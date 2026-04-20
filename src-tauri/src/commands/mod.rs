@@ -3,6 +3,7 @@ use rusqlite::Connection;
 pub mod appointments;
 pub mod auth;
 pub mod documents;
+pub mod notes;
 
 pub struct AppState {
     pub db: std::sync::Mutex<Option<Connection>>,

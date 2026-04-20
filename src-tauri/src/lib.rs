@@ -13,6 +13,9 @@ use commands::documents::{
     documents_delete, documents_get, documents_get_file_url, documents_list,
     documents_restore, documents_tags_set, documents_update, documents_upload,
 };
+use commands::notes::{
+    notes_create, notes_delete, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
+};
 use commands::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -50,6 +53,13 @@ pub fn run() {
             appointments_update,
             appointments_delete,
             appointments_link_document,
+            notes_list,
+            notes_get,
+            notes_create,
+            notes_update,
+            notes_delete,
+            notes_pin,
+            notes_tags_set,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

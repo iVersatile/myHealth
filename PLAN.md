@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 7 › Task 7.1
-   WHAT:        Rust note commands — all 7 commands from docs/ARCHITECTURE.md §4.4
-   CREATE:      src-tauri/src/commands/notes.rs
+▶ NEXT ACTION:  Phase 8 › Task 8.1
+   WHAT:        Rust contact commands — all 5 commands from docs/ARCHITECTURE.md §4.5
+   CREATE:      src-tauri/src/commands/contacts.rs
    THEN:        go
 ```
 
@@ -183,24 +183,24 @@
 
 ## Phase 7 — Notes Feature
 
-[ ] **7.1 — Rust note commands**
+[x] **7.1 — Rust note commands**
    - Create `src-tauri/src/commands/notes.rs` — all 7 commands from `docs/ARCHITECTURE.md §4.4`
    - Done when: `cargo test` passes
 
-[ ] **7.2 — Notes list + editor**
+[x] **7.2 — Notes list + editor**
    - Create `src/app/notes/page.tsx`, `src/app/notes/[id]/page.tsx`
    - Tiptap rich-text editor with Bold/Italic/Heading/List toolbar
    - Pin toggle; tag management; auto-save on keystroke idle (1 s debounce)
    - Match wireframes: Screens 9 & 10
    - Done when: create, edit, pin, and tag a note
 
-[ ] **7.3 — Notes tests** — coverage ≥ 80%
+[x] **7.3 — Notes tests** — coverage ≥ 80%
 
 ---
 
 ## Phase 8 — Contacts Feature
 
-[ ] **8.1 — Rust contact commands**
+▶ [ ] **8.1 — Rust contact commands**
    - Create `src-tauri/src/commands/contacts.rs` — all 5 commands from `docs/ARCHITECTURE.md §4.5`
    - Done when: `cargo test` passes
 
