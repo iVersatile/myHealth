@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 2 › Task 2.1
-   WHAT:        Add Rust dependencies to src-tauri/Cargo.toml
-   EDIT:        src-tauri/Cargo.toml — add rusqlite (sqlcipher+bundled), uuid, chrono, serde, serde_json, pbkdf2, hmac, sha2
+▶ NEXT ACTION:  Phase 3 › Task 3.1
+   WHAT:        Rust auth commands
+   CREATE:      src-tauri/src/commands/auth.rs — auth_unlock, auth_lock, auth_set_password, auth_change_password, auth_is_locked
    THEN:        go
 ```
 
@@ -75,21 +75,21 @@
 
 ## Phase 2 — Database & Encryption Layer
 
-▶ [ ] **2.1 — Add Rust dependencies**
+[x] **2.1 — Add Rust dependencies**
    - In `src-tauri/Cargo.toml` add: `rusqlite` (features: `sqlcipher`, `bundled`), `uuid`, `chrono`, `serde`, `serde_json`, `pbkdf2`, `hmac`, `sha2`
    - Done when: `cargo build` in `src-tauri/` succeeds
 
-[ ] **2.2 — Write database schema**
+[x] **2.2 — Write database schema**
    - Create `src-tauri/src/db/schema.sql` — copy schema verbatim from `docs/ARCHITECTURE.md §3`
    - Includes 9 tables + FTS5 virtual table
    - Done when: `sqlite3 :memory: < src-tauri/src/db/schema.sql` exits 0
 
-[ ] **2.3 — Implement DB module**
+[x] **2.3 — Implement DB module**
    - Create `src-tauri/src/db/mod.rs`: `open_db(path, key)` opens SQLCipher DB, applies PRAGMAs, runs migrations
    - Create `src-tauri/src/db/migrations.rs`: version table + schema application
    - Done when: `cargo test` passes for DB open/close round-trip
 
-[ ] **2.4 — Implement crypto module**
+[x] **2.4 — Implement crypto module**
    - Create `src-tauri/src/crypto.rs`: `derive_key(password, salt)` — PBKDF2-SHA512, 64,000 iterations → 32-byte key
    - Done when: `cargo test` passes for a known PBKDF2 test vector
 
@@ -97,7 +97,7 @@
 
 ## Phase 3 — Auth (Lock / Unlock)
 
-[ ] **3.1 — Rust auth commands**
+▶ [ ] **3.1 — Rust auth commands**
    - Create `src-tauri/src/commands/auth.rs`
    - Implement: `auth_unlock`, `auth_lock`, `auth_set_password`, `auth_change_password`, `auth_is_locked`
    - Register all in `main.rs`

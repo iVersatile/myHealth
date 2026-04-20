@@ -1,3 +1,6 @@
+pub(crate) mod crypto;
+pub(crate) mod db;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
