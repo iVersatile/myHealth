@@ -89,17 +89,8 @@ pub fn search_query(
 
     let filter_types = types.as_ref().filter(|t| !t.is_empty());
 
-    let sql = if filter_types.is_none() {
-        "SELECT entity_type, entity_id, title, \
-         snippet(search_index, 3, '<mark>', '</mark>', '…', 16), tags \
-         FROM search_index \
-         WHERE search_index MATCH ? \
-         ORDER BY rank \
-         LIMIT 50"
-            .to_string()
-    } else {
-        let placeholders: Vec<String> = filter_types
-            .unwrap()
+    let sql = if let Some(ft) = filter_types {
+        let placeholders: Vec<String> = ft
             .iter()
             .enumerate()
             .map(|(i, _)| format!("?{}", i + 2))
@@ -114,6 +105,14 @@ pub fn search_query(
              LIMIT 50",
             placeholders.join(", ")
         )
+    } else {
+        "SELECT entity_type, entity_id, title, \
+         snippet(search_index, 3, '<mark>', '</mark>', '…', 16), tags \
+         FROM search_index \
+         WHERE search_index MATCH ? \
+         ORDER BY rank \
+         LIMIT 50"
+            .to_string()
     };
 
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;

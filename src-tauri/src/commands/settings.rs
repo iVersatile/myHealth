@@ -61,7 +61,6 @@ pub fn settings_wipe_all_data(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::db;
     use rusqlite::Connection;
 

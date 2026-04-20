@@ -51,6 +51,7 @@ pub fn unlock_internal(data_dir: &Path, password: &str) -> Result<(Connection, S
     Ok((conn, hex))
 }
 
+#[allow(dead_code)]
 pub fn is_locked_internal(db: &Option<Connection>) -> bool {
     db.is_none()
 }
