@@ -13,6 +13,9 @@ use commands::documents::{
     documents_delete, documents_get, documents_get_file_url, documents_list,
     documents_restore, documents_tags_set, documents_update, documents_upload,
 };
+use commands::contacts::{
+    contacts_create, contacts_delete, contacts_get, contacts_list, contacts_update,
+};
 use commands::notes::{
     notes_create, notes_delete, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
 };
@@ -60,6 +63,11 @@ pub fn run() {
             notes_delete,
             notes_pin,
             notes_tags_set,
+            contacts_list,
+            contacts_get,
+            contacts_create,
+            contacts_update,
+            contacts_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

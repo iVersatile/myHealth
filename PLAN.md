@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 8 › Task 8.1
-   WHAT:        Rust contact commands — all 5 commands from docs/ARCHITECTURE.md §4.5
-   CREATE:      src-tauri/src/commands/contacts.rs
+▶ NEXT ACTION:  Phase 9 › Task 9.1
+   WHAT:        Timeline page — aggregate documents + appointments + notes ordered by date
+   CREATE:      src/app/(app)/timeline/page.tsx, src/components/timeline/TimelineItem.tsx
    THEN:        go
 ```
 
@@ -200,17 +200,17 @@
 
 ## Phase 8 — Contacts Feature
 
-▶ [ ] **8.1 — Rust contact commands**
+▶ [x] **8.1 — Rust contact commands**
    - Create `src-tauri/src/commands/contacts.rs` — all 5 commands from `docs/ARCHITECTURE.md §4.5`
    - Done when: `cargo test` passes
 
-[ ] **8.2 — Contacts list + form**
+▶ [x] **8.2 — Contacts list + form**
    - Create `src/app/contacts/page.tsx`, `ContactCard.tsx`, `ContactForm.tsx`
    - Role filter; quick-copy phone/email buttons
    - Match wireframe: Screen 11
    - Done when: CRUD works; copy-to-clipboard confirmed
 
-[ ] **8.3 — Contacts tests** — coverage ≥ 80%
+[x] **8.3 — Contacts tests** — coverage ≥ 80%
 
 ---
 
