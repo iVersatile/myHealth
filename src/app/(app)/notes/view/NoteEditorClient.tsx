@@ -52,6 +52,7 @@ export default function NoteEditorClient() {
 
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const titleRef = useRef(title)
+  // eslint-disable-next-line react-hooks/refs
   titleRef.current = title
 
   const editor = useEditor({

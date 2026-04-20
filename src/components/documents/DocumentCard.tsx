@@ -44,6 +44,7 @@ export function DocumentCard({ document: doc, onDelete }: DocumentCardProps) {
       {/* Thumbnail / type badge */}
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] text-[var(--text-xs)] font-semibold tracking-wide text-[var(--color-text-secondary)]">
         {doc.thumbnail_path ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={`asset://localhost/${doc.thumbnail_path}`}
             alt=""

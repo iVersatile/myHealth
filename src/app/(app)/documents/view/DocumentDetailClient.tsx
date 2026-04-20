@@ -142,6 +142,7 @@ export default function DocumentDetailClient() {
             />
           )}
           {isImage && (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={assetUrl}
               alt={doc.filename}

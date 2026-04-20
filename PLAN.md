@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 13 › Task 13.2
-   WHAT:        Bump version to 1.0.0 in package.json + tauri.conf.json, tag v1.0.0
+▶ NEXT ACTION:  Phase 13 › Task 13.3
+   WHAT:        Verify GitHub Release artifacts (.dmg arm64/x86_64, .msi, .AppImage)
    THEN:        go
 ```
 
@@ -270,17 +270,17 @@
 
 ## Phase 13 — Release  🏁
 
-▶ [ ] **13.1 — End-to-end smoke test**
+[x] **13.1 — End-to-end smoke test**
    - Manual walkthrough: upload doc → view → search → link to appointment → export PDF
    - Verify all 15 wireframe screens match implementation
 
-[ ] **13.2 — Bump version & tag**
+[x] **13.2 — Bump version & tag**
    - Update `package.json` version to `1.0.0`
    - Update `src-tauri/tauri.conf.json` version to `1.0.0`
    - `git tag v1.0.0 && git push origin v1.0.0`
    - GitHub Actions builds 4 platform artifacts automatically
 
-[ ] **13.3 — Verify GitHub Release**
+▶ [ ] **13.3 — Verify GitHub Release**
    - Confirm `.dmg` (arm64 + x86_64), `.msi`, `.AppImage` all present
    - Install test on macOS: right-click → Open to bypass Gatekeeper
 

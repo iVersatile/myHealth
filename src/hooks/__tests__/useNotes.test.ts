@@ -61,7 +61,7 @@ describe('useNotes', () => {
       created = await result.current.createNote()
     })
 
-    expect(mockInvoke).toHaveBeenCalledWith('notes_create', { title: 'Untitled', content: '' })
+    expect(mockInvoke).toHaveBeenCalledWith('notes_create', { input: { title: 'Untitled', content: '' } })
     expect(created?.id).toBe('new')
     expect(result.current.notes.some((n) => n.id === 'new')).toBe(true)
   })

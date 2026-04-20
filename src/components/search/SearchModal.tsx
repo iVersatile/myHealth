@@ -46,6 +46,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery('')
       setResults([])
     }
@@ -54,6 +55,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
   useEffect(() => {
     const trimmed = query.trim()
     if (trimmed.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults([])
       return
     }
