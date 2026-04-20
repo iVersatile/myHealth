@@ -34,7 +34,7 @@ function docToEvent(d: Document): TimelineEvent {
     title: `${d.filename} uploaded`,
     subtitle: d.category.charAt(0).toUpperCase() + d.category.slice(1),
     badge,
-    href: `/documents/${d.id}`,
+    href: `/documents/view?id=${d.id}`,
   }
 }
 
@@ -59,7 +59,7 @@ function noteToEvent(n: Note): TimelineEvent {
     title: n.title || 'Untitled note',
     subtitle: n.tags.length > 0 ? n.tags.join(', ') : null,
     badge: '📝',
-    href: `/notes/${n.id}`,
+    href: `/notes/view?id=${n.id}`,
   }
 }
 

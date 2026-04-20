@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 13 › Task 13.1
-   WHAT:        End-to-end smoke test — manual walkthrough of all 15 wireframe screens
+▶ NEXT ACTION:  Phase 13 › Task 13.2
+   WHAT:        Bump version to 1.0.0 in package.json + tauri.conf.json, tag v1.0.0
    THEN:        go
 ```
 

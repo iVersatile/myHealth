@@ -34,7 +34,7 @@ export function useNotes() {
   }, [fetchNotes])
 
   async function createNote(): Promise<Note> {
-    const note = await invoke<Note>('notes_create', { title: 'Untitled', content: '' })
+    const note = await invoke<Note>('notes_create', { input: { title: 'Untitled', content: '' } })
     upsertNote(note)
     return note
   }

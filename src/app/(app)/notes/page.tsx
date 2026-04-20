@@ -54,11 +54,11 @@ export default function NotesPage() {
 
   async function handleNew() {
     const note = await createNote()
-    router.push(`/notes/${note.id}`)
+    router.push(`/notes/view?id=${note.id}`)
   }
 
   function openNote(id: string) {
-    router.push(`/notes/${id}`)
+    router.push(`/notes/view?id=${id}`)
   }
 
   return (

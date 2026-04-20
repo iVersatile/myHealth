@@ -183,7 +183,7 @@ export default function DashboardPage() {
             {recentDocs.map(doc => (
               <Link
                 key={doc.id}
-                href={`/documents/${doc.id}`}
+                href={`/documents/view?id=${doc.id}`}
                 style={{ textDecoration: 'none' }}
               >
                 <div
@@ -243,7 +243,7 @@ export default function DashboardPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {pinnedNotes.map(note => (
-              <Link key={note.id} href={`/notes/${note.id}`} style={{ textDecoration: 'none' }}>
+              <Link key={note.id} href={`/notes/view?id=${note.id}`} style={{ textDecoration: 'none' }}>
                 <div
                   style={{
                     background: 'var(--color-surface)',

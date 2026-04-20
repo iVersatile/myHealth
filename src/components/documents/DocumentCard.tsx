@@ -79,13 +79,13 @@ export function DocumentCard({ document: doc, onDelete }: DocumentCardProps) {
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-2">
         <Link
-          href={`/documents/${doc.id}`}
+          href={`/documents/view?id=${doc.id}`}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
         >
           View
         </Link>
         <Link
-          href={`/documents/${doc.id}?edit=1`}
+          href={`/documents/view?id=${doc.id}&edit=1`}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
         >
           Edit

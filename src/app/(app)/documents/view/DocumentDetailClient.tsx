@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { Document, CATEGORY_LABELS } from '../../../../store/documentsStore'
@@ -17,8 +17,9 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default function DocumentDetailPage() {
-  const { id } = useParams<{ id: string }>()
+export default function DocumentDetailClient() {
+  const searchParams = useSearchParams()
+  const id = searchParams.get('id') ?? ''
   const router = useRouter()
 
   const [doc, setDoc] = useState<Document | null>(null)
@@ -123,7 +124,6 @@ export default function DocumentDetailPage() {
 
   return (
     <div>
-      {/* Breadcrumb */}
       <div className="mb-5 flex items-center gap-2 text-[var(--text-sm)] text-[var(--color-text-secondary)]">
         <Link href="/documents" className="hover:text-[var(--color-text)]">
           ◀ Documents
@@ -133,7 +133,6 @@ export default function DocumentDetailPage() {
       </div>
 
       <div className="flex gap-6">
-        {/* Viewer pane */}
         <div className="flex min-h-[480px] flex-1 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)]">
           {isPdf && (
             <iframe
@@ -154,7 +153,6 @@ export default function DocumentDetailPage() {
               <p className="text-[var(--text-sm)]">Preview not available for this file type.</p>
             </div>
           )}
-
           <div className="border-t border-[var(--color-border)] px-4 py-3">
             <button
               type="button"
@@ -166,12 +164,10 @@ export default function DocumentDetailPage() {
           </div>
         </div>
 
-        {/* Details sidebar */}
         <aside className="w-64 shrink-0 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
           <h2 className="mb-4 text-[var(--text-base)] font-semibold text-[var(--color-text)]">
             Details
           </h2>
-
           <dl className="flex flex-col gap-3 text-[var(--text-sm)]">
             <div>
               <dt className="text-[var(--color-text-secondary)]">Category</dt>
@@ -191,7 +187,6 @@ export default function DocumentDetailPage() {
 
           <hr className="my-4 border-[var(--color-border)]" />
 
-          {/* Tags */}
           <div className="mb-4">
             <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">Tags</p>
             {tags.length > 0 && (
@@ -241,7 +236,6 @@ export default function DocumentDetailPage() {
 
           <hr className="my-4 border-[var(--color-border)]" />
 
-          {/* Notes */}
           <div className="mb-4">
             <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">Notes</p>
             <textarea
@@ -263,7 +257,6 @@ export default function DocumentDetailPage() {
 
           <hr className="my-4 border-[var(--color-border)]" />
 
-          {/* Delete */}
           <button
             type="button"
             onClick={() => void handleDelete()}

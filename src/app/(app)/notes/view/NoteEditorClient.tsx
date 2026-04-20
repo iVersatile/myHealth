@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { Node } from '@tiptap/core'
 import Bold from '@tiptap/extension-bold'
@@ -34,10 +34,10 @@ function relativeTime(iso: string): string {
   return `${Math.floor(diff / 3600)}h ago`
 }
 
-export default function NoteEditorPage() {
-  const params = useParams()
+export default function NoteEditorClient() {
+  const searchParams = useSearchParams()
   const router = useRouter()
-  const id = params.id as string
+  const id = searchParams.get('id') ?? ''
 
   const { getNote, saveNote, deleteNote, pinNote, setNoteTags } = useNotes()
 
@@ -55,6 +55,7 @@ export default function NoteEditorPage() {
   titleRef.current = title
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       Document,
       Paragraph,
