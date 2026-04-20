@@ -4,7 +4,10 @@ pub mod appointments;
 pub mod auth;
 pub mod contacts;
 pub mod documents;
+pub mod export;
 pub mod notes;
+pub mod search;
+pub mod settings;
 
 pub struct AppState {
     pub db: std::sync::Mutex<Option<Connection>>,

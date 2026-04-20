@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::AppState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -239,7 +240,10 @@ pub fn documents_upload(
     )
     .map_err(|e| e.to_string())?;
 
-    load_doc(conn, &id)
+    let doc = load_doc(conn, &id)?;
+    let body = doc.notes.as_deref().unwrap_or("").to_string();
+    upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
+    Ok(doc)
 }
 
 #[tauri::command]
@@ -265,7 +269,10 @@ pub fn documents_update(
         rusqlite::params![category, notes, now, id],
     )
     .map_err(|e| e.to_string())?;
-    load_doc(conn, &id)
+    let doc = load_doc(conn, &id)?;
+    let body = doc.notes.as_deref().unwrap_or("").to_string();
+    upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
+    Ok(doc)
 }
 
 #[tauri::command]
@@ -287,6 +294,7 @@ pub fn documents_delete(
     if affected == 0 {
         return Err(format!("document not found or already deleted: {id}"));
     }
+    remove_from_search_index(conn, &id);
     Ok(())
 }
 
@@ -308,6 +316,10 @@ pub fn documents_restore(
         .map_err(|e| e.to_string())?;
     if affected == 0 {
         return Err(format!("document not found or not deleted: {id}"));
+    }
+    if let Ok(doc) = load_doc(conn, &id) {
+        let body = doc.notes.as_deref().unwrap_or("").to_string();
+        upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
     }
     Ok(())
 }
@@ -372,6 +384,11 @@ pub fn documents_tags_set(
         rusqlite::params![now, id],
     )
     .map_err(|e| e.to_string())?;
+
+    if let Ok(doc) = load_doc(conn, &id) {
+        let body = doc.notes.as_deref().unwrap_or("").to_string();
+        upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
+    }
 
     Ok(())
 }

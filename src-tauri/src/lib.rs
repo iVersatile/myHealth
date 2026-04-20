@@ -19,6 +19,9 @@ use commands::contacts::{
 use commands::notes::{
     notes_create, notes_delete, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
 };
+use commands::export::{export_pdf_bundle, export_save_bytes};
+use commands::search::search_query;
+use commands::settings::{settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data};
 use commands::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -68,6 +71,13 @@ pub fn run() {
             contacts_create,
             contacts_update,
             contacts_delete,
+            search_query,
+            settings_get,
+            settings_set,
+            settings_get_data_dir,
+            settings_wipe_all_data,
+            export_pdf_bundle,
+            export_save_bytes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

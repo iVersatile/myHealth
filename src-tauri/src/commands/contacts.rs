@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::AppState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -144,13 +145,23 @@ pub fn contacts_create(
     )
     .map_err(|e| e.to_string())?;
 
-    conn.query_row(
-        "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-         created_at, updated_at FROM contacts WHERE id = ?",
-        [&id],
-        row_to_contact,
-    )
-    .map_err(|e| e.to_string())
+    let c = conn
+        .query_row(
+            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+             created_at, updated_at FROM contacts WHERE id = ?",
+            [&id],
+            row_to_contact,
+        )
+        .map_err(|e| e.to_string())?;
+    let body = [
+        c.specialty.as_deref().unwrap_or(""),
+        c.clinic.as_deref().unwrap_or(""),
+        c.address.as_deref().unwrap_or(""),
+        c.notes.as_deref().unwrap_or(""),
+    ]
+    .join(" ");
+    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "");
+    Ok(c)
 }
 
 #[tauri::command]
@@ -220,13 +231,23 @@ pub fn contacts_update(
         .map_err(|e| e.to_string())?;
     }
 
-    conn.query_row(
-        "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-         created_at, updated_at FROM contacts WHERE id = ?",
-        [&input.id],
-        row_to_contact,
-    )
-    .map_err(|e| e.to_string())
+    let c = conn
+        .query_row(
+            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+             created_at, updated_at FROM contacts WHERE id = ?",
+            [&input.id],
+            row_to_contact,
+        )
+        .map_err(|e| e.to_string())?;
+    let body = [
+        c.specialty.as_deref().unwrap_or(""),
+        c.clinic.as_deref().unwrap_or(""),
+        c.address.as_deref().unwrap_or(""),
+        c.notes.as_deref().unwrap_or(""),
+    ]
+    .join(" ");
+    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "");
+    Ok(c)
 }
 
 #[tauri::command]
@@ -236,6 +257,7 @@ pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), Str
 
     conn.execute("DELETE FROM contacts WHERE id = ?", [&id])
         .map_err(|e| e.to_string())?;
+    remove_from_search_index(conn, &id);
     Ok(())
 }
 

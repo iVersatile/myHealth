@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use crate::commands::search::{remove_from_search_index, strip_html, upsert_search_index};
 use crate::commands::AppState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -136,7 +137,16 @@ pub fn notes_create(
     )
     .map_err(|e| e.to_string())?;
 
-    load_note(conn, &id)
+    let note = load_note(conn, &id)?;
+    upsert_search_index(
+        conn,
+        "note",
+        &note.id,
+        &note.title,
+        &strip_html(&note.content),
+        &note.tags.join(","),
+    );
+    Ok(note)
 }
 
 #[tauri::command]
@@ -165,7 +175,16 @@ pub fn notes_update(
         return Err(format!("note '{id}' not found"));
     }
 
-    load_note(conn, &id)
+    let note = load_note(conn, &id)?;
+    upsert_search_index(
+        conn,
+        "note",
+        &note.id,
+        &note.title,
+        &strip_html(&note.content),
+        &note.tags.join(","),
+    );
+    Ok(note)
 }
 
 #[tauri::command]
@@ -180,6 +199,7 @@ pub fn notes_delete(id: String, state: State<'_, AppState>) -> Result<(), String
     if rows == 0 {
         Err(format!("note '{id}' not found"))
     } else {
+        remove_from_search_index(conn, &id);
         Ok(())
     }
 }
@@ -239,6 +259,17 @@ pub fn notes_tags_set(
         rusqlite::params![id, now],
     )
     .map_err(|e| e.to_string())?;
+
+    if let Ok(note) = load_note(conn, &id) {
+        upsert_search_index(
+            conn,
+            "note",
+            &note.id,
+            &note.title,
+            &strip_html(&note.content),
+            &note.tags.join(","),
+        );
+    }
 
     Ok(())
 }

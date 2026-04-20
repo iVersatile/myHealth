@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::AppState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -217,7 +218,16 @@ pub fn appointments_create(
     )
     .map_err(|e| e.to_string())?;
 
-    load_appointment(conn, &id)
+    let appt = load_appointment(conn, &id)?;
+    let body = [
+        appt.doctor_name.as_deref().unwrap_or(""),
+        appt.clinic_name.as_deref().unwrap_or(""),
+        appt.specialty.as_deref().unwrap_or(""),
+        appt.notes.as_deref().unwrap_or(""),
+    ]
+    .join(" ");
+    upsert_search_index(conn, "appointment", &appt.id, &appt.title, &body, "");
+    Ok(appt)
 }
 
 #[tauri::command]
@@ -270,7 +280,16 @@ pub fn appointments_update(
         return Err(format!("appointment '{id}' not found"));
     }
 
-    load_appointment(conn, &id)
+    let appt = load_appointment(conn, &id)?;
+    let body = [
+        appt.doctor_name.as_deref().unwrap_or(""),
+        appt.clinic_name.as_deref().unwrap_or(""),
+        appt.specialty.as_deref().unwrap_or(""),
+        appt.notes.as_deref().unwrap_or(""),
+    ]
+    .join(" ");
+    upsert_search_index(conn, "appointment", &appt.id, &appt.title, &body, "");
+    Ok(appt)
 }
 
 #[tauri::command]
@@ -285,6 +304,7 @@ pub fn appointments_delete(id: String, state: State<'_, AppState>) -> Result<(),
     if rows == 0 {
         Err(format!("appointment '{id}' not found"))
     } else {
+        remove_from_search_index(conn, &id);
         Ok(())
     }
 }

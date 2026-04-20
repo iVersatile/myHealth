@@ -7,9 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 9 › Task 9.1
-   WHAT:        Timeline page — aggregate documents + appointments + notes ordered by date
-   CREATE:      src/app/(app)/timeline/page.tsx, src/components/timeline/TimelineItem.tsx
+▶ NEXT ACTION:  Phase 13 › Task 13.1
+   WHAT:        End-to-end smoke test — manual walkthrough of all 15 wireframe screens
    THEN:        go
 ```
 
@@ -216,27 +215,27 @@
 
 ## Phase 9 — Timeline & Search
 
-[ ] **9.1 — Timeline page**
+[x] **9.1 — Timeline page**
    - Create `src/app/timeline/page.tsx`, `TimelineItem.tsx`
    - Aggregate documents + appointments + notes ordered by date
    - Filter by type and date range; group by month/year
    - Match wireframe: Screen 12
    - Done when: all event types appear in correct chronological order
 
-[ ] **9.2 — Full-text search**
+[x] **9.2 — Full-text search**
    - Create `src-tauri/src/commands/search.rs` — FTS5 query across all entity types
    - Populate `search_index` on every create/update/delete in all modules
    - Wire `SearchModal.tsx` to call `search_query` IPC; highlight matched terms
    - Match wireframe: Screen 13
    - Done when: "blood" returns matching records in < 200 ms
 
-[ ] **9.3 — Search tests** — coverage ≥ 80%
+[x] **9.3 — Search tests** — coverage ≥ 80%
 
 ---
 
 ## Phase 10 — Dashboard
 
-[ ] **10.1 — Dashboard page**
+[x] **10.1 — Dashboard page**
    - Create `src/app/dashboard/page.tsx`
    - Stats cards (document count, upcoming appointments, note count)
    - Next appointment card; recent documents grid; pinned notes list
@@ -247,31 +246,31 @@
 
 ## Phase 11 — Settings
 
-[ ] **11.1 — Settings page**
+[x] **11.1 — Settings page**
    - Create `src/app/settings/page.tsx`
    - Change password (calls `auth_change_password`); auto-lock timer; theme toggle; data dir; wipe
    - Match wireframe: Screen 14
    - Done when: password change re-encrypts DB; theme toggle persists across restarts
 
-[ ] **11.2 — Settings tests** — coverage ≥ 80%
+[x] **11.2 — Settings tests** — coverage ≥ 80%
 
 ---
 
 ## Phase 12 — PDF Export Bundle
 
-[ ] **12.1 — Export command**
+[x] **12.1 — Export command**
    - Create `src-tauri/src/commands/export.rs` — `export_pdf_bundle`
    - Compose: cover page + TOC + embedded document pages using `pdf-lib` (JS side) called via Tauri IPC
    - Match wireframe: Screen 15
    - Done when: exported PDF opens and contains all selected documents with TOC
 
-[ ] **12.2 — Export tests** — coverage ≥ 80%
+[x] **12.2 — Export tests** — coverage ≥ 80%
 
 ---
 
 ## Phase 13 — Release  🏁
 
-[ ] **13.1 — End-to-end smoke test**
+▶ [ ] **13.1 — End-to-end smoke test**
    - Manual walkthrough: upload doc → view → search → link to appointment → export PDF
    - Verify all 15 wireframe screens match implementation
 
