@@ -7,9 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 13 › Task 13.3
-   WHAT:        Verify GitHub Release artifacts (.dmg arm64/x86_64, .msi, .AppImage)
-   THEN:        go
+ALL TASKS COMPLETE — MVP SHIPPED ✅
+   v1.0.0 released with all 4 artifacts verified
 ```
 
 ---
@@ -280,9 +279,9 @@
    - `git tag v1.0.0 && git push origin v1.0.0`
    - GitHub Actions builds 4 platform artifacts automatically
 
-▶ [ ] **13.3 — Verify GitHub Release**
-   - Confirm `.dmg` (arm64 + x86_64), `.msi`, `.AppImage` all present
-   - Install test on macOS: right-click → Open to bypass Gatekeeper
+[x] **13.3 — Verify GitHub Release**
+   - Confirmed: `myHealth_1.0.0_aarch64.dmg`, `myHealth_1.0.0_x64.dmg`, `myHealth_1.0.0_x64_en-US.msi`, `myHealth_1.0.0_amd64.AppImage` — all uploaded
+   - macOS Gatekeeper workaround documented in README Known Issues
 
 ---
 
