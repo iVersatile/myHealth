@@ -5,12 +5,21 @@ pub(crate) mod db;
 use commands::auth::{
     auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
 };
+use commands::appointments::{
+    appointments_create, appointments_delete, appointments_get, appointments_link_document,
+    appointments_list, appointments_update,
+};
+use commands::documents::{
+    documents_delete, documents_get, documents_get_file_url, documents_list,
+    documents_restore, documents_tags_set, documents_update, documents_upload,
+};
 use commands::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState::new())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -27,6 +36,20 @@ pub fn run() {
             auth_lock,
             auth_change_password,
             auth_is_locked,
+            documents_list,
+            documents_get,
+            documents_upload,
+            documents_update,
+            documents_delete,
+            documents_restore,
+            documents_get_file_url,
+            documents_tags_set,
+            appointments_list,
+            appointments_get,
+            appointments_create,
+            appointments_update,
+            appointments_delete,
+            appointments_link_document,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

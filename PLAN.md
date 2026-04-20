@@ -7,11 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 5 › Task 5.1
-   WHAT:        Rust document commands — upload, list, get, delete, restore
-   CREATE:      src-tauri/src/commands/documents.rs
-   EDIT:        src-tauri/src/commands/mod.rs (register module)
-   EDIT:        src-tauri/src/lib.rs (register commands)
+▶ NEXT ACTION:  Phase 7 › Task 7.1
+   WHAT:        Rust note commands — all 7 commands from docs/ARCHITECTURE.md §4.4
+   CREATE:      src-tauri/src/commands/notes.rs
    THEN:        go
 ```
 
@@ -136,50 +134,50 @@
 
 ## Phase 5 — Documents Feature
 
-[ ] **5.1 — Rust document commands**
+[x] **5.1 — Rust document commands**
    - Create `src-tauri/src/commands/documents.rs`
    - Implement all 8 commands from `docs/ARCHITECTURE.md §4.2`
    - Copy file to `~/.myHealth/files/documents/<uuid>/original.<ext>`
    - Generate 200×200 WebP thumbnail for image types
    - Done when: `cargo test` covers upload, list, get, delete, restore
 
-[ ] **5.2 — Documents list page**
+[x] **5.2 — Documents list page**
    - Create `src/app/documents/page.tsx`, `DocumentList.tsx`, `DocumentCard.tsx`
    - Category filter chips, pagination
    - Create `src/store/documentsStore.ts`, `src/hooks/useDocuments.ts`
    - Match wireframe: Screen 4
    - Done when: real uploaded files appear in list
 
-[ ] **5.3 — Upload dialog**
+[x] **5.3 — Upload dialog**
    - Create `src/components/documents/UploadDialog.tsx`
    - Drag-and-drop + Tauri `open()` file picker; category select; tags; notes
    - Match wireframe: Screen 5
    - Done when: uploading a PDF appears in list within 3 s
 
-[ ] **5.4 — Document detail page**
+[x] **5.4 — Document detail page**
    - Create `src/app/documents/[id]/page.tsx`
    - PDF inline viewer (Tauri asset protocol); image fullscreen; edit tags/notes; soft delete
    - Match wireframe: Screen 6
    - Done when: clicking a document shows its full content
 
-[ ] **5.5 — Document tests** — coverage ≥ 80% for documents module
+[x] **5.5 — Document tests** — coverage ≥ 80% for documents module
 
 ---
 
 ## Phase 6 — Appointments Feature
 
-[ ] **6.1 — Rust appointment commands**
+[x] **6.1 — Rust appointment commands**
    - Create `src-tauri/src/commands/appointments.rs`
    - Implement all 6 commands from `docs/ARCHITECTURE.md §4.3`
    - Done when: `cargo test` covers CRUD + document linking
 
-[ ] **6.2 — Appointments list + form**
+[x] **6.2 — Appointments list + form**
    - Create `src/app/appointments/page.tsx`, `AppointmentCard.tsx`, `AppointmentForm.tsx`
    - List grouped by month; status badges; document links
    - Match wireframes: Screens 7 & 8
    - Done when: create/edit/delete appointment works end-to-end
 
-[ ] **6.3 — Appointments tests** — coverage ≥ 80%
+[x] **6.3 — Appointments tests** — coverage ≥ 80%
 
 ---
 
