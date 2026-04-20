@@ -95,6 +95,7 @@ dependencies = [
  "hmac",
  "log",
  "pbkdf2",
+ "rand 0.8.6",
  "rusqlite",
  "serde",
  "serde_json",

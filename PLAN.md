@@ -7,9 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-▶ NEXT ACTION:  Phase 3 › Task 3.1
-   WHAT:        Rust auth commands
-   CREATE:      src-tauri/src/commands/auth.rs — auth_unlock, auth_lock, auth_set_password, auth_change_password, auth_is_locked
+▶ NEXT ACTION:  Phase 5 › Task 5.1
+   WHAT:        Rust document commands — upload, list, get, delete, restore
+   CREATE:      src-tauri/src/commands/documents.rs
+   EDIT:        src-tauri/src/commands/mod.rs (register module)
+   EDIT:        src-tauri/src/lib.rs (register commands)
    THEN:        go
 ```
 
@@ -97,20 +99,20 @@
 
 ## Phase 3 — Auth (Lock / Unlock)
 
-▶ [ ] **3.1 — Rust auth commands**
+[x] **3.1 — Rust auth commands**
    - Create `src-tauri/src/commands/auth.rs`
    - Implement: `auth_unlock`, `auth_lock`, `auth_set_password`, `auth_change_password`, `auth_is_locked`
    - Register all in `main.rs`
    - Done when: `cargo test` passes for lock/unlock round-trip
 
-[ ] **3.2 — Frontend lock screen**
+[x] **3.2 — Frontend lock screen**
    - Create `src/app/page.tsx` — password input + Unlock button
    - Create `src/store/authStore.ts` — `isLocked`, `setLocked`
    - Create `src/hooks/useAuth.ts` — calls `auth_unlock` IPC
    - Match wireframe: Screen 1 in `docs/WIREFRAMES.md`
    - Done when: correct password unlocks to dashboard; wrong password shows error
 
-[ ] **3.3 — Auto-lock on inactivity**
+[x] **3.3 — Auto-lock on inactivity**
    - Detect mouse/keyboard idle; after N minutes call `auth_lock`
    - N read from `settings` table (default 15 min)
    - Done when: app locks after idle period in dev mode
@@ -119,13 +121,13 @@
 
 ## Phase 4 — App Shell & Navigation
 
-[ ] **4.1 — Sidebar layout**
+[x] **4.1 — Sidebar layout**
    - Create `src/components/layout/AppShell.tsx`, `Sidebar.tsx`, `TopBar.tsx`
    - Navigation routes: Dashboard, Documents, Appointments, Notes, Contacts, Timeline, Settings
    - Match wireframe: Screen 2
    - Done when: all nav links render and route without errors
 
-[ ] **4.2 — Search modal skeleton**
+[x] **4.2 — Search modal skeleton**
    - Create `src/components/search/SearchModal.tsx`
    - Cmd/Ctrl+K opens; Escape closes; IPC wired in Phase 9
    - Done when: keyboard shortcut opens and closes modal
