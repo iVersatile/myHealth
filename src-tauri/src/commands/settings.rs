@@ -6,11 +6,9 @@ use crate::commands::AppState;
 pub fn settings_get(key: String, state: State<'_, AppState>) -> Result<Option<String>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
-    let result = conn.query_row(
-        "SELECT value FROM settings WHERE key = ?",
-        [&key],
-        |row| row.get::<_, String>(0),
-    );
+    let result = conn.query_row("SELECT value FROM settings WHERE key = ?", [&key], |row| {
+        row.get::<_, String>(0)
+    });
     match result {
         Ok(val) => Ok(Some(val)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
@@ -19,11 +17,7 @@ pub fn settings_get(key: String, state: State<'_, AppState>) -> Result<Option<St
 }
 
 #[tauri::command]
-pub fn settings_set(
-    key: String,
-    value: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub fn settings_set(key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
     conn.execute(

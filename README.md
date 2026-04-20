@@ -30,7 +30,15 @@ Personal health records manager. Local-first, encrypted, no cloud required.
 
 Download the latest release from [GitHub Releases](../../releases).
 
-**macOS:** The app is not notarised. Right-click the `.dmg` → Open on first launch.
+**macOS:** The app is unsigned and unnotarized. macOS Gatekeeper will block it on first launch.
+
+To open it after installation:
+
+```bash
+xattr -cr /Applications/myHealth.app
+```
+
+Or: right-click the `.app` in Finder → **Open** → **Open** in the dialog.
 
 **Linux:** `chmod +x myHealth_x86_64.AppImage && ./myHealth_x86_64.AppImage`
 
@@ -79,6 +87,24 @@ git push origin v1.0.0
 ```
 
 GitHub Actions will build `.dmg`, `.msi`, and `.AppImage` artifacts and publish a GitHub Release automatically.
+
+## Known Issues
+
+### macOS: "App is damaged and can't be opened" / Gatekeeper block
+
+macOS quarantines apps that are not notarized with an Apple Developer certificate.
+myHealth is distributed unsigned via GitHub Releases (no App Store).
+
+**Workaround:**
+
+```bash
+# After dragging myHealth.app to /Applications:
+xattr -cr /Applications/myHealth.app
+```
+
+Then open the app normally. This removes the quarantine extended attribute.
+
+**Permanent fix (future):** Notarization via Apple Developer Program will be added in a later release.
 
 ## License
 

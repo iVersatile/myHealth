@@ -2,26 +2,28 @@ pub(crate) mod commands;
 pub(crate) mod crypto;
 pub(crate) mod db;
 
-use commands::auth::{
-    auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
-};
 use commands::appointments::{
     appointments_create, appointments_delete, appointments_get, appointments_link_document,
     appointments_list, appointments_update,
 };
-use commands::documents::{
-    documents_delete, documents_get, documents_get_file_url, documents_list,
-    documents_restore, documents_tags_set, documents_update, documents_upload,
+use commands::auth::{
+    auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
 };
 use commands::contacts::{
     contacts_create, contacts_delete, contacts_get, contacts_list, contacts_update,
 };
+use commands::documents::{
+    documents_delete, documents_get, documents_get_file_url, documents_list, documents_restore,
+    documents_tags_set, documents_update, documents_upload,
+};
+use commands::export::{export_pdf_bundle, export_save_bytes};
 use commands::notes::{
     notes_create, notes_delete, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
 };
-use commands::export::{export_pdf_bundle, export_save_bytes};
 use commands::search::search_query;
-use commands::settings::{settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data};
+use commands::settings::{
+    settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data,
+};
 use commands::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

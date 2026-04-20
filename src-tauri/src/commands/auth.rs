@@ -47,8 +47,7 @@ pub fn set_password_internal(
 pub fn unlock_internal(data_dir: &Path, password: &str) -> Result<(Connection, String), String> {
     let salt = load_salt(data_dir)?;
     let hex = crypto::key_to_hex(&crypto::derive_key(password, &salt));
-    let conn =
-        open_db_for_path(data_dir, &hex).map_err(|_| "incorrect password".to_string())?;
+    let conn = open_db_for_path(data_dir, &hex).map_err(|_| "incorrect password".to_string())?;
     Ok((conn, hex))
 }
 
@@ -144,8 +143,7 @@ mod tests {
     use super::*;
 
     fn test_dir() -> PathBuf {
-        let dir = std::env::temp_dir()
-            .join(format!("myhealth_test_{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("myhealth_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }

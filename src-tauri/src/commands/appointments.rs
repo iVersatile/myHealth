@@ -63,10 +63,7 @@ fn fetch_document_ids(conn: &rusqlite::Connection, appt_id: &str) -> Vec<String>
     .unwrap_or_default()
 }
 
-fn load_appointment(
-    conn: &rusqlite::Connection,
-    id: &str,
-) -> Result<Appointment, String> {
+fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment, String> {
     conn.query_row(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
                 duration_min, location, notes, status, reminder_min, created_at, updated_at
@@ -410,11 +407,8 @@ mod tests {
         let conn = test_conn();
         insert_appt(&conn, "a1", "MRI", "2026-05-01T10:00:00Z", "scheduled");
         insert_doc(&conn, "d1");
-        conn.execute(
-            "INSERT INTO appointment_documents VALUES ('a1','d1')",
-            [],
-        )
-        .unwrap();
+        conn.execute("INSERT INTO appointment_documents VALUES ('a1','d1')", [])
+            .unwrap();
         let appt = load_appointment(&conn, "a1").unwrap();
         assert_eq!(appt.document_ids, vec!["d1"]);
     }
@@ -469,7 +463,13 @@ mod tests {
     #[test]
     fn update_changes_title_and_status() {
         let conn = test_conn();
-        insert_appt(&conn, "a1", "Old Title", "2026-05-01T10:00:00Z", "scheduled");
+        insert_appt(
+            &conn,
+            "a1",
+            "Old Title",
+            "2026-05-01T10:00:00Z",
+            "scheduled",
+        );
         let now = Utc::now().to_rfc3339();
         conn.execute(
             "UPDATE appointments SET title=?2, status=?3, updated_at=?4 WHERE id=?1",
@@ -485,7 +485,8 @@ mod tests {
     fn delete_removes_appointment() {
         let conn = test_conn();
         insert_appt(&conn, "a1", "X", "2026-05-01T10:00:00Z", "scheduled");
-        conn.execute("DELETE FROM appointments WHERE id='a1'", []).unwrap();
+        conn.execute("DELETE FROM appointments WHERE id='a1'", [])
+            .unwrap();
         assert!(load_appointment(&conn, "a1").is_err());
     }
 

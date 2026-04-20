@@ -54,9 +54,7 @@ fn mime_from_ext(ext: &str) -> &'static str {
         "tiff" | "tif" => "image/tiff",
         "heic" | "heif" => "image/heic",
         "doc" => "application/msword",
-        "docx" => {
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        }
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "txt" => "text/plain",
         _ => "application/octet-stream",
     }
@@ -162,10 +160,7 @@ pub fn documents_list(
 }
 
 #[tauri::command]
-pub fn documents_get(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<Document, String> {
+pub fn documents_get(state: State<'_, AppState>, id: String) -> Result<Document, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
     load_doc(conn, &id)
@@ -195,9 +190,7 @@ pub fn documents_upload(
         .unwrap_or("document")
         .to_string();
     let mime = mime_from_ext(&ext).to_string();
-    let file_size = fs::metadata(src)
-        .map_err(|e| e.to_string())?
-        .len() as i64;
+    let file_size = fs::metadata(src).map_err(|e| e.to_string())?.len() as i64;
 
     let id = Uuid::new_v4().to_string();
     let dest_dir = storage_dir()?.join(&id);
@@ -242,7 +235,14 @@ pub fn documents_upload(
 
     let doc = load_doc(conn, &id)?;
     let body = doc.notes.as_deref().unwrap_or("").to_string();
-    upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
+    upsert_search_index(
+        conn,
+        "document",
+        &doc.id,
+        &doc.filename,
+        &body,
+        &doc.tags.join(","),
+    );
     Ok(doc)
 }
 
@@ -271,15 +271,19 @@ pub fn documents_update(
     .map_err(|e| e.to_string())?;
     let doc = load_doc(conn, &id)?;
     let body = doc.notes.as_deref().unwrap_or("").to_string();
-    upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
+    upsert_search_index(
+        conn,
+        "document",
+        &doc.id,
+        &doc.filename,
+        &body,
+        &doc.tags.join(","),
+    );
     Ok(doc)
 }
 
 #[tauri::command]
-pub fn documents_delete(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+pub fn documents_delete(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
     let now = Utc::now().to_rfc3339();
@@ -299,10 +303,7 @@ pub fn documents_delete(
 }
 
 #[tauri::command]
-pub fn documents_restore(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<(), String> {
+pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
     let now = Utc::now().to_rfc3339();
@@ -319,16 +320,20 @@ pub fn documents_restore(
     }
     if let Ok(doc) = load_doc(conn, &id) {
         let body = doc.notes.as_deref().unwrap_or("").to_string();
-        upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
+        upsert_search_index(
+            conn,
+            "document",
+            &doc.id,
+            &doc.filename,
+            &body,
+            &doc.tags.join(","),
+        );
     }
     Ok(())
 }
 
 #[tauri::command]
-pub fn documents_get_file_url(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<String, String> {
+pub fn documents_get_file_url(state: State<'_, AppState>, id: String) -> Result<String, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
     conn.query_row(
@@ -360,11 +365,8 @@ pub fn documents_tags_set(
         return Err(format!("document not found: {id}"));
     }
 
-    conn.execute(
-        "DELETE FROM document_tags WHERE document_id = ?",
-        [&id],
-    )
-    .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM document_tags WHERE document_id = ?", [&id])
+        .map_err(|e| e.to_string())?;
 
     for tag in &tags {
         let tag = tag.trim();
@@ -387,7 +389,14 @@ pub fn documents_tags_set(
 
     if let Ok(doc) = load_doc(conn, &id) {
         let body = doc.notes.as_deref().unwrap_or("").to_string();
-        upsert_search_index(conn, "document", &doc.id, &doc.filename, &body, &doc.tags.join(","));
+        upsert_search_index(
+            conn,
+            "document",
+            &doc.id,
+            &doc.filename,
+            &body,
+            &doc.tags.join(","),
+        );
     }
 
     Ok(())
@@ -548,11 +557,8 @@ mod tests {
         )
         .unwrap();
 
-        conn.execute(
-            "DELETE FROM document_tags WHERE document_id = 'doc-t'",
-            [],
-        )
-        .unwrap();
+        conn.execute("DELETE FROM document_tags WHERE document_id = 'doc-t'", [])
+            .unwrap();
         for tag in &["alpha", "beta"] {
             conn.execute(
                 "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES ('doc-t', ?1)",

@@ -84,9 +84,8 @@ pub fn notes_list(
         "ORDER BY updated_at DESC"
     };
 
-    let sql = format!(
-        "SELECT id, title, content, is_pinned, created_at, updated_at FROM notes {order}"
-    );
+    let sql =
+        format!("SELECT id, title, content, is_pinned, created_at, updated_at FROM notes {order}");
 
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
     let notes: Vec<Note> = stmt
@@ -120,10 +119,7 @@ pub fn notes_get(id: String, state: State<'_, AppState>) -> Result<Note, String>
 }
 
 #[tauri::command]
-pub fn notes_create(
-    input: NoteCreateInput,
-    state: State<'_, AppState>,
-) -> Result<Note, String> {
+pub fn notes_create(input: NoteCreateInput, state: State<'_, AppState>) -> Result<Note, String> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
 
@@ -332,8 +328,10 @@ mod tests {
     fn fetch_tags_returns_sorted_tags() {
         let conn = test_conn();
         insert_note(&conn, "n1", "X", false);
-        conn.execute("INSERT INTO note_tags VALUES ('n1','zebra')", []).unwrap();
-        conn.execute("INSERT INTO note_tags VALUES ('n1','apple')", []).unwrap();
+        conn.execute("INSERT INTO note_tags VALUES ('n1','zebra')", [])
+            .unwrap();
+        conn.execute("INSERT INTO note_tags VALUES ('n1','apple')", [])
+            .unwrap();
         let tags = fetch_tags(&conn, "n1");
         assert_eq!(tags, vec!["apple", "zebra"]);
     }
@@ -424,10 +422,14 @@ mod tests {
     fn tags_set_replaces_all_tags() {
         let conn = test_conn();
         insert_note(&conn, "n1", "X", false);
-        conn.execute("INSERT INTO note_tags VALUES ('n1','old')", []).unwrap();
-        conn.execute("DELETE FROM note_tags WHERE note_id='n1'", []).unwrap();
-        conn.execute("INSERT INTO note_tags VALUES ('n1','new1')", []).unwrap();
-        conn.execute("INSERT INTO note_tags VALUES ('n1','new2')", []).unwrap();
+        conn.execute("INSERT INTO note_tags VALUES ('n1','old')", [])
+            .unwrap();
+        conn.execute("DELETE FROM note_tags WHERE note_id='n1'", [])
+            .unwrap();
+        conn.execute("INSERT INTO note_tags VALUES ('n1','new1')", [])
+            .unwrap();
+        conn.execute("INSERT INTO note_tags VALUES ('n1','new2')", [])
+            .unwrap();
         let tags = fetch_tags(&conn, "n1");
         assert_eq!(tags, vec!["new1", "new2"]);
     }
@@ -436,8 +438,10 @@ mod tests {
     fn tags_set_clears_all_tags() {
         let conn = test_conn();
         insert_note(&conn, "n1", "X", false);
-        conn.execute("INSERT INTO note_tags VALUES ('n1','t1')", []).unwrap();
-        conn.execute("DELETE FROM note_tags WHERE note_id='n1'", []).unwrap();
+        conn.execute("INSERT INTO note_tags VALUES ('n1','t1')", [])
+            .unwrap();
+        conn.execute("DELETE FROM note_tags WHERE note_id='n1'", [])
+            .unwrap();
         assert!(fetch_tags(&conn, "n1").is_empty());
     }
 
@@ -447,9 +451,7 @@ mod tests {
         insert_note(&conn, "n1", "Unpinned", false);
         insert_note(&conn, "n2", "Pinned", true);
         let mut stmt = conn
-            .prepare(
-                "SELECT id FROM notes ORDER BY is_pinned DESC, updated_at DESC",
-            )
+            .prepare("SELECT id FROM notes ORDER BY is_pinned DESC, updated_at DESC")
             .unwrap();
         let ids: Vec<String> = stmt
             .query_map([], |row| row.get(0))

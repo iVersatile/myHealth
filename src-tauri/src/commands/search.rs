@@ -42,10 +42,7 @@ pub fn upsert_search_index(
     body: &str,
     tags: &str,
 ) {
-    let _ = conn.execute(
-        "DELETE FROM search_index WHERE entity_id = ?",
-        [entity_id],
-    );
+    let _ = conn.execute("DELETE FROM search_index WHERE entity_id = ?", [entity_id]);
     let _ = conn.execute(
         "INSERT INTO search_index (entity_type, entity_id, title, body, tags)
          VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -55,10 +52,7 @@ pub fn upsert_search_index(
 
 /// Remove a row from search_index by entity_id.
 pub fn remove_from_search_index(conn: &Connection, entity_id: &str) {
-    let _ = conn.execute(
-        "DELETE FROM search_index WHERE entity_id = ?",
-        [entity_id],
-    );
+    let _ = conn.execute("DELETE FROM search_index WHERE entity_id = ?", [entity_id]);
 }
 
 /// Build an FTS5 MATCH expression with prefix wildcards for each word.
@@ -125,8 +119,7 @@ pub fn search_query(
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
 
     let items: Vec<SearchResult> = if let Some(type_list) = filter_types {
-        let mut params: Vec<rusqlite::types::Value> =
-            vec![rusqlite::types::Value::Text(fts_query)];
+        let mut params: Vec<rusqlite::types::Value> = vec![rusqlite::types::Value::Text(fts_query)];
         for t in type_list {
             params.push(rusqlite::types::Value::Text(t.clone()));
         }
@@ -387,7 +380,14 @@ mod tests {
     #[test]
     fn search_returns_empty_for_no_match() {
         let conn = open_test_db();
-        upsert_search_index(&conn, "note", "n1", "Daily Journal", "feeling good today", "");
+        upsert_search_index(
+            &conn,
+            "note",
+            "n1",
+            "Daily Journal",
+            "feeling good today",
+            "",
+        );
         let fts_query = build_fts_query("blood");
         let mut stmt = conn
             .prepare(
@@ -459,7 +459,14 @@ mod tests {
     #[test]
     fn multi_word_search_requires_all_terms() {
         let conn = open_test_db();
-        upsert_search_index(&conn, "note", "n1", "Blood Pressure", "blood pressure high", "");
+        upsert_search_index(
+            &conn,
+            "note",
+            "n1",
+            "Blood Pressure",
+            "blood pressure high",
+            "",
+        );
         upsert_search_index(&conn, "note", "n2", "Blood Only", "just blood here", "");
 
         let fts_query = build_fts_query("blood pressure");
