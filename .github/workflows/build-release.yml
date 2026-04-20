@@ -98,7 +98,7 @@ jobs:
         with:
           name: myHealth ${{ github.ref_name }}
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           body: |
             ## Install myHealth ${{ github.ref_name }}
