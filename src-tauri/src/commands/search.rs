@@ -357,7 +357,16 @@ mod tests {
     #[test]
     fn search_filtered_by_type() {
         let conn = open_test_db();
-        upsert_search_index(&conn, "note", "n1", "Blood Note", "blood test results", "", "", "");
+        upsert_search_index(
+            &conn,
+            "note",
+            "n1",
+            "Blood Note",
+            "blood test results",
+            "",
+            "",
+            "",
+        );
         upsert_search_index(
             &conn,
             "appointment",
@@ -485,7 +494,16 @@ mod tests {
             "",
             "",
         );
-        upsert_search_index(&conn, "note", "n2", "Blood Only", "just blood here", "", "", "");
+        upsert_search_index(
+            &conn,
+            "note",
+            "n2",
+            "Blood Only",
+            "just blood here",
+            "",
+            "",
+            "",
+        );
 
         let fts_query = build_fts_query("blood pressure");
         let mut stmt = conn

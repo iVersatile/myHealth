@@ -61,7 +61,8 @@ pub fn categories_list(state: State<'_, AppState>) -> Result<Vec<Category>, Stri
         .query_map([], row_to_category)
         .map_err(|e| e.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -240,9 +241,7 @@ pub fn categories_for_document(
     let conn = guard.as_ref().ok_or("database not open")?;
 
     let mut stmt = conn
-        .prepare(
-            "SELECT category_id FROM document_categories WHERE document_id = ?1",
-        )
+        .prepare("SELECT category_id FROM document_categories WHERE document_id = ?1")
         .map_err(|e| e.to_string())?;
 
     let ids = stmt
@@ -263,9 +262,7 @@ pub fn categories_for_appointment(
     let conn = guard.as_ref().ok_or("database not open")?;
 
     let mut stmt = conn
-        .prepare(
-            "SELECT category_id FROM appointment_categories WHERE appointment_id = ?1",
-        )
+        .prepare("SELECT category_id FROM appointment_categories WHERE appointment_id = ?1")
         .map_err(|e| e.to_string())?;
 
     let ids = stmt

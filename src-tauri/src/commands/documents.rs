@@ -646,7 +646,7 @@ mod tests {
 
 #[derive(Debug, Serialize)]
 pub struct ExtractionStatus {
-    pub status: String,   // "done" | "pending" | "failed"
+    pub status: String, // "done" | "pending" | "failed"
     pub text_length: usize,
 }
 

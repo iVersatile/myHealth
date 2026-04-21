@@ -7,19 +7,31 @@ pub struct ParsedFilename {
 }
 
 const STOPWORDS: &[&str] = &[
-    "a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for",
-    "with", "by", "from", "up", "as", "is", "it", "its",
+    "a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for", "with", "by", "from", "up",
+    "as", "is", "it", "its",
 ];
 
 const MONTHS: &[(&str, u32)] = &[
-    ("jan", 1), ("feb", 2), ("mar", 3), ("apr", 4),
-    ("may", 5), ("jun", 6), ("jul", 7), ("aug", 8),
-    ("sep", 9), ("oct", 10), ("nov", 11), ("dec", 12),
+    ("jan", 1),
+    ("feb", 2),
+    ("mar", 3),
+    ("apr", 4),
+    ("may", 5),
+    ("jun", 6),
+    ("jul", 7),
+    ("aug", 8),
+    ("sep", 9),
+    ("oct", 10),
+    ("nov", 11),
+    ("dec", 12),
 ];
 
 fn parse_month(s: &str) -> Option<u32> {
     let lower = s.to_lowercase();
-    MONTHS.iter().find(|(name, _)| *name == lower.as_str()).map(|(_, m)| *m)
+    MONTHS
+        .iter()
+        .find(|(name, _)| *name == lower.as_str())
+        .map(|(_, m)| *m)
 }
 
 pub fn parse_filename(stem: &str) -> ParsedFilename {
@@ -30,10 +42,8 @@ pub fn parse_filename(stem: &str) -> ParsedFilename {
 
     // Pattern: YYYY-MM-DD  e.g. 2024-12-01
     if document_date.is_none() {
-        let re = regex::Regex::new(
-            r"\b(19|20)\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b",
-        )
-        .unwrap();
+        let re =
+            regex::Regex::new(r"\b(19|20)\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])\b").unwrap();
         if let Some(m) = re.find(&remaining) {
             let s = m.as_str();
             let parts: Vec<&str> = s.split('-').collect();
@@ -50,10 +60,8 @@ pub fn parse_filename(stem: &str) -> ParsedFilename {
 
     // Pattern: YYYYMMDD  e.g. 20241201
     if document_date.is_none() {
-        let re = regex::Regex::new(
-            r"\b(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\b",
-        )
-        .unwrap();
+        let re =
+            regex::Regex::new(r"\b(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\b").unwrap();
         if let Some(m) = re.find(&remaining) {
             let s = m.as_str();
             if let (Ok(y), Ok(mo), Ok(d)) = (
@@ -144,7 +152,10 @@ pub fn parse_filename(stem: &str) -> ParsedFilename {
     tags.extend(extra_tags);
     tags.dedup();
 
-    ParsedFilename { document_date, tags }
+    ParsedFilename {
+        document_date,
+        tags,
+    }
 }
 
 #[cfg(test)]
@@ -185,7 +196,11 @@ mod tests {
     fn year_only_produces_tag_no_date() {
         let r = parse_filename("AnnualReport_2024_NHS");
         assert_eq!(r.document_date, None);
-        assert!(r.tags.contains(&"year:2024".to_string()), "tags: {:?}", r.tags);
+        assert!(
+            r.tags.contains(&"year:2024".to_string()),
+            "tags: {:?}",
+            r.tags
+        );
     }
 
     // ── Tag extraction tests ─────────────────────────────────────────────────

@@ -79,9 +79,11 @@ mod tests {
     fn system_categories_seeded() {
         let conn = migrated_conn();
         let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM categories WHERE is_system = 1", [], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE is_system = 1",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
         assert_eq!(count, 8, "expected 8 system categories");
     }
@@ -112,17 +114,21 @@ mod tests {
         )
         .unwrap();
         let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM categories WHERE id = 'cat_test'", [], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE id = 'cat_test'",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
         assert_eq!(count, 1);
         conn.execute("DELETE FROM categories WHERE id = 'cat_test'", [])
             .unwrap();
         let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM categories WHERE id = 'cat_test'", [], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE id = 'cat_test'",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
         assert_eq!(count, 0);
     }
@@ -228,19 +234,19 @@ mod tests {
         )
         .unwrap();
         let name: String = conn
-            .query_row(
-                "SELECT name FROM clinics WHERE id = 'clin-1'",
-                [],
-                |r| r.get(0),
-            )
+            .query_row("SELECT name FROM clinics WHERE id = 'clin-1'", [], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(name, "City Hospital");
         conn.execute("DELETE FROM clinics WHERE id = 'clin-1'", [])
             .unwrap();
         let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM clinics WHERE id = 'clin-1'", [], |r| {
-                r.get(0)
-            })
+            .query_row(
+                "SELECT COUNT(*) FROM clinics WHERE id = 'clin-1'",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
         assert_eq!(count, 0);
     }
@@ -278,7 +284,10 @@ mod tests {
              VALUES ('lnk-2','doc-v2-2','appt-v2-2','related','manual','2024-01-01')",
             [],
         );
-        assert!(result.is_err(), "duplicate (doc, appt) pair should be rejected");
+        assert!(
+            result.is_err(),
+            "duplicate (doc, appt) pair should be rejected"
+        );
     }
 
     #[test]
@@ -407,7 +416,10 @@ mod tests {
              '2024-10-02T00:00:00Z')",
             [],
         );
-        assert!(result.is_err(), "duplicate external_id in calendar_events should be rejected");
+        assert!(
+            result.is_err(),
+            "duplicate external_id in calendar_events should be rejected"
+        );
     }
 
     // ── v2 column additions ──────────────────────────────────────────────────
