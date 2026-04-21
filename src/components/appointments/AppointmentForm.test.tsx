@@ -278,7 +278,7 @@ describe('AppointmentForm', () => {
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalled()
-        const savedData = onSave.mock.calls[0][0]
+        const savedData = onSave.mock.calls[0]![0]
         expect(savedData).toEqual(
           expect.objectContaining({
             title: 'Doctor Visit',
@@ -297,7 +297,7 @@ describe('AppointmentForm', () => {
       const onCancel = vi.fn()
       const onSave = vi.fn(
         () =>
-          new Promise((resolve) => {
+          new Promise<void>((resolve) => {
             setTimeout(resolve, 100)
           })
       )
@@ -322,7 +322,7 @@ describe('AppointmentForm', () => {
       const onCancel = vi.fn()
       const onSave = vi.fn(
         () =>
-          new Promise((resolve) => {
+          new Promise<void>((resolve) => {
             setTimeout(resolve, 100)
           })
       )
@@ -469,7 +469,7 @@ describe('AppointmentForm', () => {
       // Simulate category selection
       const categoryElements = await screen.findAllByRole('checkbox')
       if (categoryElements.length > 0) {
-        await userEvent.click(categoryElements[0])
+        await userEvent.click(categoryElements[0]!)
       }
 
       const saveButton = await screen.findByRole('button', { name: /save changes/i })
@@ -518,7 +518,7 @@ describe('AppointmentForm', () => {
       // Simulate category deselection
       const categoryElements = await screen.findAllByRole('checkbox')
       if (categoryElements.length > 0) {
-        await userEvent.click(categoryElements[0])
+        await userEvent.click(categoryElements[0]!)
       }
 
       const saveButton = await screen.findByRole('button', { name: /save changes/i })
@@ -548,7 +548,7 @@ describe('AppointmentForm', () => {
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalled()
-        const savedData = onSave.mock.calls[0][0]
+        const savedData = onSave.mock.calls[0]![0]
         expect(savedData.appt_date).toBe('2025-01-15T10:00:00')
       })
     })
@@ -608,7 +608,7 @@ describe('AppointmentForm', () => {
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalled()
-        const savedData = onSave.mock.calls[0][0]
+        const savedData = onSave.mock.calls[0]![0]
         expect(savedData.duration_min).toBe(60)
         expect(savedData.reminder_min).toBe(30)
       })
@@ -633,7 +633,7 @@ describe('AppointmentForm', () => {
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalled()
-        const savedData = onSave.mock.calls[0][0]
+        const savedData = onSave.mock.calls[0]![0]
         expect(savedData.duration_min).toBeNull()
         expect(savedData.reminder_min).toBe(60)
       })
@@ -660,7 +660,7 @@ describe('AppointmentForm', () => {
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalled()
-        const savedData = onSave.mock.calls[0][0]
+        const savedData = onSave.mock.calls[0]![0]
         expect(savedData.specialty).toBe('Cardiology')
       })
     })
@@ -698,7 +698,7 @@ describe('AppointmentForm', () => {
 
       await waitFor(() => {
         expect(onSave).toHaveBeenCalled()
-        const savedData = onSave.mock.calls[0][0]
+        const savedData = onSave.mock.calls[0]![0]
         expect(savedData.status).toBe('completed')
       })
     })
