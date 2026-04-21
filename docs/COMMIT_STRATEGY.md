@@ -70,6 +70,16 @@ Team reference for branch management, commit conventions, and release workflow.
 
 ---
 
+## Push & CI Workflow
+
+These rules apply to every local commit and every remote push on `develop`:
+
+1. **Auto-push after local commit** — after each task-boundary commit, verify build and tests pass locally, then push to `origin/develop` immediately without asking.
+2. **Monitor CI after every push** — after pushing, check CI status (`gh run list --branch develop --limit 1`). If CI fails, diagnose and auto-fix without waiting to be asked; push the fix.
+3. **Gate new tasks on green CI** — do not start the next PLAN-v2.md task until `develop` CI is green. If CI is red, fix it first.
+
+---
+
 ## Rust vs TypeScript — Separate Commits
 
 Even within one PR, keep backend and frontend in separate commits:
