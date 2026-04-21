@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import {
   Appointment,
   SPECIALTY_OPTIONS,
@@ -9,11 +10,13 @@ import {
   AppointmentStatus,
 } from '../../store/appointmentsStore'
 import { AppointmentInput } from '../../hooks/useAppointments'
+import { CategoryPicker, type Category } from '../categories/CategoryPicker'
 
 interface AppointmentFormProps {
   initial?: Appointment
   onSave: (input: AppointmentInput) => Promise<void>
   onCancel: () => void
+  onCategoriesChange?: (ids: string[]) => void
 }
 
 function isoToDatetimeLocal(iso: string): string {
@@ -26,7 +29,7 @@ function datetimeLocalToIso(local: string): string {
 
 const STATUS_OPTIONS: AppointmentStatus[] = ['scheduled', 'completed', 'cancelled', 'missed']
 
-export function AppointmentForm({ initial, onSave, onCancel }: AppointmentFormProps) {
+export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange }: AppointmentFormProps) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [doctorName, setDoctorName] = useState(initial?.doctor_name ?? '')
   const [clinicName, setClinicName] = useState(initial?.clinic_name ?? '')
@@ -41,6 +44,59 @@ export function AppointmentForm({ initial, onSave, onCancel }: AppointmentFormPr
   const [reminderMin, setReminderMin] = useState(String(initial?.reminder_min ?? 60))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+
+  useEffect(() => {
+    const loads: Promise<void>[] = [
+      invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list')
+        .then((rows) =>
+          setAllCategories(
+            rows.map((r) => ({
+              id: r.id,
+              name: r.name,
+              parentId: r.parent_id,
+              colorHex: r.color_hex,
+              isSystem: r.is_system,
+              sortOrder: r.sort_order,
+            }))
+          )
+        )
+        .catch(() => {}),
+    ]
+    if (initial?.id) {
+      loads.push(
+        invoke<string[]>('categories_for_appointment', { appointmentId: initial.id })
+          .then(setSelectedCategoryIds)
+          .catch(() => {})
+      )
+    }
+    void Promise.all(loads)
+  }, [initial?.id])
+
+  async function handleCategoryChange(nextIds: string[]) {
+    if (!initial?.id) {
+      setSelectedCategoryIds(nextIds)
+      onCategoriesChange?.(nextIds)
+      return
+    }
+    const toAdd = nextIds.filter((id) => !selectedCategoryIds.includes(id))
+    const toRemove = selectedCategoryIds.filter((id) => !nextIds.includes(id))
+    try {
+      await Promise.all([
+        ...toAdd.map((categoryId) =>
+          invoke('categories_assign_appointment', { appointmentId: initial.id, categoryId })
+        ),
+        ...toRemove.map((categoryId) =>
+          invoke('categories_unassign', { entityId: initial.id, categoryId, entityType: 'appointment' })
+        ),
+      ])
+      setSelectedCategoryIds(nextIds)
+      onCategoriesChange?.(nextIds)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -218,6 +274,15 @@ export function AppointmentForm({ initial, onSave, onCancel }: AppointmentFormPr
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Bring fasting blood test results…"
           className={`${inputClass} resize-y`}
+        />
+      </div>
+
+      <div>
+        <label className={labelClass}>Categories</label>
+        <CategoryPicker
+          categories={allCategories}
+          selectedIds={selectedCategoryIds}
+          onChange={handleCategoryChange}
         />
       </div>
 

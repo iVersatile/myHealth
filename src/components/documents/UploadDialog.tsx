@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Document, DocumentCategory, DOCUMENT_CATEGORIES, CATEGORY_LABELS } from '../../store/documentsStore'
+import { CategoryPicker, Category } from '../categories/CategoryPicker'
 
 interface UploadDialogProps {
   onClose: () => void
@@ -19,6 +20,25 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+
+  useEffect(() => {
+    invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list')
+      .then((rows) =>
+        setAllCategories(
+          rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            parentId: r.parent_id,
+            colorHex: r.color_hex,
+            isSystem: r.is_system,
+            sortOrder: r.sort_order,
+          }))
+        )
+      )
+      .catch(() => {})
+  }, [])
 
   async function pickFile() {
     const selected = await open({
@@ -77,6 +97,13 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
         onUploaded({ ...doc, tags })
       } else {
         onUploaded(doc)
+      }
+      if (selectedCategoryIds.length > 0) {
+        await Promise.all(
+          selectedCategoryIds.map((categoryId) =>
+            invoke('categories_assign_document', { documentId: doc.id, categoryId })
+          )
+        )
       }
       onClose()
     } catch (err: unknown) {
@@ -174,6 +201,21 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
               ))}
             </select>
           </div>
+
+          {/* Medical Categories */}
+          {allCategories.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <label className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                Medical Categories{' '}
+                <span className="font-normal text-[var(--color-text-secondary)]">(optional)</span>
+              </label>
+              <CategoryPicker
+                categories={allCategories}
+                selectedIds={selectedCategoryIds}
+                onChange={setSelectedCategoryIds}
+              />
+            </div>
+          )}
 
           {/* Tags */}
           <div className="flex flex-col gap-1">

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { Document, CATEGORY_LABELS } from '../../../../store/documentsStore'
+import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -33,15 +34,42 @@ export default function DocumentDetailClient() {
   const [notesSaved, setNotesSaved] = useState(false)
   const [savingTags, setSavingTags] = useState(false)
 
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const fetched = await invoke<Document>('documents_get', { id })
+        const [fetched, catRows, assignedIds] = await Promise.all([
+          invoke<Document>('documents_get', { id }),
+          invoke<
+            Array<{
+              id: string
+              name: string
+              parent_id: string | null
+              color_hex: string
+              is_system: boolean
+              sort_order: number
+            }>
+          >('categories_list'),
+          invoke<string[]>('categories_for_document', { documentId: id }),
+        ])
         setDoc(fetched)
         setTags(fetched.tags)
         setNotes(fetched.notes ?? '')
+        setAllCategories(
+          catRows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            parentId: r.parent_id,
+            colorHex: r.color_hex,
+            isSystem: r.is_system,
+            sortOrder: r.sort_order,
+          }))
+        )
+        setSelectedCategoryIds(assignedIds)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -86,6 +114,25 @@ export default function DocumentDetailClient() {
       setTags(next)
     } finally {
       setSavingTags(false)
+    }
+  }
+
+  async function handleCategoryChange(nextIds: string[]) {
+    if (!doc) return
+    const toAdd = nextIds.filter((id) => !selectedCategoryIds.includes(id))
+    const toRemove = selectedCategoryIds.filter((id) => !nextIds.includes(id))
+    try {
+      await Promise.all([
+        ...toAdd.map((categoryId) =>
+          invoke('categories_assign_document', { documentId: doc.id, categoryId })
+        ),
+        ...toRemove.map((categoryId) =>
+          invoke('categories_unassign', { entityId: doc.id, categoryId, entityType: 'document' })
+        ),
+      ])
+      setSelectedCategoryIds(nextIds)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     }
   }
 
@@ -187,6 +234,23 @@ export default function DocumentDetailClient() {
           </dl>
 
           <hr className="my-4 border-[var(--color-border)]" />
+
+          {allCategories.length > 0 && (
+            <>
+              <div className="mb-4">
+                <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                  Medical Categories
+                </p>
+                <CategoryPicker
+                  categories={allCategories}
+                  selectedIds={selectedCategoryIds}
+                  onChange={(ids) => void handleCategoryChange(ids)}
+                />
+              </div>
+
+              <hr className="my-4 border-[var(--color-border)]" />
+            </>
+          )}
 
           <div className="mb-4">
             <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">Tags</p>
