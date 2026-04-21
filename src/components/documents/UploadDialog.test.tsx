@@ -29,6 +29,10 @@ describe('UploadDialog', () => {
   beforeEach(() => {
     mockInvoke.mockReset()
     mockOpen.mockReset()
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
   })
 
   it('renders dialog title', () => {
