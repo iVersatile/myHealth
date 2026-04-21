@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 14 — Task 14.4: Update FTS5 index for new fields
+▶ Phase 18 — Task 18.1: F4 Apple Calendar Sync — Swift plugin scaffold
 ```
 
 ---
@@ -106,22 +106,22 @@
    - `is_system = 1` (cannot be deleted by user)
    - Done when: fresh DB has 8 categories after migration
 
-▶ [ ] **14.4 — Update FTS5 index for new fields**
+[x] **14.4 — Update FTS5 index for new fields**
    - Extend `search_index` virtual table to include `extracted_metadata` and `category_name`
    - Update `src-tauri/src/commands/search.rs` to populate new fields on upsert
    - Done when: `cargo test` covers FTS5 search hitting extracted_metadata
 
-[ ] **14.5 — Update documents Rust model**
-   - Add `document_date: Option<String>` and `extracted_metadata: Option<serde_json::Value>` to `Document` struct in `src-tauri/src/commands/documents.rs`
+[x] **14.5 — Update documents Rust model**
+   - Add `document_date: Option<String>` and `extracted_metadata: Option<String>` to `Document` struct in `src-tauri/src/commands/documents.rs`
    - Done when: `cargo test` passes serialization round-trip
 
-[ ] **14.6 — Schema v2 tests** — `cargo test` coverage ≥ 80% for new tables
+[x] **14.6 — Schema v2 tests** — `cargo test` coverage ≥ 80% for new tables
 
 ---
 
 ## Phase 15 — F1: Filename Date & Tag Parsing
 
-[ ] **15.1 — Rust filename parser**
+[x] **15.1 — Rust filename parser**
    - Create `src-tauri/src/parsing/filename.rs`
    - Patterns to recognise (extract as `document_date`):
      - `DDMMMYYYY` → `01Dec2024`
@@ -133,76 +133,76 @@
    - Return: `ParsedFilename { document_date: Option<NaiveDate>, tags: Vec<String> }`
    - Done when: `cargo test` passes for all 5 date patterns + tag extraction
 
-[ ] **15.2 — Apply parser on upload**
+[x] **15.2 — Apply parser on upload**
    - In `documents_upload` command: call `parse_filename`, set `document_date` if extracted
    - Merge parsed tags with any user-provided tags (deduplicate, lowercase)
    - `document_date` from filename takes precedence over user-entered date
    - Done when: uploading `BloodTest_01Dec2024_NHS.pdf` sets `document_date = 2024-12-01` and tags `['blood test', 'nhs']`
 
-[ ] **15.3 — F1 tests** — `cargo test` coverage ≥ 80% for filename module
+[x] **15.3 — F1 tests** — `cargo test` coverage ≥ 80% for filename module
 
 ---
 
 ## Phase 16 — F2: PDF Text & OCR Extraction
 
-[ ] **16.1 — Add Rust dependencies**
+[x] **16.1 — Add Rust dependencies**
    - Add to `src-tauri/Cargo.toml`:
      - `pdf-extract = "0.7"` (text-based PDFs)
      - `leptess = "0.14"` (Tesseract OCR bindings for images)
      - `image = "0.25"` (image decoding for JPEG/PNG)
    - Done when: `cargo build` exits 0
 
-[ ] **16.2 — PDF text extractor**
+[x] **16.2 — PDF text extractor**
    - Create `src-tauri/src/extraction/pdf.rs`
    - Function: `extract_pdf_text(path: &Path) -> Result<String>`
    - Use `pdf-extract`; fall back to empty string if error
    - Done when: `cargo test` extracts text from a sample text-based PDF
 
-[ ] **16.3 — OCR extractor for images**
+[x] **16.3 — OCR extractor for images**
    - Create `src-tauri/src/extraction/ocr.rs`
    - Function: `extract_image_text(path: &Path) -> Result<String>`
    - Use `leptess` with `eng` language data
    - Support: JPEG, PNG, TIFF
    - Done when: `cargo test` extracts text from a sample scanned image
 
-[ ] **16.4 — Extraction orchestrator**
+[x] **16.4 — Extraction orchestrator**
    - Create `src-tauri/src/extraction/mod.rs`
    - Route by file extension: `.pdf` → pdf extractor; `.jpg`/`.jpeg`/`.png` → OCR
    - Store result in `documents.extracted_metadata` as JSON `{"text": "...", "extracted_at": "..."}`
    - Extraction runs async after upload (non-blocking)
    - Done when: uploading a PDF populates `extracted_metadata` within 5 s
 
-[ ] **16.5 — Tauri command: get extraction status**
+[x] **16.5 — Tauri command: get extraction status**
    - Add `documents_get_extraction_status(id)` returning `{status: "pending"|"done"|"failed", text_length: usize}`
    - Done when: frontend can poll status
 
-[ ] **16.6 — F2 tests** — coverage ≥ 80% for extraction module
+[x] **16.6 — F2 tests** — coverage ≥ 80% for extraction module
 
 ---
 
 ## Phase 17 — F3: Medical Category Hierarchy
 
-[ ] **17.1 — Rust category commands**
+[x] **17.1 — Rust category commands**
    - Create `src-tauri/src/commands/categories.rs`
    - Commands: `categories_list`, `categories_create`, `categories_update`, `categories_delete` (user-created only), `categories_assign_document`, `categories_assign_appointment`, `categories_unassign`
    - Done when: `cargo test` covers CRUD + assignment
 
-[ ] **17.2 — Category picker UI component**
+[x] **17.2 — Category picker UI component**
    - Create `src/components/categories/CategoryPicker.tsx`
    - Multi-select with parent/child indentation
    - System categories shown first (not deletable); user categories below with delete button
    - Done when: component renders with mock data
 
-[ ] **17.3 — Wire categories to Documents**
+[x] **17.3 — Wire categories to Documents**
    - Add category multi-select to `UploadDialog.tsx` and `DocumentDetail` page
    - Call `categories_assign_document` / `categories_unassign` on change
    - Done when: assigning a category to a document persists and reloads correctly
 
-[ ] **17.4 — Wire categories to Appointments**
+[x] **17.4 — Wire categories to Appointments**
    - Add category multi-select to `AppointmentForm.tsx`
    - Done when: assigning a category to an appointment persists
 
-[ ] **17.5 — F3 tests** — coverage ≥ 80%
+[x] **17.5 — F3 tests** — coverage ≥ 80%
 
 ---
 

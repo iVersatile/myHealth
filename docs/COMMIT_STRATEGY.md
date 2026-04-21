@@ -64,6 +64,8 @@ Team reference for branch management, commit conventions, and release workflow.
 
 - Subject: imperative mood, lowercase, no period, max 50 chars
 - Body: explain *why*, not what — wrap at 72 chars, blank line after subject
+- **Commit at task boundaries** — one commit (or one commit pair: backend + frontend) per completed PLAN-v2.md task, after its "Done when" criterion is met and tests pass
+- **Verify the build before committing** — run `pnpm build` locally; a commit that breaks the TypeScript/Next.js build will fail the `lint.yml` / `test.yml` CI jobs on `develop`
 - Never commit code that doesn't compile or has failing tests
 
 ---
