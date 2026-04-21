@@ -4,6 +4,7 @@ use std::path::Path;
 ///
 /// Currently a stub returning empty string since system Tesseract
 /// is not installed. In production, this would use a real OCR engine.
+#[allow(dead_code)]
 pub fn extract_image_text(path: &Path) -> Result<String, String> {
     // Stub: return empty string for now
     // In the future, replace with actual OCR (leptess or pure-Rust alternative)

@@ -1,5 +1,6 @@
 use std::path::Path;
 
+#[allow(dead_code)]
 pub fn extract_pdf_text(path: &Path) -> Result<String, String> {
     match pdf_extract::extract_text(path) {
         Ok(text) => Ok(text),

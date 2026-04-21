@@ -5,6 +5,7 @@ use chrono::Utc;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ExtractionResult {
     pub text: String,
     pub extracted_at: String,
@@ -16,6 +17,7 @@ pub struct ExtractionResult {
 /// - PDF files → pdf::extract_pdf_text
 /// - Images (jpg, jpeg, png, tiff, tif) → ocr::extract_image_text
 /// - Other formats → returns empty text
+#[allow(dead_code)]
 pub fn extract(path: &Path) -> ExtractionResult {
     let ext = path
         .extension()
