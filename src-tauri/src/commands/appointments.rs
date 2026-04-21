@@ -223,7 +223,7 @@ pub fn appointments_create(
         appt.notes.as_deref().unwrap_or(""),
     ]
     .join(" ");
-    upsert_search_index(conn, "appointment", &appt.id, &appt.title, &body, "");
+    upsert_search_index(conn, "appointment", &appt.id, &appt.title, &body, "", "", "");
     Ok(appt)
 }
 
@@ -285,7 +285,7 @@ pub fn appointments_update(
         appt.notes.as_deref().unwrap_or(""),
     ]
     .join(" ");
-    upsert_search_index(conn, "appointment", &appt.id, &appt.title, &body, "");
+    upsert_search_index(conn, "appointment", &appt.id, &appt.title, &body, "", "", "");
     Ok(appt)
 }
 

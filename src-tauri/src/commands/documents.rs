@@ -2,12 +2,14 @@ use std::fs;
 use std::path::PathBuf;
 
 use chrono::Utc;
+use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::AppState;
+use crate::parsing::filename::parse_filename;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Document {
@@ -22,6 +24,8 @@ pub struct Document {
     pub created_at: String,
     pub updated_at: String,
     pub is_deleted: bool,
+    pub document_date: Option<String>,
+    pub extracted_metadata: Option<String>,
     pub tags: Vec<String>,
 }
 
@@ -85,7 +89,8 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, String> {
     let mut stmt = conn
         .prepare(
             "SELECT id, filename, file_path, mime_type, file_size_bytes, category, \
-             thumbnail_path, notes, created_at, updated_at, is_deleted \
+             thumbnail_path, notes, created_at, updated_at, is_deleted, \
+             document_date, extracted_metadata \
              FROM documents WHERE id = ?",
         )
         .map_err(|e| e.to_string())?;
@@ -103,6 +108,8 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, String> {
                 created_at: row.get(8)?,
                 updated_at: row.get(9)?,
                 is_deleted: row.get::<_, i64>(10)? != 0,
+                document_date: row.get(11)?,
+                extracted_metadata: row.get(12)?,
                 tags: vec![],
             })
         })
@@ -192,6 +199,16 @@ pub fn documents_upload(
     let mime = mime_from_ext(&ext).to_string();
     let file_size = fs::metadata(src).map_err(|e| e.to_string())?.len() as i64;
 
+    // Parse filename stem for date and tags.
+    let stem = src
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&filename);
+    let parsed = parse_filename(stem);
+    let document_date: Option<String> = parsed
+        .document_date
+        .map(|d| d.format("%Y-%m-%d").to_string());
+
     let id = Uuid::new_v4().to_string();
     let dest_dir = storage_dir()?.join(&id);
     fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
@@ -217,8 +234,8 @@ pub fn documents_upload(
     conn.execute(
         "INSERT INTO documents \
          (id, filename, file_path, mime_type, file_size_bytes, category, \
-          thumbnail_path, notes, created_at, updated_at, is_deleted) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9, 0)",
+          thumbnail_path, notes, document_date, created_at, updated_at, is_deleted) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10, 0)",
         rusqlite::params![
             id,
             filename,
@@ -228,10 +245,20 @@ pub fn documents_upload(
             category,
             thumbnail_path,
             notes,
+            document_date,
             now,
         ],
     )
     .map_err(|e| e.to_string())?;
+
+    // Insert tags parsed from the filename.
+    for tag in &parsed.tags {
+        conn.execute(
+            "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
+            rusqlite::params![id, tag],
+        )
+        .map_err(|e| e.to_string())?;
+    }
 
     let doc = load_doc(conn, &id)?;
     let body = doc.notes.as_deref().unwrap_or("").to_string();
@@ -242,6 +269,8 @@ pub fn documents_upload(
         &doc.filename,
         &body,
         &doc.tags.join(","),
+        "",
+        "",
     );
     Ok(doc)
 }
@@ -278,6 +307,8 @@ pub fn documents_update(
         &doc.filename,
         &body,
         &doc.tags.join(","),
+        "",
+        "",
     );
     Ok(doc)
 }
@@ -327,6 +358,8 @@ pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), S
             &doc.filename,
             &body,
             &doc.tags.join(","),
+            "",
+            "",
         );
     }
     Ok(())
@@ -396,6 +429,8 @@ pub fn documents_tags_set(
             &doc.filename,
             &body,
             &doc.tags.join(","),
+            "",
+            "",
         );
     }
 
@@ -426,7 +461,9 @@ mod tests {
                 created_at      DATETIME NOT NULL,
                 updated_at      DATETIME NOT NULL,
                 is_deleted      BOOLEAN  NOT NULL DEFAULT 0,
-                deleted_at      DATETIME
+                deleted_at      DATETIME,
+                document_date   TEXT,
+                extracted_metadata TEXT
             );
             CREATE TABLE document_tags (
                 document_id TEXT NOT NULL,
@@ -576,5 +613,79 @@ mod tests {
         assert_eq!(mime_from_ext("PNG"), "image/png");
         assert_eq!(mime_from_ext("jpg"), "image/jpeg");
         assert_eq!(mime_from_ext("xyz"), "application/octet-stream");
+    }
+
+    #[test]
+    fn document_date_roundtrip() {
+        let conn = test_conn();
+        insert_doc(&conn, "doc-date", "lab", false);
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE documents SET document_date = '2024-12-01' WHERE id = 'doc-date'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE documents SET updated_at = ?1 WHERE id = 'doc-date'",
+            rusqlite::params![now],
+        )
+        .unwrap();
+        let doc = load_doc(&conn, "doc-date").unwrap();
+        assert_eq!(doc.document_date.as_deref(), Some("2024-12-01"));
+    }
+
+    #[test]
+    fn extracted_metadata_none_by_default() {
+        let conn = test_conn();
+        insert_doc(&conn, "doc-meta", "lab", false);
+        let doc = load_doc(&conn, "doc-meta").unwrap();
+        assert!(doc.extracted_metadata.is_none());
+        assert!(doc.document_date.is_none());
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExtractionStatus {
+    pub status: String,   // "done" | "pending" | "failed"
+    pub text_length: usize,
+}
+
+#[tauri::command]
+pub fn documents_get_extraction_status(
+    id: String,
+    state: State<'_, crate::commands::AppState>,
+) -> Result<ExtractionStatus, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    let meta: Option<Option<String>> = conn
+        .query_row(
+            "SELECT extracted_metadata FROM documents WHERE id = ?1 AND is_deleted = 0",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+
+    match meta {
+        None => Err(format!("document {} not found", id)),
+        Some(None) => Ok(ExtractionStatus {
+            status: "pending".into(),
+            text_length: 0,
+        }),
+        Some(Some(json_str)) => {
+            let text_length = serde_json::from_str::<serde_json::Value>(&json_str)
+                .ok()
+                .and_then(|v| v["text"].as_str().map(|s| s.len()))
+                .unwrap_or(0);
+            Ok(ExtractionStatus {
+                status: if text_length > 0 {
+                    "done".into()
+                } else {
+                    "failed".into()
+                },
+                text_length,
+            })
+        }
     }
 }

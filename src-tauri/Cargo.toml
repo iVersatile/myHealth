@@ -31,3 +31,9 @@ hmac = "0.12"
 sha2 = "0.10"
 rand = "0.8"
 tauri-plugin-dialog = "2"
+regex = "1"
+pdf-extract = "0.7"
+image = "0.25"
+# Note: leptess/tesseract require system Tesseract/Leptonica libraries
+# Pure-Rust OCR alternatives available but not yet integrated
+# For now: pdf-extract for PDF text, image for image processing

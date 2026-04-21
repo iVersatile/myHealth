@@ -2,6 +2,7 @@ use rusqlite::Connection;
 
 pub mod appointments;
 pub mod auth;
+pub mod categories;
 pub mod contacts;
 pub mod documents;
 pub mod export;

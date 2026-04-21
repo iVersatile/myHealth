@@ -1,6 +1,8 @@
 pub(crate) mod commands;
 pub(crate) mod crypto;
 pub(crate) mod db;
+pub(crate) mod extraction;
+pub(crate) mod parsing;
 
 use commands::appointments::{
     appointments_create, appointments_delete, appointments_get, appointments_link_document,
@@ -9,12 +11,17 @@ use commands::appointments::{
 use commands::auth::{
     auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
 };
+use commands::categories::{
+    categories_assign_appointment, categories_assign_document, categories_create,
+    categories_delete, categories_for_appointment, categories_for_document, categories_list,
+    categories_unassign, categories_update,
+};
 use commands::contacts::{
     contacts_create, contacts_delete, contacts_get, contacts_list, contacts_update,
 };
 use commands::documents::{
-    documents_delete, documents_get, documents_get_file_url, documents_list, documents_restore,
-    documents_tags_set, documents_update, documents_upload,
+    documents_delete, documents_get, documents_get_extraction_status, documents_get_file_url,
+    documents_list, documents_restore, documents_tags_set, documents_update, documents_upload,
 };
 use commands::export::{export_pdf_bundle, export_save_bytes};
 use commands::notes::{
@@ -54,6 +61,7 @@ pub fn run() {
             documents_delete,
             documents_restore,
             documents_get_file_url,
+            documents_get_extraction_status,
             documents_tags_set,
             appointments_list,
             appointments_get,
@@ -68,6 +76,15 @@ pub fn run() {
             notes_delete,
             notes_pin,
             notes_tags_set,
+            categories_list,
+            categories_create,
+            categories_update,
+            categories_delete,
+            categories_assign_document,
+            categories_assign_appointment,
+            categories_for_document,
+            categories_for_appointment,
+            categories_unassign,
             contacts_list,
             contacts_get,
             contacts_create,

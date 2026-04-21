@@ -160,7 +160,7 @@ pub fn contacts_create(
         c.notes.as_deref().unwrap_or(""),
     ]
     .join(" ");
-    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "");
+    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "", "", "");
     Ok(c)
 }
 
@@ -246,7 +246,7 @@ pub fn contacts_update(
         c.notes.as_deref().unwrap_or(""),
     ]
     .join(" ");
-    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "");
+    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "", "", "");
     Ok(c)
 }
 

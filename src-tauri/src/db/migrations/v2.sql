@@ -114,3 +114,20 @@ INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order) V
   ('cat_prescriptions',    'Prescriptions',    NULL, '#10B981', 1, 5),
   ('cat_surgery',          'Surgery',          NULL, '#F59E0B', 1, 6),
   ('cat_other',            'Other',            NULL, '#64748B', 1, 7);
+
+-- ============================================================================
+-- SEARCH INDEX EXTENSION (F2: extracted_metadata and category_name)
+-- ============================================================================
+-- FTS5 virtual tables cannot be altered, so we recreate with new columns.
+
+DROP TABLE IF EXISTS search_index;
+CREATE VIRTUAL TABLE search_index USING fts5(
+  entity_type,
+  entity_id,
+  title,
+  body,
+  tags,
+  extracted_metadata,
+  category_name,
+  tokenize = 'porter unicode61'
+);
