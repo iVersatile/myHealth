@@ -1,8 +1,7 @@
 use rusqlite::{Connection, Result};
 
-const SCHEMA: &str = include_str!("schema.sql");
-const CURRENT_VERSION: i32 = 1;
-
+const SCHEMA_V1: &str = include_str!("schema.sql");
+const SCHEMA_V2: &str = include_str!("migrations/v2.sql");
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -17,12 +16,18 @@ pub fn run(conn: &Connection) -> Result<()> {
         |row| row.get(0),
     )?;
 
-    if version < CURRENT_VERSION {
-        conn.execute_batch(SCHEMA)?;
-        conn.execute(
-            "INSERT INTO schema_migrations (version) VALUES (?1)",
-            [CURRENT_VERSION],
-        )?;
+    if version < 1 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V1)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [1])?;
+        tx.commit()?;
+    }
+
+    if version < 2 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V2)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [2])?;
+        tx.commit()?;
     }
 
     Ok(())
