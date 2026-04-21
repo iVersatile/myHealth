@@ -65,7 +65,8 @@ Team reference for branch management, commit conventions, and release workflow.
 - Subject: imperative mood, lowercase, no period, max 50 chars
 - Body: explain *why*, not what — wrap at 72 chars, blank line after subject
 - **Commit at task boundaries** — one commit (or one commit pair: backend + frontend) per completed PLAN-v2.md task, after its "Done when" criterion is met and tests pass
-- **Verify the build before committing** — run `pnpm build` locally; a commit that breaks the TypeScript/Next.js build will fail the `lint.yml` / `test.yml` CI jobs on `develop`
+- **Never mark a task complete without proving it works** — run tests, verify the "Done when" criterion is met; marking complete on untested code is a false signal
+- **Verify the build before committing** — for TypeScript: `pnpm build`; for Rust: `cargo fmt --all -- --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test`; a passing local check is the gate, not CI
 - Never commit code that doesn't compile or has failing tests
 
 ---
@@ -77,6 +78,10 @@ These rules apply to every local commit and every remote push on `develop`:
 1. **Auto-push after local commit** — after each task-boundary commit, verify build and tests pass locally, then push to `origin/develop` immediately without asking.
 2. **Monitor CI after every push** — after pushing, check CI status (`gh run list --branch develop --limit 1`). If CI fails, diagnose and auto-fix without waiting to be asked; push the fix.
 3. **Gate new tasks on green CI** — do not start the next PLAN-v2.md task until `develop` CI is green. If CI is red, fix it first.
+4. **Local pre-push checklist** — before every push to remote `develop`, run all of the following locally:
+   - TypeScript: `pnpm typecheck && pnpm lint && pnpm test run`
+   - Rust (when any `.rs` file changed): `cargo fmt --all -- --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test`
+   - CI catches what local checks miss; local checks must pass first.
 
 ---
 
@@ -188,6 +193,14 @@ Fixes #67
 ```
 chore(release): bump version to v1.1.0
 ```
+
+---
+
+## Lessons Learnt
+
+Patterns and rules learned from past mistakes: [`docs/LESSONS_LEARNT.md`](./LESSONS_LEARNT.md)
+
+Review at the start of every task before writing any code.
 
 ---
 
