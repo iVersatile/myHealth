@@ -56,8 +56,21 @@ mod tests {
         path
     }
 
+    fn tesseract_available() -> bool {
+        std::process::Command::new("tesseract")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
     #[test]
     fn tesseract_processes_blank_image() {
+        if !tesseract_available() {
+            return;
+        }
         let path = write_blank_png("ocr_blank_test.png");
         let result = extract_image_text(&path);
         assert!(result.is_ok(), "OCR failed: {result:?}");
@@ -65,6 +78,9 @@ mod tests {
 
     #[test]
     fn blank_image_returns_empty_or_whitespace_only() {
+        if !tesseract_available() {
+            return;
+        }
         let path = write_blank_png("ocr_blank_empty.png");
         let text = extract_image_text(&path).unwrap();
         assert!(
@@ -75,6 +91,9 @@ mod tests {
 
     #[tokio::test]
     async fn async_variant_succeeds_on_blank_image() {
+        if !tesseract_available() {
+            return;
+        }
         let path = write_blank_png("ocr_async_test.png");
         let result = extract_image_text_async(&path).await;
         assert!(result.is_ok(), "async OCR failed: {result:?}");

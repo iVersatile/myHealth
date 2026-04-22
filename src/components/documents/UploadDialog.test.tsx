@@ -6,9 +6,11 @@ import type { Document } from '../../store/documentsStore'
 
 const mockInvoke = vi.fn()
 const mockOpen = vi.fn()
+const mockListen = vi.fn()
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: (...args: unknown[]) => mockInvoke(...args) }))
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: (...args: unknown[]) => mockOpen(...args) }))
+vi.mock('@tauri-apps/api/event', () => ({ listen: (...args: unknown[]) => mockListen(...args) }))
 
 const fakeDoc: Document = {
   id: 'new-doc',
@@ -49,6 +51,8 @@ describe('UploadDialog', () => {
   beforeEach(() => {
     mockInvoke.mockReset()
     mockOpen.mockReset()
+    mockListen.mockReset()
+    mockListen.mockResolvedValue(() => {})
     setupInvoke()
   })
 
