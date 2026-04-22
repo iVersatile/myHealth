@@ -15,9 +15,10 @@ use commands::auth::{
 };
 use commands::calendar::{calendar_list_sources, calendar_sync, calendar_toggle_source};
 use commands::categories::{
-    categories_assign_appointment, categories_assign_document, categories_create,
-    categories_delete, categories_for_appointment, categories_for_document, categories_list,
-    categories_unassign, categories_update,
+    assign_category_to_appointment, assign_category_to_document, categories_assign_appointment,
+    categories_assign_document, categories_create, categories_delete, categories_for_appointment,
+    categories_for_document, categories_list, categories_unassign, categories_update,
+    unassign_category_from_appointment, unassign_category_from_document,
 };
 use commands::clinics::{
     clinics_create, clinics_delete, clinics_get, clinics_list, clinics_update,
@@ -99,6 +100,10 @@ pub fn run() {
             categories_for_document,
             categories_for_appointment,
             categories_unassign,
+            assign_category_to_document,
+            unassign_category_from_document,
+            assign_category_to_appointment,
+            unassign_category_from_appointment,
             calendar_list_sources,
             calendar_sync,
             calendar_toggle_source,

@@ -233,6 +233,82 @@ pub fn categories_unassign(
 }
 
 #[tauri::command]
+pub fn assign_category_to_document(
+    _user_id: String,
+    document_id: String,
+    category_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    conn.execute(
+        "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
+        rusqlite::params![document_id, category_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unassign_category_from_document(
+    _user_id: String,
+    document_id: String,
+    category_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    conn.execute(
+        "DELETE FROM document_categories WHERE document_id = ?1 AND category_id = ?2",
+        rusqlite::params![document_id, category_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn assign_category_to_appointment(
+    _user_id: String,
+    appointment_id: String,
+    category_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    conn.execute(
+        "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)",
+        rusqlite::params![appointment_id, category_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unassign_category_from_appointment(
+    _user_id: String,
+    appointment_id: String,
+    category_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    conn.execute(
+        "DELETE FROM appointment_categories WHERE appointment_id = ?1 AND category_id = ?2",
+        rusqlite::params![appointment_id, category_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn categories_for_document(
     document_id: String,
     state: State<'_, AppState>,
@@ -516,5 +592,135 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn document_linked_to_three_categories_all_queryable() {
+        let conn = open_test_db();
+        let doc_id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES (?1, 'multi.pdf', '/tmp/multi.pdf', 'application/pdf', 0, 'other', ?2, ?2)",
+            rusqlite::params![doc_id, now],
+        )
+        .unwrap();
+
+        let cats = list_categories(&conn);
+        let cat_ids: Vec<String> = cats.iter().take(3).map(|c| c.id.clone()).collect();
+        assert_eq!(cat_ids.len(), 3, "need at least 3 system categories");
+
+        for cat_id in &cat_ids {
+            conn.execute(
+                "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
+                rusqlite::params![doc_id, cat_id],
+            )
+            .unwrap();
+        }
+
+        let mut assigned: Vec<String> = conn
+            .prepare("SELECT category_id FROM document_categories WHERE document_id = ?1")
+            .unwrap()
+            .query_map([&doc_id], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assigned.sort();
+
+        let mut expected = cat_ids.clone();
+        expected.sort();
+        assert_eq!(assigned, expected);
+
+        for cat_id in &cat_ids {
+            let count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM document_categories WHERE document_id = ?1 AND category_id = ?2",
+                    rusqlite::params![doc_id, cat_id],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(
+                count, 1,
+                "document should be reachable via category {cat_id}"
+            );
+        }
+    }
+
+    #[test]
+    fn unassign_removes_only_specific_pair() {
+        let conn = open_test_db();
+        let doc_id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES (?1, 'pair.pdf', '/tmp/pair.pdf', 'application/pdf', 0, 'other', ?2, ?2)",
+            rusqlite::params![doc_id, now],
+        )
+        .unwrap();
+
+        let cats = list_categories(&conn);
+        let cat_a = &cats[0].id;
+        let cat_b = &cats[1].id;
+
+        for cat_id in [cat_a, cat_b] {
+            conn.execute(
+                "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
+                rusqlite::params![doc_id, cat_id],
+            )
+            .unwrap();
+        }
+
+        conn.execute(
+            "DELETE FROM document_categories WHERE document_id = ?1 AND category_id = ?2",
+            rusqlite::params![doc_id, cat_a],
+        )
+        .unwrap();
+
+        let remaining: Vec<String> = conn
+            .prepare("SELECT category_id FROM document_categories WHERE document_id = ?1")
+            .unwrap()
+            .query_map([&doc_id], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(
+            remaining,
+            vec![cat_b.clone()],
+            "only cat_b should remain after unassigning cat_a"
+        );
+    }
+
+    #[test]
+    fn appointment_linked_to_three_categories_all_queryable() {
+        let conn = open_test_db();
+        let appt_id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, created_at, updated_at) \
+             VALUES (?1, 'Multi-cat appt', '2025-06-01', ?2, ?2)",
+            rusqlite::params![appt_id, now],
+        )
+        .unwrap();
+
+        let cats = list_categories(&conn);
+        let cat_ids: Vec<String> = cats.iter().take(3).map(|c| c.id.clone()).collect();
+
+        for cat_id in &cat_ids {
+            conn.execute(
+                "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)",
+                rusqlite::params![appt_id, cat_id],
+            )
+            .unwrap();
+        }
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointment_categories WHERE appointment_id = ?1",
+                rusqlite::params![appt_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 3);
     }
 }
