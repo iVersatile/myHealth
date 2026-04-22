@@ -166,7 +166,7 @@ describe('UploadDialog', () => {
     expect(tagsInput.value).toContain('2026-03-15')
   })
 
-  it('shows contact suggestions from extraction and saves one', async () => {
+  it('shows contact suggestions from extraction and saves one (no duplicate)', async () => {
     const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
@@ -176,7 +176,8 @@ describe('UploadDialog', () => {
       if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
       if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_delete') return Promise.resolve(undefined)
-      if (cmd === 'contacts_create') return Promise.resolve({})
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'new-c1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([])
       return Promise.resolve(undefined)
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
@@ -188,6 +189,64 @@ describe('UploadDialog', () => {
     await userEvent.click(saveBtn)
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('contacts_create', expect.objectContaining({ input: expect.objectContaining({ name: 'Dr. House' }) })))
     await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+  })
+
+  it('shows duplicate merge prompt when similar contact found on save', async () => {
+    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
+    const existingContact = { id: 'existing-c1', name: 'Dr. Greg House' }
+    const dupCandidate = { primary_contact_id: 'new-c1', contact: existingContact, similarity_score: 0.92, match_reason: 'name similarity' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: ['Dr. House'], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'new-c1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([dupCandidate])
+      if (cmd === 'merge_contacts') return Promise.resolve(existingContact)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    expect(screen.getByText('Dr. Greg House')).toBeTruthy()
+    expect(screen.getByText(/92%/)).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: /^merge$/i }))
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('merge_contacts', {
+      userId: '',
+      primaryId: 'existing-c1',
+      duplicateIds: ['new-c1'],
+    }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+  })
+
+  it('keep both on duplicate prompt marks contact saved without merging', async () => {
+    const contactSugg = { name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
+    const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.9, match_reason: 'name similarity' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'new-c1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([dupCandidate])
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /keep both/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+    expect(mockInvoke).not.toHaveBeenCalledWith('merge_contacts', expect.anything())
   })
 
   it('shows and dismisses category suggestion', async () => {
