@@ -1,3 +1,4 @@
+pub mod doctor;
 pub mod ocr;
 pub mod pdf;
 
@@ -9,6 +10,7 @@ use std::path::Path;
 pub struct ExtractionResult {
     pub text: String,
     pub extracted_at: String,
+    pub doctor_candidates: Vec<String>,
 }
 
 /// Extracts text from a file based on its extension.
@@ -33,9 +35,11 @@ pub fn extract(path: &Path) -> ExtractionResult {
         _ => String::new(),
     };
 
+    let doctor_candidates = doctor::extract_doctor_candidates(&text);
     ExtractionResult {
         text,
         extracted_at: Utc::now().to_rfc3339(),
+        doctor_candidates,
     }
 }
 
