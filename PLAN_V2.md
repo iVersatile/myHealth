@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 1 — Sprint 1
-▶ Task 1.2 — Merge command (merge_contacts)
+Current: Phase 1 — Sprint 2
+▶ Task 1.3 — Duplicate detection UI in Contacts page
 ```
 
 ---
@@ -76,7 +76,7 @@ Current: Phase 1 — Sprint 1
      - Return `Vec<DuplicateCandidate>` where each entry contains `{ contact, similarity_score: f64, match_reason: String }`
    - Done when: `cargo test contacts::` passes with vectors: (a) identical names → similarity 1.0, (b) "John Smith" vs "Jon Smyth" → 0.85–0.92, (c) "John Smith" vs "Jane Doe" → < 0.5; scan 200 contacts in < 500ms
 
-▶ [ ] **1.2 — Merge command**
+[x] **1.2 — Merge command**
    - Implement `merge_contacts` Tauri command:
      - Signature: `merge_contacts(user_id: String, primary_id: String, duplicate_ids: Vec<String>)`
      - Re-point all `document_contacts` and `appointment_contacts` rows to `primary_id`
@@ -87,7 +87,7 @@ Current: Phase 1 — Sprint 1
 
 ### Sprint 2: Frontend
 
-[ ] **1.3 — Duplicate detection UI in Contacts page**
+▶ [ ] **1.3 — Duplicate detection UI in Contacts page**
    - Add "Find Duplicates" button to `src/app/(app)/contacts/page.tsx`
    - Calls `find_duplicate_contacts`; displays side-by-side comparison cards for each group
    - Each card shows both contacts' fields, similarity %, and "Merge" / "Keep Both" buttons
