@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -118,6 +120,128 @@ pub fn links_list_for_appointment(
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Serialize)]
+pub struct LinkSuggestion {
+    pub appointment_id: String,
+    pub appointment_title: String,
+    pub score: u8,
+}
+
+#[tauri::command]
+pub fn links_score_candidates(
+    state: State<'_, AppState>,
+    document_id: String,
+) -> Result<Option<LinkSuggestion>, String> {
+    use crate::commands::appointments::Appointment;
+    use crate::commands::scoring::score_link_candidates;
+
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    // Fetch the document
+    let doc = conn
+        .query_row(
+            "SELECT id, filename, file_path, mime_type, file_size_bytes, category,
+                    thumbnail_path, notes, created_at, updated_at, is_deleted,
+                    document_date, extracted_metadata
+             FROM documents WHERE id = ?1 AND is_deleted = 0",
+            params![document_id],
+            |row| {
+                Ok(crate::commands::documents::Document {
+                    id: row.get(0)?,
+                    filename: row.get(1)?,
+                    file_path: row.get(2)?,
+                    mime_type: row.get(3)?,
+                    file_size_bytes: row.get(4)?,
+                    category: row.get(5)?,
+                    thumbnail_path: row.get(6)?,
+                    notes: row.get(7)?,
+                    created_at: row.get(8)?,
+                    updated_at: row.get(9)?,
+                    is_deleted: row.get(10)?,
+                    document_date: row.get(11)?,
+                    extracted_metadata: row.get(12)?,
+                    tags: vec![],
+                })
+            },
+        )
+        .map_err(|e| e.to_string())?;
+
+    // Fetch all appointments
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
+                    duration_min, location, notes, status, reminder_min, created_at, updated_at
+             FROM appointments ORDER BY appt_date DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let appointments: Vec<Appointment> = stmt
+        .query_map([], |row| {
+            Ok(Appointment {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                doctor_name: row.get(2)?,
+                clinic_name: row.get(3)?,
+                specialty: row.get(4)?,
+                appt_date: row.get(5)?,
+                duration_min: row.get(6)?,
+                location: row.get(7)?,
+                notes: row.get(8)?,
+                status: row.get(9)?,
+                reminder_min: row.get(10)?,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
+                document_ids: vec![],
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<_, _>>()
+        .map_err(|e: rusqlite::Error| e.to_string())?;
+
+    // Build appt_id → category names map
+    let mut appt_categories: HashMap<String, Vec<String>> = HashMap::new();
+    let mut cat_stmt = conn
+        .prepare(
+            "SELECT ac.appointment_id, c.name
+             FROM appointment_categories ac
+             JOIN categories c ON c.id = ac.category_id",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let cat_rows = cat_stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?;
+
+    for row in cat_rows {
+        let (appt_id, cat_name) = row.map_err(|e| e.to_string())?;
+        appt_categories.entry(appt_id).or_default().push(cat_name);
+    }
+
+    // Score and return top candidate
+    let mut scored = score_link_candidates(&doc, &appointments, &appt_categories);
+    if scored.is_empty() {
+        return Ok(None);
+    }
+
+    let (top_appt_id, top_score) = scored.swap_remove(0);
+    let title: String = conn
+        .query_row(
+            "SELECT title FROM appointments WHERE id = ?1",
+            params![top_appt_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    Ok(Some(LinkSuggestion {
+        appointment_id: top_appt_id,
+        appointment_title: title,
+        score: top_score,
+    }))
 }
 
 #[cfg(test)]

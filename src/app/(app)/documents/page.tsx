@@ -6,6 +6,7 @@ import { DocumentList } from '../../../components/documents/DocumentList'
 import { UploadDialog } from '../../../components/documents/UploadDialog'
 import { ExportDialog } from '../../../components/export/ExportDialog'
 import { DoctorSuggestionBanner } from '../../../components/documents/DoctorSuggestionBanner'
+import { LinkSuggestionBanner } from '../../../components/documents/LinkSuggestionBanner'
 import { ContactForm } from '../../../components/contacts/ContactForm'
 import { useDocumentsStore } from '../../../store/documentsStore'
 import { useContacts } from '../../../hooks/useContacts'
@@ -18,6 +19,11 @@ export default function DocumentsPage() {
   const [doctorCandidates, setDoctorCandidates] = useState<string[]>([])
   const [showContactForm, setShowContactForm] = useState(false)
   const [pendingDoctorName, setPendingDoctorName] = useState<string | null>(null)
+  const [linkSuggestion, setLinkSuggestion] = useState<{
+    appointmentId: string
+    appointmentTitle: string
+    documentId: string
+  } | null>(null)
   const { documents, total, setDocuments } = useDocumentsStore()
   const { createContact } = useContacts()
 
@@ -32,6 +38,39 @@ export default function DocumentsPage() {
     } catch {
       // extraction is best-effort; ignore failures
     }
+    try {
+      const suggestion = await invoke<{
+        appointment_id: string
+        appointment_title: string
+        score: number
+      } | null>('links_score_candidates', { documentId: doc.id })
+      if (suggestion) {
+        setLinkSuggestion({
+          appointmentId: suggestion.appointment_id,
+          appointmentTitle: suggestion.appointment_title,
+          documentId: doc.id,
+        })
+      }
+    } catch {
+      // scoring is best-effort; ignore failures
+    }
+  }
+
+  async function handleLinkConfirm(appointmentId: string) {
+    if (!linkSuggestion) return
+    try {
+      await invoke('links_create', {
+        input: {
+          document_id: linkSuggestion.documentId,
+          appointment_id: appointmentId,
+          link_type: 'related',
+          confidence: 'auto',
+        },
+      })
+    } catch {
+      // best-effort
+    }
+    setLinkSuggestion(null)
   }
 
   function handleBannerAccept(name: string) {
@@ -76,6 +115,17 @@ export default function DocumentsPage() {
             candidates={doctorCandidates}
             onAccept={handleBannerAccept}
             onDismiss={() => setDoctorCandidates([])}
+          />
+        </div>
+      )}
+
+      {linkSuggestion && (
+        <div className="mb-4">
+          <LinkSuggestionBanner
+            appointmentId={linkSuggestion.appointmentId}
+            appointmentTitle={linkSuggestion.appointmentTitle}
+            onConfirm={(id) => void handleLinkConfirm(id)}
+            onDismiss={() => setLinkSuggestion(null)}
           />
         </div>
       )}
