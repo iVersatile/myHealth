@@ -28,6 +28,9 @@ beforeEach(() => {
     if (cmd === 'auth_change_password') return Promise.resolve()
     if (cmd === 'settings_wipe_all_data') return Promise.resolve()
     if (cmd === 'auth_lock') return Promise.resolve()
+    if (cmd === 'calendar_list_sources') return Promise.resolve([])
+    if (cmd === 'calendar_toggle_source') return Promise.resolve()
+    if (cmd === 'calendar_sync') return Promise.resolve(0)
     return Promise.resolve()
   })
 })
@@ -51,6 +54,7 @@ describe('SettingsPage', () => {
       if (cmd === 'settings_get' && args?.key === 'theme') return Promise.resolve('dark')
       if (cmd === 'settings_get') return Promise.resolve(null)
       if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
       return Promise.resolve()
     })
     await renderPage()
@@ -65,6 +69,7 @@ describe('SettingsPage', () => {
       if (cmd === 'settings_get' && args?.key === 'auto_lock_minutes') return Promise.resolve('30')
       if (cmd === 'settings_get') return Promise.resolve(null)
       if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
       return Promise.resolve()
     })
     await renderPage()
@@ -75,6 +80,12 @@ describe('SettingsPage', () => {
   })
 
   it('shows error when new passwords do not match', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      return Promise.resolve()
+    })
     const user = userEvent.setup()
     await renderPage()
 
@@ -91,6 +102,12 @@ describe('SettingsPage', () => {
   })
 
   it('shows error when new password is too short', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      return Promise.resolve()
+    })
     const user = userEvent.setup()
     await renderPage()
 
@@ -107,6 +124,13 @@ describe('SettingsPage', () => {
   })
 
   it('calls auth_change_password with correct args on valid submit', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'auth_change_password') return Promise.resolve()
+      return Promise.resolve()
+    })
     const user = userEvent.setup()
     await renderPage()
 
@@ -128,6 +152,13 @@ describe('SettingsPage', () => {
   })
 
   it('clears password fields after successful change', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'auth_change_password') return Promise.resolve()
+      return Promise.resolve()
+    })
     const user = userEvent.setup()
     await renderPage()
 
@@ -148,6 +179,7 @@ describe('SettingsPage', () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'settings_get') return Promise.resolve(null)
       if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
       if (cmd === 'auth_change_password') return Promise.reject(new Error('Wrong password'))
       return Promise.resolve()
     })
@@ -168,6 +200,7 @@ describe('SettingsPage', () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'settings_get') return Promise.resolve(null)
       if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
       if (cmd === 'auth_change_password') return new Promise<void>((r) => { resolve = r })
       return Promise.resolve()
     })
@@ -184,6 +217,13 @@ describe('SettingsPage', () => {
   })
 
   it('persists auto-lock selection via settings_set', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'settings_set') return Promise.resolve()
+      return Promise.resolve()
+    })
     await renderPage()
     await waitFor(() => expect(screen.getByLabelText(/auto-lock/i)).toBeDefined())
 
@@ -198,6 +238,13 @@ describe('SettingsPage', () => {
   })
 
   it('persists theme selection via settings_set', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'settings_set') return Promise.resolve()
+      return Promise.resolve()
+    })
     await renderPage()
     await waitFor(() => expect(screen.getByDisplayValue('dark')).toBeDefined())
 
@@ -209,6 +256,12 @@ describe('SettingsPage', () => {
   })
 
   it('first click on Wipe shows confirmation UI', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      return Promise.resolve()
+    })
     await renderPage()
     await waitFor(() => expect(screen.getByText('Wipe all data')).toBeDefined())
 
@@ -220,6 +273,12 @@ describe('SettingsPage', () => {
   })
 
   it('Cancel resets wipe confirmation', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      return Promise.resolve()
+    })
     await renderPage()
     await waitFor(() => expect(screen.getByText('Wipe all data')).toBeDefined())
 
@@ -232,6 +291,13 @@ describe('SettingsPage', () => {
 
   it('second click calls settings_wipe_all_data then lock', async () => {
     mockLock.mockResolvedValue(undefined)
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'settings_wipe_all_data') return Promise.resolve()
+      return Promise.resolve()
+    })
     await renderPage()
     await waitFor(() => expect(screen.getByText('Wipe all data')).toBeDefined())
 
@@ -242,5 +308,203 @@ describe('SettingsPage', () => {
       expect(mockInvoke).toHaveBeenCalledWith('settings_wipe_all_data')
     )
     await waitFor(() => expect(mockLock).toHaveBeenCalledOnce())
+  })
+
+  it('renders Calendar Sync section', async () => {
+    await renderPage()
+    expect(screen.getByText('Calendar Sync')).toBeDefined()
+  })
+
+  it('shows "Loading calendars…" while fetching calendar list', async () => {
+    let resolve!: () => void
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return new Promise<void>((r) => { resolve = r })
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Loading calendars…')).toBeDefined())
+    resolve()
+  })
+
+  it('displays calendars with mock source data', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([
+        {
+          id: 'cal-1',
+          external_id: 'ext-1',
+          name: 'Personal',
+          color_hex: '#FF5733',
+          enabled: true,
+          last_synced_at: '2025-04-22T10:30:00Z',
+        },
+        {
+          id: 'cal-2',
+          external_id: 'ext-2',
+          name: 'Work',
+          color_hex: '#3366FF',
+          enabled: false,
+          last_synced_at: null,
+        },
+      ])
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Personal')).toBeDefined())
+    expect(screen.getByText('Work')).toBeDefined()
+    expect(screen.getByText(/Last synced:/)).toBeDefined()
+    expect(screen.getByText('Never synced')).toBeDefined()
+  })
+
+  it('toggle calls calendar_toggle_source with correct args', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([
+        {
+          id: 'cal-1',
+          external_id: 'ext-1',
+          name: 'Personal',
+          color_hex: '#FF5733',
+          enabled: true,
+          last_synced_at: null,
+        },
+      ])
+      if (cmd === 'calendar_toggle_source') return Promise.resolve()
+      return Promise.resolve()
+    })
+    const user = userEvent.setup()
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Personal')).toBeDefined())
+
+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement
+    expect(checkbox.checked).toBe(true)
+    await user.click(checkbox)
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('calendar_toggle_source', {
+        id: 'cal-1',
+        enabled: false,
+      })
+    )
+  })
+
+  it('Sync Now button calls calendar_sync with enabled source IDs', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([
+        {
+          id: 'cal-1',
+          external_id: 'ext-1',
+          name: 'Personal',
+          color_hex: '#FF5733',
+          enabled: true,
+          last_synced_at: null,
+        },
+        {
+          id: 'cal-2',
+          external_id: 'ext-2',
+          name: 'Work',
+          color_hex: '#3366FF',
+          enabled: false,
+          last_synced_at: null,
+        },
+      ])
+      if (cmd === 'calendar_sync') return Promise.resolve(5)
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Personal')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Sync Now'))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('calendar_sync', {
+        sourceIds: ['cal-1'],
+      })
+    )
+    await waitFor(() =>
+      expect(screen.getByText('Synced 5 events')).toBeDefined()
+    )
+  })
+
+  it('shows "macOS-only" message on calendar_list_sources error', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.reject(new Error('Platform not supported'))
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() =>
+      expect(screen.getByText('Calendar sync is only supported on macOS.')).toBeDefined()
+    )
+  })
+
+  it('shows "No calendars found" when list is empty', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() =>
+      expect(screen.getByText('No calendars found.')).toBeDefined()
+    )
+  })
+
+  it('shows "Synced N events" after successful sync', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([
+        {
+          id: 'cal-1',
+          external_id: 'ext-1',
+          name: 'Personal',
+          color_hex: '#FF5733',
+          enabled: true,
+          last_synced_at: null,
+        },
+      ])
+      if (cmd === 'calendar_sync') return Promise.resolve(3)
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Personal')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Sync Now'))
+
+    await waitFor(() =>
+      expect(screen.getByText('Synced 3 events')).toBeDefined()
+    )
+  })
+
+  it('disables Sync Now button when no calendars are enabled', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([
+        {
+          id: 'cal-1',
+          external_id: 'ext-1',
+          name: 'Personal',
+          color_hex: '#FF5733',
+          enabled: false,
+          last_synced_at: null,
+        },
+      ])
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Personal')).toBeDefined())
+
+    const syncBtn = screen.getByText('Sync Now') as HTMLButtonElement
+    expect(syncBtn.disabled).toBe(true)
   })
 })

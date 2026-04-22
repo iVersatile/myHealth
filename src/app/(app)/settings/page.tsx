@@ -6,6 +6,15 @@ import { useAuth } from '../../../hooks/useAuth'
 
 type Theme = 'light' | 'dark' | 'system'
 
+type CalendarSourceRow = {
+  id: string
+  external_id: string
+  name: string
+  color_hex: string | null
+  enabled: boolean
+  last_synced_at: string | null
+}
+
 const AUTO_LOCK_OPTIONS = [
   { label: '5 minutes', value: '5' },
   { label: '15 minutes', value: '15' },
@@ -109,6 +118,12 @@ export default function SettingsPage() {
   const [wipeConfirm, setWipeConfirm] = useState(false)
   const [wipeBusy, setWipeBusy] = useState(false)
 
+  const [calendars, setCalendars] = useState<CalendarSourceRow[]>([])
+  const [calendarsLoading, setCalendarsLoading] = useState(true)
+  const [calendarsError, setCalendarsError] = useState<string | null>(null)
+  const [syncBusy, setSyncBusy] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<{ text: string; ok: boolean } | null>(null)
+
   useEffect(() => {
     async function loadSettings() {
       const [t, al, dir] = await Promise.all([
@@ -121,6 +136,22 @@ export default function SettingsPage() {
       setDataDir(dir)
     }
     void loadSettings()
+  }, [])
+
+  useEffect(() => {
+    async function loadCalendars() {
+      setCalendarsLoading(true)
+      setCalendarsError(null)
+      try {
+        const sources = await invoke<CalendarSourceRow[]>('calendar_list_sources')
+        setCalendars(sources)
+      } catch (err) {
+        setCalendarsError(String(err))
+      } finally {
+        setCalendarsLoading(false)
+      }
+    }
+    void loadCalendars()
   }, [])
 
   useEffect(() => {
@@ -180,6 +211,31 @@ export default function SettingsPage() {
       console.error('Wipe failed', err)
       setWipeBusy(false)
       setWipeConfirm(false)
+    }
+  }
+
+  async function handleCalendarToggle(id: string, enabled: boolean) {
+    try {
+      await invoke('calendar_toggle_source', { id, enabled })
+      setCalendars(prev =>
+        prev.map(cal => (cal.id === id ? { ...cal, enabled } : cal))
+      )
+    } catch (err) {
+      setSyncMsg({ text: String(err), ok: false })
+    }
+  }
+
+  async function handleSync() {
+    setSyncBusy(true)
+    setSyncMsg(null)
+    try {
+      const enabledIds = calendars.filter(cal => cal.enabled).map(cal => cal.id)
+      const synced = await invoke<number>('calendar_sync', { sourceIds: enabledIds })
+      setSyncMsg({ text: `Synced ${synced} event${synced === 1 ? '' : 's'}`, ok: true })
+    } catch (err) {
+      setSyncMsg({ text: String(err), ok: false })
+    } finally {
+      setSyncBusy(false)
     }
   }
 
@@ -332,6 +388,108 @@ export default function SettingsPage() {
           <button onClick={() => { void handleWipe() }} style={btnDanger}>
             Wipe all data
           </button>
+        )}
+      </div>
+
+      {/* Calendar Sync */}
+      <div style={sectionStyle}>
+        <SectionTitle>Calendar Sync</SectionTitle>
+
+        {calendarsLoading && (
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+            Loading calendars…
+          </p>
+        )}
+
+        {calendarsError && !calendarsLoading && (
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+            Calendar sync is only supported on macOS.
+          </p>
+        )}
+
+        {!calendarsError && !calendarsLoading && calendars.length === 0 && (
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+            No calendars found.
+          </p>
+        )}
+
+        {!calendarsError && !calendarsLoading && calendars.length > 0 && (
+          <>
+            <div style={{ marginBottom: 'var(--space-4)' }}>
+              {calendars.map(cal => (
+                <div
+                  key={cal.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-3)',
+                    padding: 'var(--space-3)',
+                    background: 'var(--color-surface-sunken)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    marginBottom: 'var(--space-2)',
+                  }}
+                >
+                  {/* Color dot */}
+                  <div
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      background: cal.color_hex || 'var(--color-text-muted)',
+                      flexShrink: 0,
+                    }}
+                  />
+
+                  {/* Calendar name and sync info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', margin: 0, fontWeight: 500 }}>
+                      {cal.name}
+                    </p>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
+                      {cal.last_synced_at ? `Last synced: ${new Date(cal.last_synced_at).toLocaleString()}` : 'Never synced'}
+                    </p>
+                  </div>
+
+                  {/* Toggle switch */}
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-2)',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={cal.enabled}
+                      onChange={e => { void handleCalendarToggle(cal.id, e.target.checked) }}
+                      style={{ cursor: 'pointer', accentColor: 'var(--color-primary)' }}
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => { void handleSync() }}
+              style={btnPrimary}
+              disabled={syncBusy || calendars.filter(c => c.enabled).length === 0}
+            >
+              {syncBusy ? 'Syncing…' : 'Sync Now'}
+            </button>
+
+            {syncMsg && (
+              <p style={{
+                fontSize: 'var(--text-sm)',
+                color: syncMsg.ok ? 'var(--color-success)' : 'var(--color-danger)',
+                marginTop: 'var(--space-3)',
+              }}>
+                {syncMsg.text}
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
