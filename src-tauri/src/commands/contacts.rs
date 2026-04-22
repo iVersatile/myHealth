@@ -275,11 +275,138 @@ fn last_token(s: &str) -> &str {
     s.split_whitespace().last().unwrap_or(s)
 }
 
+// ─── Duplicate detection ────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DuplicateCandidate {
+    /// The "anchor" contact's id (the one we searched from).
+    pub primary_contact_id: String,
+    /// A contact that is potentially a duplicate of the anchor.
+    pub contact: Contact,
+    /// Jaro-Winkler name similarity (0.0–1.0) or 1.0 for exact field matches.
+    pub similarity_score: f64,
+    /// Human-readable reason: "name similarity", "same email", "same phone".
+    pub match_reason: String,
+}
+
+fn name_similarity(a: &str, b: &str) -> f64 {
+    strsim::jaro_winkler(&a.trim().to_lowercase(), &b.trim().to_lowercase())
+}
+
+fn fields_match(a: &Option<String>, b: &Option<String>) -> bool {
+    match (a, b) {
+        (Some(x), Some(y)) => !x.is_empty() && !y.is_empty() && x.eq_ignore_ascii_case(y),
+        _ => false,
+    }
+}
+
+/// Pure deduplication engine — no DB access, fully testable.
+///
+/// Compares every contact in `contacts` against `primary`.
+/// Returns candidates whose name similarity >= `threshold`,
+/// plus any contact with matching email or phone (regardless of threshold).
+fn duplicates_of(
+    primary: &Contact,
+    contacts: &[Contact],
+    threshold: f64,
+) -> Vec<DuplicateCandidate> {
+    contacts
+        .iter()
+        .filter(|c| c.id != primary.id)
+        .filter_map(|c| {
+            let score = name_similarity(&primary.name, &c.name);
+            if score >= threshold {
+                return Some(DuplicateCandidate {
+                    primary_contact_id: primary.id.clone(),
+                    contact: c.clone(),
+                    similarity_score: score,
+                    match_reason: "name similarity".to_string(),
+                });
+            }
+            if fields_match(&primary.email, &c.email) {
+                return Some(DuplicateCandidate {
+                    primary_contact_id: primary.id.clone(),
+                    contact: c.clone(),
+                    similarity_score: 1.0,
+                    match_reason: "same email".to_string(),
+                });
+            }
+            if fields_match(&primary.phone, &c.phone) {
+                return Some(DuplicateCandidate {
+                    primary_contact_id: primary.id.clone(),
+                    contact: c.clone(),
+                    similarity_score: 1.0,
+                    match_reason: "same phone".to_string(),
+                });
+            }
+            None
+        })
+        .collect()
+}
+
+/// Scan all contacts for duplicates.
+///
+/// If `contact_id` is Some, scan only that contact against all others.
+/// If `contact_id` is None, scan every pair (each pair emitted once, primary < duplicate by id).
+pub fn compute_duplicates(
+    contacts: &[Contact],
+    contact_id: Option<&str>,
+    threshold: f64,
+) -> Vec<DuplicateCandidate> {
+    if let Some(id) = contact_id {
+        let Some(primary) = contacts.iter().find(|c| c.id == id) else {
+            return Vec::new();
+        };
+        return duplicates_of(primary, contacts, threshold);
+    }
+
+    // Full scan: emit each pair exactly once.
+    let mut results = Vec::new();
+    for (i, primary) in contacts.iter().enumerate() {
+        let rest = &contacts[i + 1..];
+        for candidate in duplicates_of(primary, rest, threshold) {
+            results.push(candidate);
+        }
+    }
+    results
+}
+
+#[tauri::command]
+pub fn find_duplicate_contacts(
+    _user_id: String,
+    contact_id: Option<String>,
+    threshold: f64,
+    state: State<'_, AppState>,
+) -> Result<Vec<DuplicateCandidate>, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+             created_at, updated_at FROM contacts ORDER BY name",
+        )
+        .map_err(|e| e.to_string())?;
+    let contacts: Vec<Contact> = stmt
+        .query_map([], row_to_contact)
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(compute_duplicates(
+        &contacts,
+        contact_id.as_deref(),
+        threshold,
+    ))
+}
+
+// ─── Name-based fuzzy lookup (used by upload pipeline) ──────────────────────
+
 /// Returns an existing contact whose name closely matches `name`, or `None`.
 ///
 /// Two passes:
-/// 1. Full-name Levenshtein ≤ 2 — catches typos ("Dr. John Smit" vs "Dr. John Smith").
-/// 2. Surname-only Levenshtein ≤ 1 — catches initial abbreviations ("Dr. J. Smith" vs "Dr. John Smith").
+/// 1. Full-name Levenshtein <= 2 — catches typos ("Dr. John Smit" vs "Dr. John Smith").
+/// 2. Surname-only Levenshtein <= 1 — catches initial abbreviations ("Dr. J. Smith" vs "Dr. John Smith").
 pub fn find_similar_contact(name: &str, conn: &rusqlite::Connection) -> Option<Contact> {
     let query_norm = name.trim().to_lowercase();
     let query_surname = last_token(&query_norm);
@@ -448,5 +575,115 @@ mod tests {
         let conn = open_test_db();
         let result = find_similar_contact("Dr. John Smith", &conn);
         assert!(result.is_none());
+    }
+
+    // ── compute_duplicates tests ────────────────────────────────────────────
+
+    fn make_contact(id: &str, name: &str, email: Option<&str>, phone: Option<&str>) -> Contact {
+        Contact {
+            id: id.to_string(),
+            name: name.to_string(),
+            role: "gp".to_string(),
+            specialty: None,
+            phone: phone.map(str::to_string),
+            email: email.map(str::to_string),
+            clinic: None,
+            address: None,
+            notes: None,
+            created_at: "2026-01-01T00:00:00Z".to_string(),
+            updated_at: "2026-01-01T00:00:00Z".to_string(),
+        }
+    }
+
+    #[test]
+    fn identical_names_score_1_0() {
+        let a = make_contact("1", "John Smith", None, None);
+        let b = make_contact("2", "John Smith", None, None);
+        let results = compute_duplicates(&[a, b], None, 0.85);
+        assert_eq!(results.len(), 1);
+        assert!((results[0].similarity_score - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn similar_names_above_threshold() {
+        let a = make_contact("1", "John Smith", None, None);
+        let b = make_contact("2", "Jon Smyth", None, None);
+        let score = name_similarity("John Smith", "Jon Smyth");
+        // Jaro-Winkler on similar names must meet spec range 0.85–0.92.
+        assert!(
+            score >= 0.85 && score <= 0.92,
+            "expected 0.85–0.92, got {score:.4}"
+        );
+        let results = compute_duplicates(&[a, b], None, 0.85);
+        assert_eq!(
+            results.len(),
+            1,
+            "similar names should be a duplicate candidate"
+        );
+    }
+
+    #[test]
+    fn dissimilar_names_not_returned() {
+        let a = make_contact("1", "John Smith", None, None);
+        let b = make_contact("2", "Jane Doe", None, None);
+        let results = compute_duplicates(&[a, b], None, 0.85);
+        assert!(results.is_empty(), "dissimilar names should not match");
+    }
+
+    #[test]
+    fn exact_email_match_regardless_of_threshold() {
+        let a = make_contact("1", "John Smith", Some("js@example.com"), None);
+        let b = make_contact("2", "Jane Doe", Some("js@example.com"), None);
+        let results = compute_duplicates(&[a, b], None, 0.99);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].match_reason, "same email");
+    }
+
+    #[test]
+    fn exact_phone_match_regardless_of_threshold() {
+        let a = make_contact("1", "John Smith", None, Some("+44 123 456789"));
+        let b = make_contact("2", "Jane Doe", None, Some("+44 123 456789"));
+        let results = compute_duplicates(&[a, b], None, 0.99);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].match_reason, "same phone");
+    }
+
+    #[test]
+    fn targeted_scan_returns_only_candidates_for_given_contact() {
+        let a = make_contact("1", "John Smith", None, None);
+        let b = make_contact("2", "Jon Smyth", None, None);
+        let c = make_contact("3", "Alice Brown", None, None);
+        let results = compute_duplicates(&[a, b, c], Some("1"), 0.85);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].primary_contact_id, "1");
+        assert_eq!(results[0].contact.id, "2");
+    }
+
+    #[test]
+    fn unknown_contact_id_returns_empty() {
+        let a = make_contact("1", "John Smith", None, None);
+        let results = compute_duplicates(&[a], Some("nonexistent"), 0.85);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn full_scan_emits_each_pair_once() {
+        let a = make_contact("1", "John Smith", None, None);
+        let b = make_contact("2", "Jon Smyth", None, None);
+        let results = compute_duplicates(&[a, b], None, 0.85);
+        assert_eq!(results.len(), 1, "pair (1,2) emitted exactly once");
+    }
+
+    #[test]
+    fn scan_200_contacts_under_500ms() {
+        let contacts: Vec<Contact> = (0..200)
+            .map(|i| make_contact(&i.to_string(), &format!("Contact {i}"), None, None))
+            .collect();
+        let start = std::time::Instant::now();
+        let _ = compute_duplicates(&contacts, None, 0.85);
+        assert!(
+            start.elapsed().as_millis() < 500,
+            "200-contact scan exceeded 500ms"
+        );
     }
 }
