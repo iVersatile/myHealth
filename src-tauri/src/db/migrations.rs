@@ -2,6 +2,8 @@ use rusqlite::{Connection, Result};
 
 const SCHEMA_V1: &str = include_str!("schema.sql");
 const SCHEMA_V2: &str = include_str!("migrations/v2.sql");
+const SCHEMA_V3: &str = include_str!("migrations/v3.sql");
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -30,6 +32,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 3 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V3)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [3])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -47,7 +56,7 @@ mod tests {
     // ── Migration round-trip ─────────────────────────────────────────────────
 
     #[test]
-    fn migration_runs_to_version_2() {
+    fn migration_runs_to_version_3() {
         let conn = migrated_conn();
         let version: i32 = conn
             .query_row(
@@ -56,7 +65,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
     }
 
     #[test]
@@ -70,7 +79,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
     }
 
     // ── Categories ───────────────────────────────────────────────────────────
@@ -467,5 +476,143 @@ mod tests {
             )
             .unwrap();
         assert_eq!(clinic, "clin-ref");
+    }
+
+    // ── v3 column additions ──────────────────────────────────────────────────
+
+    #[test]
+    fn documents_has_extraction_columns() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              created_at, updated_at, is_deleted, \
+              extracted_text, extraction_status, extracted_at, extraction_error, \
+              parsed_filename, parser_confidence) \
+             VALUES ('doc-v3-1','scan.pdf','/tmp/scan.pdf','application/pdf',2048,'lab', \
+             '2024-01-01','2024-01-01',0, \
+             'blood glucose 5.4','done','2024-06-01T10:00:00Z',NULL,'scan_2024',0.92)",
+            [],
+        )
+        .unwrap();
+        let (text, status, confidence): (String, String, f64) = conn
+            .query_row(
+                "SELECT extracted_text, extraction_status, parser_confidence \
+                 FROM documents WHERE id = 'doc-v3-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(text, "blood glucose 5.4");
+        assert_eq!(status, "done");
+        assert!((confidence - 0.92).abs() < 0.001);
+    }
+
+    #[test]
+    fn existing_documents_have_null_extraction_columns() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              created_at, updated_at, is_deleted) \
+             VALUES ('doc-v3-old','old.pdf','/tmp/old.pdf','application/pdf',512,'other', \
+             '2024-01-01','2024-01-01',0)",
+            [],
+        )
+        .unwrap();
+        let text: Option<String> = conn
+            .query_row(
+                "SELECT extracted_text FROM documents WHERE id = 'doc-v3-old'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(
+            text.is_none(),
+            "extracted_text must be NULL for pre-v3 rows"
+        );
+    }
+
+    #[test]
+    fn appointments_has_clinic_id_column() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO clinics (id, name) VALUES ('clin-appt', 'Heart Centre')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO appointments \
+             (id, title, appt_date, status, created_at, updated_at, clinic_id) \
+             VALUES ('appt-v3-1','ECG','2024-09-01','scheduled', \
+             '2024-01-01','2024-01-01','clin-appt')",
+            [],
+        )
+        .unwrap();
+        let clinic: String = conn
+            .query_row(
+                "SELECT clinic_id FROM appointments WHERE id = 'appt-v3-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(clinic, "clin-appt");
+    }
+
+    #[test]
+    fn contacts_has_dedup_columns() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO contacts \
+             (id, name, role, created_at, updated_at, is_deduped_with, dedup_score) \
+             VALUES ('con-v3-1','Jane Doe','gp','2024-01-01','2024-01-01','con-v3-2',0.91)",
+            [],
+        )
+        .unwrap();
+        let (deduped_with, score): (String, f64) = conn
+            .query_row(
+                "SELECT is_deduped_with, dedup_score FROM contacts WHERE id = 'con-v3-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(deduped_with, "con-v3-2");
+        assert!((score - 0.91).abs() < 0.001);
+    }
+
+    #[test]
+    fn document_appointments_has_score_column() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              created_at, updated_at, is_deleted) \
+             VALUES ('doc-v3-s','s.pdf','/tmp/s.pdf','application/pdf',1,'other', \
+             '2024-01-01','2024-01-01',0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, status, created_at, updated_at) \
+             VALUES ('appt-v3-s','Blood Test','2024-10-01','scheduled', \
+             '2024-01-01','2024-01-01')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO document_appointments \
+             (id, document_id, appointment_id, link_type, confidence, score) \
+             VALUES ('lnk-v3','doc-v3-s','appt-v3-s','related','auto',5)",
+            [],
+        )
+        .unwrap();
+        let score: i64 = conn
+            .query_row(
+                "SELECT score FROM document_appointments WHERE id = 'lnk-v3'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(score, 5);
     }
 }
