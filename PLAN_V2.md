@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 4 — Sprint 7
-Task 4.2 — Bulk categorization command
+Current: Phase 4 — Sprint 8
+Task 4.4 — Bulk categorization UI
 ```
 
 ---
@@ -204,20 +204,20 @@ Task 4.2 — Bulk categorization command
    - All write operations wrapped in transactions
    - Done when: `cargo test` covers document linked to 3 categories; query by any category returns it; unassign removes only the specific pair
 
-▶ **4.2 — Bulk categorization command**
+[x] **4.2 — Bulk categorization command**
    - Implement `categories_bulk_link(user_id: String, entity_type: String, entity_ids: Vec<String>, category_id: String)`
    - Use a single DB transaction for all INSERTs (not one command per entity)
    - Done when: `cargo test` (single transaction) links 50 documents to one category in < 1s on CI runner
 
 ### Sprint 8: Frontend
 
-[ ] **4.3 — Multi-category picker in Document/Appointment forms**
+[x] **4.3 — Multi-category picker in Document/Appointment forms**
    - Replace single `<select>` category with `CategoryPicker` multi-select component
    - Shows selected categories as removable chips; search/filter dropdown
    - Calls `assign_category_to_document` / `unassign_category_from_document` on add/remove
    - Done when: document can be assigned 3 categories; all 3 appear in category filter views
 
-[ ] **4.4 — Bulk categorization UI**
+▶ **4.4 — Bulk categorization UI**
    - Add checkbox selection mode to `DocumentList.tsx`
    - "Assign Category" action bar appears on selection; calls `categories_bulk_link`
    - Done when: selecting 5 documents and assigning a category links all 5
