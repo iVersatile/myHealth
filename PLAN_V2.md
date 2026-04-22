@@ -8,7 +8,7 @@
 
 ```
 Current: Phase 2 — Sprint 4
-▶ Task 2.4 — Linked documents sidebar in Appointment detail
+▶ Task 2.5 — F6 tests
 ```
 
 ---
@@ -140,12 +140,12 @@ Current: Phase 2 — Sprint 4
    - "Link" button calls `link_document_to_appointment` + removes card; "Not Related" dismisses permanently for session
    - Done when: uploading a document close in date and clinic to an existing appointment shows a suggestion with score ≥ 4
 
-▶ [ ] **2.4 — Linked documents sidebar in Appointment detail**
+[x] **2.4 — Linked documents sidebar in Appointment detail**
    - In `src/app/(app)/appointments/[id]/page.tsx` add linked documents panel
    - Calls `get_appointment_links`; shows document thumbnails with unlink button
    - Done when: linking a document from the document side appears in the appointment sidebar within 1 render cycle
 
-[ ] **2.5 — F6 tests** — coverage ≥ 80% for scoring, CRUD, and UI flows
+▶ [ ] **2.5 — F6 tests** — coverage ≥ 80% for scoring, CRUD, and UI flows
 
 ---
 
