@@ -8,7 +8,7 @@
 
 ```
 Current: Phase 1 — Sprint 2
-▶ Task 1.3 — Duplicate detection UI in Contacts page
+▶ Task 1.4 — Upload dialog: duplicate check on "Save as Contact"
 ```
 
 ---
@@ -87,13 +87,13 @@ Current: Phase 1 — Sprint 2
 
 ### Sprint 2: Frontend
 
-▶ [ ] **1.3 — Duplicate detection UI in Contacts page**
+[x] **1.3 — Duplicate detection UI in Contacts page**
    - Add "Find Duplicates" button to `src/app/(app)/contacts/page.tsx`
    - Calls `find_duplicate_contacts`; displays side-by-side comparison cards for each group
    - Each card shows both contacts' fields, similarity %, and "Merge" / "Keep Both" buttons
    - Done when: merging two visually confirmed duplicates updates list without page reload
 
-[ ] **1.4 — Upload dialog: duplicate check on "Save as Contact"**
+▶ [ ] **1.4 — Upload dialog: duplicate check on "Save as Contact"**
    - Before calling `contacts_create` in `UploadDialog.tsx`, call `find_duplicate_contacts` with the candidate name
    - If similarity ≥ 0.85 match found, show inline "Possible duplicate: [name] — merge?" prompt
    - User can choose merge, create new, or cancel

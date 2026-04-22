@@ -2,6 +2,13 @@ import { useCallback, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Contact, useContactsStore } from '../store/contactsStore'
 
+export interface DuplicateCandidate {
+  primary_contact_id: string
+  contact: Contact
+  similarity_score: number
+  match_reason: string
+}
+
 export interface ContactCreateInput {
   name: string
   role: string
@@ -63,6 +70,24 @@ export function useContacts(roleFilter?: string) {
     removeContact(id)
   }
 
+  async function findDuplicateContacts(contactId?: string): Promise<DuplicateCandidate[]> {
+    return invoke<DuplicateCandidate[]>('find_duplicate_contacts', {
+      userId: '',
+      contactId: contactId ?? null,
+    })
+  }
+
+  async function mergeContacts(primaryId: string, duplicateIds: string[]): Promise<Contact> {
+    const contact = await invoke<Contact>('merge_contacts', {
+      userId: '',
+      primaryId,
+      duplicateIds,
+    })
+    upsertContact(contact)
+    duplicateIds.forEach(removeContact)
+    return contact
+  }
+
   return {
     contacts,
     loading,
@@ -70,6 +95,8 @@ export function useContacts(roleFilter?: string) {
     createContact,
     updateContact,
     deleteContact,
+    findDuplicateContacts,
+    mergeContacts,
     refresh: fetchContacts,
   }
 }
