@@ -39,7 +39,7 @@
 
 ## Phase 14 — Schema v2 Migrations
 
-[ ] **14.1 — Write migration SQL**
+[x] **14.1 — Write migration SQL**
    - Create `src-tauri/src/db/migrations/v2.sql`
    - Add tables: `categories`, `document_categories`, `appointment_categories`, `clinics`, `document_appointments`, `calendar_sources`, `calendar_events`
    - Add columns: `documents.document_date TEXT`, `documents.extracted_metadata TEXT`, `contacts.clinic_id TEXT`, `contacts.specialty TEXT`
@@ -96,7 +96,7 @@
      ```
    - Done when: `sqlite3 :memory: < v2.sql` exits 0
 
-[ ] **14.2 — Wire migration into migrations.rs**
+[x] **14.2 — Wire migration into migrations.rs**
    - Bump schema version to 2 in `src-tauri/src/db/migrations.rs`
    - Apply v2.sql when current version < 2
    - Done when: `cargo test` passes migration round-trip (v1 DB upgraded to v2)
