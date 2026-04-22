@@ -41,7 +41,6 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [category, setCategory] = useState<DocumentCategory>('lab')
   const [tagsRaw, setTagsRaw] = useState('')
   const [notes, setNotes] = useState('')
-  const [doctorCandidates, setDoctorCandidates] = useState<string[]>([])
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [categorySuggestion, setCategorySuggestion] = useState<string | null>(null)
@@ -80,7 +79,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       setUploadedDoc(doc)
 
       // Run PDF extraction only for PDFs
-      let extractedTags: string[] = [...doc.tags]
+      const extractedTags: string[] = [...doc.tags]
       if (doc.document_date) {
         extractedTags.push(doc.document_date)
       }
@@ -88,7 +87,6 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       if (doc.mime_type === 'application/pdf') {
         try {
           const suggestions = await invoke<ExtractionSuggestions>('documents_run_extraction', { id: doc.id })
-          setDoctorCandidates(suggestions.doctor_candidates)
           setCategorySuggestion(suggestions.category_suggestion)
           setContactSuggestions(suggestions.contact_suggestions)
 

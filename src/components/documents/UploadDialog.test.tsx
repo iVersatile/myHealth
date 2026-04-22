@@ -30,7 +30,7 @@ function setupInvoke() {
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === 'categories_list') return Promise.resolve([])
     if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
-    if (cmd === 'documents_run_extraction') return Promise.resolve([])
+    if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
     if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
     if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
     if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
