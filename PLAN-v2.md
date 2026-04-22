@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 19 — Task 19.1: F5 Contact Auto-Creation — Rust clinic commands
+▶ Phase 19 — Task 19.4: F5 Contact Auto-Creation — Auto-creation suggestion UI
 ```
 
 ---
@@ -238,22 +238,22 @@
 
 ## Phase 19 — F5: Contact Auto-Creation from Documents
 
-[ ] **19.1 — Rust clinic commands**
+[x] **19.1 — Rust clinic commands**
    - Create `src-tauri/src/commands/clinics.rs`
    - Commands: `clinics_list`, `clinics_create`, `clinics_update`, `clinics_delete`
    - Done when: `cargo test` passes CRUD
 
-[ ] **19.2 — Doctor name extraction from metadata**
+[x] **19.2 — Doctor name extraction from metadata**
    - In `extraction/pdf.rs` and `extraction/ocr.rs`: extract candidate doctor names using regex patterns (e.g., `Dr\.\s+[A-Z][a-z]+\s+[A-Z][a-z]+`)
    - Store in `extracted_metadata` JSON under key `"doctor_candidates": [...]`
    - Done when: `cargo test` extracts "Dr. John Smith" from a sample text
 
-[ ] **19.3 — Duplicate detection**
+[x] **19.3 — Duplicate detection**
    - Rust function: `find_similar_contact(name: &str, conn: &Connection) -> Option<Contact>`
    - Use Levenshtein distance ≤ 2 for fuzzy match against existing contacts
    - Done when: "Dr. J. Smith" matches existing "Dr. John Smith"
 
-[ ] **19.4 — Auto-creation suggestion UI**
+▶ **19.4 — Auto-creation suggestion UI**
    - After document upload + extraction: if `doctor_candidates` present and no existing contact matches, show banner: "Create contact for Dr. X?"
    - User can accept (opens pre-filled `ContactForm`) or dismiss
    - Done when: banner appears and pre-fills form correctly

@@ -261,6 +261,50 @@ pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), Str
     Ok(())
 }
 
+fn last_token(s: &str) -> &str {
+    s.split_whitespace().last().unwrap_or(s)
+}
+
+/// Returns an existing contact whose name closely matches `name`, or `None`.
+///
+/// Two passes:
+/// 1. Full-name Levenshtein ≤ 2 — catches typos ("Dr. John Smit" vs "Dr. John Smith").
+/// 2. Surname-only Levenshtein ≤ 1 — catches initial abbreviations ("Dr. J. Smith" vs "Dr. John Smith").
+pub fn find_similar_contact(name: &str, conn: &rusqlite::Connection) -> Option<Contact> {
+    let query_norm = name.trim().to_lowercase();
+    let query_surname = last_token(&query_norm);
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+             created_at, updated_at FROM contacts ORDER BY name",
+        )
+        .ok()?;
+
+    let contacts: Vec<Contact> = stmt
+        .query_map([], row_to_contact)
+        .ok()?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    for c in &contacts {
+        let candidate = c.name.trim().to_lowercase();
+        if strsim::levenshtein(&query_norm, &candidate) <= 2 {
+            return Some(c.clone());
+        }
+    }
+
+    for c in &contacts {
+        let candidate = c.name.trim().to_lowercase();
+        let candidate_surname = last_token(&candidate);
+        if strsim::levenshtein(query_surname, candidate_surname) <= 1 {
+            return Some(c.clone());
+        }
+    }
+
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -338,5 +382,55 @@ mod tests {
             })
             .unwrap();
         assert_eq!(count, 0);
+    }
+
+    fn insert_contact(conn: &rusqlite::Connection, name: &str) {
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) VALUES (?, ?, 'gp', ?, ?)",
+            rusqlite::params![id, name, now, now],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn find_similar_exact_match() {
+        let conn = open_test_db();
+        insert_contact(&conn, "Dr. John Smith");
+        let result = find_similar_contact("Dr. John Smith", &conn);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().name, "Dr. John Smith");
+    }
+
+    #[test]
+    fn find_similar_typo_within_two_edits() {
+        let conn = open_test_db();
+        insert_contact(&conn, "Dr. John Smith");
+        let result = find_similar_contact("Dr. John Smit", &conn);
+        assert!(result.is_some(), "one-char typo should match");
+    }
+
+    #[test]
+    fn find_similar_initial_abbreviation() {
+        let conn = open_test_db();
+        insert_contact(&conn, "Dr. John Smith");
+        let result = find_similar_contact("Dr. J. Smith", &conn);
+        assert!(result.is_some(), "initial abbreviation should match via surname");
+    }
+
+    #[test]
+    fn find_similar_no_match_different_name() {
+        let conn = open_test_db();
+        insert_contact(&conn, "Dr. John Smith");
+        let result = find_similar_contact("Dr. Alice Jones", &conn);
+        assert!(result.is_none(), "completely different name should not match");
+    }
+
+    #[test]
+    fn find_similar_empty_db_returns_none() {
+        let conn = open_test_db();
+        let result = find_similar_contact("Dr. John Smith", &conn);
+        assert!(result.is_none());
     }
 }
