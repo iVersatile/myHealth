@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DocumentList } from './DocumentList'
 import type { Document } from '../../store/documentsStore'
+
+const { mockInvoke } = vi.hoisted(() => ({ mockInvoke: vi.fn() }))
+vi.mock('@tauri-apps/api/core', () => ({ invoke: mockInvoke }))
 
 const mockDeleteDocument = vi.fn()
 const mockGoToPage = vi.fn()
@@ -66,6 +69,7 @@ describe('DocumentList', () => {
     mockDeleteDocument.mockReset()
     mockGoToPage.mockReset()
     mockFilterByCategory.mockReset()
+    mockInvoke.mockResolvedValue([])
   })
 
   it('shows loading state', () => {
@@ -137,5 +141,77 @@ describe('DocumentList', () => {
     render(<DocumentList />)
     const prevBtn = screen.getByRole('button', { name: /previous page/i }) as HTMLButtonElement
     expect(prevBtn.disabled).toBe(true)
+  })
+
+  it('renders a checkbox for each document', () => {
+    mockHookReturn.documents = [makeDoc('a'), makeDoc('b')]
+    mockHookReturn.total = 2
+    render(<DocumentList />)
+    expect(screen.getByRole('checkbox', { name: /select a\.pdf/i })).toBeTruthy()
+    expect(screen.getByRole('checkbox', { name: /select b\.pdf/i })).toBeTruthy()
+  })
+
+  it('shows action bar when a document is selected', async () => {
+    const user = userEvent.setup()
+    mockHookReturn.documents = [makeDoc('a')]
+    mockHookReturn.total = 1
+    render(<DocumentList />)
+    await user.click(screen.getByRole('checkbox', { name: /select a\.pdf/i }))
+    expect(screen.getByRole('toolbar', { name: /bulk actions/i })).toBeTruthy()
+    expect(screen.getByText(/1 document selected/i)).toBeTruthy()
+  })
+
+  it('hides action bar after cancel', async () => {
+    const user = userEvent.setup()
+    mockHookReturn.documents = [makeDoc('a')]
+    mockHookReturn.total = 1
+    render(<DocumentList />)
+    await user.click(screen.getByRole('checkbox', { name: /select a\.pdf/i }))
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(screen.queryByRole('toolbar', { name: /bulk actions/i })).toBeNull()
+  })
+
+  it('select-all checkbox selects all documents on the page', async () => {
+    const user = userEvent.setup()
+    mockHookReturn.documents = [makeDoc('a'), makeDoc('b')]
+    mockHookReturn.total = 2
+    render(<DocumentList />)
+    await user.click(screen.getByRole('checkbox', { name: /select all documents/i }))
+    expect(screen.getByText(/2 documents selected/i)).toBeTruthy()
+  })
+
+  it('calls categories_bulk_link with selected ids and chosen category', async () => {
+    const user = userEvent.setup()
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list')
+        return Promise.resolve([
+          { id: 'cat-1', name: 'Cardiology', parent_id: null, color_hex: '#EF4444', is_system: true, sort_order: 0 },
+        ])
+      return Promise.resolve(undefined)
+    })
+    mockHookReturn.documents = [makeDoc('a'), makeDoc('b')]
+    mockHookReturn.total = 2
+    render(<DocumentList />)
+
+    await user.click(screen.getByRole('checkbox', { name: /select a\.pdf/i }))
+    await user.click(screen.getByRole('checkbox', { name: /select b\.pdf/i }))
+
+    await waitFor(() => screen.getByRole('option', { name: 'Cardiology' }))
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /choose category/i }),
+      'cat-1',
+    )
+    await user.click(screen.getByRole('button', { name: /assign category/i }))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('categories_bulk_link', {
+        userId: '',
+        entityType: 'document',
+        entityIds: ['a', 'b'],
+        categoryId: 'cat-1',
+      }),
+    )
+    // selection cleared after success
+    expect(screen.queryByRole('toolbar', { name: /bulk actions/i })).toBeNull()
   })
 })
