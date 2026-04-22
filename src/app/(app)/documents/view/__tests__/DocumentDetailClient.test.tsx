@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import DocumentDetailClient from '../DocumentDetailClient'
 
 const mockInvoke = vi.fn()
 const mockConvertFileSrc = vi.fn((path: string) => `asset://localhost${path}`)
+const mockRouterPush = vi.fn()
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
@@ -12,11 +13,13 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({ get: () => 'doc-1' }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockRouterPush }),
 }))
 
-vi.mock('../../../../components/categories/CategoryPicker', () => ({
-  CategoryPicker: () => null,
+vi.mock('../../../../../components/categories/CategoryPicker', () => ({
+  CategoryPicker: ({ onChange }: { onChange: (ids: string[]) => void }) => (
+    <button onClick={() => onChange(['cat-1'])}>Pick Category</button>
+  ),
 }))
 
 const makeDoc = (overrides = {}) => ({
@@ -36,13 +39,60 @@ const makeDoc = (overrides = {}) => ({
   ...overrides,
 })
 
-function setupInvoke(docOverrides = {}) {
+const makeCategory = (id = 'cat-1', name = 'Blood Tests') => ({
+  id,
+  name,
+  parent_id: null,
+  color_hex: '#ff0000',
+  is_system: true,
+  sort_order: 1,
+})
+
+const makeLink = (overrides = {}) => ({
+  id: 'link-1',
+  document_id: 'doc-1',
+  appointment_id: 'appt-1',
+  link_type: 'related',
+  confidence: 'manual',
+  created_at: '2026-04-22T10:00:00Z',
+  ...overrides,
+})
+
+const makeAppointment = (overrides = {}) => ({
+  id: 'appt-1',
+  title: 'Annual Checkup',
+  date: '2026-04-22',
+  time: '09:00',
+  doctor: 'Dr. Smith',
+  location: 'Clinic',
+  notes: null,
+  status: 'scheduled',
+  created_at: '2026-04-22T10:00:00Z',
+  updated_at: '2026-04-22T10:00:00Z',
+  ...overrides,
+})
+
+function setupInvoke(
+  docOverrides = {},
+  opts: {
+    categories?: ReturnType<typeof makeCategory>[]
+    links?: ReturnType<typeof makeLink>[]
+    appointments?: ReturnType<typeof makeAppointment>[]
+    assignedIds?: string[]
+  } = {}
+) {
+  const {
+    categories = [],
+    links = [],
+    appointments = [],
+    assignedIds = [],
+  } = opts
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === 'documents_get') return Promise.resolve(makeDoc(docOverrides))
-    if (cmd === 'categories_list') return Promise.resolve([])
-    if (cmd === 'categories_for_document') return Promise.resolve([])
-    if (cmd === 'links_list_for_document') return Promise.resolve([])
-    if (cmd === 'appointments_list') return Promise.resolve([])
+    if (cmd === 'categories_list') return Promise.resolve(categories)
+    if (cmd === 'categories_for_document') return Promise.resolve(assignedIds)
+    if (cmd === 'links_list_for_document') return Promise.resolve(links)
+    if (cmd === 'appointments_list') return Promise.resolve(appointments)
     return Promise.resolve(undefined)
   })
 }
@@ -51,6 +101,7 @@ describe('DocumentDetailClient — document preview (AC-F1.6)', () => {
   beforeEach(() => {
     mockInvoke.mockReset()
     mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
   })
 
   it('renders iframe with asset URL for PDF documents', async () => {
@@ -92,5 +143,427 @@ describe('DocumentDetailClient — document preview (AC-F1.6)', () => {
     const { container } = render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
     expect(container.querySelector('iframe')).toBeNull()
+  })
+})
+
+describe('DocumentDetailClient — error and loading states', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+  })
+
+  it('shows loading state initially', () => {
+    mockInvoke.mockReturnValue(new Promise(() => {}))
+    render(<DocumentDetailClient />)
+    expect(screen.getByText('Loading…')).toBeTruthy()
+  })
+
+  it('shows error when documents_get rejects', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.reject(new Error('DB error'))
+      return Promise.resolve([])
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('DB error')).toBeTruthy()
+  })
+
+  it('shows error string when non-Error is thrown', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.reject('string error')
+      return Promise.resolve([])
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('string error')).toBeTruthy()
+  })
+})
+
+describe('DocumentDetailClient — document details panel', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+  })
+
+  it('displays document filename in breadcrumb', async () => {
+    setupInvoke({ filename: 'blood-test.pdf' })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('blood-test.pdf')).toBeTruthy()
+  })
+
+  it('displays file size in bytes for small files', async () => {
+    setupInvoke({ file_size_bytes: 500 })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('500 B')).toBeTruthy()
+  })
+
+  it('displays file size in KB for medium files', async () => {
+    setupInvoke({ file_size_bytes: 2048 })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('2.0 KB')).toBeTruthy()
+  })
+
+  it('displays file size in MB for large files', async () => {
+    setupInvoke({ file_size_bytes: 2 * 1024 * 1024 })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('2.0 MB')).toBeTruthy()
+  })
+
+  it('shows category label from CATEGORY_LABELS', async () => {
+    setupInvoke({ category: 'lab' })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Lab')).toBeTruthy()
+  })
+
+  it('falls back to raw category when label not in map', async () => {
+    setupInvoke({ category: 'unknown_cat' })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('unknown_cat')).toBeTruthy()
+  })
+})
+
+describe('DocumentDetailClient — tags', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+  })
+
+  it('renders existing tags', async () => {
+    setupInvoke({ tags: ['cardiology', '2024-03-15'] })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('#cardiology')).toBeTruthy()
+    expect(screen.getByText('#2024-03-15')).toBeTruthy()
+  })
+
+  it('adds a tag on button click', async () => {
+    setupInvoke()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const input = screen.getByPlaceholderText('Add tag')
+    fireEvent.change(input, { target: { value: 'newtag' } })
+    fireEvent.click(screen.getByRole('button', { name: '+' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('documents_tags_set', {
+        id: 'doc-1',
+        tags: ['newtag'],
+      })
+    })
+  })
+
+  it('adds a tag on Enter key', async () => {
+    setupInvoke()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const input = screen.getByPlaceholderText('Add tag')
+    fireEvent.change(input, { target: { value: 'entertag' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('documents_tags_set', {
+        id: 'doc-1',
+        tags: ['entertag'],
+      })
+    })
+  })
+
+  it('does not add duplicate tags', async () => {
+    setupInvoke({ tags: ['existing'] })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const input = screen.getByPlaceholderText('Add tag')
+    fireEvent.change(input, { target: { value: 'existing' } })
+    fireEvent.click(screen.getByRole('button', { name: '+' }))
+
+    await waitFor(() => {
+      const tagCalls = mockInvoke.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'documents_tags_set'
+      )
+      expect(tagCalls).toHaveLength(0)
+    })
+  })
+
+  it('removes a tag on ✕ click', async () => {
+    setupInvoke({ tags: ['cardiology'] })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove tag cardiology' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('documents_tags_set', {
+        id: 'doc-1',
+        tags: [],
+      })
+    })
+  })
+})
+
+describe('DocumentDetailClient — notes', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+  })
+
+  it('pre-populates notes from document', async () => {
+    setupInvoke({ notes: 'Existing note text' })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    const textarea = screen.getByPlaceholderText('Add notes…') as HTMLTextAreaElement
+    expect(textarea.value).toBe('Existing note text')
+  })
+
+  it('saves notes on button click', async () => {
+    setupInvoke({ notes: 'Some notes' })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Notes' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('documents_update', {
+        id: 'doc-1',
+        notes: 'Some notes',
+      })
+    })
+  })
+
+  it('passes null for empty notes on save', async () => {
+    setupInvoke({ notes: null })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Notes' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('documents_update', {
+        id: 'doc-1',
+        notes: null,
+      })
+    })
+  })
+})
+
+describe('DocumentDetailClient — categories section', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+  })
+
+  it('shows CategoryPicker when categories are available', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([makeCategory()])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Pick Category')).toBeTruthy()
+  })
+
+  it('does not show CategoryPicker when no categories', async () => {
+    setupInvoke({}, { categories: [] })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.queryByText('Pick Category')).toBeNull()
+  })
+
+  it('calls categories_assign_document when new category added', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([makeCategory()])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByText('Pick Category'))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('categories_assign_document', {
+        documentId: 'doc-1',
+        categoryId: 'cat-1',
+      })
+    })
+  })
+
+  it('calls categories_unassign when category removed', async () => {
+    // Start with cat-1 and cat-2 both assigned; mock picks only cat-1 → cat-2 removed
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list')
+        return Promise.resolve([makeCategory('cat-1'), makeCategory('cat-2', 'X-Ray')])
+      if (cmd === 'categories_for_document') return Promise.resolve(['cat-1', 'cat-2'])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByText('Pick Category'))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('categories_unassign', {
+        entityId: 'doc-1',
+        categoryId: 'cat-2',
+        entityType: 'document',
+      })
+    })
+  })
+})
+
+describe('DocumentDetailClient — appointment links', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+  })
+
+  it('shows linked appointment title', async () => {
+    setupInvoke(
+      {},
+      {
+        links: [makeLink()],
+        appointments: [makeAppointment()],
+      }
+    )
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Annual Checkup')).toBeTruthy()
+  })
+
+  it('shows appointment id when appointment not found', async () => {
+    setupInvoke({}, { links: [makeLink()], appointments: [] })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('appt-1')).toBeTruthy()
+  })
+
+  it('unlinks appointment on ✕ click', async () => {
+    setupInvoke(
+      {},
+      {
+        links: [makeLink()],
+        appointments: [makeAppointment()],
+      }
+    )
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink appointment' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('links_delete', { id: 'link-1' })
+    })
+  })
+
+  it('shows appointment select when unlinkable appointments exist', async () => {
+    setupInvoke(
+      {},
+      {
+        links: [],
+        appointments: [makeAppointment()],
+      }
+    )
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Select appointment…')).toBeTruthy()
+    expect(screen.getByText('Annual Checkup')).toBeTruthy()
+  })
+
+  it('hides select when all appointments already linked', async () => {
+    setupInvoke(
+      {},
+      {
+        links: [makeLink()],
+        appointments: [makeAppointment()],
+      }
+    )
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.queryByText('Select appointment…')).toBeNull()
+  })
+
+  it('links selected appointment on Link button click', async () => {
+    const newLink = makeLink({ id: 'link-2', appointment_id: 'appt-1' })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([makeAppointment()])
+      if (cmd === 'links_create') return Promise.resolve(newLink)
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const select = screen.getByRole('combobox')
+    fireEvent.change(select, { target: { value: 'appt-1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Link' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('links_create', {
+        input: {
+          document_id: 'doc-1',
+          appointment_id: 'appt-1',
+          link_type: 'related',
+          confidence: 'manual',
+        },
+      })
+    })
+  })
+})
+
+describe('DocumentDetailClient — delete', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  })
+
+  it('calls documents_delete and navigates on confirm', async () => {
+    setupInvoke()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('documents_delete', { id: 'doc-1' })
+      expect(mockRouterPush).toHaveBeenCalledWith('/documents')
+    })
+  })
+
+  it('does not delete when confirm returns false', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    setupInvoke()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => {
+      const deleteCalls = mockInvoke.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'documents_delete'
+      )
+      expect(deleteCalls).toHaveLength(0)
+    })
   })
 })
