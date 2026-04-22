@@ -233,6 +233,48 @@ pub fn categories_unassign(
 }
 
 #[tauri::command]
+pub fn categories_bulk_link(
+    _user_id: String,
+    entity_type: String,
+    entity_ids: Vec<String>,
+    category_id: String,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    let sql = match entity_type.as_str() {
+        "document" => {
+            "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)"
+        }
+        "appointment" => {
+            "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)"
+        }
+        _ => return Err(format!("unknown entity_type: {entity_type}")),
+    };
+
+    conn.execute("BEGIN", []).map_err(|e| e.to_string())?;
+
+    let mut inserted = 0usize;
+    for entity_id in &entity_ids {
+        match conn.execute(sql, rusqlite::params![entity_id, category_id]) {
+            Ok(n) => inserted += n,
+            Err(e) => {
+                let _ = conn.execute("ROLLBACK", []);
+                return Err(e.to_string());
+            }
+        }
+    }
+
+    conn.execute("COMMIT", []).map_err(|e| {
+        let _ = conn.execute("ROLLBACK", []);
+        e.to_string()
+    })?;
+
+    Ok(inserted)
+}
+
+#[tauri::command]
 pub fn assign_category_to_document(
     _user_id: String,
     document_id: String,
@@ -722,5 +764,52 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 3);
+    }
+
+    #[test]
+    fn bulk_link_50_documents_in_single_transaction() {
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+
+        let doc_ids: Vec<String> = (0..50).map(|_| Uuid::new_v4().to_string()).collect();
+        for doc_id in &doc_ids {
+            conn.execute(
+                "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+                 VALUES (?1, 'bulk.pdf', '/tmp/bulk.pdf', 'application/pdf', 0, 'other', ?2, ?2)",
+                rusqlite::params![doc_id, now],
+            )
+            .unwrap();
+        }
+
+        let cats = list_categories(&conn);
+        let cat_id = &cats[0].id;
+
+        let start = std::time::Instant::now();
+
+        conn.execute("BEGIN", []).unwrap();
+        for doc_id in &doc_ids {
+            conn.execute(
+                "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
+                rusqlite::params![doc_id, cat_id],
+            )
+            .unwrap();
+        }
+        conn.execute("COMMIT", []).unwrap();
+
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed.as_secs() < 1,
+            "bulk insert of 50 docs took {:?}, expected < 1s",
+            elapsed
+        );
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_categories WHERE category_id = ?1",
+                rusqlite::params![cat_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 50);
     }
 }
