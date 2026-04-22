@@ -8,7 +8,7 @@
 
 ```
 Current: Phase 6 — Release
-Task 6.1 — End-to-end smoke test
+Task 6.2 — Bump version & tag
 ```
 
 ---
@@ -264,11 +264,11 @@ Task 6.1 — End-to-end smoke test
 
 ## Phase 6 — Release
 
-▶ [ ] **6.1 — End-to-end smoke test**
+[x] **6.1 — End-to-end smoke test**
    - Manual walkthrough of all v1.1 flows: duplicate detection, link scoring, OCR, multi-category, calendar sync
    - Verify performance targets from PRD_V2 §Non-Functional Requirements
 
-[ ] **6.2 — Bump version & tag**
+▶ [ ] **6.2 — Bump version & tag**
    - Update `package.json` version to `1.1.0`
    - Update `src-tauri/tauri.conf.json` version to `1.1.0`
    - **Requires explicit user approval before running `git tag`** (see `docs/COMMIT_STRATEGY.md`)
