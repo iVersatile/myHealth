@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 3 — Sprint 6
-Task 3.5 — F2 tests (coverage ≥ 80% for extraction, OCR, caching, progress UI)
+Current: Phase 4 — Sprint 7
+Task 4.1 — Junction table CRUD commands (hierarchical categories many-to-many)
 ```
 
 ---
@@ -184,7 +184,7 @@ Task 3.5 — F2 tests (coverage ≥ 80% for extraction, OCR, caching, progress U
    - Auto-dismiss when extraction complete
    - Done when: uploading a scanned PDF shows page-by-page progress updates; progress events render within 100ms of emission
 
-▶ **3.5 — F2 tests** — coverage ≥ 80% for extraction, OCR, caching, and progress UI
+[x] **3.5 — F2 tests** — coverage ≥ 80% for extraction, OCR, caching, and progress UI
 
 ---
 
@@ -194,7 +194,7 @@ Task 3.5 — F2 tests (coverage ≥ 80% for extraction, OCR, caching, progress U
 
 ### Sprint 7: Backend & schema
 
-[ ] **4.1 — Junction table CRUD commands**
+▶ **4.1 — Junction table CRUD commands**
    - Junction tables exist from Task 0.1 migration — no schema discovery needed
    - Implement Tauri commands per ARCHITECTURE_V2 §4:
      - `assign_category_to_document(user_id: String, document_id: String, category_id: String)`

@@ -333,4 +333,78 @@ describe('UploadDialog', () => {
     fireEvent.drop(dropZone, { dataTransfer })
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_upload', expect.objectContaining({ filePath: '/tmp/dropped.pdf' })))
   })
+
+  it('shows OCR progressbar with page/total/elapsed when ocr_progress event fires', async () => {
+    let ocrCallback: ((e: { payload: unknown }) => void) | null = null
+    mockListen.mockReset()
+    mockListen.mockImplementation(async (_event: string, cb: (e: { payload: unknown }) => void) => {
+      ocrCallback = cb
+      return () => {}
+    })
+
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    mockOpen.mockResolvedValue('/home/user/scan.pdf')
+
+    // Delay extraction so progress event fires while still in analyzing step
+    let resolveExtraction!: (v: unknown) => void
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return new Promise((res) => { resolveExtraction = res })
+      return Promise.resolve(undefined)
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /drop file here/i }))
+
+    // Wait for listen to be registered
+    await waitFor(() => expect(ocrCallback).not.toBeNull())
+
+    // Fire a progress event
+    ocrCallback!({ payload: { page: 3, total: 8, elapsed_ms: 4000 } })
+
+    await waitFor(() => expect(screen.getByRole('progressbar')).toBeTruthy())
+    const bar = screen.getByRole('progressbar')
+    expect(bar.getAttribute('aria-valuenow')).toBe('3')
+    expect(bar.getAttribute('aria-valuemax')).toBe('8')
+    expect(screen.getByText(/page 3 of 8/i)).toBeTruthy()
+    expect(screen.getByText(/4s elapsed/i)).toBeTruthy()
+
+    // Finish extraction so component doesn't hang
+    resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
+  })
+
+  it('hides OCR progressbar after extraction completes', async () => {
+    let ocrCallback: ((e: { payload: unknown }) => void) | null = null
+    mockListen.mockReset()
+    mockListen.mockImplementation(async (_event: string, cb: (e: { payload: unknown }) => void) => {
+      ocrCallback = cb
+      return () => {}
+    })
+
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    mockOpen.mockResolvedValue('/home/user/scan.pdf')
+
+    let resolveExtraction!: (v: unknown) => void
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return new Promise((res) => { resolveExtraction = res })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      return Promise.resolve(undefined)
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /drop file here/i }))
+    await waitFor(() => expect(ocrCallback).not.toBeNull())
+
+    ocrCallback!({ payload: { page: 1, total: 3, elapsed_ms: 1000 } })
+    await waitFor(() => expect(screen.getByRole('progressbar')).toBeTruthy())
+
+    resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
+
+    await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull())
+    // Component should now be in review step
+    await waitFor(() => expect(screen.getByText('report.pdf')).toBeTruthy())
+  })
 })
