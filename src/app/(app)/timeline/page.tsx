@@ -104,12 +104,24 @@ function formatDay(date: Date) {
 
 // ── TimelineItem ──────────────────────────────────────────────────────────────
 
-function TimelineItem({ event, highlighted = false }: { event: TimelineEvent; highlighted?: boolean }) {
+function TimelineItem({
+  event,
+  highlighted = false,
+  badgeColor,
+}: {
+  event: TimelineEvent
+  highlighted?: boolean
+  badgeColor?: string
+}) {
   const typeColor: Record<EventType, string> = {
     document: 'var(--color-accent)',
     appointment: '#10b981',
     note: '#f59e0b',
   }
+
+  const badgeStyle = badgeColor
+    ? { backgroundColor: badgeColor + '28', color: badgeColor, border: `1px solid ${badgeColor}60` }
+    : { backgroundColor: 'var(--color-tag-bg)', color: 'var(--color-tag-text)' }
 
   return (
     <a href={event.href} className="flex gap-4 no-underline group">
@@ -126,7 +138,10 @@ function TimelineItem({ event, highlighted = false }: { event: TimelineEvent; hi
           <span className="text-xs text-[var(--color-text-muted)] w-14 shrink-0 mt-0.5">
             {formatDay(event.date)}
           </span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-tag-bg)] text-[var(--color-tag-text)] font-mono shrink-0">
+          <span
+            className="text-xs px-1.5 py-0.5 rounded font-mono shrink-0"
+            style={badgeStyle}
+          >
             {event.badge}
           </span>
           <div className="min-w-0 flex-1">
@@ -152,14 +167,46 @@ function TimelineItem({ event, highlighted = false }: { event: TimelineEvent; hi
 
 // ── GroupHeader ───────────────────────────────────────────────────────────────
 
-function GroupHeader({ label, color, count }: { label: string; color?: string; count: number }) {
+function GroupHeader({
+  label,
+  color,
+  count,
+  categoryId,
+  onColorChange,
+}: {
+  label: string
+  color?: string
+  count: number
+  categoryId?: string
+  onColorChange?: (id: string, color: string) => void
+}) {
   return (
     <div className="flex items-center gap-3 mb-4">
       {color && (
-        <span
-          className="w-3 h-3 rounded-full shrink-0"
-          style={{ backgroundColor: color }}
-        />
+        categoryId && onColorChange
+          ? (
+            <label
+              className="w-3 h-3 rounded-full shrink-0 cursor-pointer ring-offset-1 hover:ring-2 hover:ring-[var(--color-accent)] transition-shadow relative"
+              title="Click to change category color"
+            >
+              <span
+                className="block w-3 h-3 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <input
+                type="color"
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                value={color}
+                onChange={(e) => onColorChange(categoryId, e.target.value)}
+              />
+            </label>
+          )
+          : (
+            <span
+              className="w-3 h-3 rounded-full shrink-0"
+              style={{ backgroundColor: color }}
+            />
+          )
       )}
       <span className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
         {label}
@@ -185,6 +232,20 @@ export default function TimelinePage() {
   // appointmentId -> documentIds linked to it
   const [apptLinkedDocIds, setApptLinkedDocIds] = useState<Map<string, string[]>>(new Map())
   const [extraLoading, setExtraLoading] = useState(false)
+
+  async function handleCategoryColorChange(categoryId: string, newColor: string) {
+    setCategories((prev) =>
+      prev.map((c) => (c.id === categoryId ? { ...c, color_hex: newColor } : c))
+    )
+    try {
+      await invoke('categories_update', { input: { id: categoryId, color_hex: newColor } })
+    } catch {
+      // revert on failure
+      setCategories((prev) =>
+        prev.map((c) => (c.id === categoryId ? { ...c, color_hex: c.color_hex } : c))
+      )
+    }
+  }
 
   const { documents, loading: docsLoading } = useDocuments()
   const { appointments, loading: apptsLoading } = useAppointments()
@@ -524,10 +585,16 @@ export default function TimelinePage() {
                   label={category.name}
                   color={category.color_hex}
                   count={events.length}
+                  categoryId={category.id !== '__none__' ? category.id : undefined}
+                  onColorChange={category.id !== '__none__' ? handleCategoryColorChange : undefined}
                 />
                 <div>
                   {events.map((event) => (
-                    <TimelineItem key={event.id} event={event} />
+                    <TimelineItem
+                      key={event.id}
+                      event={event}
+                      badgeColor={category.id !== '__none__' ? category.color_hex : undefined}
+                    />
                   ))}
                 </div>
               </div>

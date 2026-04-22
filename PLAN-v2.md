@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 20 — Task 20.5: Timeline v2 — condition/doctor views
+▶ Phase 20 — Task 20.6: Condition color highlighting
 ```
 
 ---
@@ -286,7 +286,7 @@
    - Search & select appointments; call `links_create` with `confidence = 'manual'`
    - Done when: user can manually link/unlink
 
-[ ] **20.5 — Timeline v2 — condition/doctor views**
+[x] **20.5 — Timeline v2 — condition/doctor views**
    - Refactor `src/app/timeline/page.tsx`:
      - Add view toggle: Chronological | By Category | By Doctor
      - "By Category" groups events under category names with color swatch
