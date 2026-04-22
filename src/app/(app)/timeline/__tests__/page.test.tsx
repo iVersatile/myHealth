@@ -199,7 +199,7 @@ describe('TimelinePage', () => {
   })
 
   it('shows "No doctor assigned" for appointments without a doctor', async () => {
-    mockAppointments = [{ ...APPT, id: 'a2', doctor_name: null, clinic_name: null }]
+    mockAppointments = [{ ...APPT, id: 'a2', doctor_name: null as unknown as string, clinic_name: null as unknown as string }]
     await renderPage()
     fireEvent.click(screen.getByText('By Doctor'))
     await waitFor(() => expect(screen.getByText('No doctor assigned')).toBeDefined())
