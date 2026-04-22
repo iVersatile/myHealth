@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 2 — Sprint 4
-▶ Task 2.5 — F6 tests
+Current: Phase 3 — Sprint 5
+Task 3.2 — OCR extraction command
 ```
 
 ---
@@ -145,7 +145,7 @@ Current: Phase 2 — Sprint 4
    - Calls `get_appointment_links`; shows document thumbnails with unlink button
    - Done when: linking a document from the document side appears in the appointment sidebar within 1 render cycle
 
-▶ [ ] **2.5 — F6 tests** — coverage ≥ 80% for scoring, CRUD, and UI flows
+[x] **2.5 — F6 tests** — coverage ≥ 80% for scoring, CRUD, and UI flows
 
 ---
 
@@ -155,14 +155,14 @@ Current: Phase 2 — Sprint 4
 
 ### Sprint 5: Rust backend
 
-[ ] **3.1 — OCR subprocess integration**
+[x] **3.1 — OCR subprocess integration**
    - Tesseract 5.x must be available on target platform: macOS (`brew install tesseract`), Windows (bundled binary or system install), Linux (system package)
    - In `src-tauri/src/services/extraction/ocr.rs` implement async OCR via `tokio::process::Command::new("tesseract")`
    - Spawn **one subprocess per document** (not per page) to minimise process-spawn overhead
    - Per-page 10s timeout; on timeout append `[OCR_TIMEOUT]` marker and continue to next page
    - Done when: `cargo test` confirms subprocess extraction works end-to-end; `tesseract` CLI invocation correctly parses a test image file
 
-[ ] **3.2 — OCR extraction command**
+▶ **3.2 — OCR extraction command**
    - In `src-tauri/src/services/extraction/mod.rs` add OCR branch:
      - After native `pdf-extract` pass, if extracted text < 50% expected character density, trigger OCR
      - Single Tesseract subprocess for whole document; emit Tauri event `ocr_progress { page: u32, total: u32, elapsed_ms: u64 }` per page

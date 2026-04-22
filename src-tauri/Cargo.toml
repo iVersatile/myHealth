@@ -35,6 +35,4 @@ regex = "1"
 strsim = "0.11"
 pdf-extract = "0.7"
 image = "0.25"
-# Note: leptess/tesseract require system Tesseract/Leptonica libraries
-# Pure-Rust OCR alternatives available but not yet integrated
-# For now: pdf-extract for PDF text, image for image processing
+tokio = { version = "1", features = ["process", "time", "rt", "rt-multi-thread", "macros"] }

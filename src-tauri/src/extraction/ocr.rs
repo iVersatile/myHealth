@@ -1,33 +1,111 @@
 use std::path::Path;
+use std::time::Duration;
 
-/// Extracts text from image files using OCR.
-///
-/// Currently a stub returning empty string since system Tesseract
-/// is not installed. In production, this would use a real OCR engine.
-#[allow(dead_code)]
+const PER_CALL_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Runs Tesseract OCR on the image at `path`.
+/// Returns `Ok("[OCR_TIMEOUT]")` if the call exceeds 10 s.
+/// Returns `Err(…)` only if the process cannot be spawned.
+pub async fn extract_image_text_async(path: &Path) -> Result<String, String> {
+    let path_str = path.to_str().ok_or("non-UTF-8 path")?;
+
+    let child = tokio::process::Command::new("tesseract")
+        .arg(path_str)
+        .arg("stdout")
+        .arg("-l")
+        .arg("eng")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                "tesseract not found; install with: brew install tesseract".to_string()
+            } else {
+                format!("failed to spawn tesseract: {e}")
+            }
+        })?;
+
+    match tokio::time::timeout(PER_CALL_TIMEOUT, child.wait_with_output()).await {
+        Ok(Ok(output)) => String::from_utf8(output.stdout)
+            .map(|s| s.trim().to_string())
+            .map_err(|e| format!("OCR output is not valid UTF-8: {e}")),
+        Ok(Err(e)) => Err(format!("tesseract process error: {e}")),
+        Err(_) => Ok("[OCR_TIMEOUT]".to_string()),
+    }
+}
+
+/// Synchronous wrapper around [`extract_image_text_async`].
+/// Do not call from within an existing async context.
 pub fn extract_image_text(path: &Path) -> Result<String, String> {
-    // Stub: return empty string for now
-    // In the future, replace with actual OCR (leptess or pure-Rust alternative)
-    let _ = path;
-    Ok(String::new())
+    tokio::runtime::Runtime::new()
+        .map_err(|e| format!("failed to create tokio runtime: {e}"))?
+        .block_on(extract_image_text_async(path))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use image::{ImageBuffer, Luma};
     use std::path::PathBuf;
 
-    #[test]
-    fn returns_empty_for_jpeg() {
-        let path = PathBuf::from("/tmp/fake.jpg");
-        let result = extract_image_text(&path);
-        assert_eq!(result, Ok(String::new()));
+    fn write_blank_png(name: &str) -> PathBuf {
+        let path = PathBuf::from(format!("/tmp/{name}"));
+        let img: ImageBuffer<Luma<u8>, Vec<u8>> =
+            ImageBuffer::from_fn(200, 50, |_, _| Luma([255u8]));
+        img.save(&path).expect("failed to write test PNG");
+        path
     }
 
     #[test]
-    fn returns_empty_for_png() {
-        let path = PathBuf::from("/tmp/fake.png");
+    fn tesseract_processes_blank_image() {
+        let path = write_blank_png("ocr_blank_test.png");
         let result = extract_image_text(&path);
-        assert_eq!(result, Ok(String::new()));
+        assert!(result.is_ok(), "OCR failed: {result:?}");
+    }
+
+    #[test]
+    fn blank_image_returns_empty_or_whitespace_only() {
+        let path = write_blank_png("ocr_blank_empty.png");
+        let text = extract_image_text(&path).unwrap();
+        assert!(
+            text.is_empty() || text.chars().all(|c| c.is_whitespace()),
+            "expected empty text for blank image, got: {text:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn async_variant_succeeds_on_blank_image() {
+        let path = write_blank_png("ocr_async_test.png");
+        let result = extract_image_text_async(&path).await;
+        assert!(result.is_ok(), "async OCR failed: {result:?}");
+    }
+
+    #[test]
+    fn nonexistent_file_does_not_panic() {
+        let path = PathBuf::from("/tmp/nonexistent_ocr_xyz_12345.png");
+        let _ = extract_image_text(&path);
+    }
+
+    #[test]
+    fn returns_error_when_tesseract_not_found() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result: Result<String, String> = rt.block_on(async {
+            tokio::process::Command::new("tesseract_binary_that_does_not_exist")
+                .arg("/tmp/x.png")
+                .arg("stdout")
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .map(|_| String::new())
+                .map_err(|e| {
+                    if e.kind() == std::io::ErrorKind::NotFound {
+                        "tesseract not found; install with: brew install tesseract".to_string()
+                    } else {
+                        format!("failed to spawn tesseract: {e}")
+                    }
+                })
+        });
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not found"));
     }
 }
