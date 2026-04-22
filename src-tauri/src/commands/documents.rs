@@ -669,6 +669,8 @@ pub struct ExtractionSuggestions {
 pub fn documents_run_extraction(
     id: String,
     state: State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    emit_progress: Option<bool>,
 ) -> Result<ExtractionSuggestions, String> {
     let file_path: String = {
         let guard = state.db.lock().map_err(|e| e.to_string())?;
@@ -681,7 +683,11 @@ pub fn documents_run_extraction(
         .map_err(|e| e.to_string())?
     };
 
-    let result = crate::extraction::extract(std::path::Path::new(&file_path));
+    let result = if emit_progress.unwrap_or(false) {
+        crate::extraction::extract_with_progress(std::path::Path::new(&file_path), &app_handle)
+    } else {
+        crate::extraction::extract(std::path::Path::new(&file_path))
+    };
 
     let contact_dtos: Vec<ContactSuggestionDto> = result
         .contact_suggestions
