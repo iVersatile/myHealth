@@ -426,7 +426,10 @@ mod tests {
         let conn = open_test_db();
         insert_contact(&conn, "Dr. John Smith");
         let result = find_similar_contact("Dr. J. Smith", &conn);
-        assert!(result.is_some(), "initial abbreviation should match via surname");
+        assert!(
+            result.is_some(),
+            "initial abbreviation should match via surname"
+        );
     }
 
     #[test]
@@ -434,7 +437,10 @@ mod tests {
         let conn = open_test_db();
         insert_contact(&conn, "Dr. John Smith");
         let result = find_similar_contact("Dr. Alice Jones", &conn);
-        assert!(result.is_none(), "completely different name should not match");
+        assert!(
+            result.is_none(),
+            "completely different name should not match"
+        );
     }
 
     #[test]
