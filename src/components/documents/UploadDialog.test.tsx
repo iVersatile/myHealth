@@ -268,6 +268,59 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(screen.queryByText(/suggested category/i)).toBeNull())
   })
 
+  it('cancel on duplicate prompt deletes new contact and returns to idle', async () => {
+    const contactSugg = { name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
+    const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.92, match_reason: 'name similarity' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'new-c1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([dupCandidate])
+      if (cmd === 'contacts_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    const cancelBtns = screen.getAllByRole('button', { name: /^cancel$/i })
+    await userEvent.click(cancelBtns[0]!)
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'new-c1' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+  })
+
+  it('cancel on duplicate prompt returns to idle even if delete fails', async () => {
+    const contactSugg = { name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
+    const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.92, match_reason: 'name similarity' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'new-c1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([dupCandidate])
+      if (cmd === 'contacts_delete') return Promise.reject(new Error('delete failed'))
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    const cancelBtns = screen.getAllByRole('button', { name: /^cancel$/i })
+    await userEvent.click(cancelBtns[0]!)
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+  })
+
   it('processes file via drag and drop', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     const dropZone = screen.getByRole('button', { name: /drop file here/i })

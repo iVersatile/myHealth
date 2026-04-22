@@ -1,6 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
+vi.mock('../../../../components/contacts/ContactForm', () => ({
+  ContactForm: ({
+    onSave,
+    onCancel,
+    initial,
+  }: {
+    onSave: (d: unknown) => void
+    onCancel: () => void
+    initial: { name: string } | null
+  }) => (
+    <div data-testid="contact-form">
+      {initial ? <span>editing:{initial.name}</span> : <span>new-form</span>}
+      <button onClick={() => onSave(initial ?? { name: 'New', role: 'gp' })}>Save Contact</button>
+      <button onClick={onCancel}>Cancel Form</button>
+    </div>
+  ),
+}))
+
 const CONTACT_A = {
   id: 'c1',
   name: 'Dr. John Smith',
@@ -162,5 +180,84 @@ describe('ContactsPage', () => {
     fireEvent.click(screen.getByText('Find Duplicates'))
     await waitFor(() => expect(screen.getByText('← Back')).toBeInTheDocument())
     expect(screen.queryByText('+ New')).not.toBeInTheDocument()
+  })
+
+  it('role chip passes role filter to contacts_list', async () => {
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
+    const callsBefore = mockInvoke.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Specialist' }))
+    await waitFor(() => expect(mockInvoke.mock.calls.length).toBeGreaterThan(callsBefore))
+    const listCalls = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'contacts_list')
+    const lastCall = listCalls[listCalls.length - 1]
+    expect(lastCall![1]).toMatchObject({ role: 'specialist' })
+  })
+
+  it('active role chip has accent background class', async () => {
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
+    const gpChip = screen.getByRole('button', { name: 'GP' })
+    fireEvent.click(gpChip)
+    expect(gpChip.className).toContain('bg-[var(--color-accent)]')
+  })
+
+  it('confirmed delete calls contacts_delete', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
+    fireEvent.click(screen.getAllByRole('button', { name: /delete/i })[0]!)
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', expect.objectContaining({ id: 'c1' }))
+    )
+  })
+
+  it('cancelled delete does not call contacts_delete', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
+    const callsBefore = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'contacts_delete').length
+    fireEvent.click(screen.getAllByRole('button', { name: /delete/i })[0]!)
+    const callsAfter = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'contacts_delete').length
+    expect(callsAfter).toBe(callsBefore)
+  })
+
+  it('+ New button opens ContactForm in new mode', async () => {
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('+ New')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('+ New'))
+    expect(screen.getByTestId('contact-form')).toBeInTheDocument()
+    expect(screen.getByText('new-form')).toBeInTheDocument()
+  })
+
+  it('Cancel Form button closes ContactForm', async () => {
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('+ New')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('+ New'))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel Form' }))
+    await waitFor(() => expect(screen.queryByTestId('contact-form')).not.toBeInTheDocument())
+  })
+
+  it('edit button opens ContactForm pre-filled with contact name', async () => {
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
+    fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]!)
+    expect(screen.getByTestId('contact-form')).toBeInTheDocument()
+    expect(screen.getByText('editing:Dr. John Smith')).toBeInTheDocument()
+  })
+
+  it('Save Contact in edit mode calls contacts_update', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([CONTACT_A, CONTACT_B])
+      if (cmd === 'contacts_update') return Promise.resolve({ ...CONTACT_A, name: 'Updated Name' })
+      return Promise.resolve([])
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
+    fireEvent.click(screen.getAllByRole('button', { name: /edit/i })[0]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Save Contact' }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('contacts_update', expect.anything())
+    )
+    await waitFor(() => expect(screen.queryByTestId('contact-form')).not.toBeInTheDocument())
   })
 })
