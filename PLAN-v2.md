@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 19 — Task 19.5: F5 tests — coverage ≥ 80%
+▶ Phase 20 — Task 20.1: Rust link commands
 ```
 
 ---
@@ -258,13 +258,13 @@
    - User can accept (opens pre-filled `ContactForm`) or dismiss
    - Done when: banner appears and pre-fills form correctly
 
-▶ [ ] **19.5 — F5 tests** — coverage ≥ 80%
+[x] **19.5 — F5 tests** — coverage ≥ 80%
 
 ---
 
 ## Phase 20 — F6: Document–Appointment Linking + Timeline v2
 
-[ ] **20.1 — Rust link commands**
+▶ [ ] **20.1 — Rust link commands**
    - Create `src-tauri/src/commands/links.rs`
    - Commands: `links_create(document_id, appointment_id, link_type)`, `links_delete(id)`, `links_list_for_document(document_id)`, `links_list_for_appointment(appointment_id)`
    - Done when: `cargo test` passes CRUD
