@@ -129,4 +129,11 @@ describe('AppointmentCard', () => {
     expect(onDelete).toHaveBeenCalledOnce()
     expect(onDelete).toHaveBeenCalledWith('a1')
   })
+
+  it('renders View link pointing to detail page', () => {
+    render(<AppointmentCard appointment={makeAppt({ id: 'a99' })} onEdit={onEdit} onDelete={onDelete} />)
+    const viewLink = screen.getByRole('link', { name: 'View' })
+    expect(viewLink).toBeDefined()
+    expect((viewLink as HTMLAnchorElement).href).toContain('/appointments/view?id=a99')
+  })
 })

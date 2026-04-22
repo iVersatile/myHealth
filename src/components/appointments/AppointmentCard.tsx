@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Appointment, STATUS_LABELS, AppointmentStatus } from '../../store/appointmentsStore'
 
 interface AppointmentCardProps {
@@ -71,6 +72,12 @@ export function AppointmentCard({ appointment: appt, onEdit, onDelete }: Appoint
 
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-2">
+        <Link
+          href={`/appointments/view?id=${appt.id}`}
+          className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
+        >
+          View
+        </Link>
         <button
           type="button"
           onClick={() => onEdit(appt)}
