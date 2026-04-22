@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 18 — Task 18.1: F4 Apple Calendar Sync — Swift plugin scaffold
+▶ Phase 19 — Task 19.1: F5 Contact Auto-Creation — Rust clinic commands
 ```
 
 ---
@@ -208,31 +208,31 @@
 
 ## Phase 18 — F4: Apple Calendar Sync (macOS only)
 
-[ ] **18.1 — Swift Tauri plugin scaffold**
+[x] **18.1 — Swift Tauri plugin scaffold**
    - Create `src-tauri/src/plugins/calendar/` with Swift source
    - Plugin: `myhealth-calendar-plugin`
    - Request `NSCalendarsUsageDescription` permission
    - Add `com.apple.security.personal-information.calendars` entitlement to `src-tauri/entitlements.plist`
    - Done when: `cargo build` compiles on macOS with plugin linked
 
-[ ] **18.2 — List available calendars**
+[x] **18.2 — List available calendars**
    - Swift function: `listCalendars() -> [[String: String]]` — returns `[{id, title, color}]`
    - Tauri command: `calendar_list_sources`
    - Done when: IPC returns user's calendar list on macOS
 
-[ ] **18.3 — Sync selected calendars**
+[x] **18.3 — Sync selected calendars**
    - Swift function: `fetchEvents(calendarIds: [String], from: Date, to: Date) -> [[String: Any]]`
    - Tauri command: `calendar_sync(source_ids: Vec<String>)` — upsert into `calendar_events`
    - Sync window: 1 year back + 2 years forward
    - Done when: `calendar_sync` populates `calendar_events` from a real macOS calendar
 
-[ ] **18.4 — Calendar settings UI**
+[x] **18.4 — Calendar settings UI**
    - Add "Calendar Sync" section to `src/app/settings/page.tsx`
    - List available calendars with toggle switches
    - "Sync Now" button; show last synced timestamp
    - Done when: toggling a calendar and syncing updates `calendar_sources.enabled` and populates events
 
-[ ] **18.5 — F4 tests** — unit tests for sync logic; integration skipped on non-macOS CI
+[x] **18.5 — F4 tests** — unit tests for sync logic; integration skipped on non-macOS CI
 
 ---
 
