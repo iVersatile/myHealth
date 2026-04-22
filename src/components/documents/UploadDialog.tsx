@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Document, DocumentCategory, DOCUMENT_CATEGORIES, CATEGORY_LABELS } from '../../store/documentsStore'
 import { CategoryPicker, Category } from '../categories/CategoryPicker'
@@ -34,6 +35,12 @@ interface DuplicateCandidate {
   match_reason: string
 }
 
+interface OcrProgress {
+  page: number
+  total: number
+  elapsed_ms: number
+}
+
 type ContactPhase =
   | { kind: 'idle' }
   | { kind: 'saving' }
@@ -62,6 +69,14 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [contactPhases, setContactPhases] = useState<Map<string, ContactPhase>>(new Map())
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
+  const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null)
+  const unlistenRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    return () => {
+      unlistenRef.current?.()
+    }
+  }, [])
 
   useEffect(() => {
     invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list')
@@ -97,13 +112,28 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
         extractedTags.push(doc.document_date)
       }
 
-      if (doc.mime_type === 'application/pdf') {
+      const isOcrCandidate =
+        doc.mime_type === 'application/pdf' || (doc.mime_type?.startsWith('image/') ?? false)
+
+      if (isOcrCandidate) {
         try {
-          const suggestions = await invoke<ExtractionSuggestions>('documents_run_extraction', { id: doc.id })
+          const unlisten = await listen<OcrProgress>('ocr_progress', (e) => {
+            setOcrProgress(e.payload)
+          })
+          unlistenRef.current = unlisten
+
+          const suggestions = await invoke<ExtractionSuggestions>('documents_run_extraction', {
+            id: doc.id,
+            emitProgress: true,
+          })
+
+          unlistenRef.current?.()
+          unlistenRef.current = null
+          setOcrProgress(null)
+
           setCategorySuggestion(suggestions.category_suggestion)
           setContactSuggestions(suggestions.contact_suggestions)
 
-          // Add doctor names and specialty/invoice tags
           for (const name of suggestions.doctor_candidates) {
             if (!extractedTags.includes(name)) extractedTags.push(name)
           }
@@ -111,6 +141,9 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
             if (!extractedTags.includes(tag)) extractedTags.push(tag)
           }
         } catch {
+          unlistenRef.current?.()
+          unlistenRef.current = null
+          setOcrProgress(null)
           // Extraction failure is non-fatal — still proceed to review
         }
       }
@@ -278,9 +311,31 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           {step === 'analyzing' && (
             <div className="flex flex-col items-center gap-4 px-6 py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary)]" />
-              <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
-                Uploading and extracting document data…
-              </p>
+              {ocrProgress ? (
+                <div className="flex w-full flex-col gap-2">
+                  <p className="text-center text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+                    Extracting text — page {ocrProgress.page} of {ocrProgress.total}{' '}
+                    ({Math.round(ocrProgress.elapsed_ms / 1000)}s elapsed)
+                  </p>
+                  <div
+                    role="progressbar"
+                    aria-valuenow={ocrProgress.page}
+                    aria-valuemin={0}
+                    aria-valuemax={ocrProgress.total}
+                    aria-label="OCR progress"
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-border)]"
+                  >
+                    <div
+                      className="h-full rounded-full bg-[var(--color-primary)] transition-[width] duration-200"
+                      style={{ width: `${Math.round((ocrProgress.page / ocrProgress.total) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+                  Uploading and extracting document data…
+                </p>
+              )}
             </div>
           )}
 

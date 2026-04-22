@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 3 — Sprint 5
-Task 3.3 — Cache extracted text
+Current: Phase 3 — Sprint 6
+Task 3.5 — F2 tests (coverage ≥ 80% for extraction, OCR, caching, progress UI)
 ```
 
 ---
@@ -170,7 +170,7 @@ Task 3.3 — Cache extracted text
    - Update `documents_run_extraction` to accept `emit_progress: bool` flag
    - Done when: `cargo test` covers (a) native-text path returns in < 500ms, (b) OCR-triggered path emits `ocr_progress` events, (c) 10s timeout appends `[OCR_TIMEOUT]` marker and continues, (d) `extracted_at` timestamp set on completion
 
-▶ **3.3 — Cache extracted text**
+[x] **3.3 — Cache extracted text**
    - `extracted_text TEXT` column already added in Task 0.2 migration
    - On extraction completion write text to `documents.extracted_text` and set `extraction_status = 'EXTRACTED'`
    - On next extraction call for same document ID, return cached value immediately if `extraction_status = 'EXTRACTED'`
@@ -178,13 +178,13 @@ Task 3.3 — Cache extracted text
 
 ### Sprint 6: Frontend
 
-[ ] **3.4 — Async progress bar in Upload dialog**
+[x] **3.4 — Async progress bar in Upload dialog**
    - In `UploadDialog.tsx` listen for `ocr_progress` Tauri event via `listen()`
    - Show progress bar: "Extracting text — page N of M (Xs elapsed)"
    - Auto-dismiss when extraction complete
    - Done when: uploading a scanned PDF shows page-by-page progress updates; progress events render within 100ms of emission
 
-[ ] **3.5 — F2 tests** — coverage ≥ 80% for extraction, OCR, caching, and progress UI
+▶ **3.5 — F2 tests** — coverage ≥ 80% for extraction, OCR, caching, and progress UI
 
 ---
 
