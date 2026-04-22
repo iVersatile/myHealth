@@ -3,6 +3,7 @@ pub(crate) mod crypto;
 pub(crate) mod db;
 pub(crate) mod extraction;
 pub(crate) mod parsing;
+pub(crate) mod plugins;
 
 use commands::appointments::{
     appointments_create, appointments_delete, appointments_get, appointments_link_document,
@@ -11,6 +12,7 @@ use commands::appointments::{
 use commands::auth::{
     auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
 };
+use commands::calendar::{calendar_list_sources, calendar_sync, calendar_toggle_source};
 use commands::categories::{
     categories_assign_appointment, categories_assign_document, categories_create,
     categories_delete, categories_for_appointment, categories_for_document, categories_list,
@@ -85,6 +87,9 @@ pub fn run() {
             categories_for_document,
             categories_for_appointment,
             categories_unassign,
+            calendar_list_sources,
+            calendar_sync,
+            calendar_toggle_source,
             contacts_list,
             contacts_get,
             contacts_create,
