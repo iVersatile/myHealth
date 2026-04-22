@@ -130,6 +130,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "strsim",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

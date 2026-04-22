@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 19 — Task 19.4: F5 Contact Auto-Creation — Auto-creation suggestion UI
+▶ Phase 19 — Task 19.5: F5 tests — coverage ≥ 80%
 ```
 
 ---
@@ -253,12 +253,12 @@
    - Use Levenshtein distance ≤ 2 for fuzzy match against existing contacts
    - Done when: "Dr. J. Smith" matches existing "Dr. John Smith"
 
-▶ **19.4 — Auto-creation suggestion UI**
+[x] **19.4 — Auto-creation suggestion UI**
    - After document upload + extraction: if `doctor_candidates` present and no existing contact matches, show banner: "Create contact for Dr. X?"
    - User can accept (opens pre-filled `ContactForm`) or dismiss
    - Done when: banner appears and pre-fills form correctly
 
-[ ] **19.5 — F5 tests** — coverage ≥ 80%
+▶ [ ] **19.5 — F5 tests** — coverage ≥ 80%
 
 ---
 

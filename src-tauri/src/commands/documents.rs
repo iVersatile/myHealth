@@ -644,6 +644,45 @@ mod tests {
     }
 }
 
+#[tauri::command]
+pub fn documents_run_extraction(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
+    let file_path: String = {
+        let guard = state.db.lock().map_err(|e| e.to_string())?;
+        let conn = guard.as_ref().ok_or("database not open")?;
+        conn.query_row(
+            "SELECT file_path FROM documents WHERE id = ?1 AND is_deleted = 0",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
+    let result = crate::extraction::extract(std::path::Path::new(&file_path));
+    let candidates = result.doctor_candidates.clone();
+
+    let json = serde_json::json!({
+        "text": result.text,
+        "extracted_at": result.extracted_at,
+        "doctor_candidates": result.doctor_candidates,
+    })
+    .to_string();
+
+    {
+        let guard = state.db.lock().map_err(|e| e.to_string())?;
+        let conn = guard.as_ref().ok_or("database not open")?;
+        conn.execute(
+            "UPDATE documents SET extracted_metadata = ?1, updated_at = ?2 WHERE id = ?3",
+            rusqlite::params![json, Utc::now().to_rfc3339(), id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    Ok(candidates)
+}
+
 #[derive(Debug, Serialize)]
 pub struct ExtractionStatus {
     pub status: String, // "done" | "pending" | "failed"

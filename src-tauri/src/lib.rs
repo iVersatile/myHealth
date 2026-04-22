@@ -22,11 +22,13 @@ use commands::clinics::{
     clinics_create, clinics_delete, clinics_get, clinics_list, clinics_update,
 };
 use commands::contacts::{
-    contacts_create, contacts_delete, contacts_get, contacts_list, contacts_update,
+    contacts_create, contacts_delete, contacts_find_similar, contacts_get, contacts_list,
+    contacts_update,
 };
 use commands::documents::{
     documents_delete, documents_get, documents_get_extraction_status, documents_get_file_url,
-    documents_list, documents_restore, documents_tags_set, documents_update, documents_upload,
+    documents_list, documents_restore, documents_run_extraction, documents_tags_set,
+    documents_update, documents_upload,
 };
 use commands::export::{export_pdf_bundle, export_save_bytes};
 use commands::notes::{
@@ -67,6 +69,7 @@ pub fn run() {
             documents_restore,
             documents_get_file_url,
             documents_get_extraction_status,
+            documents_run_extraction,
             documents_tags_set,
             appointments_list,
             appointments_get,
@@ -103,6 +106,7 @@ pub fn run() {
             contacts_create,
             contacts_update,
             contacts_delete,
+            contacts_find_similar,
             search_query,
             settings_get,
             settings_set,

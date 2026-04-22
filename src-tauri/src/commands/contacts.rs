@@ -261,6 +261,16 @@ pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), Str
     Ok(())
 }
 
+#[tauri::command]
+pub fn contacts_find_similar(
+    name: String,
+    state: State<'_, AppState>,
+) -> Result<Option<Contact>, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+    Ok(find_similar_contact(&name, conn))
+}
+
 fn last_token(s: &str) -> &str {
     s.split_whitespace().last().unwrap_or(s)
 }
