@@ -30,6 +30,7 @@ const makeDoc = (overrides: Partial<Document> = {}): Document => ({
   created_at: '2026-04-20T10:00:00Z',
   updated_at: '2026-04-20T10:00:00Z',
   is_deleted: false,
+  document_date: null,
   tags: [],
   ...overrides,
 })

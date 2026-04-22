@@ -12,6 +12,7 @@ export interface Document {
   created_at: string
   updated_at: string
   is_deleted: boolean
+  document_date: string | null
   tags: string[]
 }
 
