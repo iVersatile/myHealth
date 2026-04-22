@@ -644,11 +644,29 @@ mod tests {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct ContactSuggestionDto {
+    pub name: String,
+    pub specialty: Option<String>,
+    pub clinic: Option<String>,
+    pub address: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExtractionSuggestions {
+    pub doctor_candidates: Vec<String>,
+    pub category_suggestion: Option<String>,
+    pub document_tags: Vec<String>,
+    pub contact_suggestions: Vec<ContactSuggestionDto>,
+}
+
 #[tauri::command]
 pub fn documents_run_extraction(
     id: String,
     state: State<'_, AppState>,
-) -> Result<Vec<String>, String> {
+) -> Result<ExtractionSuggestions, String> {
     let file_path: String = {
         let guard = state.db.lock().map_err(|e| e.to_string())?;
         let conn = guard.as_ref().ok_or("database not open")?;
@@ -661,12 +679,26 @@ pub fn documents_run_extraction(
     };
 
     let result = crate::extraction::extract(std::path::Path::new(&file_path));
-    let candidates = result.doctor_candidates.clone();
+
+    let contact_dtos: Vec<ContactSuggestionDto> = result
+        .contact_suggestions
+        .iter()
+        .map(|c| ContactSuggestionDto {
+            name: c.name.clone(),
+            specialty: c.specialty.clone(),
+            clinic: c.clinic.clone(),
+            address: c.address.clone(),
+            phone: c.phone.clone(),
+            email: c.email.clone(),
+        })
+        .collect();
 
     let json = serde_json::json!({
         "text": result.text,
         "extracted_at": result.extracted_at,
         "doctor_candidates": result.doctor_candidates,
+        "category_suggestion": result.category_suggestion,
+        "document_tags": result.document_tags,
     })
     .to_string();
 
@@ -680,7 +712,12 @@ pub fn documents_run_extraction(
         .map_err(|e| e.to_string())?;
     }
 
-    Ok(candidates)
+    Ok(ExtractionSuggestions {
+        doctor_candidates: result.doctor_candidates,
+        category_suggestion: result.category_suggestion,
+        document_tags: result.document_tags,
+        contact_suggestions: contact_dtos,
+    })
 }
 
 #[derive(Debug, Serialize)]

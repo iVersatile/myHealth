@@ -436,3 +436,29 @@ All acceptance criteria for each feature are specified in the **Feature Requirem
 - OCR accuracy varies based on PDF scan quality
 - Maximum category nesting depth: 5 levels
 
+---
+
+## User Test Feedback Log
+
+### v1 Upload Flow — Manual Test (2026-04-22)
+
+The following issues were reported after manual testing of the document upload flow. Each item is an **implementation miss** against existing PRD v1 requirements (not a new requirement).
+
+#### UTFv1-01: Tags not auto-populated from extraction data
+**Reported:** Tags field was empty after upload; date, doctor names, specialty, and invoice indicator were not added automatically.
+**PRD coverage:** F1.12 (date-as-tag), F1.11 (extraction pipeline feeds UI).
+**Root cause:** `processFile()` in `UploadDialog.tsx` called `setTagsRaw(doc.tags.join(', '))` using only filename-parsed tags; it never consumed `doctor_candidates`, `document_tags`, or `document_date` from extraction results.
+**Fix:** After running extraction, merge `document_date`, `doctor_candidates`, and `document_tags` into the tag list before `setTagsRaw`.
+
+#### UTFv1-02: Category not suggested from PDF content
+**Reported:** "Internal Medicine → Gastroenterology" was not suggested after uploading a PDF containing "Gastroenterologist".
+**PRD coverage:** F1.13 (category suggestion from extracted text).
+**Root cause:** No category extraction logic existed in the Rust backend; `documents_run_extraction` returned only `Vec<String>` (doctor names). No category suggestion state or UI existed in `UploadDialog.tsx`.
+**Fix:** Added `extraction/category.rs` (keyword → category path mapping), extended `ExtractionSuggestions` DTO with `category_suggestion`, and added a dismissible suggestion banner in the review step UI.
+
+#### UTFv1-03: Contact and clinic not suggested from PDF
+**Reported:** Dr Michael Chapman was not suggested as a contact; clinic name, address, phone, and email from the PDF footer were not surfaced.
+**PRD coverage:** F4.5 (auto-contact creation from extraction).
+**Root cause:** No contact extraction logic existed in the Rust backend. `UploadDialog` displayed doctor names as read-only badges with no contact creation flow.
+**Fix:** Added `extraction/contact.rs` (UK phone, email, postcode-anchored address, clinic name, specialty proximity patterns), extended `ExtractionSuggestions` with `contact_suggestions`, and replaced read-only badges with actionable "Detected contacts" cards with "Save as Contact" button (calls `contacts_create`).
+

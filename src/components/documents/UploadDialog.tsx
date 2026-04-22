@@ -11,6 +11,22 @@ interface UploadDialogProps {
   onUploaded: (doc: Document) => void
 }
 
+interface ContactSuggestion {
+  name: string
+  specialty: string | null
+  clinic: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+}
+
+interface ExtractionSuggestions {
+  doctor_candidates: string[]
+  category_suggestion: string | null
+  document_tags: string[]
+  contact_suggestions: ContactSuggestion[]
+}
+
 type Step = 'pick' | 'analyzing' | 'review'
 
 export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
@@ -28,6 +44,10 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [doctorCandidates, setDoctorCandidates] = useState<string[]>([])
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+  const [categorySuggestion, setCategorySuggestion] = useState<string | null>(null)
+  const [categorySuggestionDismissed, setCategorySuggestionDismissed] = useState(false)
+  const [contactSuggestions, setContactSuggestions] = useState<ContactSuggestion[]>([])
+  const [savedContacts, setSavedContacts] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
 
@@ -58,18 +78,33 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
         notes: null,
       })
       setUploadedDoc(doc)
-      // Pre-populate tags from filename parsing
-      setTagsRaw(doc.tags.join(', '))
 
       // Run PDF extraction only for PDFs
+      let extractedTags: string[] = [...doc.tags]
+      if (doc.document_date) {
+        extractedTags.push(doc.document_date)
+      }
+
       if (doc.mime_type === 'application/pdf') {
         try {
-          const candidates = await invoke<string[]>('documents_run_extraction', { id: doc.id })
-          setDoctorCandidates(candidates)
+          const suggestions = await invoke<ExtractionSuggestions>('documents_run_extraction', { id: doc.id })
+          setDoctorCandidates(suggestions.doctor_candidates)
+          setCategorySuggestion(suggestions.category_suggestion)
+          setContactSuggestions(suggestions.contact_suggestions)
+
+          // Add doctor names and specialty/invoice tags
+          for (const name of suggestions.doctor_candidates) {
+            if (!extractedTags.includes(name)) extractedTags.push(name)
+          }
+          for (const tag of suggestions.document_tags) {
+            if (!extractedTags.includes(tag)) extractedTags.push(tag)
+          }
         } catch {
           // Extraction failure is non-fatal — still proceed to review
         }
       }
+
+      setTagsRaw(extractedTags.filter(Boolean).join(', '))
 
       setStep('review')
     } catch (err: unknown) {
@@ -260,22 +295,79 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                 )}
               </div>
 
-              {/* Doctor candidates from PDF extraction */}
-              {doctorCandidates.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
-                    Detected names
+              {/* Category suggestion from PDF extraction */}
+              {categorySuggestion && !categorySuggestionDismissed && (
+                <div className="flex items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-3 py-2">
+                  <p className="text-[var(--text-sm)] text-[var(--color-text)]">
+                    Suggested category:{' '}
+                    <span className="font-medium">{categorySuggestion}</span>
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {doctorCandidates.map((name) => (
-                      <span
-                        key={name}
-                        className="rounded-full bg-[var(--color-surface-sunken)] px-2.5 py-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)]"
-                      >
-                        {name}
-                      </span>
-                    ))}
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCategorySuggestionDismissed(true)}
+                      className="text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                    >
+                      Dismiss
+                    </button>
                   </div>
+                </div>
+              )}
+
+              {/* Detected contacts from PDF extraction */}
+              {contactSuggestions.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                    Detected contacts
+                  </p>
+                  {contactSuggestions.map((cs) => (
+                    <div
+                      key={cs.name}
+                      className="flex items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2"
+                    >
+                      <div className="flex flex-col gap-0.5 text-[var(--text-xs)]">
+                        <span className="font-medium text-[var(--color-text)]">{cs.name}</span>
+                        {cs.specialty && (
+                          <span className="text-[var(--color-text-secondary)]">{cs.specialty}</span>
+                        )}
+                        {cs.clinic && (
+                          <span className="text-[var(--color-text-secondary)]">{cs.clinic}</span>
+                        )}
+                        {cs.address && (
+                          <span className="text-[var(--color-text-secondary)]">{cs.address}</span>
+                        )}
+                        {cs.phone && (
+                          <span className="text-[var(--color-text-secondary)]">{cs.phone}</span>
+                        )}
+                        {cs.email && (
+                          <span className="text-[var(--color-text-secondary)]">{cs.email}</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={savedContacts.has(cs.name)}
+                        onClick={() => {
+                          void invoke('contacts_create', {
+                            input: {
+                              name: cs.name,
+                              role: 'Doctor',
+                              specialty: cs.specialty,
+                              phone: cs.phone,
+                              email: cs.email,
+                              clinic: cs.clinic,
+                              address: cs.address,
+                              notes: null,
+                            },
+                          }).then(() => {
+                            setSavedContacts((prev) => new Set([...prev, cs.name]))
+                          })
+                        }}
+                        className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
+                      >
+                        {savedContacts.has(cs.name) ? 'Saved' : 'Save as Contact'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 

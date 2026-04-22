@@ -1,6 +1,10 @@
+pub mod category;
+pub mod contact;
 pub mod doctor;
 pub mod ocr;
 pub mod pdf;
+
+pub use contact::ContactSuggestion;
 
 use chrono::Utc;
 use std::path::Path;
@@ -11,6 +15,9 @@ pub struct ExtractionResult {
     pub text: String,
     pub extracted_at: String,
     pub doctor_candidates: Vec<String>,
+    pub category_suggestion: Option<String>,
+    pub document_tags: Vec<String>,
+    pub contact_suggestions: Vec<ContactSuggestion>,
 }
 
 /// Extracts text from a file based on its extension.
@@ -36,10 +43,17 @@ pub fn extract(path: &Path) -> ExtractionResult {
     };
 
     let doctor_candidates = doctor::extract_doctor_candidates(&text);
+    let category_suggestion = category::suggest_category(&text);
+    let document_tags = category::extract_document_tags(&text);
+    let contact_suggestions = contact::extract_contact_suggestions(&text);
+
     ExtractionResult {
         text,
         extracted_at: Utc::now().to_rfc3339(),
         doctor_candidates,
+        category_suggestion,
+        document_tags,
+        contact_suggestions,
     }
 }
 
