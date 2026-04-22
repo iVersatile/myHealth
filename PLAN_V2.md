@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 4 — Sprint 8
-Task 4.4 — Bulk categorization UI
+Current: Phase 6 — Release
+Task 6.1 — End-to-end smoke test
 ```
 
 ---
@@ -217,12 +217,12 @@ Task 4.4 — Bulk categorization UI
    - Calls `assign_category_to_document` / `unassign_category_from_document` on add/remove
    - Done when: document can be assigned 3 categories; all 3 appear in category filter views
 
-▶ **4.4 — Bulk categorization UI**
+[x] **4.4 — Bulk categorization UI**
    - Add checkbox selection mode to `DocumentList.tsx`
    - "Assign Category" action bar appears on selection; calls `categories_bulk_link`
    - Done when: selecting 5 documents and assigning a category links all 5
 
-[ ] **4.5 — F3 tests** — coverage ≥ 80%
+[x] **4.5 — F3 tests** — coverage ≥ 80%
 
 ---
 
@@ -264,7 +264,7 @@ Task 4.4 — Bulk categorization UI
 
 ## Phase 6 — Release
 
-[ ] **6.1 — End-to-end smoke test**
+▶ [ ] **6.1 — End-to-end smoke test**
    - Manual walkthrough of all v1.1 flows: duplicate detection, link scoring, OCR, multi-category, calendar sync
    - Verify performance targets from PRD_V2 §Non-Functional Requirements
 
