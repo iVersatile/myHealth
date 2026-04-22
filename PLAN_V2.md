@@ -8,7 +8,7 @@
 
 ```
 Current: Phase 6 — Release
-Task 6.2 — Bump version & tag
+Task 6.3 — Verify GitHub Release
 ```
 
 ---
@@ -268,12 +268,12 @@ Task 6.2 — Bump version & tag
    - Manual walkthrough of all v1.1 flows: duplicate detection, link scoring, OCR, multi-category, calendar sync
    - Verify performance targets from PRD_V2 §Non-Functional Requirements
 
-▶ [ ] **6.2 — Bump version & tag**
+[x] **6.2 — Bump version & tag**
    - Update `package.json` version to `1.1.0`
    - Update `src-tauri/tauri.conf.json` version to `1.1.0`
    - **Requires explicit user approval before running `git tag`** (see `docs/COMMIT_STRATEGY.md`)
 
-[ ] **6.3 — Verify GitHub Release**
+▶ [ ] **6.3 — Verify GitHub Release**
    - Confirm 4 platform artifacts published; update README Known Issues if needed
 
 ---
