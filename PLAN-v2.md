@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 20 — Task 20.2: Link scoring engine
+▶ Phase 20 — Task 20.5: Timeline v2 — condition/doctor views
 ```
 
 ---
@@ -269,19 +269,19 @@
    - Commands: `links_create(document_id, appointment_id, link_type)`, `links_delete(id)`, `links_list_for_document(document_id)`, `links_list_for_appointment(appointment_id)`
    - Done when: `cargo test` passes CRUD
 
-▶ [ ] **20.2 — Link scoring engine**
+[x] **20.2 — Link scoring engine**
    - Rust function: `score_link_candidates(doc: &Document, appointments: &[Appointment]) -> Vec<(AppointmentId, u8)>`
    - Scoring: date within ±3 days (+3), doctor name match (+3), shared category (+2), shared clinic (+2)
    - Return candidates with score ≥ 4, sorted descending
    - Done when: `cargo test` verifies scoring logic
 
-[ ] **20.3 — Link suggestion on upload**
+[x] **20.3 — Link suggestion on upload**
    - After upload + extraction: call `score_link_candidates`; surface top suggestion as dismissible card
    - User confirms → `links_create` with `confidence = 'auto'`
    - User dismisses → no link created
    - Done when: uploading a blood-test PDF near a recent appointment surfaces the suggestion
 
-[ ] **20.4 — Manual link UI in Document Detail**
+[x] **20.4 — Manual link UI in Document Detail**
    - Add "Linked Appointments" section to `src/app/documents/[id]/page.tsx`
    - Search & select appointments; call `links_create` with `confidence = 'manual'`
    - Done when: user can manually link/unlink

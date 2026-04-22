@@ -6,6 +6,16 @@ import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { Document, CATEGORY_LABELS } from '../../../../store/documentsStore'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
+import type { Appointment } from '../../../../store/appointmentsStore'
+
+interface DocumentLink {
+  id: string
+  document_id: string
+  appointment_id: string
+  link_type: string
+  confidence: string
+  created_at: string
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -37,12 +47,17 @@ export default function DocumentDetailClient() {
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
 
+  const [links, setLinks] = useState<DocumentLink[]>([])
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([])
+  const [selectedApptId, setSelectedApptId] = useState('')
+  const [linkingAppt, setLinkingAppt] = useState(false)
+
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetched, catRows, assignedIds] = await Promise.all([
+        const [fetched, catRows, assignedIds, existingLinks, appts] = await Promise.all([
           invoke<Document>('documents_get', { id }),
           invoke<
             Array<{
@@ -55,6 +70,8 @@ export default function DocumentDetailClient() {
             }>
           >('categories_list'),
           invoke<string[]>('categories_for_document', { documentId: id }),
+          invoke<DocumentLink[]>('links_list_for_document', { documentId: id }),
+          invoke<Appointment[]>('appointments_list', { month: null, status: null }),
         ])
         setDoc(fetched)
         setTags(fetched.tags)
@@ -70,6 +87,8 @@ export default function DocumentDetailClient() {
           }))
         )
         setSelectedCategoryIds(assignedIds)
+        setLinks(existingLinks)
+        setAllAppointments(appts)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -131,6 +150,36 @@ export default function DocumentDetailClient() {
         ),
       ])
       setSelectedCategoryIds(nextIds)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function handleLinkAppointment() {
+    if (!doc || !selectedApptId) return
+    setLinkingAppt(true)
+    try {
+      const link = await invoke<DocumentLink>('links_create', {
+        input: {
+          document_id: doc.id,
+          appointment_id: selectedApptId,
+          link_type: 'related',
+          confidence: 'manual',
+        },
+      })
+      setLinks((prev) => [...prev, link])
+      setSelectedApptId('')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setLinkingAppt(false)
+    }
+  }
+
+  async function handleUnlinkAppointment(linkId: string) {
+    try {
+      await invoke('links_delete', { id: linkId })
+      setLinks((prev) => prev.filter((l) => l.id !== linkId))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     }
@@ -251,6 +300,65 @@ export default function DocumentDetailClient() {
               <hr className="my-4 border-[var(--color-border)]" />
             </>
           )}
+
+          <div className="mb-4">
+            <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+              Linked Appointments
+            </p>
+            {links.length > 0 && (
+              <ul className="mb-2 flex flex-col gap-1">
+                {links.map((link) => {
+                  const appt = allAppointments.find((a) => a.id === link.appointment_id)
+                  return (
+                    <li key={link.id} className="flex items-center justify-between gap-1">
+                      <span className="truncate text-[var(--text-xs)] text-[var(--color-text)]">
+                        {appt?.title ?? link.appointment_id}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Unlink appointment"
+                        onClick={() => void handleUnlinkAppointment(link.id)}
+                        className="shrink-0 text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]"
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            {(() => {
+              const linkedIds = new Set(links.map((l) => l.appointment_id))
+              const unlinkable = allAppointments.filter((a) => !linkedIds.has(a.id))
+              if (unlinkable.length === 0) return null
+              return (
+                <div className="flex gap-1">
+                  <select
+                    value={selectedApptId}
+                    onChange={(e) => setSelectedApptId(e.target.value)}
+                    className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                  >
+                    <option value="">Select appointment…</option>
+                    {unlinkable.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.title}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={linkingAppt || !selectedApptId}
+                    onClick={() => void handleLinkAppointment()}
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-sunken)]"
+                  >
+                    Link
+                  </button>
+                </div>
+              )
+            })()}
+          </div>
+
+          <hr className="my-4 border-[var(--color-border)]" />
 
           <div className="mb-4">
             <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">Tags</p>
