@@ -4,6 +4,7 @@ pub mod appointments;
 pub mod auth;
 pub mod calendar;
 pub mod categories;
+pub mod clinics;
 pub mod contacts;
 pub mod documents;
 pub mod export;

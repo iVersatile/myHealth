@@ -18,6 +18,9 @@ use commands::categories::{
     categories_delete, categories_for_appointment, categories_for_document, categories_list,
     categories_unassign, categories_update,
 };
+use commands::clinics::{
+    clinics_create, clinics_delete, clinics_get, clinics_list, clinics_update,
+};
 use commands::contacts::{
     contacts_create, contacts_delete, contacts_get, contacts_list, contacts_update,
 };
@@ -90,6 +93,11 @@ pub fn run() {
             calendar_list_sources,
             calendar_sync,
             calendar_toggle_source,
+            clinics_list,
+            clinics_get,
+            clinics_create,
+            clinics_update,
+            clinics_delete,
             contacts_list,
             contacts_get,
             contacts_create,
