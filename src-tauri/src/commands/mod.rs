@@ -10,6 +10,7 @@ pub mod documents;
 pub mod export;
 pub mod links;
 pub mod notes;
+pub mod scoring;
 pub mod search;
 pub mod settings;
 

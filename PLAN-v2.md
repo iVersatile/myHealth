@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 20 — Task 20.1: Rust link commands
+▶ Phase 20 — Task 20.2: Link scoring engine
 ```
 
 ---
@@ -264,12 +264,12 @@
 
 ## Phase 20 — F6: Document–Appointment Linking + Timeline v2
 
-▶ [ ] **20.1 — Rust link commands**
+[x] **20.1 — Rust link commands**
    - Create `src-tauri/src/commands/links.rs`
    - Commands: `links_create(document_id, appointment_id, link_type)`, `links_delete(id)`, `links_list_for_document(document_id)`, `links_list_for_appointment(appointment_id)`
    - Done when: `cargo test` passes CRUD
 
-[ ] **20.2 — Link scoring engine**
+▶ [ ] **20.2 — Link scoring engine**
    - Rust function: `score_link_candidates(doc: &Document, appointments: &[Appointment]) -> Vec<(AppointmentId, u8)>`
    - Scoring: date within ±3 days (+3), doctor name match (+3), shared category (+2), shared clinic (+2)
    - Return candidates with score ≥ 4, sorted descending
