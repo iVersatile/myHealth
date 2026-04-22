@@ -31,6 +31,9 @@ use commands::documents::{
     documents_update, documents_upload,
 };
 use commands::export::{export_pdf_bundle, export_save_bytes};
+use commands::links::{
+    links_create, links_delete, links_list_for_appointment, links_list_for_document,
+};
 use commands::notes::{
     notes_create, notes_delete, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
 };
@@ -114,6 +117,10 @@ pub fn run() {
             settings_wipe_all_data,
             export_pdf_bundle,
             export_save_bytes,
+            links_create,
+            links_delete,
+            links_list_for_document,
+            links_list_for_appointment,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

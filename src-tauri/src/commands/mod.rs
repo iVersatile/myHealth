@@ -8,6 +8,7 @@ pub mod clinics;
 pub mod contacts;
 pub mod documents;
 pub mod export;
+pub mod links;
 pub mod notes;
 pub mod search;
 pub mod settings;
