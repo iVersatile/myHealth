@@ -58,6 +58,9 @@ Manages health records for an elderly parent or child with a chronic condition. 
 | F1.6 | View PDF inline; open image fullscreen |
 | F1.7 | Soft delete with 30-day trash and permanent delete |
 | F1.8 | Display file size, upload date, category |
+| F1.9 | Auto-extract document date from filename during upload (patterns: YYYY-MM-DD, YYYYMMDD, DD-Mon-YYYY) and pre-populate the document date field |
+| F1.10 | Extract healthcare provider / doctor names from PDF text content during upload and present as labelled suggestions in the review step |
+| F1.11 | Two-step upload UX: step 1 uploads the file and runs auto-extraction; step 2 presents extracted metadata (date, provider names, tags) for user review and edit before confirming |
 
 ### F2 — Appointments
 

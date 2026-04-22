@@ -73,6 +73,16 @@ Do not substitute `pnpm build` for this — they verify different layers.
 
 ---
 
+## L-007 — Implementing features before writing PRD requirements
+
+**What happened:** Filename date extraction, PDF provider-name extraction, and the 2-step upload UX were all implemented and shipped before the corresponding requirements existed in `docs/PRD.md`. Manual testing revealed the features existed but were never specified, making it impossible to assess completeness or regression risk.
+
+**Root cause:** Implementation was driven by user feedback during a session without first updating the PRD. The Manual Test Feedback Protocol was not yet in place.
+
+**Rule:** Before implementing any feature discovered via manual test feedback, update `docs/PRD.md` first. Add the requirement row, commit it, then implement. Never implement a feature that has no PRD entry.
+
+---
+
 ## Review Checklist (start of each task)
 
 Before writing any code for a new task:
