@@ -753,7 +753,7 @@ mod tests {
         let score = name_similarity("John Smith", "Jon Smyth");
         // Jaro-Winkler on similar names must meet spec range 0.85–0.92.
         assert!(
-            score >= 0.85 && score <= 0.92,
+            (0.85..=0.92).contains(&score),
             "expected 0.85–0.92, got {score:.4}"
         );
         let results = compute_duplicates(&[a, b], None, 0.85);
