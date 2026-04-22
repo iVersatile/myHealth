@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { UploadDialog } from './UploadDialog'
 import type { Document } from '../../store/documentsStore'
@@ -146,5 +146,75 @@ describe('UploadDialog', () => {
         notes: 'Annual checkup',
       })
     })
+  })
+
+  it('includes document_date in tags when doc has one', async () => {
+    const docWithDate = { ...fakeDoc, document_date: '2026-03-15' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(docWithDate)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_update') return Promise.resolve(docWithDate)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(docWithDate)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    const tagsInput = screen.getByLabelText(/tags/i) as HTMLInputElement
+    expect(tagsInput.value).toContain('2026-03-15')
+  })
+
+  it('shows contact suggestions from extraction and saves one', async () => {
+    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: ['Dr. House'], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({})
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByText('Dr. House')).toBeTruthy())
+    expect(screen.getByText('Diagnostics')).toBeTruthy()
+    expect(screen.getByText('PPTH')).toBeTruthy()
+    const saveBtn = screen.getByRole('button', { name: /save as contact/i })
+    await userEvent.click(saveBtn)
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('contacts_create', expect.objectContaining({ input: expect.objectContaining({ name: 'Dr. House' }) })))
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+  })
+
+  it('shows and dismisses category suggestion', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: 'prescription', document_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByText(/suggested category/i)).toBeTruthy())
+    const dismissBtn = screen.getByRole('button', { name: /dismiss/i })
+    await userEvent.click(dismissBtn)
+    await waitFor(() => expect(screen.queryByText(/suggested category/i)).toBeNull())
+  })
+
+  it('processes file via drag and drop', async () => {
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    const dropZone = screen.getByRole('button', { name: /drop file here/i })
+    const fakeFile = Object.assign(new File(['data'], 'dropped.pdf', { type: 'application/pdf' }), { path: '/tmp/dropped.pdf' })
+    const dataTransfer = { files: [fakeFile] }
+    fireEvent.drop(dropZone, { dataTransfer })
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_upload', expect.objectContaining({ filePath: '/tmp/dropped.pdf' })))
   })
 })
