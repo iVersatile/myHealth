@@ -201,9 +201,9 @@ export default function TimelinePage() {
     if (viewMode === 'by-doctor' && apptLinkedDocIds.size > 0) return
 
     let cancelled = false
-    setExtraLoading(true)
 
     async function fetchExtra() {
+      setExtraLoading(true)
       if (viewMode === 'by-category') {
         const [cats, ...catResults] = await Promise.all([
           invoke<Category[]>('categories_list'),
