@@ -8,7 +8,7 @@
 
 ```
 Current: Phase 4 — Sprint 7
-Task 4.1 — Junction table CRUD commands (hierarchical categories many-to-many)
+Task 4.2 — Bulk categorization command
 ```
 
 ---
@@ -194,7 +194,7 @@ Task 4.1 — Junction table CRUD commands (hierarchical categories many-to-many)
 
 ### Sprint 7: Backend & schema
 
-▶ **4.1 — Junction table CRUD commands**
+[x] **4.1 — Junction table CRUD commands**
    - Junction tables exist from Task 0.1 migration — no schema discovery needed
    - Implement Tauri commands per ARCHITECTURE_V2 §4:
      - `assign_category_to_document(user_id: String, document_id: String, category_id: String)`
@@ -204,7 +204,7 @@ Task 4.1 — Junction table CRUD commands (hierarchical categories many-to-many)
    - All write operations wrapped in transactions
    - Done when: `cargo test` covers document linked to 3 categories; query by any category returns it; unassign removes only the specific pair
 
-[ ] **4.2 — Bulk categorization command**
+▶ **4.2 — Bulk categorization command**
    - Implement `categories_bulk_link(user_id: String, entity_type: String, entity_ids: Vec<String>, category_id: String)`
    - Use a single DB transaction for all INSERTs (not one command per entity)
    - Done when: `cargo test` (single transaction) links 50 documents to one category in < 1s on CI runner
