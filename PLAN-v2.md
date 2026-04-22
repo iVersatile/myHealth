@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-▶ Phase 20 — Task 20.6: Condition color highlighting
+▶ Phase 21 — Task 21.1: End-to-end smoke test
 ```
 
 ---
@@ -294,12 +294,12 @@
      - Each group shows: documents list, appointments list, linked items highlighted
    - Done when: all three views render with live data
 
-[ ] **20.6 — Condition color highlighting**
+[x] **20.6 — Condition color highlighting**
    - Use `categories.color_hex` to tint timeline group headers and event badges
    - Color picker in category edit form
    - Done when: changing a category color updates the timeline in real time
 
-[ ] **20.7 — F6 tests** — coverage ≥ 80%
+[x] **20.7 — F6 tests** — coverage ≥ 80%
 
 ---
 
