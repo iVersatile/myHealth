@@ -139,6 +139,10 @@ git checkout develop && git merge main && git push origin develop
 
 **Tags only ever go on `main`.** A tag push is the sole release trigger.
 
+### Git Tag Approval Rule
+
+**Never run `git tag` without explicit user approval in the same session.** Before executing any `git tag` command, present the intended tag name and version to the user and wait for confirmation. Reason: pushing a tag to `main` immediately triggers GitHub Actions to build and publish 4 release artifacts — this is irreversible and public. Approval must be given in the same session, not assumed from a prior instruction.
+
 ### Versioning (SemVer)
 
 | Increment | When |

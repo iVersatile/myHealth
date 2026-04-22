@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { Document, CATEGORY_LABELS } from '../../../../store/documentsStore'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 import type { Appointment } from '../../../../store/appointmentsStore'
@@ -215,7 +215,7 @@ export default function DocumentDetailClient() {
 
   const isPdf = doc.mime_type === 'application/pdf'
   const isImage = doc.mime_type.startsWith('image/')
-  const assetUrl = `asset://localhost/${doc.file_path}`
+  const assetUrl = convertFileSrc(doc.file_path)
   const catLabel = CATEGORY_LABELS[doc.category as keyof typeof CATEGORY_LABELS] ?? doc.category
 
   return (

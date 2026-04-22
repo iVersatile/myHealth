@@ -83,6 +83,16 @@ Do not substitute `pnpm build` for this — they verify different layers.
 
 ---
 
+## L-008 — F1.6 document preview coded but broken (asset protocol scope unconfigured)
+
+**What happened:** F1.6 ("View PDF inline; open image fullscreen") was in the PRD and code existed in `DocumentDetailClient.tsx` using `asset://localhost/<path>` URLs. Manual testing revealed the preview area was blank — the URL silently failed to load because Tauri's asset protocol requires an explicit scope allowlist, and none was configured in `tauri.conf.json`.
+
+**Root cause:** The implementation was written without verifying that `tauri.conf.json` had `app.security.assetProtocol.scope` set. The code compiled and the route rendered, giving false confidence.
+
+**Rule:** Whenever the `asset://` protocol or any Tauri protocol handler is used to serve local files, immediately verify that the corresponding scope is configured (`tauri.conf.json` → `app.security.assetProtocol`) and that the file actually loads in the running app before marking the task complete.
+
+---
+
 ## Review Checklist (start of each task)
 
 Before writing any code for a new task:
