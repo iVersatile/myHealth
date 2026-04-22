@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 export interface Category {
   id: string
@@ -24,6 +24,8 @@ export function CategoryPicker({
   onChange,
   onDeleteCategory,
 }: CategoryPickerProps) {
+  const [filterQuery, setFilterQuery] = useState('')
+
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder),
     [categories]
@@ -33,6 +35,12 @@ export function CategoryPicker({
     () => sortedCategories.filter(cat => selectedIds.includes(cat.id)),
     [sortedCategories, selectedIds]
   )
+
+  const filteredCategories = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase()
+    if (!q) return sortedCategories
+    return sortedCategories.filter(cat => cat.name.toLowerCase().includes(q))
+  }, [sortedCategories, filterQuery])
 
   const toggleCategory = (categoryId: string) => {
     const newSelectedIds = selectedIds.includes(categoryId)
@@ -144,9 +152,22 @@ export function CategoryPicker({
           backgroundColor: 'var(--color-surface)',
         }}
       >
+        <input
+          type="search"
+          value={filterQuery}
+          onChange={e => setFilterQuery(e.target.value)}
+          placeholder="Filter categories…"
+          aria-label="Filter categories"
+          className="mb-2 w-full rounded border px-2 py-1 text-sm"
+          style={{
+            borderColor: 'var(--color-border)',
+            backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text)',
+          }}
+        />
         <div className="space-y-0">
-          {sortedCategories.map(category => {
-            const children = sortedCategories.filter(
+          {filteredCategories.map(category => {
+            const children = filteredCategories.filter(
               cat => cat.parentId === category.id
             )
             if (category.parentId === null) {
@@ -156,6 +177,9 @@ export function CategoryPicker({
                   {children.map(child => renderCategoryItem(child, 1))}
                 </div>
               )
+            }
+            if (!filteredCategories.some(cat => cat.id === category.parentId)) {
+              return renderCategoryItem(category, 0)
             }
             return null
           })}

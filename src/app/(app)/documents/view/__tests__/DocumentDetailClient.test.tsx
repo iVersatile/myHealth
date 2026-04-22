@@ -399,7 +399,8 @@ describe('DocumentDetailClient — categories section', () => {
     fireEvent.click(screen.getByText('Pick Category'))
 
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith('categories_assign_document', {
+      expect(mockInvoke).toHaveBeenCalledWith('assign_category_to_document', {
+        userId: '',
         documentId: 'doc-1',
         categoryId: 'cat-1',
       })
@@ -424,10 +425,10 @@ describe('DocumentDetailClient — categories section', () => {
     fireEvent.click(screen.getByText('Pick Category'))
 
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith('categories_unassign', {
-        entityId: 'doc-1',
+      expect(mockInvoke).toHaveBeenCalledWith('unassign_category_from_document', {
+        userId: '',
+        documentId: 'doc-1',
         categoryId: 'cat-2',
-        entityType: 'document',
       })
     })
   })

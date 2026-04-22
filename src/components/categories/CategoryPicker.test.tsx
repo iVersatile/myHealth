@@ -269,4 +269,23 @@ describe('CategoryPicker', () => {
 
     expect(onChange).toHaveBeenCalledWith(['c1'])
   })
+
+  it('filters categories by search query', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <CategoryPicker
+        categories={MOCK_CATEGORIES}
+        selectedIds={[]}
+        onChange={vi.fn()}
+      />
+    )
+
+    const filterInput = screen.getByRole('searchbox', { name: /Filter categories/i })
+    await user.type(filterInput, 'card')
+
+    expect(screen.getByRole('checkbox', { name: /Cardiology/i })).toBeDefined()
+    expect(screen.queryByRole('checkbox', { name: /Lab Results/i })).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: /Imaging/i })).toBeNull()
+  })
 })

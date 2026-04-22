@@ -155,10 +155,10 @@ export default function DocumentDetailClient() {
     try {
       await Promise.all([
         ...toAdd.map((categoryId) =>
-          invoke('categories_assign_document', { documentId: doc.id, categoryId })
+          invoke('assign_category_to_document', { userId: '', documentId: doc.id, categoryId })
         ),
         ...toRemove.map((categoryId) =>
-          invoke('categories_unassign', { entityId: doc.id, categoryId, entityType: 'document' })
+          invoke('unassign_category_from_document', { userId: '', documentId: doc.id, categoryId })
         ),
       ])
       setSelectedCategoryIds(nextIds)

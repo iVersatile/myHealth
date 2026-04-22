@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { Appointment, STATUS_LABELS } from '../../../../store/appointmentsStore'
 import { CATEGORY_LABELS } from '../../../../store/documentsStore'
+import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 
 interface LinkedDocument {
   document_id: string
@@ -42,18 +43,32 @@ export default function AppointmentDetailClient() {
   const [error, setError] = useState<string | null>(null)
   const [unlinking, setUnlinking] = useState<string | null>(null)
 
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+
   useEffect(() => {
     if (!id) return
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetchedAppt, fetchedLinks] = await Promise.all([
+        const [fetchedAppt, fetchedLinks, catRows, assignedIds] = await Promise.all([
           invoke<Appointment>('appointments_get', { id }),
           invoke<LinkedDocument[]>('get_appointment_links', { userId: '', appointmentId: id }),
+          invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list'),
+          invoke<string[]>('categories_for_appointment', { appointmentId: id }),
         ])
         setAppt(fetchedAppt)
         setLinkedDocs(fetchedLinks)
+        setAllCategories(catRows.map(r => ({
+          id: r.id,
+          name: r.name,
+          parentId: r.parent_id,
+          colorHex: r.color_hex,
+          isSystem: r.is_system,
+          sortOrder: r.sort_order,
+        })))
+        setSelectedCategoryIds(assignedIds)
       } catch (e) {
         setError(String(e))
       } finally {
@@ -76,6 +91,24 @@ export default function AppointmentDetailClient() {
       setError(String(e))
     } finally {
       setUnlinking(null)
+    }
+  }
+
+  async function handleCategoryChange(nextIds: string[]) {
+    const toAdd = nextIds.filter(cid => !selectedCategoryIds.includes(cid))
+    const toRemove = selectedCategoryIds.filter(cid => !nextIds.includes(cid))
+    try {
+      await Promise.all([
+        ...toAdd.map(categoryId =>
+          invoke('assign_category_to_appointment', { userId: '', appointmentId: id, categoryId })
+        ),
+        ...toRemove.map(categoryId =>
+          invoke('unassign_category_from_appointment', { userId: '', appointmentId: id, categoryId })
+        ),
+      ])
+      setSelectedCategoryIds(nextIds)
+    } catch (e) {
+      setError(String(e))
     }
   }
 
@@ -181,6 +214,20 @@ export default function AppointmentDetailClient() {
           </div>
         )}
       </section>
+
+      {/* Medical categories */}
+      {allCategories.length > 0 && (
+        <section aria-label="Medical categories">
+          <h2 className="mb-3 text-[var(--text-lg)] font-semibold text-[var(--color-text)]">
+            Medical Categories
+          </h2>
+          <CategoryPicker
+            categories={allCategories}
+            selectedIds={selectedCategoryIds}
+            onChange={(ids) => void handleCategoryChange(ids)}
+          />
+        </section>
+      )}
 
       {/* Linked documents */}
       <section aria-label="Linked documents">

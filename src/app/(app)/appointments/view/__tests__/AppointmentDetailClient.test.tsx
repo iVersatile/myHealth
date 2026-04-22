@@ -42,10 +42,13 @@ const makeLinkedDoc = (overrides = {}) => ({
 function setupInvoke(
   apptOverrides = {},
   linkedDocs: ReturnType<typeof makeLinkedDoc>[] = [],
+  assignedCategoryIds: string[] = [],
 ) {
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === 'appointments_get') return Promise.resolve(makeAppt(apptOverrides))
     if (cmd === 'get_appointment_links') return Promise.resolve(linkedDocs)
+    if (cmd === 'categories_list') return Promise.resolve([])
+    if (cmd === 'categories_for_appointment') return Promise.resolve(assignedCategoryIds)
     return Promise.resolve(undefined)
   })
 }
@@ -141,5 +144,26 @@ describe('AppointmentDetailClient', () => {
     await waitFor(() => screen.getByText('Annual Checkup'))
     fireEvent.click(screen.getByText('← Back'))
     expect(mockRouterBack).toHaveBeenCalledOnce()
+  })
+
+  it('calls assign_category_to_appointment when category toggled on', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt())
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list')
+        return Promise.resolve([{ id: 'cat-1', name: 'Cardiology', parent_id: null, color_hex: '#EF4444', is_system: true, sort_order: 0 }])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Cardiology/i }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('assign_category_to_appointment', {
+        userId: '',
+        appointmentId: 'appt-1',
+        categoryId: 'cat-1',
+      })
+    )
   })
 })
