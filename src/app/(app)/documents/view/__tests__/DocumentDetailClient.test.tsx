@@ -93,6 +93,7 @@ function setupInvoke(
     if (cmd === 'categories_for_document') return Promise.resolve(assignedIds)
     if (cmd === 'links_list_for_document') return Promise.resolve(links)
     if (cmd === 'appointments_list') return Promise.resolve(appointments)
+    if (cmd === 'links_score_candidates') return Promise.resolve([])
     return Promise.resolve(undefined)
   })
 }
@@ -367,6 +368,7 @@ describe('DocumentDetailClient — categories section', () => {
       if (cmd === 'categories_for_document') return Promise.resolve([])
       if (cmd === 'links_list_for_document') return Promise.resolve([])
       if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
       return Promise.resolve(undefined)
     })
     render(<DocumentDetailClient />)
@@ -388,6 +390,7 @@ describe('DocumentDetailClient — categories section', () => {
       if (cmd === 'categories_for_document') return Promise.resolve([])
       if (cmd === 'links_list_for_document') return Promise.resolve([])
       if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
       return Promise.resolve(undefined)
     })
     render(<DocumentDetailClient />)
@@ -412,6 +415,7 @@ describe('DocumentDetailClient — categories section', () => {
       if (cmd === 'categories_for_document') return Promise.resolve(['cat-1', 'cat-2'])
       if (cmd === 'links_list_for_document') return Promise.resolve([])
       if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
       return Promise.resolve(undefined)
     })
     render(<DocumentDetailClient />)
@@ -508,6 +512,7 @@ describe('DocumentDetailClient — appointment links', () => {
       if (cmd === 'categories_for_document') return Promise.resolve([])
       if (cmd === 'links_list_for_document') return Promise.resolve([])
       if (cmd === 'appointments_list') return Promise.resolve([makeAppointment()])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
       if (cmd === 'links_create') return Promise.resolve(newLink)
       return Promise.resolve(undefined)
     })
@@ -528,6 +533,111 @@ describe('DocumentDetailClient — appointment links', () => {
         },
       })
     })
+  })
+})
+
+const makeSuggestion = (overrides = {}) => ({
+  appointment_id: 'appt-2',
+  appointment_title: 'Cardiology Review',
+  score: 5,
+  reasons: ['Date proximity', 'Category match'],
+  ...overrides,
+})
+
+describe('DocumentDetailClient — suggested links', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+  })
+
+  it('shows suggestion card when score >= 4', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([makeSuggestion()])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Cardiology Review')).toBeTruthy()
+    expect(screen.getByText('Score: 5')).toBeTruthy()
+  })
+
+  it('hides suggestion for already-linked appointment', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([makeLink({ appointment_id: 'appt-2' })])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([makeSuggestion()])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.queryByText('Score: 5')).toBeNull()
+  })
+
+  it('calls link_document_to_appointment and removes card on Link click', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([makeSuggestion()])
+      if (cmd === 'link_document_to_appointment') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.getByText('Score: 5')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Link suggestion' }))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('link_document_to_appointment', expect.objectContaining({
+        documentId: 'doc-1',
+        appointmentId: 'appt-2',
+      }))
+    })
+    await waitFor(() => expect(screen.queryByText('Score: 5')).toBeNull())
+  })
+
+  it('dismisses suggestion for session on Not Related click', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([makeSuggestion()])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.getByText('Score: 5')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Not Related' }))
+
+    await waitFor(() => expect(screen.queryByText('Score: 5')).toBeNull())
+  })
+
+  it('shows suggestion reasons', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([makeSuggestion()])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Date proximity')).toBeTruthy()
+    expect(screen.getByText('Category match')).toBeTruthy()
   })
 })
 

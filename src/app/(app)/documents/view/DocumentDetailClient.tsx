@@ -416,11 +416,17 @@ export default function DocumentDetailClient() {
                           {s.appointment_title}
                         </p>
                         <p className="mb-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
-                          Score: {s.score} · {s.reasons.join(', ')}
+                          Score: {s.score}
                         </p>
+                        <ul className="mb-1 flex flex-wrap gap-x-2 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                          {s.reasons.map((r) => (
+                            <li key={r}>{r}</li>
+                          ))}
+                        </ul>
                         <div className="flex gap-1">
                           <button
                             type="button"
+                            aria-label="Link suggestion"
                             onClick={() => void handleConfirmSuggestion(s)}
                             className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-primary)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-primary)] hover:bg-[var(--color-surface-sunken)]"
                           >
@@ -428,10 +434,11 @@ export default function DocumentDetailClient() {
                           </button>
                           <button
                             type="button"
+                            aria-label="Not Related"
                             onClick={() => handleDismissSuggestion(s.appointment_id)}
                             className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)]"
                           >
-                            Not related
+                            Not Related
                           </button>
                         </div>
                       </li>
