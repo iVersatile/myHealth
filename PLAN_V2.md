@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 2 — Sprint 3
-▶ Task 2.2 — Link CRUD commands
+Current: Phase 2 — Sprint 4
+▶ Task 2.4 — Linked documents sidebar in Appointment detail
 ```
 
 ---
@@ -123,7 +123,7 @@ Current: Phase 2 — Sprint 3
      - **TF-IDF is not used** for link scoring (FTS5 TF-IDF is for full-text search only)
    - Done when: `cargo test` passes with vectors: (a) date 3d apart → score +3 ≥ threshold, (b) date 10d apart → +0, (c) doctor name match → +3, (d) shared category → +2, (e) shared clinic → +2; score < 4 suppressed; score ≥ 4 returned; 200 appointments scored in < 200ms
 
-▶ [ ] **2.2 — Link CRUD commands**
+[x] **2.2 — Link CRUD commands**
    - Implement Tauri commands per ARCHITECTURE_V2 §4:
      - `link_document_to_appointment(user_id: String, document_id: String, appointment_id: String, score: u8)`
      - `unlink_document_from_appointment(user_id: String, document_id: String, appointment_id: String)`
@@ -134,13 +134,13 @@ Current: Phase 2 — Sprint 3
 
 ### Sprint 4: Frontend
 
-[ ] **2.3 — Link suggestion panel in Document detail**
+[x] **2.3 — Link suggestion panel in Document detail**
    - In `src/app/(app)/documents/[id]/page.tsx` add "Suggested Links" section
    - On mount call `score_document_appointment_links`; render suggestion cards: appointment title, date, clinic, score (points)
    - "Link" button calls `link_document_to_appointment` + removes card; "Not Related" dismisses permanently for session
    - Done when: uploading a document close in date and clinic to an existing appointment shows a suggestion with score ≥ 4
 
-[ ] **2.4 — Linked documents sidebar in Appointment detail**
+▶ [ ] **2.4 — Linked documents sidebar in Appointment detail**
    - In `src/app/(app)/appointments/[id]/page.tsx` add linked documents panel
    - Calls `get_appointment_links`; shows document thumbnails with unlink button
    - Done when: linking a document from the document side appears in the appointment sidebar within 1 render cycle
