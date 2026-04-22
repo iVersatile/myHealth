@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 1 — Sprint 2
-▶ Task 1.4 — Upload dialog: duplicate check on "Save as Contact"
+Current: Phase 2 — Sprint 3
+▶ Task 2.1 — Scoring engine (integer point model)
 ```
 
 ---
@@ -93,13 +93,13 @@ Current: Phase 1 — Sprint 2
    - Each card shows both contacts' fields, similarity %, and "Merge" / "Keep Both" buttons
    - Done when: merging two visually confirmed duplicates updates list without page reload
 
-▶ [ ] **1.4 — Upload dialog: duplicate check on "Save as Contact"**
+[x] **1.4 — Upload dialog: duplicate check on "Save as Contact"**
    - Before calling `contacts_create` in `UploadDialog.tsx`, call `find_duplicate_contacts` with the candidate name
    - If similarity ≥ 0.85 match found, show inline "Possible duplicate: [name] — merge?" prompt
    - User can choose merge, create new, or cancel
    - Done when: saving a contact with name close to an existing one surfaces the merge prompt
 
-[ ] **1.5 — F5 tests** — coverage ≥ 80% for duplicate detection and merge flows
+[x] **1.5 — F5 tests** — coverage ≥ 80% for duplicate detection and merge flows
 
 ---
 
@@ -109,7 +109,7 @@ Current: Phase 1 — Sprint 2
 
 ### Sprint 3: Rust backend
 
-[ ] **2.1 — Scoring engine (integer point model)**
+▶ [ ] **2.1 — Scoring engine (integer point model)**
    - Create `src-tauri/src/services/linking/scorer.rs` per ARCHITECTURE_V2 §9
    - Implement `score_document_appointment_links` command:
      - Signature: `score_document_appointment_links(user_id: String, document_id: String)`

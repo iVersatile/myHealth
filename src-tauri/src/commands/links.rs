@@ -127,15 +127,16 @@ pub struct LinkSuggestion {
     pub appointment_id: String,
     pub appointment_title: String,
     pub score: u8,
+    pub reasons: Vec<String>,
 }
 
 #[tauri::command]
 pub fn links_score_candidates(
     state: State<'_, AppState>,
     document_id: String,
-) -> Result<Option<LinkSuggestion>, String> {
+) -> Result<Vec<LinkSuggestion>, String> {
     use crate::commands::appointments::Appointment;
-    use crate::commands::scoring::score_link_candidates;
+    use crate::services::linking::scorer::score_candidates;
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
@@ -145,7 +146,7 @@ pub fn links_score_candidates(
         .query_row(
             "SELECT id, filename, file_path, mime_type, file_size_bytes, category,
                     thumbnail_path, notes, created_at, updated_at, is_deleted,
-                    document_date, extracted_metadata
+                    document_date, extracted_metadata, extracted_text
              FROM documents WHERE id = ?1 AND is_deleted = 0",
             params![document_id],
             |row| {
@@ -163,6 +164,7 @@ pub fn links_score_candidates(
                     is_deleted: row.get(10)?,
                     document_date: row.get(11)?,
                     extracted_metadata: row.get(12)?,
+                    extracted_text: row.get(13)?,
                     tags: vec![],
                 })
             },
@@ -222,26 +224,27 @@ pub fn links_score_candidates(
         appt_categories.entry(appt_id).or_default().push(cat_name);
     }
 
-    // Score and return top candidate
-    let mut scored = score_link_candidates(&doc, &appointments, &appt_categories);
-    if scored.is_empty() {
-        return Ok(None);
+    // Score all candidates and return those meeting the threshold
+    let candidates = score_candidates(&doc, &appointments, &appt_categories);
+
+    let mut suggestions: Vec<LinkSuggestion> = Vec::with_capacity(candidates.len());
+    for candidate in candidates {
+        let title: String = conn
+            .query_row(
+                "SELECT title FROM appointments WHERE id = ?1",
+                params![candidate.appointment_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        suggestions.push(LinkSuggestion {
+            appointment_id: candidate.appointment_id,
+            appointment_title: title,
+            score: candidate.score,
+            reasons: candidate.reasons,
+        });
     }
 
-    let (top_appt_id, top_score) = scored.swap_remove(0);
-    let title: String = conn
-        .query_row(
-            "SELECT title FROM appointments WHERE id = ?1",
-            params![top_appt_id],
-            |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?;
-
-    Ok(Some(LinkSuggestion {
-        appointment_id: top_appt_id,
-        appointment_title: title,
-        score: top_score,
-    }))
+    Ok(suggestions)
 }
 
 #[cfg(test)]

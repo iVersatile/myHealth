@@ -26,6 +26,7 @@ pub struct Document {
     pub is_deleted: bool,
     pub document_date: Option<String>,
     pub extracted_metadata: Option<String>,
+    pub extracted_text: Option<String>,
     pub tags: Vec<String>,
 }
 
@@ -90,7 +91,7 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, String> {
         .prepare(
             "SELECT id, filename, file_path, mime_type, file_size_bytes, category, \
              thumbnail_path, notes, created_at, updated_at, is_deleted, \
-             document_date, extracted_metadata \
+             document_date, extracted_metadata, extracted_text \
              FROM documents WHERE id = ?",
         )
         .map_err(|e| e.to_string())?;
@@ -110,6 +111,7 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, String> {
                 is_deleted: row.get::<_, i64>(10)? != 0,
                 document_date: row.get(11)?,
                 extracted_metadata: row.get(12)?,
+                extracted_text: row.get(13)?,
                 tags: vec![],
             })
         })
@@ -463,7 +465,8 @@ mod tests {
                 is_deleted      BOOLEAN  NOT NULL DEFAULT 0,
                 deleted_at      DATETIME,
                 document_date   TEXT,
-                extracted_metadata TEXT
+                extracted_metadata TEXT,
+                extracted_text  TEXT
             );
             CREATE TABLE document_tags (
                 document_id TEXT NOT NULL,

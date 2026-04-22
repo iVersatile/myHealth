@@ -4,6 +4,7 @@ pub(crate) mod db;
 pub(crate) mod extraction;
 pub(crate) mod parsing;
 pub(crate) mod plugins;
+pub(crate) mod services;
 
 use commands::appointments::{
     appointments_create, appointments_delete, appointments_get, appointments_link_document,

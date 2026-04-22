@@ -132,6 +132,7 @@ mod tests {
             is_deleted: false,
             document_date: document_date.map(str::to_string),
             extracted_metadata: None,
+            extracted_text: None,
             tags: vec![],
         }
     }
