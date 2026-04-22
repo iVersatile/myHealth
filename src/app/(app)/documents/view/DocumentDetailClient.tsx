@@ -17,6 +17,13 @@ interface DocumentLink {
   created_at: string
 }
 
+interface LinkSuggestion {
+  appointment_id: string
+  appointment_title: string
+  score: number
+  reasons: string[]
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -52,12 +59,15 @@ export default function DocumentDetailClient() {
   const [selectedApptId, setSelectedApptId] = useState('')
   const [linkingAppt, setLinkingAppt] = useState(false)
 
+  const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([])
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetched, catRows, assignedIds, existingLinks, appts] = await Promise.all([
+        const [fetched, catRows, assignedIds, existingLinks, appts, scored] = await Promise.all([
           invoke<Document>('documents_get', { id }),
           invoke<
             Array<{
@@ -72,6 +82,7 @@ export default function DocumentDetailClient() {
           invoke<string[]>('categories_for_document', { documentId: id }),
           invoke<DocumentLink[]>('links_list_for_document', { documentId: id }),
           invoke<Appointment[]>('appointments_list', { month: null, status: null }),
+          invoke<LinkSuggestion[]>('links_score_candidates', { documentId: id }),
         ])
         setDoc(fetched)
         setTags(fetched.tags)
@@ -89,6 +100,7 @@ export default function DocumentDetailClient() {
         setSelectedCategoryIds(assignedIds)
         setLinks(existingLinks)
         setAllAppointments(appts)
+        setSuggestions(scored)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -183,6 +195,29 @@ export default function DocumentDetailClient() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     }
+  }
+
+  async function handleConfirmSuggestion(suggestion: LinkSuggestion) {
+    if (!doc) return
+    try {
+      await invoke('link_document_to_appointment', {
+        userId: '',
+        documentId: doc.id,
+        appointmentId: suggestion.appointment_id,
+        score: suggestion.score,
+      })
+      const refreshed = await invoke<DocumentLink[]>('links_list_for_document', {
+        documentId: doc.id,
+      })
+      setLinks(refreshed)
+      setSuggestions((prev) => prev.filter((s) => s.appointment_id !== suggestion.appointment_id))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  function handleDismissSuggestion(appointmentId: string) {
+    setDismissedIds((prev) => new Set([...prev, appointmentId]))
   }
 
   async function handleDelete() {
@@ -357,6 +392,55 @@ export default function DocumentDetailClient() {
               )
             })()}
           </div>
+
+          {(() => {
+            const linkedIds = new Set(links.map((l) => l.appointment_id))
+            const visible = suggestions.filter(
+              (s) => !dismissedIds.has(s.appointment_id) && !linkedIds.has(s.appointment_id)
+            )
+            if (visible.length === 0) return null
+            return (
+              <>
+                <hr className="my-4 border-[var(--color-border)]" />
+                <div className="mb-4">
+                  <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                    Suggested Links
+                  </p>
+                  <ul className="flex flex-col gap-2">
+                    {visible.map((s) => (
+                      <li
+                        key={s.appointment_id}
+                        className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2"
+                      >
+                        <p className="mb-1 truncate text-[var(--text-xs)] font-medium text-[var(--color-text)]">
+                          {s.appointment_title}
+                        </p>
+                        <p className="mb-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                          Score: {s.score} · {s.reasons.join(', ')}
+                        </p>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void handleConfirmSuggestion(s)}
+                            className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-primary)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-primary)] hover:bg-[var(--color-surface-sunken)]"
+                          >
+                            Link
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDismissSuggestion(s.appointment_id)}
+                            className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)]"
+                          >
+                            Not related
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )
+          })()}
 
           <hr className="my-4 border-[var(--color-border)]" />
 
