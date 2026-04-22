@@ -8,7 +8,7 @@
 
 ```
 Current: Phase 3 — Sprint 5
-Task 3.2 — OCR extraction command
+Task 3.3 — Cache extracted text
 ```
 
 ---
@@ -162,7 +162,7 @@ Task 3.2 — OCR extraction command
    - Per-page 10s timeout; on timeout append `[OCR_TIMEOUT]` marker and continue to next page
    - Done when: `cargo test` confirms subprocess extraction works end-to-end; `tesseract` CLI invocation correctly parses a test image file
 
-▶ **3.2 — OCR extraction command**
+[x] **3.2 — OCR extraction command**
    - In `src-tauri/src/services/extraction/mod.rs` add OCR branch:
      - After native `pdf-extract` pass, if extracted text < 50% expected character density, trigger OCR
      - Single Tesseract subprocess for whole document; emit Tauri event `ocr_progress { page: u32, total: u32, elapsed_ms: u64 }` per page
@@ -170,7 +170,7 @@ Task 3.2 — OCR extraction command
    - Update `documents_run_extraction` to accept `emit_progress: bool` flag
    - Done when: `cargo test` covers (a) native-text path returns in < 500ms, (b) OCR-triggered path emits `ocr_progress` events, (c) 10s timeout appends `[OCR_TIMEOUT]` marker and continues, (d) `extracted_at` timestamp set on completion
 
-[ ] **3.3 — Cache extracted text**
+▶ **3.3 — Cache extracted text**
    - `extracted_text TEXT` column already added in Task 0.2 migration
    - On extraction completion write text to `documents.extracted_text` and set `extraction_status = 'EXTRACTED'`
    - On next extraction call for same document ID, return cached value immediately if `extraction_status = 'EXTRACTED'`

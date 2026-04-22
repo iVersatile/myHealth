@@ -466,7 +466,8 @@ mod tests {
                 deleted_at      DATETIME,
                 document_date   TEXT,
                 extracted_metadata TEXT,
-                extracted_text  TEXT
+                extracted_text  TEXT,
+                extraction_status TEXT
             );
             CREATE TABLE document_tags (
                 document_id TEXT NOT NULL,
@@ -645,6 +646,81 @@ mod tests {
         assert!(doc.extracted_metadata.is_none());
         assert!(doc.document_date.is_none());
     }
+
+    #[test]
+    fn cache_write_sets_extracted_text_and_status() {
+        let conn = test_conn();
+        insert_doc(&conn, "doc-cache-1", "lab", false);
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE documents \
+             SET extracted_text = ?1, extraction_status = 'EXTRACTED', updated_at = ?2 \
+             WHERE id = 'doc-cache-1'",
+            rusqlite::params!["blood glucose 5.4", now],
+        )
+        .unwrap();
+
+        let (text, status): (String, String) = conn
+            .query_row(
+                "SELECT extracted_text, extraction_status FROM documents WHERE id = 'doc-cache-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(text, "blood glucose 5.4");
+        assert_eq!(status, "EXTRACTED");
+    }
+
+    #[test]
+    fn cache_hit_query_returns_text_when_status_extracted() {
+        let conn = test_conn();
+        insert_doc(&conn, "doc-cache-2", "lab", false);
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE documents \
+             SET extracted_text = ?1, extraction_status = 'EXTRACTED', updated_at = ?2 \
+             WHERE id = 'doc-cache-2'",
+            rusqlite::params!["hemoglobin A1c 5.7%", now],
+        )
+        .unwrap();
+
+        let cached: Option<String> = conn
+            .query_row(
+                "SELECT extracted_text FROM documents \
+                 WHERE id = ?1 AND is_deleted = 0 \
+                   AND extraction_status = 'EXTRACTED' \
+                   AND extracted_text IS NOT NULL",
+                rusqlite::params!["doc-cache-2"],
+                |r| r.get(0),
+            )
+            .optional()
+            .unwrap()
+            .flatten();
+
+        assert_eq!(cached.as_deref(), Some("hemoglobin A1c 5.7%"));
+    }
+
+    #[test]
+    fn cache_hit_query_returns_none_when_status_not_extracted() {
+        let conn = test_conn();
+        insert_doc(&conn, "doc-cache-3", "lab", false);
+
+        let cached: Option<String> = conn
+            .query_row(
+                "SELECT extracted_text FROM documents \
+                 WHERE id = ?1 AND is_deleted = 0 \
+                   AND extraction_status = 'EXTRACTED' \
+                   AND extracted_text IS NOT NULL",
+                rusqlite::params!["doc-cache-3"],
+                |r| r.get(0),
+            )
+            .optional()
+            .unwrap()
+            .flatten();
+
+        assert!(cached.is_none());
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -672,6 +748,50 @@ pub fn documents_run_extraction(
     app_handle: tauri::AppHandle,
     emit_progress: Option<bool>,
 ) -> Result<ExtractionSuggestions, String> {
+    // ── cache hit ────────────────────────────────────────────────────────────
+    {
+        let guard = state.db.lock().map_err(|e| e.to_string())?;
+        let conn = guard.as_ref().ok_or("database not open")?;
+        let cached: Option<String> = conn
+            .query_row(
+                "SELECT extracted_text FROM documents \
+                 WHERE id = ?1 AND is_deleted = 0 \
+                   AND extraction_status = 'EXTRACTED' \
+                   AND extracted_text IS NOT NULL",
+                rusqlite::params![id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|e| e.to_string())?
+            .flatten();
+
+        if let Some(text) = cached {
+            let doctor_candidates = crate::extraction::doctor::extract_doctor_candidates(&text);
+            let category_suggestion = crate::extraction::category::suggest_category(&text);
+            let document_tags = crate::extraction::category::extract_document_tags(&text);
+            let contact_suggestions =
+                crate::extraction::contact::extract_contact_suggestions(&text);
+            let contact_dtos: Vec<ContactSuggestionDto> = contact_suggestions
+                .iter()
+                .map(|c| ContactSuggestionDto {
+                    name: c.name.clone(),
+                    specialty: c.specialty.clone(),
+                    clinic: c.clinic.clone(),
+                    address: c.address.clone(),
+                    phone: c.phone.clone(),
+                    email: c.email.clone(),
+                })
+                .collect();
+            return Ok(ExtractionSuggestions {
+                doctor_candidates,
+                category_suggestion,
+                document_tags,
+                contact_suggestions: contact_dtos,
+            });
+        }
+    }
+
+    // ── cache miss — run extraction ──────────────────────────────────────────
     let file_path: String = {
         let guard = state.db.lock().map_err(|e| e.to_string())?;
         let conn = guard.as_ref().ok_or("database not open")?;
@@ -715,8 +835,13 @@ pub fn documents_run_extraction(
         let guard = state.db.lock().map_err(|e| e.to_string())?;
         let conn = guard.as_ref().ok_or("database not open")?;
         conn.execute(
-            "UPDATE documents SET extracted_metadata = ?1, updated_at = ?2 WHERE id = ?3",
-            rusqlite::params![json, Utc::now().to_rfc3339(), id],
+            "UPDATE documents \
+             SET extracted_metadata = ?1, \
+                 extracted_text = ?2, \
+                 extraction_status = 'EXTRACTED', \
+                 updated_at = ?3 \
+             WHERE id = ?4",
+            rusqlite::params![json, result.text, Utc::now().to_rfc3339(), id],
         )
         .map_err(|e| e.to_string())?;
     }
