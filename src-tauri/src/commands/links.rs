@@ -122,6 +122,138 @@ pub fn links_list_for_appointment(
         .map_err(|e| e.to_string())
 }
 
+// ─── Task 2.2: typed CRUD commands ──────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct LinkedAppointment {
+    pub appointment_id: String,
+    pub title: String,
+    pub appt_date: String,
+    pub doctor_name: Option<String>,
+    pub score: u8,
+    pub created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LinkedDocument {
+    pub document_id: String,
+    pub filename: String,
+    pub category: String,
+    pub document_date: Option<String>,
+    pub score: u8,
+    pub created_at: String,
+}
+
+#[tauri::command]
+pub fn link_document_to_appointment(
+    state: State<'_, AppState>,
+    _user_id: String,
+    document_id: String,
+    appointment_id: String,
+    score: u8,
+) -> Result<(), String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+    let id = Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "INSERT INTO document_appointments \
+         (id, document_id, appointment_id, link_type, confidence, score, created_at) \
+         VALUES (?1, ?2, ?3, 'related', 'auto', ?4, ?5)",
+        params![id, document_id, appointment_id, score, now],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unlink_document_from_appointment(
+    state: State<'_, AppState>,
+    _user_id: String,
+    document_id: String,
+    appointment_id: String,
+) -> Result<(), String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+    conn.execute(
+        "DELETE FROM document_appointments \
+         WHERE document_id = ?1 AND appointment_id = ?2",
+        params![document_id, appointment_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_document_links(
+    state: State<'_, AppState>,
+    _user_id: String,
+    document_id: String,
+) -> Result<Vec<LinkedAppointment>, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT a.id, a.title, a.appt_date, a.doctor_name, da.score, da.created_at
+             FROM document_appointments da
+             JOIN appointments a ON a.id = da.appointment_id
+             WHERE da.document_id = ?1
+             ORDER BY da.score DESC, da.created_at DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![document_id], |row| {
+            Ok(LinkedAppointment {
+                appointment_id: row.get(0)?,
+                title: row.get(1)?,
+                appt_date: row.get(2)?,
+                doctor_name: row.get(3)?,
+                score: row.get::<_, u8>(4).unwrap_or(0),
+                created_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_appointment_links(
+    state: State<'_, AppState>,
+    _user_id: String,
+    appointment_id: String,
+) -> Result<Vec<LinkedDocument>, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT d.id, d.filename, d.category, d.document_date, da.score, da.created_at
+             FROM document_appointments da
+             JOIN documents d ON d.id = da.document_id
+             WHERE da.appointment_id = ?1
+             ORDER BY da.score DESC, da.created_at DESC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(params![appointment_id], |row| {
+            Ok(LinkedDocument {
+                document_id: row.get(0)?,
+                filename: row.get(1)?,
+                category: row.get(2)?,
+                document_date: row.get(3)?,
+                score: row.get::<_, u8>(4).unwrap_or(0),
+                created_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())
+}
+
 #[derive(Debug, Serialize)]
 pub struct LinkSuggestion {
     pub appointment_id: String,
@@ -454,6 +586,180 @@ mod tests {
         let count: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM document_appointments WHERE id = 'link7'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    // ─── Task 2.2 command tests ────────────────────────────────────────────
+
+    fn insert_link_scored(conn: &Connection, id: &str, doc_id: &str, appt_id: &str, score: u8) {
+        conn.execute(
+            "INSERT INTO document_appointments \
+             (id, document_id, appointment_id, link_type, confidence, score, created_at) \
+             VALUES (?1, ?2, ?3, 'related', 'auto', ?4, '2026-01-01T00:00:00Z')",
+            params![id, doc_id, appt_id, score],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn link_document_inserts_row_with_score() {
+        let conn = open_test_db();
+        insert_document(&conn, "da_doc1");
+        insert_appointment(&conn, "da_appt1");
+
+        let id = Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO document_appointments \
+             (id, document_id, appointment_id, link_type, confidence, score, created_at) \
+             VALUES (?1, 'da_doc1', 'da_appt1', 'related', 'auto', 7, ?2)",
+            params![id, now],
+        )
+        .unwrap();
+
+        let score: u8 = conn
+            .query_row(
+                "SELECT score FROM document_appointments WHERE document_id = 'da_doc1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(score, 7);
+    }
+
+    #[test]
+    fn unlink_by_pair_removes_only_that_row() {
+        let conn = open_test_db();
+        insert_document(&conn, "da_doc2");
+        insert_appointment(&conn, "da_appt2a");
+        insert_appointment(&conn, "da_appt2b");
+        insert_link_scored(&conn, "da_link2a", "da_doc2", "da_appt2a", 5);
+        insert_link_scored(&conn, "da_link2b", "da_doc2", "da_appt2b", 8);
+
+        conn.execute(
+            "DELETE FROM document_appointments \
+             WHERE document_id = 'da_doc2' AND appointment_id = 'da_appt2a'",
+            [],
+        )
+        .unwrap();
+
+        let remaining: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_appointments WHERE document_id = 'da_doc2'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(remaining, 1);
+
+        let still_there: String = conn
+            .query_row(
+                "SELECT appointment_id FROM document_appointments WHERE document_id = 'da_doc2'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(still_there, "da_appt2b");
+    }
+
+    #[test]
+    fn get_document_links_returns_appointments() {
+        let conn = open_test_db();
+        insert_document(&conn, "da_doc3");
+        insert_appointment(&conn, "da_appt3a");
+        insert_appointment(&conn, "da_appt3b");
+        insert_link_scored(&conn, "da_link3a", "da_doc3", "da_appt3a", 6);
+        insert_link_scored(&conn, "da_link3b", "da_doc3", "da_appt3b", 9);
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT a.id, a.title, a.appt_date, a.doctor_name, da.score, da.created_at
+                 FROM document_appointments da
+                 JOIN appointments a ON a.id = da.appointment_id
+                 WHERE da.document_id = 'da_doc3'
+                 ORDER BY da.score DESC",
+            )
+            .unwrap();
+        let links: Vec<LinkedAppointment> = stmt
+            .query_map([], |row| {
+                Ok(LinkedAppointment {
+                    appointment_id: row.get(0)?,
+                    title: row.get(1)?,
+                    appt_date: row.get(2)?,
+                    doctor_name: row.get(3)?,
+                    score: row.get::<_, u8>(4).unwrap_or(0),
+                    created_at: row.get(5)?,
+                })
+            })
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        assert_eq!(links.len(), 2);
+        assert_eq!(links[0].score, 9);
+        assert_eq!(links[0].appointment_id, "da_appt3b");
+        assert_eq!(links[1].score, 6);
+    }
+
+    #[test]
+    fn get_appointment_links_returns_documents() {
+        let conn = open_test_db();
+        insert_document(&conn, "da_doc4a");
+        insert_document(&conn, "da_doc4b");
+        insert_appointment(&conn, "da_appt4");
+        insert_link_scored(&conn, "da_link4a", "da_doc4a", "da_appt4", 5);
+        insert_link_scored(&conn, "da_link4b", "da_doc4b", "da_appt4", 7);
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT d.id, d.filename, d.category, d.document_date, da.score, da.created_at
+                 FROM document_appointments da
+                 JOIN documents d ON d.id = da.document_id
+                 WHERE da.appointment_id = 'da_appt4'
+                 ORDER BY da.score DESC",
+            )
+            .unwrap();
+        let links: Vec<LinkedDocument> = stmt
+            .query_map([], |row| {
+                Ok(LinkedDocument {
+                    document_id: row.get(0)?,
+                    filename: row.get(1)?,
+                    category: row.get(2)?,
+                    document_date: row.get(3)?,
+                    score: row.get::<_, u8>(4).unwrap_or(0),
+                    created_at: row.get(5)?,
+                })
+            })
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        assert_eq!(links.len(), 2);
+        assert_eq!(links[0].score, 7);
+        assert_eq!(links[0].document_id, "da_doc4b");
+    }
+
+    #[test]
+    fn link_transaction_rolls_back_on_fk_violation() {
+        let conn = open_test_db();
+        insert_document(&conn, "da_doc5");
+
+        // appointment 'ghost' does not exist → FK violation
+        let result = conn.execute(
+            "INSERT INTO document_appointments \
+             (id, document_id, appointment_id, link_type, confidence, score, created_at) \
+             VALUES ('da_lx', 'da_doc5', 'ghost', 'related', 'auto', 5, '2026-01-01')",
+            [],
+        );
+        assert!(result.is_err(), "FK violation should prevent insert");
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_appointments WHERE id = 'da_lx'",
                 [],
                 |r| r.get(0),
             )

@@ -33,8 +33,9 @@ use commands::documents::{
 };
 use commands::export::{export_pdf_bundle, export_save_bytes};
 use commands::links::{
-    links_create, links_delete, links_list_for_appointment, links_list_for_document,
-    links_score_candidates,
+    get_appointment_links, get_document_links, link_document_to_appointment, links_create,
+    links_delete, links_list_for_appointment, links_list_for_document, links_score_candidates,
+    unlink_document_from_appointment,
 };
 use commands::notes::{
     notes_create, notes_delete, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
@@ -126,6 +127,10 @@ pub fn run() {
             links_list_for_document,
             links_list_for_appointment,
             links_score_candidates,
+            link_document_to_appointment,
+            unlink_document_from_appointment,
+            get_document_links,
+            get_appointment_links,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

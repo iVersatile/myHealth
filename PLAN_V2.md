@@ -8,7 +8,7 @@
 
 ```
 Current: Phase 2 — Sprint 3
-▶ Task 2.1 — Scoring engine (integer point model)
+▶ Task 2.2 — Link CRUD commands
 ```
 
 ---
@@ -109,7 +109,7 @@ Current: Phase 2 — Sprint 3
 
 ### Sprint 3: Rust backend
 
-▶ [ ] **2.1 — Scoring engine (integer point model)**
+[x] **2.1 — Scoring engine (integer point model)**
    - Create `src-tauri/src/services/linking/scorer.rs` per ARCHITECTURE_V2 §9
    - Implement `score_document_appointment_links` command:
      - Signature: `score_document_appointment_links(user_id: String, document_id: String)`
@@ -123,7 +123,7 @@ Current: Phase 2 — Sprint 3
      - **TF-IDF is not used** for link scoring (FTS5 TF-IDF is for full-text search only)
    - Done when: `cargo test` passes with vectors: (a) date 3d apart → score +3 ≥ threshold, (b) date 10d apart → +0, (c) doctor name match → +3, (d) shared category → +2, (e) shared clinic → +2; score < 4 suppressed; score ≥ 4 returned; 200 appointments scored in < 200ms
 
-[ ] **2.2 — Link CRUD commands**
+▶ [ ] **2.2 — Link CRUD commands**
    - Implement Tauri commands per ARCHITECTURE_V2 §4:
      - `link_document_to_appointment(user_id: String, document_id: String, appointment_id: String, score: u8)`
      - `unlink_document_from_appointment(user_id: String, document_id: String, appointment_id: String)`
