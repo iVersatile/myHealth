@@ -44,25 +44,24 @@ export default function AppointmentDetailClient() {
 
   useEffect(() => {
     if (!id) return
+    async function load() {
+      setLoading(true)
+      setError(null)
+      try {
+        const [fetchedAppt, fetchedLinks] = await Promise.all([
+          invoke<Appointment>('appointments_get', { id }),
+          invoke<LinkedDocument[]>('get_appointment_links', { userId: '', appointmentId: id }),
+        ])
+        setAppt(fetchedAppt)
+        setLinkedDocs(fetchedLinks)
+      } catch (e) {
+        setError(String(e))
+      } finally {
+        setLoading(false)
+      }
+    }
     void load()
   }, [id])
-
-  async function load() {
-    setLoading(true)
-    setError(null)
-    try {
-      const [fetchedAppt, fetchedLinks] = await Promise.all([
-        invoke<Appointment>('appointments_get', { id }),
-        invoke<LinkedDocument[]>('get_appointment_links', { userId: '', appointmentId: id }),
-      ])
-      setAppt(fetchedAppt)
-      setLinkedDocs(fetchedLinks)
-    } catch (e) {
-      setError(String(e))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function handleUnlink(documentId: string) {
     setUnlinking(documentId)
