@@ -196,7 +196,7 @@ mod tests {
     fn split_pdf_pages_are_sorted() {
         // Sorting logic: PathBuf sorts lexicographically which gives correct page order
         // for pdftoppm output format page-001.png, page-002.png, …
-        let mut pages = vec![
+        let mut pages = [
             std::path::PathBuf::from("/tmp/page-003.png"),
             std::path::PathBuf::from("/tmp/page-001.png"),
             std::path::PathBuf::from("/tmp/page-002.png"),
