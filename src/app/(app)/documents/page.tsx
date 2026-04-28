@@ -24,7 +24,9 @@ export default function DocumentsPage() {
     appointmentTitle: string
     documentId: string
   } | null>(null)
-  const { documents, total, setDocuments } = useDocumentsStore()
+  const documents = useDocumentsStore(s => s.documents)
+  const total = useDocumentsStore(s => s.total)
+  const setDocuments = useDocumentsStore(s => s.setDocuments)
   const { createContact } = useContacts()
 
   async function handleUploaded(doc: Document) {

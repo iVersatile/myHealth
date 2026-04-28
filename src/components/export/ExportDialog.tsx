@@ -9,7 +9,7 @@ interface ExportDialogProps {
 }
 
 export function ExportDialog({ onClose }: ExportDialogProps) {
-  const { documents } = useDocumentsStore()
+  const documents = useDocumentsStore(s => s.documents)
   const { exporting, error, exportBundle, pickOutputPath } = useExport()
 
   const today = new Date().toLocaleDateString('en-GB', {
