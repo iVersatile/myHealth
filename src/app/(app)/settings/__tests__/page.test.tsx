@@ -380,7 +380,7 @@ describe('SettingsPage', () => {
     await renderPage()
     await waitFor(() => expect(screen.getByText('Personal')).toBeDefined())
 
-    const checkbox = screen.getByRole('checkbox') as HTMLInputElement
+    const checkbox = screen.getByRole('checkbox', { name: /Enable Personal/i }) as HTMLInputElement
     expect(checkbox.checked).toBe(true)
     await user.click(checkbox)
 

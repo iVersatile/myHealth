@@ -617,6 +617,7 @@ export default function SettingsPage() {
                       type="checkbox"
                       checked={cal.enabled}
                       onChange={e => { void handleCalendarToggle(cal.id, e.target.checked) }}
+                      aria-label={`Enable ${cal.name}`}
                       style={{ cursor: 'pointer', accentColor: 'var(--color-primary)' }}
                     />
                   </label>
