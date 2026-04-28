@@ -7,21 +7,19 @@ import {
 } from '../store/documentsStore'
 
 export function useDocuments() {
-  const {
-    documents,
-    total,
-    page,
-    limit,
-    category,
-    loading,
-    error,
-    setDocuments,
-    setPage,
-    setCategory,
-    setLoading,
-    setError,
-    removeDocument,
-  } = useDocumentsStore()
+  const documents = useDocumentsStore(s => s.documents)
+  const total = useDocumentsStore(s => s.total)
+  const page = useDocumentsStore(s => s.page)
+  const limit = useDocumentsStore(s => s.limit)
+  const category = useDocumentsStore(s => s.category)
+  const loading = useDocumentsStore(s => s.loading)
+  const error = useDocumentsStore(s => s.error)
+  const setDocuments = useDocumentsStore(s => s.setDocuments)
+  const setPage = useDocumentsStore(s => s.setPage)
+  const setCategory = useDocumentsStore(s => s.setCategory)
+  const setLoading = useDocumentsStore(s => s.setLoading)
+  const setError = useDocumentsStore(s => s.setError)
+  const removeDocument = useDocumentsStore(s => s.removeDocument)
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true)
