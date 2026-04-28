@@ -103,14 +103,23 @@ pub fn auth_unlock(
     password: String,
 ) -> Result<(), String> {
     use tauri::Manager;
+    state.auth_rate_limit.lock().unwrap().check()?;
     let data_dir = app_handle
         .path()
         .app_data_dir()
         .map_err(|e| format!("no data dir: {e}"))?;
-    let (conn, hex) = unlock_internal(&data_dir, &password)?;
-    *state.db.lock().unwrap() = Some(conn);
-    *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
-    Ok(())
+    match unlock_internal(&data_dir, &password) {
+        Ok((conn, hex)) => {
+            state.auth_rate_limit.lock().unwrap().reset();
+            *state.db.lock().unwrap() = Some(conn);
+            *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
+            Ok(())
+        }
+        Err(e) => {
+            state.auth_rate_limit.lock().unwrap().record_failure();
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
@@ -218,5 +227,38 @@ mod tests {
         let (conn, _) = set_password_internal(&dir, "pass").unwrap();
         assert!(!is_locked_internal(&Some(conn)));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rate_limit_check_passes_when_clean() {
+        let rl = super::super::AuthRateLimit {
+            fail_count: 0,
+            locked_until: None,
+        };
+        assert!(rl.check().is_ok());
+    }
+
+    #[test]
+    fn rate_limit_blocks_after_failures() {
+        let mut rl = super::super::AuthRateLimit {
+            fail_count: 0,
+            locked_until: None,
+        };
+        // First failure sets a 2s lockout
+        rl.record_failure();
+        assert_eq!(rl.fail_count, 1);
+        assert!(rl.check().is_err());
+    }
+
+    #[test]
+    fn rate_limit_resets_on_success() {
+        let mut rl = super::super::AuthRateLimit {
+            fail_count: 3,
+            locked_until: Some(std::time::Instant::now() + std::time::Duration::from_secs(30)),
+        };
+        rl.reset();
+        assert_eq!(rl.fail_count, 0);
+        assert!(rl.locked_until.is_none());
+        assert!(rl.check().is_ok());
     }
 }
