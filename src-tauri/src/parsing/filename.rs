@@ -37,6 +37,72 @@ fn normalise_test_type(token: &str) -> Option<&'static str> {
         .map(|(_, label)| *label)
 }
 
+const INSTITUTION_SUFFIXES: &[&str] = &[
+    "hospital",
+    "clinic",
+    "surgery",
+    "centre",
+    "center",
+    "medical",
+    "health",
+    "practice",
+    "infirmary",
+    "institute",
+    "nhs",
+    "gp",
+    "pharmacy",
+    "dental",
+    "labs",
+    "laboratory",
+];
+
+fn split_camel_case(s: &str) -> Vec<String> {
+    if s.is_empty() {
+        return Vec::new();
+    }
+    let mut words = Vec::new();
+    let mut start = 0;
+    let chars: Vec<char> = s.chars().collect();
+    for i in 1..chars.len() {
+        let prev = chars[i - 1];
+        let curr = chars[i];
+        let split = (prev.is_lowercase() && curr.is_uppercase())
+            || (i + 1 < chars.len()
+                && prev.is_uppercase()
+                && curr.is_uppercase()
+                && chars[i + 1].is_lowercase());
+        if split {
+            words.push(s[start..i].to_string());
+            start = i;
+        }
+    }
+    words.push(s[start..].to_string());
+    words
+}
+
+fn detect_clinic(words: &[String]) -> Option<String> {
+    if words.len() < 2 {
+        return None;
+    }
+    let last = words.last()?;
+    if INSTITUTION_SUFFIXES.contains(&last.to_lowercase().as_str()) {
+        let name = words
+            .iter()
+            .map(|w| {
+                let mut c = w.chars();
+                match c.next() {
+                    None => String::new(),
+                    Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        Some(format!("clinic:{name}"))
+    } else {
+        None
+    }
+}
+
 const STOPWORDS: &[&str] = &[
     "a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for", "with", "by", "from", "up",
     "as", "is", "it", "its",
@@ -168,17 +234,26 @@ pub fn parse_filename(stem: &str) -> ParsedFilename {
         }
     }
 
-    // Remaining tokens → candidate tags (with test-type normalisation)
+    // Remaining tokens → candidate tags (camelCase split → clinic detection → test-type normalisation)
     let mut tags: Vec<String> = remaining
         .split(|c: char| c == '_' || c == '-' || c.is_whitespace())
-        .map(|t| t.trim().to_lowercase())
-        .filter(|t| {
-            !t.is_empty()
-                && t.len() > 1
-                && !STOPWORDS.contains(&t.as_str())
-                && t.chars().any(|c| c.is_alphabetic())
+        .filter(|t| !t.trim().is_empty())
+        .flat_map(|raw| {
+            let words = split_camel_case(raw.trim());
+            if let Some(clinic_tag) = detect_clinic(&words) {
+                return vec![clinic_tag];
+            }
+            words
+                .into_iter()
+                .map(|w| w.to_lowercase())
+                .filter(|t| {
+                    t.len() > 1
+                        && !STOPWORDS.contains(&t.as_str())
+                        && t.chars().any(|c| c.is_alphabetic())
+                })
+                .map(|t| normalise_test_type(&t).map(str::to_string).unwrap_or(t))
+                .collect()
         })
-        .map(|t| normalise_test_type(&t).map(str::to_string).unwrap_or(t))
         .collect();
 
     tags.extend(extra_tags);
@@ -350,5 +425,62 @@ mod tests {
             r.tags
         );
         assert!(r.tags.contains(&"letter".to_string()), "tags: {:?}", r.tags);
+    }
+
+    // ── Clinic name extraction tests ─────────────────────────────────────────
+
+    #[test]
+    fn camel_case_hospital_emits_clinic_tag() {
+        let r = parse_filename("StMarysHospital_2024_BloodTest");
+        assert!(
+            r.tags.contains(&"clinic:St Marys Hospital".to_string()),
+            "tags: {:?}",
+            r.tags
+        );
+    }
+
+    #[test]
+    fn clinic_tag_excludes_raw_words() {
+        let r = parse_filename("StMarysHospital_2024_BloodTest");
+        assert!(
+            !r.tags
+                .iter()
+                .any(|t| t == "hospital" || t == "st" || t == "marys"),
+            "raw words still present: {:?}",
+            r.tags
+        );
+    }
+
+    #[test]
+    fn non_institution_camel_token_splits_to_plain_tags() {
+        let r = parse_filename("BloodTest_2024");
+        assert!(
+            r.tags.contains(&"Blood Work".to_string()),
+            "tags: {:?}",
+            r.tags
+        );
+        assert!(
+            !r.tags.iter().any(|t| t.starts_with("clinic:")),
+            "unexpected clinic tag: {:?}",
+            r.tags
+        );
+    }
+
+    #[test]
+    fn split_camel_case_basic() {
+        assert_eq!(
+            split_camel_case("StMarysHospital"),
+            vec!["St", "Marys", "Hospital"]
+        );
+    }
+
+    #[test]
+    fn split_camel_case_acronym() {
+        assert_eq!(split_camel_case("NHSHospital"), vec!["NHS", "Hospital"]);
+    }
+
+    #[test]
+    fn split_camel_case_all_lower() {
+        assert_eq!(split_camel_case("hospital"), vec!["hospital"]);
     }
 }

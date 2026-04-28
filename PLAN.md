@@ -8,7 +8,7 @@
 
 ```
 Phase 7 — Upload Analysis Gap Closing
-Current: 7.3 — Clinic name extraction from filename (Gap 2)
+Current: 7.4 — International phone numbers (Gap 4)
 ```
 
 ---
@@ -246,12 +246,12 @@ Current: 7.3 — Clinic name extraction from filename (Gap 2)
    - Add `TEST_TYPE_MAP` constant; map raw tokens to canonical labels (e.g. `"bloodtest"` → `"Blood Work"`)
    - Done when: `parse_filename("BloodTest_2024_NHS")` returns tag `"Blood Work"`
 
-▶ **7.3 — Gap 2: Clinic name extraction from filename**
+[x] **7.3 — Gap 2: Clinic name extraction from filename**
    - File: `src-tauri/src/parsing/filename.rs`
    - Add `INSTITUTION_SUFFIXES`; emit `clinic:<Name>` tag for institution-bearing tokens
    - Done when: `parse_filename("StMarysHospital_2024_BloodTest")` returns tag `"clinic:St Marys Hospital"`
 
-[ ] **7.4 — Gap 4: International phone numbers**
+▶ **7.4 — Gap 4: International phone numbers**
    - File: `src-tauri/src/extraction/contact.rs`
    - Add E.164 fallback regex after existing UK pattern
    - Done when: PDF containing `+1 (555) 123-4567` returns that number in `ContactSuggestionDto.phone`
