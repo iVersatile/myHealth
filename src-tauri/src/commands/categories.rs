@@ -47,15 +47,22 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
 }
 
 #[tauri::command]
-pub fn categories_list(state: State<'_, AppState>) -> Result<Vec<Category>, CommandError> {
+pub fn categories_list(
+    include_archived: Option<bool>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Category>, CommandError> {
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let mut stmt = conn.prepare(
+    let sql = if include_archived.unwrap_or(false) {
         "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
-             FROM categories ORDER BY is_system DESC, sort_order ASC, name ASC",
-    )?;
+         FROM categories ORDER BY is_system DESC, sort_order ASC, name ASC"
+    } else {
+        "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
+         FROM categories WHERE is_archived = 0 ORDER BY is_system DESC, sort_order ASC, name ASC"
+    };
 
+    let mut stmt = conn.prepare(sql)?;
     let rows = stmt.query_map([], row_to_category)?;
 
     rows.collect::<Result<Vec<_>, _>>()
@@ -453,6 +460,26 @@ pub fn category_reorder(
     )?;
     let cat = stmt.query_row(rusqlite::params![category_id], row_to_category)?;
     Ok(cat)
+}
+
+#[tauri::command]
+pub fn categories_archive_stale(
+    months_inactive: u32,
+    state: State<'_, AppState>,
+) -> Result<u64, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let changes = conn.execute(
+        "UPDATE categories SET is_archived = 1 \
+         WHERE is_system = 0 \
+           AND is_archived = 0 \
+           AND id NOT IN (SELECT DISTINCT category_id FROM document_categories) \
+           AND id NOT IN (SELECT DISTINCT category_id FROM appointment_categories) \
+           AND created_at < datetime('now', printf('-%d months', ?1))",
+        rusqlite::params![months_inactive],
+    )?;
+    Ok(changes as u64)
 }
 
 #[cfg(test)]
@@ -874,5 +901,117 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 50);
+    }
+
+    #[test]
+    fn archive_stale_archives_inactive_old_category() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO categories (id, name, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, 'Stale', '#888888', 0, 200, datetime('now', '-13 months'))",
+            rusqlite::params![id],
+        )
+        .unwrap();
+
+        let changes = conn
+            .execute(
+                "UPDATE categories SET is_archived = 1 \
+                 WHERE is_system = 0 AND is_archived = 0 \
+                 AND id NOT IN (SELECT DISTINCT category_id FROM document_categories) \
+                 AND id NOT IN (SELECT DISTINCT category_id FROM appointment_categories) \
+                 AND created_at < datetime('now', printf('-%d months', ?1))",
+                rusqlite::params![12u32],
+            )
+            .unwrap();
+        assert!(changes >= 1, "expected at least 1 archive");
+
+        let archived: i64 = conn
+            .query_row(
+                "SELECT is_archived FROM categories WHERE id = ?1",
+                rusqlite::params![id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(archived, 1);
+    }
+
+    #[test]
+    fn archive_stale_skips_category_with_document_link() {
+        let conn = open_test_db();
+        let cat_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO categories (id, name, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, 'Linked', '#777777', 0, 201, datetime('now', '-13 months'))",
+            rusqlite::params![cat_id],
+        )
+        .unwrap();
+
+        let doc_id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, \
+             category, created_at, updated_at) \
+             VALUES (?1, 'link.pdf', '/tmp/link.pdf', 'application/pdf', 0, 'other', ?2, ?2)",
+            rusqlite::params![doc_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
+            rusqlite::params![doc_id, cat_id],
+        )
+        .unwrap();
+
+        conn.execute(
+            "UPDATE categories SET is_archived = 1 \
+             WHERE is_system = 0 AND is_archived = 0 \
+             AND id NOT IN (SELECT DISTINCT category_id FROM document_categories) \
+             AND id NOT IN (SELECT DISTINCT category_id FROM appointment_categories) \
+             AND created_at < datetime('now', printf('-%d months', ?1))",
+            rusqlite::params![12u32],
+        )
+        .unwrap();
+
+        let archived: i64 = conn
+            .query_row(
+                "SELECT is_archived FROM categories WHERE id = ?1",
+                rusqlite::params![cat_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(archived, 0, "linked category must not be archived");
+    }
+
+    #[test]
+    fn archive_stale_never_archives_system_categories() {
+        let conn = open_test_db();
+
+        conn.execute(
+            "UPDATE categories SET created_at = datetime('now', '-24 months') WHERE is_system = 1",
+            [],
+        )
+        .unwrap();
+
+        conn.execute(
+            "UPDATE categories SET is_archived = 1 \
+             WHERE is_system = 0 AND is_archived = 0 \
+             AND id NOT IN (SELECT DISTINCT category_id FROM document_categories) \
+             AND id NOT IN (SELECT DISTINCT category_id FROM appointment_categories) \
+             AND created_at < datetime('now', printf('-%d months', ?1))",
+            rusqlite::params![12u32],
+        )
+        .unwrap();
+
+        let archived_system: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE is_system = 1 AND is_archived = 1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            archived_system, 0,
+            "system categories must never be archived"
+        );
     }
 }

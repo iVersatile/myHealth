@@ -18,6 +18,8 @@ const SCHEMA_V4: &str = "
         ON documents (created_at);
 ";
 
+const SCHEMA_V5: &str = "ALTER TABLE categories ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0;";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -60,6 +62,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 5 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V5)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [5])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -77,7 +86,7 @@ mod tests {
     // ── Migration round-trip ─────────────────────────────────────────────────
 
     #[test]
-    fn migration_runs_to_version_3() {
+    fn migration_runs_to_current_version() {
         let conn = migrated_conn();
         let version: i32 = conn
             .query_row(
@@ -86,7 +95,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 4);
+        assert_eq!(version, 5);
     }
 
     #[test]
@@ -100,7 +109,42 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 4);
+        assert_eq!(version, 5);
+    }
+
+    #[test]
+    fn categories_has_is_archived_column() {
+        let conn = migrated_conn();
+        // Insert a category; is_archived should default to 0
+        conn.execute(
+            "INSERT INTO categories (id, name, color_hex, is_system, sort_order) \
+             VALUES ('cat_arch_test', 'ArchTest', '#FFFFFF', 0, 200)",
+            [],
+        )
+        .unwrap();
+        let archived: i64 = conn
+            .query_row(
+                "SELECT is_archived FROM categories WHERE id = 'cat_arch_test'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(archived, 0);
+
+        // Archiving works
+        conn.execute(
+            "UPDATE categories SET is_archived = 1 WHERE id = 'cat_arch_test'",
+            [],
+        )
+        .unwrap();
+        let archived: i64 = conn
+            .query_row(
+                "SELECT is_archived FROM categories WHERE id = 'cat_arch_test'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(archived, 1);
     }
 
     // ── Categories ───────────────────────────────────────────────────────────

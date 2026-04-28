@@ -124,16 +124,25 @@ export default function SettingsPage() {
   const [syncBusy, setSyncBusy] = useState(false)
   const [syncMsg, setSyncMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
+  const [autoArchive, setAutoArchive] = useState(false)
+  const [archiveMonths, setArchiveMonths] = useState(12)
+  const [archiveBusy, setArchiveBusy] = useState(false)
+  const [archiveMsg, setArchiveMsg] = useState<{ text: string; ok: boolean } | null>(null)
+
   useEffect(() => {
     async function loadSettings() {
-      const [t, al, dir] = await Promise.all([
+      const [t, al, dir, aa, am] = await Promise.all([
         invoke<string | null>('settings_get', { key: 'theme' }),
         invoke<string | null>('settings_get', { key: 'auto_lock_minutes' }),
         invoke<string>('settings_get_data_dir'),
+        invoke<string | null>('settings_get', { key: 'auto_archive_categories' }),
+        invoke<string | null>('settings_get', { key: 'auto_archive_months' }),
       ])
       if (t === 'light' || t === 'dark' || t === 'system') setTheme(t)
       if (al) setAutoLock(al)
       setDataDir(dir)
+      setAutoArchive(aa === 'true')
+      if (am) setArchiveMonths(parseInt(am, 10) || 12)
     }
     void loadSettings()
   }, [])
@@ -222,6 +231,30 @@ export default function SettingsPage() {
       )
     } catch (err) {
       setSyncMsg({ text: String(err), ok: false })
+    }
+  }
+
+  async function handleAutoArchiveToggle(checked: boolean) {
+    setAutoArchive(checked)
+    await invoke('settings_set', { key: 'auto_archive_categories', value: String(checked) })
+  }
+
+  async function handleArchiveMonthsChange(val: number) {
+    const clamped = Math.max(1, Math.min(120, val))
+    setArchiveMonths(clamped)
+    await invoke('settings_set', { key: 'auto_archive_months', value: String(clamped) })
+  }
+
+  async function handleRunArchive() {
+    setArchiveBusy(true)
+    setArchiveMsg(null)
+    try {
+      const count = await invoke<number>('categories_archive_stale', { monthsInactive: archiveMonths })
+      setArchiveMsg({ text: `Archived ${count} inactive categor${count === 1 ? 'y' : 'ies'}.`, ok: true })
+    } catch (err) {
+      setArchiveMsg({ text: String(err), ok: false })
+    } finally {
+      setArchiveBusy(false)
     }
   }
 
@@ -388,6 +421,59 @@ export default function SettingsPage() {
           <button onClick={() => { void handleWipe() }} style={btnDanger}>
             Wipe all data
           </button>
+        )}
+      </div>
+
+      {/* Categories */}
+      <div style={sectionStyle}>
+        <SectionTitle>Categories</SectionTitle>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+          <div>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', margin: 0, fontWeight: 500 }}>
+              Auto-archive inactive categories
+            </p>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
+              Categories with no linked documents or appointments are archived automatically.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={autoArchive}
+            onChange={e => { void handleAutoArchiveToggle(e.target.checked) }}
+            style={{ cursor: 'pointer', accentColor: 'var(--color-primary)', width: 18, height: 18, flexShrink: 0 }}
+            aria-label="Auto-archive inactive categories"
+          />
+        </div>
+
+        <Field label="Inactivity threshold (months)" id="archive-months">
+          <input
+            id="archive-months"
+            type="number"
+            min={1}
+            max={120}
+            value={archiveMonths}
+            onChange={e => { void handleArchiveMonthsChange(parseInt(e.target.value, 10)) }}
+            style={{ ...inputStyle, width: 100 }}
+          />
+        </Field>
+
+        <button
+          onClick={() => { void handleRunArchive() }}
+          style={btnSecondary}
+          disabled={archiveBusy}
+        >
+          {archiveBusy ? 'Archiving…' : 'Run Now'}
+        </button>
+
+        {archiveMsg && (
+          <p style={{
+            fontSize: 'var(--text-sm)',
+            color: archiveMsg.ok ? 'var(--color-success)' : 'var(--color-danger)',
+            marginTop: 'var(--space-3)',
+          }}>
+            {archiveMsg.text}
+          </p>
         )}
       </div>
 
