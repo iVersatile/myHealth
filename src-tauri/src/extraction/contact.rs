@@ -13,6 +13,7 @@ pub struct ContactSuggestion {
 
 static DR_PATTERN: OnceLock<Regex> = OnceLock::new();
 static PHONE_PATTERN: OnceLock<Regex> = OnceLock::new();
+static INTL_PHONE_PATTERN: OnceLock<Regex> = OnceLock::new();
 static EMAIL_PATTERN: OnceLock<Regex> = OnceLock::new();
 static CLINIC_PATTERN: OnceLock<Regex> = OnceLock::new();
 static POSTCODE_PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -26,6 +27,14 @@ fn dr_re() -> &'static Regex {
 fn phone_re() -> &'static Regex {
     PHONE_PATTERN
         .get_or_init(|| Regex::new(r"(?:\+44\s?|0)\d[\d\s\-]{8,12}\d").expect("phone regex valid"))
+}
+
+fn intl_phone_re() -> &'static Regex {
+    INTL_PHONE_PATTERN.get_or_init(|| {
+        // Matches E.164-style international numbers (non-UK): +CC (NNN) NNN-NNNN etc.
+        Regex::new(r"\+[1-9]\d{0,2}(?:\s?\(?\d{2,5}\)?[\s\-]?){2,4}")
+            .expect("intl phone regex valid")
+    })
 }
 
 fn email_re() -> &'static Regex {
@@ -54,7 +63,14 @@ fn first_email(text: &str) -> Option<String> {
 }
 
 fn first_phone(text: &str) -> Option<String> {
-    phone_re().find(text).map(|m| m.as_str().trim().to_string())
+    phone_re()
+        .find(text)
+        .map(|m| m.as_str().trim().to_string())
+        .or_else(|| {
+            intl_phone_re()
+                .find(text)
+                .map(|m| m.as_str().trim().to_string())
+        })
 }
 
 fn first_clinic(text: &str) -> Option<String> {
@@ -218,6 +234,33 @@ mod tests {
     fn returns_empty_when_no_doctor() {
         let text = "Patient report — no doctor mentioned.";
         assert!(extract_contact_suggestions(text).is_empty());
+    }
+
+    #[test]
+    fn extracts_international_phone_number() {
+        let text = "Call us at +1 (555) 123-4567 for appointments.";
+        assert_eq!(first_phone(text), Some("+1 (555) 123-4567".to_string()));
+    }
+
+    #[test]
+    fn uk_pattern_takes_priority_over_international() {
+        let text = "UK: 01494 123456  US: +1 (555) 123-4567";
+        let phone = first_phone(text);
+        assert!(
+            phone
+                .as_deref()
+                .map(|p| p.starts_with('0'))
+                .unwrap_or(false),
+            "expected UK number first, got: {phone:?}"
+        );
+    }
+
+    #[test]
+    fn intl_phone_attached_to_first_doctor() {
+        let text = "Dr. Sarah Green\nPhone: +1 (555) 123-4567";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].phone.as_deref(), Some("+1 (555) 123-4567"));
     }
 
     #[test]
