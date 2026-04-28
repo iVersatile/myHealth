@@ -8,7 +8,7 @@
 
 ```
 Phase 7 — Upload Analysis Gap Closing
-Current: 7.1 — Per-page OCR progress + timeout (Gap 3)
+Current: 7.3 — Clinic name extraction from filename (Gap 2)
 ```
 
 ---
@@ -232,7 +232,7 @@ Current: 7.1 — Per-page OCR progress + timeout (Gap 3)
 
 ### Sprint 11
 
-▶ **7.1 — Gap 3: Per-page OCR progress + timeout**
+[x] **7.1 — Gap 3: Per-page OCR progress + timeout**
    - Files: `src-tauri/src/extraction/ocr.rs`, `src-tauri/src/extraction/mod.rs`
    - Use `pdftoppm` (Poppler) to split scanned PDFs into per-page PNGs in a temp dir
    - Call `extract_image_text_async(page_png)` per page — 10s `PER_CALL_TIMEOUT` applies correctly
@@ -241,12 +241,12 @@ Current: 7.1 — Per-page OCR progress + timeout (Gap 3)
    - Prerequisite: `brew install poppler` on macOS
    - Done when: 3-page scanned PDF → progress bar updates at 1/3, 2/3, 3/3; slow page → `[OCR_TIMEOUT]`
 
-[ ] **7.2 — Gap 1: Test-type keyword normalisation**
+[x] **7.2 — Gap 1: Test-type keyword normalisation**
    - File: `src-tauri/src/parsing/filename.rs`
    - Add `TEST_TYPE_MAP` constant; map raw tokens to canonical labels (e.g. `"bloodtest"` → `"Blood Work"`)
    - Done when: `parse_filename("BloodTest_2024_NHS")` returns tag `"Blood Work"`
 
-[ ] **7.3 — Gap 2: Clinic name extraction from filename**
+▶ **7.3 — Gap 2: Clinic name extraction from filename**
    - File: `src-tauri/src/parsing/filename.rs`
    - Add `INSTITUTION_SUFFIXES`; emit `clinic:<Name>` tag for institution-bearing tokens
    - Done when: `parse_filename("StMarysHospital_2024_BloodTest")` returns tag `"clinic:St Marys Hospital"`
