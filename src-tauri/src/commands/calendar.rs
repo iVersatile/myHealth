@@ -260,6 +260,84 @@ pub fn calendar_toggle_source(
     Ok(())
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CalendarEventDto {
+    pub id: String,
+    pub title: String,
+    pub start_at: String,
+    pub end_at: Option<String>,
+    pub location: Option<String>,
+    pub calendar_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConflictPair {
+    pub event_a: CalendarEventDto,
+    pub event_b: CalendarEventDto,
+    pub overlap_minutes: u32,
+}
+
+#[tauri::command]
+pub fn calendar_detect_conflicts(
+    state: State<'_, AppState>,
+) -> Result<Vec<ConflictPair>, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let mut stmt = conn.prepare(
+        "SELECT a.id, a.title, a.start_at, a.end_at, a.location, a.calendar_id,
+                b.id, b.title, b.start_at, b.end_at, b.location, b.calendar_id,
+                CAST((julianday(MIN(a.end_at, b.end_at)) - julianday(MAX(a.start_at, b.start_at))) * 24 * 60 AS INTEGER)
+         FROM calendar_events a
+         JOIN calendar_events b ON a.calendar_id = b.calendar_id AND a.id < b.id
+         WHERE a.end_at IS NOT NULL AND b.end_at IS NOT NULL
+           AND a.start_at < b.end_at AND b.start_at < a.end_at",
+    )?;
+    let pairs = stmt
+        .query_map([], |row| {
+            let event_a = CalendarEventDto {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                start_at: row.get(2)?,
+                end_at: row.get(3)?,
+                location: row.get(4)?,
+                calendar_id: row.get(5)?,
+            };
+            let event_b = CalendarEventDto {
+                id: row.get(6)?,
+                title: row.get(7)?,
+                start_at: row.get(8)?,
+                end_at: row.get(9)?,
+                location: row.get(10)?,
+                calendar_id: row.get(11)?,
+            };
+            let overlap_raw: i64 = row.get(12)?;
+            Ok(ConflictPair {
+                event_a,
+                event_b,
+                overlap_minutes: overlap_raw.max(0) as u32,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(pairs)
+}
+
+#[tauri::command]
+pub fn calendar_event_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+    conn.execute(
+        "DELETE FROM calendar_events WHERE id = ?1",
+        rusqlite::params![id],
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -683,5 +761,159 @@ mod tests {
         assert!(!source.enabled);
         assert_eq!(source.color_hex.as_deref(), Some("#AABBCC"));
         assert!(source.last_synced_at.is_none());
+    }
+
+    fn insert_test_source(conn: &rusqlite::Connection, src_id: &str) {
+        conn.execute(
+            "INSERT INTO calendar_sources (id, external_id, name, enabled) \
+             VALUES (?1, ?1, 'Test', 1)",
+            rusqlite::params![src_id],
+        )
+        .unwrap();
+    }
+
+    fn insert_test_event(
+        conn: &rusqlite::Connection,
+        id: &str,
+        src_id: &str,
+        start: &str,
+        end: &str,
+    ) {
+        conn.execute(
+            "INSERT INTO calendar_events \
+             (id, external_id, calendar_id, title, start_at, end_at, last_synced_at) \
+             VALUES (?1, ?1, ?2, 'Event', ?3, ?4, '2024-01-01T00:00:00Z')",
+            rusqlite::params![id, src_id, start, end],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn detect_conflicts_finds_overlapping_events() {
+        let conn = open_test_db();
+        insert_test_source(&conn, "src-c1");
+        insert_test_event(
+            &conn,
+            "ev-a",
+            "src-c1",
+            "2024-01-01T10:00:00",
+            "2024-01-01T11:00:00",
+        );
+        insert_test_event(
+            &conn,
+            "ev-b",
+            "src-c1",
+            "2024-01-01T10:30:00",
+            "2024-01-01T11:30:00",
+        );
+
+        let mut stmt = conn.prepare(
+            "SELECT a.id, a.title, a.start_at, a.end_at, a.location, a.calendar_id,
+                    b.id, b.title, b.start_at, b.end_at, b.location, b.calendar_id,
+                    CAST((julianday(MIN(a.end_at, b.end_at)) - julianday(MAX(a.start_at, b.start_at))) * 24 * 60 AS INTEGER)
+             FROM calendar_events a
+             JOIN calendar_events b ON a.calendar_id = b.calendar_id AND a.id < b.id
+             WHERE a.end_at IS NOT NULL AND b.end_at IS NOT NULL
+               AND a.start_at < b.end_at AND b.start_at < a.end_at",
+        ).unwrap();
+        let pairs: Vec<ConflictPair> = stmt
+            .query_map([], |row| {
+                let event_a = CalendarEventDto {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    start_at: row.get(2)?,
+                    end_at: row.get(3)?,
+                    location: row.get(4)?,
+                    calendar_id: row.get(5)?,
+                };
+                let event_b = CalendarEventDto {
+                    id: row.get(6)?,
+                    title: row.get(7)?,
+                    start_at: row.get(8)?,
+                    end_at: row.get(9)?,
+                    location: row.get(10)?,
+                    calendar_id: row.get(11)?,
+                };
+                let overlap_raw: i64 = row.get(12)?;
+                Ok(ConflictPair {
+                    event_a,
+                    event_b,
+                    overlap_minutes: overlap_raw.max(0) as u32,
+                })
+            })
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(pairs.len(), 1);
+        assert_eq!(pairs[0].overlap_minutes, 30);
+    }
+
+    #[test]
+    fn detect_conflicts_ignores_non_overlapping_events() {
+        let conn = open_test_db();
+        insert_test_source(&conn, "src-c2");
+        insert_test_event(
+            &conn,
+            "ev-c",
+            "src-c2",
+            "2024-01-01T09:00:00",
+            "2024-01-01T10:00:00",
+        );
+        insert_test_event(
+            &conn,
+            "ev-d",
+            "src-c2",
+            "2024-01-01T10:00:00",
+            "2024-01-01T11:00:00",
+        );
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM calendar_events a
+             JOIN calendar_events b ON a.calendar_id = b.calendar_id AND a.id < b.id
+             WHERE a.end_at IS NOT NULL AND b.end_at IS NOT NULL
+               AND a.start_at < b.end_at AND b.start_at < a.end_at",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn calendar_event_delete_removes_correct_row() {
+        let conn = open_test_db();
+        insert_test_source(&conn, "src-c3");
+        insert_test_event(
+            &conn,
+            "ev-del",
+            "src-c3",
+            "2024-01-01T08:00:00",
+            "2024-01-01T09:00:00",
+        );
+        insert_test_event(
+            &conn,
+            "ev-keep",
+            "src-c3",
+            "2024-01-01T10:00:00",
+            "2024-01-01T11:00:00",
+        );
+
+        conn.execute(
+            "DELETE FROM calendar_events WHERE id = ?1",
+            rusqlite::params!["ev-del"],
+        )
+        .unwrap();
+
+        let remaining: i64 = conn
+            .query_row("SELECT COUNT(*) FROM calendar_events", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(remaining, 1);
+
+        let kept_id: String = conn
+            .query_row("SELECT id FROM calendar_events", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(kept_id, "ev-keep");
     }
 }

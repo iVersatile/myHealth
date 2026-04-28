@@ -61,6 +61,8 @@ export const IPC = {
   calendarToggleSource: 'calendar_toggle_source',
   calendarRequestPermission: 'calendar_request_permission',
   calendarImportEvents: 'calendar_import_events',
+  calendarDetectConflicts: 'calendar_detect_conflicts',
+  calendarEventDelete: 'calendar_event_delete',
 
   // Clinics
   clinicsList: 'clinics_list',

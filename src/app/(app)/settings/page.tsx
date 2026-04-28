@@ -15,6 +15,21 @@ type CalendarSourceRow = {
   last_synced_at: string | null
 }
 
+type CalendarEventDto = {
+  id: string
+  title: string
+  start_at: string
+  end_at: string | null
+  location: string | null
+  calendar_id: string
+}
+
+type ConflictPair = {
+  event_a: CalendarEventDto
+  event_b: CalendarEventDto
+  overlap_minutes: number
+}
+
 const AUTO_LOCK_OPTIONS = [
   { label: '5 minutes', value: '5' },
   { label: '15 minutes', value: '15' },
@@ -128,6 +143,10 @@ export default function SettingsPage() {
   const [archiveMonths, setArchiveMonths] = useState(12)
   const [archiveBusy, setArchiveBusy] = useState(false)
   const [archiveMsg, setArchiveMsg] = useState<{ text: string; ok: boolean } | null>(null)
+
+  const [conflicts, setConflicts] = useState<ConflictPair[]>([])
+  const [conflictsLoading, setConflictsLoading] = useState(false)
+  const [showConflicts, setShowConflicts] = useState(false)
 
   useEffect(() => {
     async function loadSettings() {
@@ -270,6 +289,32 @@ export default function SettingsPage() {
     } finally {
       setSyncBusy(false)
     }
+  }
+
+  async function loadConflicts() {
+    setConflictsLoading(true)
+    try {
+      const pairs = await invoke<ConflictPair[]>('calendar_detect_conflicts')
+      setConflicts(pairs)
+      setShowConflicts(true)
+    } catch (err) {
+      setSyncMsg({ text: String(err), ok: false })
+    } finally {
+      setConflictsLoading(false)
+    }
+  }
+
+  async function handleKeepEvent(deleteId: string, pairIndex: number) {
+    try {
+      await invoke('calendar_event_delete', { id: deleteId })
+      setConflicts(prev => prev.filter((_, i) => i !== pairIndex))
+    } catch (err) {
+      setSyncMsg({ text: String(err), ok: false })
+    }
+  }
+
+  function handleKeepBoth(pairIndex: number) {
+    setConflicts(prev => prev.filter((_, i) => i !== pairIndex))
   }
 
   return (
@@ -479,7 +524,28 @@ export default function SettingsPage() {
 
       {/* Calendar Sync */}
       <div style={sectionStyle}>
-        <SectionTitle>Calendar Sync</SectionTitle>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>
+            Calendar Sync
+          </h2>
+          {conflicts.length > 0 && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '20px',
+              height: '20px',
+              padding: '0 6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              background: 'var(--color-danger)',
+              color: '#fff',
+              borderRadius: '10px',
+            }}>
+              {conflicts.length}
+            </span>
+          )}
+        </div>
 
         {calendarsLoading && (
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
@@ -558,13 +624,22 @@ export default function SettingsPage() {
               ))}
             </div>
 
-            <button
-              onClick={() => { void handleSync() }}
-              style={btnPrimary}
-              disabled={syncBusy || calendars.filter(c => c.enabled).length === 0}
-            >
-              {syncBusy ? 'Syncing…' : 'Sync Now'}
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                onClick={() => { void handleSync() }}
+                style={btnPrimary}
+                disabled={syncBusy || calendars.filter(c => c.enabled).length === 0}
+              >
+                {syncBusy ? 'Syncing…' : 'Sync Now'}
+              </button>
+              <button
+                onClick={() => { void loadConflicts() }}
+                style={btnSecondary}
+                disabled={conflictsLoading}
+              >
+                {conflictsLoading ? 'Checking…' : 'Check Conflicts'}
+              </button>
+            </div>
 
             {syncMsg && (
               <p style={{
@@ -574,6 +649,85 @@ export default function SettingsPage() {
               }}>
                 {syncMsg.text}
               </p>
+            )}
+
+            {showConflicts && conflicts.length === 0 && (
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-success)', marginTop: 'var(--space-3)' }}>
+                No conflicts found.
+              </p>
+            )}
+
+            {showConflicts && conflicts.length > 0 && (
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', marginBottom: 'var(--space-3)' }}>
+                  Resolve Conflicts ({conflicts.length})
+                </p>
+                {conflicts.map((pair, idx) => (
+                  <div
+                    key={`${pair.event_a.id}-${pair.event_b.id}`}
+                    style={{
+                      background: 'var(--color-surface-sunken)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: 'var(--space-3)',
+                      marginBottom: 'var(--space-3)',
+                    }}
+                  >
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '0 0 var(--space-2) 0' }}>
+                      Overlap: {pair.overlap_minutes} min
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+                      {([pair.event_a, pair.event_b] as const).map((ev, evIdx) => (
+                        <div
+                          key={ev.id}
+                          style={{
+                            background: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: 'var(--space-2)',
+                          }}
+                        >
+                          <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text)', margin: '0 0 4px 0' }}>
+                            {evIdx === 0 ? 'Event A' : 'Event B'}
+                          </p>
+                          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', margin: '0 0 2px 0' }}>
+                            {ev.title}
+                          </p>
+                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+                            {new Date(ev.start_at).toLocaleString()}
+                            {ev.end_at ? ` – ${new Date(ev.end_at).toLocaleTimeString()}` : ''}
+                          </p>
+                          {ev.location && (
+                            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
+                              {ev.location}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                      <button
+                        style={{ ...btnPrimary, fontSize: '12px', padding: '4px 10px' }}
+                        onClick={() => { void handleKeepEvent(pair.event_b.id, idx) }}
+                      >
+                        Keep A
+                      </button>
+                      <button
+                        style={{ ...btnPrimary, fontSize: '12px', padding: '4px 10px' }}
+                        onClick={() => { void handleKeepEvent(pair.event_a.id, idx) }}
+                      >
+                        Keep B
+                      </button>
+                      <button
+                        style={{ ...btnSecondary, fontSize: '12px', padding: '4px 10px' }}
+                        onClick={() => handleKeepBoth(idx)}
+                      >
+                        Keep Both
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}

@@ -17,8 +17,8 @@ use commands::auth::{
     auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
 };
 use commands::calendar::{
-    calendar_import_events, calendar_list_sources, calendar_request_permission, calendar_sync,
-    calendar_toggle_source,
+    calendar_detect_conflicts, calendar_event_delete, calendar_import_events,
+    calendar_list_sources, calendar_request_permission, calendar_sync, calendar_toggle_source,
 };
 use commands::categories::{
     assign_category_to_appointment, assign_category_to_document, categories_archive_stale,
@@ -122,6 +122,8 @@ pub fn run() {
             calendar_toggle_source,
             calendar_request_permission,
             calendar_import_events,
+            calendar_detect_conflicts,
+            calendar_event_delete,
             clinics_list,
             clinics_get,
             clinics_create,
