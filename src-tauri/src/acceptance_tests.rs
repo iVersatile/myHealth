@@ -1,10 +1,10 @@
-/// Acceptance tests for the Phase-7 upload-analysis gap-closing work.
-///
-/// Each test corresponds to a named gap from `docs/UPLOAD_ANALYSIS_GAPS.md`
-/// and asserts the "Done when" criterion stated there.
-///
-/// These tests live inside the crate (not under `tests/`) so that they have
-/// access to `pub(crate)` modules.
+// Acceptance tests for the Phase-7 upload-analysis gap-closing work.
+//
+// Each test corresponds to a named gap from `docs/UPLOAD_ANALYSIS_GAPS.md`
+// and asserts the "Done when" criterion stated there.
+//
+// These tests live inside the crate (not under `tests/`) so that they have
+// access to `pub(crate)` modules.
 
 // ── Gap 1 — F1.3: Test-type keyword normalisation ───────────────────────────
 //
