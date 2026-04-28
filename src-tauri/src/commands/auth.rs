@@ -99,17 +99,30 @@ pub fn unlock_internal(data_dir: &Path, password: &str) -> Result<(Connection, S
 
     if stored_iters < crypto::ITERATIONS {
         let new_hex = crypto::key_to_hex(&crypto::derive_key(password, &salt));
-        // Checkpoint and remove the WAL file, then rekey the main db file only.
-        // We do NOT restore WAL mode on this connection — instead we drop it and
-        // reopen fresh. This avoids a Linux-specific race where SQLCipher writes
-        // a WAL header after PRAGMA journal_mode = WAL that is not flushed before
-        // the next open, causing "incorrect password".
-        conn.execute_batch(&format!(
-            "PRAGMA journal_mode = DELETE;\
-             PRAGMA rekey = \"x'{new_hex}'\";"
-        ))
-        .map_err(|e| format!("rekey during migration: {e}"))?;
+        // PRAGMA rekey is unreliable on Linux with bundled-sqlcipher-vendored-openssl
+        // (may be compiled out or produce a file that cannot be reopened). Use the
+        // SQLite Online Backup API instead: copy all pages from the old connection
+        // (keyed with old_hex) into a fresh connection (keyed with new_hex), then
+        // atomically replace the original file.
+        let db_file = db_path(data_dir);
+        let tmp_file = db_file.with_extension("db.migration_tmp");
+        {
+            let mut new_conn = db::open_db(
+                tmp_file.to_str().ok_or("tmp path is not valid UTF-8")?,
+                &new_hex,
+            )
+            .map_err(|e| format!("open tmp db: {e}"))?;
+            let backup = rusqlite::backup::Backup::new(&conn, &mut new_conn)
+                .map_err(|e| format!("backup init: {e}"))?;
+            backup
+                .run_to_completion(1024, std::time::Duration::ZERO, None)
+                .map_err(|e| format!("backup copy: {e}"))?;
+        }
         drop(conn);
+        std::fs::rename(&tmp_file, &db_file).map_err(|e| format!("rename migrated db: {e}"))?;
+        // Remove any leftover WAL/SHM from the old connection.
+        let _ = std::fs::remove_file(db_file.with_extension("db-wal"));
+        let _ = std::fs::remove_file(db_file.with_extension("db-shm"));
         write_iterations(data_dir, crypto::ITERATIONS)?;
         let migrated_conn = open_db_for_path(data_dir, &new_hex)
             .map_err(|e| format!("reopen after migration: {e}"))?;
