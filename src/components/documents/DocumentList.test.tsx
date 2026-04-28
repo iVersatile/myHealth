@@ -97,16 +97,35 @@ describe('DocumentList', () => {
     expect(screen.getByText('b.pdf')).toBeTruthy()
   })
 
-  it('renders category filter chips', () => {
+  it('renders category filter chips from categories_list', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list')
+        return Promise.resolve([
+          { id: 'cat-1', name: 'Lab', parent_id: null, color_hex: '#6366f1', is_system: false, sort_order: 0 },
+        ])
+      return Promise.resolve([])
+    })
     render(<DocumentList />)
-    expect(screen.getByRole('button', { name: 'All' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Lab' })).toBeTruthy()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Lab' })).toBeTruthy())
   })
 
-  it('calls filterByCategory when chip clicked', async () => {
+  it('toggles category filter chip on click', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list')
+        return Promise.resolve([
+          { id: 'cat-1', name: 'Lab', parent_id: null, color_hex: '#6366f1', is_system: false, sort_order: 0 },
+        ])
+      return Promise.resolve({ items: [], total: 0 })
+    })
+    const user = userEvent.setup()
     render(<DocumentList />)
-    await userEvent.click(screen.getByRole('button', { name: 'Lab' }))
-    expect(mockFilterByCategory).toHaveBeenCalledWith('lab')
+    await waitFor(() => screen.getByRole('button', { name: 'Lab' }))
+    await user.click(screen.getByRole('button', { name: 'Lab' }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('documents_search_filtered', expect.objectContaining({
+        categoryIds: ['cat-1'],
+      })),
+    )
   })
 
   it('does not show pagination when total fits on one page', () => {
