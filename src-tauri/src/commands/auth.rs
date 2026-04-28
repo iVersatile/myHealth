@@ -99,8 +99,15 @@ pub fn unlock_internal(data_dir: &Path, password: &str) -> Result<(Connection, S
 
     if stored_iters < crypto::ITERATIONS {
         let new_hex = crypto::key_to_hex(&crypto::derive_key(password, &salt));
-        conn.execute_batch(&format!("PRAGMA rekey = \"x'{new_hex}'\";"))
-            .map_err(|e| format!("rekey during migration: {e}"))?;
+        // Flush and remove the WAL file before rekeying. SQLCipher's PRAGMA rekey
+        // re-encrypts only the main db file; any WAL pages written with the old key
+        // would cause "incorrect password" on the next open with the new key.
+        conn.execute_batch(&format!(
+            "PRAGMA journal_mode = DELETE;\
+             PRAGMA rekey = \"x'{new_hex}'\";\
+             PRAGMA journal_mode = WAL;"
+        ))
+        .map_err(|e| format!("rekey during migration: {e}"))?;
         write_iterations(data_dir, crypto::ITERATIONS)?;
         return Ok((conn, new_hex));
     }
