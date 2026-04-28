@@ -96,6 +96,7 @@ export const IPC = {
   // Export
   exportPdfBundle: 'export_pdf_bundle',
   exportSaveBytes: 'export_save_bytes',
+  exportPdfSummaryBytes: 'export_pdf_summary_bytes',
 
   // Links
   linksCreate: 'links_create',

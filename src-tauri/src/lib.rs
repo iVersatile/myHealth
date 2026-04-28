@@ -39,7 +39,7 @@ use commands::documents::{
     documents_list, documents_restore, documents_run_extraction, documents_search_filtered,
     documents_tags_set, documents_update, documents_upload,
 };
-use commands::export::{export_pdf_bundle, export_save_bytes};
+use commands::export::{export_pdf_bundle, export_pdf_summary_bytes, export_save_bytes};
 use commands::links::{
     get_appointment_links, get_document_links, link_document_to_appointment, links_create,
     links_delete, links_list_for_appointment, links_list_for_document, links_score_candidates,
@@ -145,6 +145,7 @@ pub fn run() {
             stats_summary,
             export_pdf_bundle,
             export_save_bytes,
+            export_pdf_summary_bytes,
             links_create,
             links_delete,
             links_list_for_document,

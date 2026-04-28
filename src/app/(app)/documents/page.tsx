@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { DocumentList } from '../../../components/documents/DocumentList'
 import { UploadDialog } from '../../../components/documents/UploadDialog'
 import { ExportDialog } from '../../../components/export/ExportDialog'
+import { SummaryExportDialog } from '../../../components/export/SummaryExportDialog'
 import { DoctorSuggestionBanner } from '../../../components/documents/DoctorSuggestionBanner'
 import { LinkSuggestionBanner } from '../../../components/documents/LinkSuggestionBanner'
 import { ContactForm } from '../../../components/contacts/ContactForm'
@@ -16,6 +17,7 @@ import type { ContactCreateInput } from '../../../hooks/useContacts'
 export default function DocumentsPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [summaryExportOpen, setSummaryExportOpen] = useState(false)
   const [doctorCandidates, setDoctorCandidates] = useState<string[]>([])
   const [showContactForm, setShowContactForm] = useState(false)
   const [pendingDoctorName, setPendingDoctorName] = useState<string | null>(null)
@@ -96,6 +98,13 @@ export default function DocumentsPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setSummaryExportOpen(true)}
+            className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
+          >
+            ↓ Summary PDF
+          </button>
+          <button
+            type="button"
             onClick={() => setExportOpen(true)}
             className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
           >
@@ -142,6 +151,9 @@ export default function DocumentsPage() {
       )}
       {exportOpen && (
         <ExportDialog onClose={() => setExportOpen(false)} />
+      )}
+      {summaryExportOpen && (
+        <SummaryExportDialog onClose={() => setSummaryExportOpen(false)} />
       )}
       {showContactForm && (
         <ContactForm

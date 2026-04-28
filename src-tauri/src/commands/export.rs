@@ -169,6 +169,139 @@ fn b64_decode(input: &str) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
+// ── Summary export data structs ──────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SummaryDocumentItem {
+    pub id: String,
+    pub filename: String,
+    pub category: String,
+    pub notes: Option<String>,
+    pub created_at: String,
+    pub extracted_text: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SummaryAppointmentItem {
+    pub id: String,
+    pub title: String,
+    pub doctor_name: Option<String>,
+    pub specialty: Option<String>,
+    pub appt_date: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SummaryContactItem {
+    pub id: String,
+    pub name: String,
+    pub role: String,
+    pub specialty: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SummaryData {
+    pub documents: Vec<SummaryDocumentItem>,
+    pub appointments: Vec<SummaryAppointmentItem>,
+    pub contacts: Vec<SummaryContactItem>,
+}
+
+#[tauri::command]
+pub fn export_pdf_summary_bytes(
+    state: State<'_, AppState>,
+    date_from: Option<String>,
+    date_to: Option<String>,
+    include_documents: bool,
+    include_appointments: bool,
+    include_contacts: bool,
+) -> Result<SummaryData, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let documents = if include_documents {
+        let from = date_from.as_deref().unwrap_or("1900-01-01");
+        let to = date_to.as_deref().unwrap_or("2999-12-31");
+        let mut stmt = conn.prepare(
+            "SELECT id, filename, category, notes, created_at, extracted_text \
+             FROM documents \
+             WHERE is_deleted = 0 AND created_at >= ?1 AND created_at <= ?2 \
+             ORDER BY created_at DESC",
+        )?;
+        let rows = stmt
+            .query_map(rusqlite::params![from, to], |row| {
+                Ok(SummaryDocumentItem {
+                    id: row.get(0)?,
+                    filename: row.get(1)?,
+                    category: row.get(2)?,
+                    notes: row.get(3)?,
+                    created_at: row.get(4)?,
+                    extracted_text: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        rows
+    } else {
+        vec![]
+    };
+
+    let appointments = if include_appointments {
+        let from = date_from.as_deref().unwrap_or("1900-01-01");
+        let to = date_to.as_deref().unwrap_or("2999-12-31");
+        let mut stmt = conn.prepare(
+            "SELECT id, title, doctor_name, specialty, appt_date, notes \
+             FROM appointments \
+             WHERE appt_date >= ?1 AND appt_date <= ?2 \
+             ORDER BY appt_date DESC",
+        )?;
+        let rows = stmt
+            .query_map(rusqlite::params![from, to], |row| {
+                Ok(SummaryAppointmentItem {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    doctor_name: row.get(2)?,
+                    specialty: row.get(3)?,
+                    appt_date: row.get(4)?,
+                    notes: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        rows
+    } else {
+        vec![]
+    };
+
+    let contacts = if include_contacts {
+        let mut stmt = conn.prepare(
+            "SELECT id, name, role, specialty, phone, email \
+             FROM contacts \
+             ORDER BY name ASC",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(SummaryContactItem {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    role: row.get(2)?,
+                    specialty: row.get(3)?,
+                    phone: row.get(4)?,
+                    email: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        rows
+    } else {
+        vec![]
+    };
+
+    Ok(SummaryData {
+        documents,
+        appointments,
+        contacts,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,5 +368,138 @@ mod tests {
             Ok(())
         };
         assert!(result.is_err());
+    }
+
+    fn open_test_db() -> rusqlite::Connection {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        crate::db::migrations::run(&conn).unwrap();
+        conn
+    }
+
+    #[test]
+    fn summary_documents_filtered_by_date() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at) \
+             VALUES ('d1', 'lab.pdf', '/tmp/lab.pdf', 'application/pdf', 100, 'lab', '2026-01-15T10:00:00Z')",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at) \
+             VALUES ('d2', 'old.pdf', '/tmp/old.pdf', 'application/pdf', 100, 'other', '2020-06-01T10:00:00Z')",
+            [],
+        ).unwrap();
+
+        let from = "2026-01-01";
+        let to = "2026-12-31";
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, filename, category, notes, created_at, extracted_text \
+             FROM documents \
+             WHERE is_deleted = 0 AND created_at >= ?1 AND created_at <= ?2 \
+             ORDER BY created_at DESC",
+            )
+            .unwrap();
+        let docs: Vec<SummaryDocumentItem> = stmt
+            .query_map(rusqlite::params![from, to], |row| {
+                Ok(SummaryDocumentItem {
+                    id: row.get(0)?,
+                    filename: row.get(1)?,
+                    category: row.get(2)?,
+                    notes: row.get(3)?,
+                    created_at: row.get(4)?,
+                    extracted_text: row.get(5)?,
+                })
+            })
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        assert_eq!(docs.len(), 1);
+        assert_eq!(docs[0].id, "d1");
+    }
+
+    #[test]
+    fn summary_appointments_filtered_by_date() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date) \
+             VALUES ('a1', 'GP Visit', '2026-03-10T09:00:00Z')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date) \
+             VALUES ('a2', 'Old Checkup', '2019-05-01T09:00:00Z')",
+            [],
+        )
+        .unwrap();
+
+        let from = "2026-01-01";
+        let to = "2026-12-31";
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, title, doctor_name, specialty, appt_date, notes \
+             FROM appointments \
+             WHERE appt_date >= ?1 AND appt_date <= ?2 \
+             ORDER BY appt_date DESC",
+            )
+            .unwrap();
+        let appts: Vec<SummaryAppointmentItem> = stmt
+            .query_map(rusqlite::params![from, to], |row| {
+                Ok(SummaryAppointmentItem {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    doctor_name: row.get(2)?,
+                    specialty: row.get(3)?,
+                    appt_date: row.get(4)?,
+                    notes: row.get(5)?,
+                })
+            })
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        assert_eq!(appts.len(), 1);
+        assert_eq!(appts[0].id, "a1");
+    }
+
+    #[test]
+    fn summary_contacts_returned_all() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role) VALUES ('c1', 'Dr Smith', 'gp')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role) VALUES ('c2', 'Dr Jones', 'specialist')",
+            [],
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, name, role, specialty, phone, email FROM contacts ORDER BY name ASC",
+            )
+            .unwrap();
+        let contacts: Vec<SummaryContactItem> = stmt
+            .query_map([], |row| {
+                Ok(SummaryContactItem {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    role: row.get(2)?,
+                    specialty: row.get(3)?,
+                    phone: row.get(4)?,
+                    email: row.get(5)?,
+                })
+            })
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+
+        assert_eq!(contacts.len(), 2);
+        assert_eq!(contacts[0].name, "Dr Jones");
+        assert_eq!(contacts[1].name, "Dr Smith");
     }
 }
