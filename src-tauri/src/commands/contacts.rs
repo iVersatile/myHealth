@@ -418,32 +418,34 @@ pub fn merge_contacts(
     let guard = state.db.lock().map_err(|e| e.to_string())?;
     let conn = guard.as_ref().ok_or("database not open")?;
 
-    conn.execute("BEGIN", []).map_err(|e| e.to_string())?;
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
 
-    let result = (|| -> rusqlite::Result<Contact> {
+    let result: Result<Contact, String> = (|| {
         // 1. Re-point appointment_contacts rows.
         for dup_id in &duplicate_ids {
-            // Delete any row that would create a PK conflict with an existing primary row.
-            conn.execute(
+            tx.execute(
                 "DELETE FROM appointment_contacts \
                  WHERE contact_id = ?1 AND appointment_id IN \
                    (SELECT appointment_id FROM appointment_contacts WHERE contact_id = ?2)",
                 rusqlite::params![dup_id, primary_id],
-            )?;
-            // Re-point remaining rows.
-            conn.execute(
+            )
+            .map_err(|e| e.to_string())?;
+            tx.execute(
                 "UPDATE appointment_contacts SET contact_id = ?1 WHERE contact_id = ?2",
                 rusqlite::params![primary_id, dup_id],
-            )?;
+            )
+            .map_err(|e| e.to_string())?;
         }
 
         // 2. Load primary and duplicates; merge null fields from duplicates.
-        let primary = conn.query_row(
-            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at FROM contacts WHERE id = ?",
-            [&primary_id],
-            row_to_contact,
-        )?;
+        let primary = tx
+            .query_row(
+                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+                 created_at, updated_at FROM contacts WHERE id = ?",
+                [&primary_id],
+                row_to_contact,
+            )
+            .map_err(|e| e.to_string())?;
 
         let mut merged_specialty = primary.specialty.clone();
         let mut merged_phone = primary.phone.clone();
@@ -453,12 +455,14 @@ pub fn merge_contacts(
         let mut merged_notes = primary.notes.clone();
 
         for dup_id in &duplicate_ids {
-            let dup = conn.query_row(
-                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at FROM contacts WHERE id = ?",
-                [dup_id],
-                row_to_contact,
-            )?;
+            let dup = tx
+                .query_row(
+                    "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+                     created_at, updated_at FROM contacts WHERE id = ?",
+                    [dup_id],
+                    row_to_contact,
+                )
+                .map_err(|e| e.to_string())?;
             if merged_specialty.is_none() {
                 merged_specialty = dup.specialty;
             }
@@ -480,7 +484,7 @@ pub fn merge_contacts(
         }
 
         let now = Utc::now().to_rfc3339();
-        conn.execute(
+        tx.execute(
             "UPDATE contacts SET specialty = ?1, phone = ?2, email = ?3, clinic = ?4, \
              address = ?5, notes = ?6, updated_at = ?7 WHERE id = ?8",
             rusqlite::params![
@@ -493,26 +497,28 @@ pub fn merge_contacts(
                 now,
                 primary_id,
             ],
-        )?;
+        )
+        .map_err(|e| e.to_string())?;
 
         // 3. Delete duplicate rows.
         for dup_id in &duplicate_ids {
-            conn.execute("DELETE FROM contacts WHERE id = ?", [dup_id])?;
+            tx.execute("DELETE FROM contacts WHERE id = ?", [dup_id])
+                .map_err(|e| e.to_string())?;
         }
 
         // Return updated primary.
-        conn.query_row(
+        tx.query_row(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
              created_at, updated_at FROM contacts WHERE id = ?",
             [&primary_id],
             row_to_contact,
         )
+        .map_err(|e| e.to_string())
     })();
 
     match result {
         Ok(contact) => {
-            conn.execute("COMMIT", []).map_err(|e| e.to_string())?;
-            // Rebuild search index for merged primary.
+            tx.commit().map_err(|e| e.to_string())?;
             let body = [
                 contact.specialty.as_deref().unwrap_or(""),
                 contact.clinic.as_deref().unwrap_or(""),
@@ -536,8 +542,8 @@ pub fn merge_contacts(
             Ok(contact)
         }
         Err(e) => {
-            let _ = conn.execute("ROLLBACK", []);
-            Err(e.to_string())
+            let _ = tx.rollback();
+            Err(e)
         }
     }
 }
