@@ -8,7 +8,7 @@
 
 ```
 Phase 8 — v1.2 Enhancements
-Current task: 8.4 — F3.7 Auto-archive empty categories
+Current task: 8.5 — F4.5 Calendar conflict resolution UI
 ```
 
 ---
@@ -347,7 +347,7 @@ Current task: 8.4 — F3.7 Auto-archive empty categories
    - In `src/app/(app)/categories/` render category tree as sortable list; on drop call `category_reorder`
    - Done when: dragging a subcategory to a new parent persists after page reload; tree depth limit 5 enforced (drop rejected if depth would exceed 5)
 
-▶ **8.4 — F3.7 Auto-archive empty categories**
+[x] **8.4 — F3.7 Auto-archive empty categories**
    - Add `categories_archive_stale(user_id: String, months_inactive: u32)` command in `src-tauri/src/commands/categories.rs`
    - Archive (set `is_archived = 1`) any category with zero linked documents/appointments for `months_inactive` months
    - Add `is_archived` column via migration v5 in `src-tauri/src/db/migrations.rs`; update `categories_list` to exclude archived by default; add `include_archived: bool` flag
@@ -357,7 +357,7 @@ Current task: 8.4 — F3.7 Auto-archive empty categories
 
 ### Sprint 13: Conflict resolution + PDF export
 
-[ ] **8.5 — F4.5 Calendar conflict resolution UI**
+▶ **8.5 — F4.5 Calendar conflict resolution UI**
    - Detect conflicts server-side: add `calendar_detect_conflicts(user_id: String)` command in `src-tauri/src/commands/calendar.rs`
    - Conflict = two `calendar_events` with overlapping `(start_time, end_time)` on the same calendar source
    - Return `Vec<ConflictPair> { event_a: CalendarEventDto, event_b: CalendarEventDto, overlap_minutes: u32 }`
