@@ -6,6 +6,37 @@ pub struct ParsedFilename {
     pub tags: Vec<String>,
 }
 
+/// Maps lowercase substring patterns to canonical test-type labels.
+/// Patterns are checked in order; first match wins per token.
+const TEST_TYPE_MAP: &[(&str, &str)] = &[
+    ("blood", "Blood Work"),
+    ("cbc", "CBC"),
+    ("lipid", "Lipid Panel"),
+    ("cholesterol", "Lipid Panel"),
+    ("mri", "MRI"),
+    ("ct", "CT Scan"),
+    ("xray", "X-Ray"),
+    ("x-ray", "X-Ray"),
+    ("ultrasound", "Ultrasound"),
+    ("ecg", "ECG"),
+    ("ekg", "ECG"),
+    ("echo", "Echocardiogram"),
+    ("dexa", "DEXA Scan"),
+    ("mammogram", "Mammogram"),
+    ("colonoscopy", "Colonoscopy"),
+    ("endoscopy", "Endoscopy"),
+    ("biopsy", "Biopsy"),
+    ("urine", "Urinalysis"),
+    ("stool", "Stool Test"),
+];
+
+fn normalise_test_type(token: &str) -> Option<&'static str> {
+    TEST_TYPE_MAP
+        .iter()
+        .find(|(pat, _)| token.contains(pat))
+        .map(|(_, label)| *label)
+}
+
 const STOPWORDS: &[&str] = &[
     "a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for", "with", "by", "from", "up",
     "as", "is", "it", "its",
@@ -137,7 +168,7 @@ pub fn parse_filename(stem: &str) -> ParsedFilename {
         }
     }
 
-    // Remaining tokens → candidate tags
+    // Remaining tokens → candidate tags (with test-type normalisation)
     let mut tags: Vec<String> = remaining
         .split(|c: char| c == '_' || c == '-' || c.is_whitespace())
         .map(|t| t.trim().to_lowercase())
@@ -147,6 +178,7 @@ pub fn parse_filename(stem: &str) -> ParsedFilename {
                 && !STOPWORDS.contains(&t.as_str())
                 && t.chars().any(|c| c.is_alphabetic())
         })
+        .map(|t| normalise_test_type(&t).map(str::to_string).unwrap_or(t))
         .collect();
 
     tags.extend(extra_tags);
@@ -226,7 +258,8 @@ mod tests {
 
     #[test]
     fn tags_are_lowercase() {
-        let r = parse_filename("BloodTest_01Dec2024_NHS");
+        // Use a filename with no test-type keywords; canonical labels are Title Case
+        let r = parse_filename("Cardiology_Referral_Letter");
         for tag in &r.tags {
             assert_eq!(*tag, tag.to_lowercase(), "tag not lowercase: {tag}");
         }
@@ -251,5 +284,71 @@ mod tests {
     fn month_case_insensitive_dd_mon_yyyy() {
         let r = parse_filename("Report_01-dec-2024");
         assert_eq!(r.document_date, Some(date(2024, 12, 1)));
+    }
+
+    // ── Test-type normalisation tests ────────────────────────────────────────
+
+    #[test]
+    fn blood_test_normalised_to_blood_work() {
+        let r = parse_filename("BloodTest_2024_NHS");
+        assert!(
+            r.tags.contains(&"Blood Work".to_string()),
+            "tags: {:?}",
+            r.tags
+        );
+        assert!(
+            !r.tags.contains(&"bloodtest".to_string()),
+            "raw token still present: {:?}",
+            r.tags
+        );
+    }
+
+    #[test]
+    fn cbc_normalised() {
+        let r = parse_filename("CBC_Results_2024");
+        assert!(r.tags.contains(&"CBC".to_string()), "tags: {:?}", r.tags);
+    }
+
+    #[test]
+    fn mri_normalised() {
+        let r = parse_filename("Brain_MRI_20241201");
+        assert!(r.tags.contains(&"MRI".to_string()), "tags: {:?}", r.tags);
+    }
+
+    #[test]
+    fn ekg_normalised_to_ecg() {
+        let r = parse_filename("EKG_Report_2024");
+        assert!(r.tags.contains(&"ECG".to_string()), "tags: {:?}", r.tags);
+    }
+
+    #[test]
+    fn cholesterol_normalised_to_lipid_panel() {
+        let r = parse_filename("Cholesterol_Check_2024");
+        assert!(
+            r.tags.contains(&"Lipid Panel".to_string()),
+            "tags: {:?}",
+            r.tags
+        );
+    }
+
+    #[test]
+    fn urine_normalised_to_urinalysis() {
+        let r = parse_filename("Urine_Test_2024");
+        assert!(
+            r.tags.contains(&"Urinalysis".to_string()),
+            "tags: {:?}",
+            r.tags
+        );
+    }
+
+    #[test]
+    fn unrecognised_tokens_pass_through_unchanged() {
+        let r = parse_filename("Referral_Letter_2024");
+        assert!(
+            r.tags.contains(&"referral".to_string()),
+            "tags: {:?}",
+            r.tags
+        );
+        assert!(r.tags.contains(&"letter".to_string()), "tags: {:?}", r.tags);
     }
 }
