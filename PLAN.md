@@ -8,7 +8,7 @@
 
 ```
 Phase 8 — v1.2 Enhancements
-Current task: 8.5 — F4.5 Calendar conflict resolution UI
+Current task: 8.7 — v1.2 acceptance tests
 ```
 
 ---
@@ -357,7 +357,7 @@ Current task: 8.5 — F4.5 Calendar conflict resolution UI
 
 ### Sprint 13: Conflict resolution + PDF export
 
-▶ **8.5 — F4.5 Calendar conflict resolution UI**
+[x] **8.5 — F4.5 Calendar conflict resolution UI**
    - Detect conflicts server-side: add `calendar_detect_conflicts(user_id: String)` command in `src-tauri/src/commands/calendar.rs`
    - Conflict = two `calendar_events` with overlapping `(start_time, end_time)` on the same calendar source
    - Return `Vec<ConflictPair> { event_a: CalendarEventDto, event_b: CalendarEventDto, overlap_minutes: u32 }`
@@ -366,7 +366,7 @@ Current task: 8.5 — F4.5 Calendar conflict resolution UI
    - "Resolve Conflicts" panel: side-by-side event cards; user can "Keep A", "Keep B", or "Keep Both"; chosen action calls `calendar_events_delete` or `calendar_events_keep_both`
    - Done when: two overlapping test events inserted → conflict detected → UI shows merge dialog → user keeps one → other deleted; zero conflicts → badge hidden
 
-[ ] **8.6 — PDF summary report export**
+[x] **8.6 — PDF summary report export**
    - Note: `export_pdf_bundle` (zip of original files) already exists in `src-tauri/src/commands/export.rs` — this task adds a new *formatted summary* PDF, distinct from the bundle.
    - Generate the summary PDF on the **frontend** using `pdf-lib` (`^1.17.1`, already in `package.json`) — no new Rust crate needed.
    - Add a thin `export_pdf_summary_bytes(user_id, date_from, date_to, include_documents, include_appointments, include_contacts)` Tauri command in `src-tauri/src/commands/export.rs` that returns the raw JSON data (documents list, appointment list, contacts list) for the given filters; the frontend assembles the PDF.
@@ -376,7 +376,7 @@ Current task: 8.5 — F4.5 Calendar conflict resolution UI
    - Add `exportPdfSummaryBytes: 'export_pdf_summary_bytes'` to `src/lib/ipc.ts`
    - Done when: `tsc --noEmit` passes; generated PDF is non-empty and opens in system viewer; `cargo test` covers the data-fetch command returning correct entity counts for given filters
 
-[ ] **8.7 — v1.2 acceptance tests**
+▶ **8.7 — v1.2 acceptance tests**
    - Run acceptance test cases from `docs/ACCEPTANCE_TESTS_V2.md`:
      - F7 (advanced search filters): TC-F7-01 through TC-F7-04
      - F8 (category drag-reorder + auto-archive): TC-F8-01 through TC-F8-03
