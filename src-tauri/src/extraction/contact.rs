@@ -32,7 +32,7 @@ fn phone_re() -> &'static Regex {
 fn intl_phone_re() -> &'static Regex {
     INTL_PHONE_PATTERN.get_or_init(|| {
         // Matches E.164-style international numbers (non-UK): +CC (NNN) NNN-NNNN etc.
-        Regex::new(r"\+[1-9]\d{0,2}(?:\s?\(?\d{2,5}\)?[\s\-]?){2,4}")
+        Regex::new(r"\+[1-9]\d{0,2}(?:\s?\(?\d{1,5}\)?[\s\-]?){2,5}")
             .expect("intl phone regex valid")
     })
 }

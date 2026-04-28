@@ -6,6 +6,9 @@ pub(crate) mod parsing;
 pub(crate) mod plugins;
 pub(crate) mod services;
 
+#[cfg(test)]
+mod acceptance_tests;
+
 use commands::appointments::{
     appointments_create, appointments_delete, appointments_get, appointments_link_document,
     appointments_list, appointments_update,
