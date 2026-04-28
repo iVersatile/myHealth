@@ -30,6 +30,26 @@ fn open_db_for_path(data_dir: &Path, hex: &str) -> Result<Connection, String> {
     db::open_db(path_str, hex).map_err(|e| format!("open db: {e}"))
 }
 
+fn validate_password_strength(password: &str) -> Result<(), String> {
+    if password.len() < 12 {
+        return Err("Password must be at least 12 characters".into());
+    }
+    if !password.chars().any(|c| c.is_uppercase()) {
+        return Err("Password must contain at least one uppercase letter".into());
+    }
+    if !password.chars().any(|c| c.is_lowercase()) {
+        return Err("Password must contain at least one lowercase letter".into());
+    }
+    if !password.chars().any(|c| c.is_ascii_digit()) {
+        return Err("Password must contain at least one digit".into());
+    }
+    let specials = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
+    if !password.chars().any(|c| specials.contains(c)) {
+        return Err("Password must contain at least one special character".into());
+    }
+    Ok(())
+}
+
 // Internal functions — testable without Tauri runtime.
 
 pub fn set_password_internal(
@@ -69,9 +89,10 @@ pub fn auth_set_password(
         .path()
         .app_data_dir()
         .map_err(|e| format!("no data dir: {e}"))?;
+    validate_password_strength(&password)?;
     let (conn, hex) = set_password_internal(&data_dir, &password)?;
     *state.db.lock().unwrap() = Some(conn);
-    *state.key_hex.lock().unwrap() = Some(hex);
+    *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
     Ok(())
 }
 
@@ -88,7 +109,7 @@ pub fn auth_unlock(
         .map_err(|e| format!("no data dir: {e}"))?;
     let (conn, hex) = unlock_internal(&data_dir, &password)?;
     *state.db.lock().unwrap() = Some(conn);
-    *state.key_hex.lock().unwrap() = Some(hex);
+    *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
     Ok(())
 }
 
@@ -111,13 +132,14 @@ pub fn auth_change_password(
         .app_data_dir()
         .map_err(|e| format!("no data dir: {e}"))?;
     let salt = load_salt(&data_dir)?;
+    validate_password_strength(&new_password)?;
     let old_hex = crypto::key_to_hex(&crypto::derive_key(&old_password, &salt));
     let new_hex = crypto::key_to_hex(&crypto::derive_key(&new_password, &salt));
 
     // Verify old password matches the stored key.
     {
         let stored = state.key_hex.lock().unwrap();
-        if stored.as_deref() != Some(old_hex.as_str()) {
+        if stored.as_ref().map(|z| z.as_str()) != Some(old_hex.as_str()) {
             return Err("incorrect current password".into());
         }
     }
@@ -126,11 +148,14 @@ pub fn auth_change_password(
     {
         let db_guard = state.db.lock().unwrap();
         let conn = db_guard.as_ref().ok_or("app is locked")?;
-        conn.execute_batch(&format!("PRAGMA rekey = '{new_hex}';"))
+        if new_hex.len() != 64 || !new_hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Err("rekey value must be exactly 64 hex characters".into());
+        }
+        conn.execute_batch(&format!("PRAGMA rekey = \"x'{new_hex}'\";"))
             .map_err(|e| format!("rekey failed: {e}"))?;
     }
 
-    *state.key_hex.lock().unwrap() = Some(new_hex);
+    *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(new_hex));
     Ok(())
 }
 
