@@ -742,7 +742,7 @@ pub struct ExtractionSuggestions {
 }
 
 #[tauri::command]
-pub fn documents_run_extraction(
+pub async fn documents_run_extraction(
     id: String,
     state: State<'_, AppState>,
     app_handle: tauri::AppHandle,
@@ -803,11 +803,20 @@ pub fn documents_run_extraction(
         .map_err(|e| e.to_string())?
     };
 
-    let result = if emit_progress.unwrap_or(false) {
-        crate::extraction::extract_with_progress(std::path::Path::new(&file_path), &app_handle)
-    } else {
-        crate::extraction::extract(std::path::Path::new(&file_path))
-    };
+    let emit = emit_progress.unwrap_or(false);
+    let app_handle_cloned = app_handle.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        if emit {
+            crate::extraction::extract_with_progress(
+                std::path::Path::new(&file_path),
+                &app_handle_cloned,
+            )
+        } else {
+            crate::extraction::extract(std::path::Path::new(&file_path))
+        }
+    })
+    .await
+    .map_err(|e| format!("extraction thread panicked: {e}"))?;
 
     let contact_dtos: Vec<ContactSuggestionDto> = result
         .contact_suggestions
