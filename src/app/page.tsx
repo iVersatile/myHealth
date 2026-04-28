@@ -6,6 +6,30 @@ import { useAuth } from '../hooks/useAuth'
 
 type Mode = 'unlock' | 'setup'
 
+function validatePasswordStrength(password: string): string | null {
+  if (password.length < 12) {
+    return 'Password must be at least 12 characters.'
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter.'
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter.'
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain at least one digit.'
+  }
+
+  if (!/[!@#$%^&*()_+\-=\[\]{}|;':",.<>?/]/.test(password)) {
+    return 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;\':",.<>?/).'
+  }
+
+  return null
+}
+
 export default function LockScreen() {
   const router = useRouter()
   const { unlock, setup } = useAuth()
@@ -25,8 +49,10 @@ export default function LockScreen() {
         setError('Passwords do not match.')
         return
       }
-      if (password.length < 8) {
-        setError('Password must be at least 8 characters.')
+
+      const strengthError = validatePasswordStrength(password)
+      if (strengthError) {
+        setError(strengthError)
         return
       }
     }
