@@ -8,7 +8,7 @@
 
 ```
 Phase 8 — v1.2 Enhancements
-Current task: 8.3 — F3.4 Drag-to-organize categories
+Current task: 8.4 — F3.7 Auto-archive empty categories
 ```
 
 ---
@@ -340,14 +340,14 @@ Current task: 8.3 — F3.4 Drag-to-organize categories
    - On filter change debounce 300ms, call `documents_search_filtered`; show result count
    - Done when: filtering by date range narrows document list; combining date + category further narrows; clearing filters restores full list
 
-▶ **8.3 — F3.4 Drag-to-organize categories**
+[x] **8.3 — F3.4 Drag-to-organize categories**
    - Install drag-and-drop dependencies first: `npm install @dnd-kit/core @dnd-kit/sortable` (not yet in `package.json`)
    - Add `category_reorder(user_id: String, category_id: String, new_parent_id: Option<String>, new_position: u32)` command in `src-tauri/src/commands/categories.rs`
    - Add `categoryReorder: 'category_reorder'` to `src/lib/ipc.ts`
    - In `src/app/(app)/categories/` render category tree as sortable list; on drop call `category_reorder`
    - Done when: dragging a subcategory to a new parent persists after page reload; tree depth limit 5 enforced (drop rejected if depth would exceed 5)
 
-[ ] **8.4 — F3.7 Auto-archive empty categories**
+▶ **8.4 — F3.7 Auto-archive empty categories**
    - Add `categories_archive_stale(user_id: String, months_inactive: u32)` command in `src-tauri/src/commands/categories.rs`
    - Archive (set `is_archived = 1`) any category with zero linked documents/appointments for `months_inactive` months
    - Add `is_archived` column via migration v5 in `src-tauri/src/db/migrations.rs`; update `categories_list` to exclude archived by default; add `include_archived: bool` flag
