@@ -6,9 +6,14 @@ pub fn open_db(path: &str, key: &str) -> Result<Connection> {
     let conn = Connection::open(path)?;
 
     // Key must be set before any other DB operation.
-    // key is expected to be a hex-encoded PBKDF2 output (chars: [0-9a-f]).
+    // key is expected to be a hex-encoded PBKDF2 output (chars: [0-9a-f], length 64).
+    if key.len() != 64 || !key.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "key must be exactly 64 lowercase hex characters".to_string(),
+        ));
+    }
     conn.execute_batch(&format!(
-        "PRAGMA key = '{key}';
+        "PRAGMA key = \"x'{key}'\";
          PRAGMA cipher_page_size = 4096;
          PRAGMA kdf_iter = 64000;
          PRAGMA cipher_hmac_algorithm = HMAC_SHA512;
@@ -31,7 +36,7 @@ mod tests {
     fn open_close_roundtrip() {
         let tmp = std::env::temp_dir().join("myhealth_test_roundtrip.db");
         let _ = fs::remove_file(&tmp);
-        let key = "testhex0000000000000000000000000000000000000000000000000000000001";
+        let key = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
         {
             let conn = open_db(tmp.to_str().unwrap(), key).unwrap();
