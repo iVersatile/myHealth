@@ -7,9 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-ALL v1.1.0 TASKS COMPLETE ✅
-v1.1.0 released — 4 artifacts on GitHub Releases
-Next: v1.2 planning (Phase 5 — Apple Calendar, deferred)
+Phase 7 — Upload Analysis Gap Closing
+Current: 7.1 — Per-page OCR progress + timeout (Gap 3)
 ```
 
 ---
@@ -224,6 +223,38 @@ Next: v1.2 planning (Phase 5 — Apple Calendar, deferred)
    - Done when: selecting 5 documents and assigning a category links all 5
 
 [x] **4.5 — F3 tests** — coverage ≥ 80%
+
+---
+
+## Phase 7 — Upload Analysis Gap Closing (v1.2)
+
+> Source: `docs/UPLOAD_ANALYSIS_GAPS.md` — 4 gaps identified in post-v1.1.0 code audit.
+
+### Sprint 11
+
+▶ **7.1 — Gap 3: Per-page OCR progress + timeout**
+   - Files: `src-tauri/src/extraction/ocr.rs`, `src-tauri/src/extraction/mod.rs`
+   - Use `pdftoppm` (Poppler) to split scanned PDFs into per-page PNGs in a temp dir
+   - Call `extract_image_text_async(page_png)` per page — 10s `PER_CALL_TIMEOUT` applies correctly
+   - Emit `ocr_progress(app, i, n, elapsed_ms)` after each page
+   - Fall back to single whole-file Tesseract call if `pdftoppm` is unavailable
+   - Prerequisite: `brew install poppler` on macOS
+   - Done when: 3-page scanned PDF → progress bar updates at 1/3, 2/3, 3/3; slow page → `[OCR_TIMEOUT]`
+
+[ ] **7.2 — Gap 1: Test-type keyword normalisation**
+   - File: `src-tauri/src/parsing/filename.rs`
+   - Add `TEST_TYPE_MAP` constant; map raw tokens to canonical labels (e.g. `"bloodtest"` → `"Blood Work"`)
+   - Done when: `parse_filename("BloodTest_2024_NHS")` returns tag `"Blood Work"`
+
+[ ] **7.3 — Gap 2: Clinic name extraction from filename**
+   - File: `src-tauri/src/parsing/filename.rs`
+   - Add `INSTITUTION_SUFFIXES`; emit `clinic:<Name>` tag for institution-bearing tokens
+   - Done when: `parse_filename("StMarysHospital_2024_BloodTest")` returns tag `"clinic:St Marys Hospital"`
+
+[ ] **7.4 — Gap 4: International phone numbers**
+   - File: `src-tauri/src/extraction/contact.rs`
+   - Add E.164 fallback regex after existing UK pattern
+   - Done when: PDF containing `+1 (555) 123-4567` returns that number in `ContactSuggestionDto.phone`
 
 ---
 
