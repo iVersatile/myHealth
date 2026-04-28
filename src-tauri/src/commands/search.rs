@@ -2,6 +2,7 @@ use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use super::CommandError;
 use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -76,7 +77,7 @@ pub fn search_query(
     q: String,
     types: Option<Vec<String>>,
     state: State<'_, AppState>,
-) -> Result<SearchResults, String> {
+) -> Result<SearchResults, CommandError> {
     let q = q.trim().to_string();
     if q.is_empty() {
         return Ok(SearchResults { items: vec![] });
@@ -87,7 +88,7 @@ pub fn search_query(
         return Ok(SearchResults { items: vec![] });
     }
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let filter_types = types.as_ref().filter(|t| !t.is_empty());
@@ -118,20 +119,18 @@ pub fn search_query(
             .to_string()
     };
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(&sql)?;
 
     let items: Vec<SearchResult> = if let Some(type_list) = filter_types {
         let mut params: Vec<rusqlite::types::Value> = vec![rusqlite::types::Value::Text(fts_query)];
         for t in type_list {
             params.push(rusqlite::types::Value::Text(t.clone()));
         }
-        stmt.query_map(rusqlite::params_from_iter(params.iter()), row_to_result)
-            .map_err(|e| e.to_string())?
+        stmt.query_map(rusqlite::params_from_iter(params.iter()), row_to_result)?
             .filter_map(|r| r.ok())
             .collect()
     } else {
-        stmt.query_map([&fts_query], row_to_result)
-            .map_err(|e| e.to_string())?
+        stmt.query_map([&fts_query], row_to_result)?
             .filter_map(|r| r.ok())
             .collect()
     };

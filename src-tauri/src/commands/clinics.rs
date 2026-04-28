@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use super::CommandError;
 use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -40,28 +41,25 @@ fn row_to_clinic(row: &rusqlite::Row) -> rusqlite::Result<Clinic> {
 }
 
 #[tauri::command]
-pub fn clinics_list(state: State<'_, AppState>) -> Result<Vec<Clinic>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn clinics_list(state: State<'_, AppState>) -> Result<Vec<Clinic>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, address, phone, created_at \
+    let mut stmt = conn.prepare(
+        "SELECT id, name, address, phone, created_at \
              FROM clinics ORDER BY name ASC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
     let result = stmt
-        .query_map([], row_to_clinic)
-        .map_err(|e| e.to_string())?
+        .query_map([], row_to_clinic)?
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string());
+        .map_err(|e| CommandError::Internal(e.to_string()));
     result
 }
 
 #[tauri::command]
-pub fn clinics_get(id: String, state: State<'_, AppState>) -> Result<Clinic, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn clinics_get(id: String, state: State<'_, AppState>) -> Result<Clinic, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.query_row(
@@ -69,15 +67,15 @@ pub fn clinics_get(id: String, state: State<'_, AppState>) -> Result<Clinic, Str
         [&id],
         row_to_clinic,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
 pub fn clinics_create(
     input: ClinicCreateInput,
     state: State<'_, AppState>,
-) -> Result<Clinic, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Clinic, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let id = Uuid::new_v4().to_string();
@@ -86,45 +84,41 @@ pub fn clinics_create(
     conn.execute(
         "INSERT INTO clinics (id, name, address, phone, created_at) VALUES (?, ?, ?, ?, ?)",
         rusqlite::params![id, input.name, input.address, input.phone, now],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     conn.query_row(
         "SELECT id, name, address, phone, created_at FROM clinics WHERE id = ?",
         [&id],
         row_to_clinic,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
 pub fn clinics_update(
     input: ClinicUpdateInput,
     state: State<'_, AppState>,
-) -> Result<Clinic, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Clinic, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     if let Some(name) = input.name {
         conn.execute(
             "UPDATE clinics SET name = ? WHERE id = ?",
             rusqlite::params![name, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(address) = input.address {
         conn.execute(
             "UPDATE clinics SET address = ? WHERE id = ?",
             rusqlite::params![address, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(phone) = input.phone {
         conn.execute(
             "UPDATE clinics SET phone = ? WHERE id = ?",
             rusqlite::params![phone, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     conn.query_row(
@@ -132,16 +126,16 @@ pub fn clinics_update(
         [&input.id],
         row_to_clinic,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
-pub fn clinics_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn clinics_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute("DELETE FROM clinics WHERE id = ?", [&id])
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError::Internal(e.to_string()))
         .map(|_| ())
 }
 

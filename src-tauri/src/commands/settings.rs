@@ -1,10 +1,14 @@
 use tauri::State;
 
+use super::CommandError;
 use crate::commands::{AppState, CommandContext};
 
 #[tauri::command]
-pub fn settings_get(key: String, state: State<'_, AppState>) -> Result<Option<String>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn settings_get(
+    key: String,
+    state: State<'_, AppState>,
+) -> Result<Option<String>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let result = conn.query_row("SELECT value FROM settings WHERE key = ?", [&key], |row| {
         row.get::<_, String>(0)
@@ -12,30 +16,33 @@ pub fn settings_get(key: String, state: State<'_, AppState>) -> Result<Option<St
     match result {
         Ok(val) => Ok(Some(val)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(e.to_string()),
+        Err(e) => Err(CommandError::Internal(e.to_string())),
     }
 }
 
 #[tauri::command]
-pub fn settings_set(key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn settings_set(
+    key: String,
+    value: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "INSERT INTO settings (key, value) VALUES (?1, ?2)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         rusqlite::params![key, value],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn settings_get_data_dir(app_handle: tauri::AppHandle) -> Result<String, String> {
+pub fn settings_get_data_dir(app_handle: tauri::AppHandle) -> Result<String, CommandError> {
     use tauri::Manager;
     let dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("no data dir: {e}"))?;
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
     Ok(dir.to_string_lossy().into_owned())
 }
 
@@ -43,18 +50,19 @@ pub fn settings_get_data_dir(app_handle: tauri::AppHandle) -> Result<String, Str
 pub fn settings_wipe_all_data(
     state: State<'_, AppState>,
     app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+) -> Result<(), CommandError> {
     use tauri::Manager;
-    state.db.lock().map_err(|e| e.to_string())?.take();
-    state.key_hex.lock().map_err(|e| e.to_string())?.take();
+    state.db.lock()?.take();
+    state.key_hex.lock()?.take();
 
     let dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("no data dir: {e}"))?;
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
 
     if dir.exists() {
-        std::fs::remove_dir_all(&dir).map_err(|e| format!("failed to wipe data: {e}"))?;
+        std::fs::remove_dir_all(&dir)
+            .map_err(|e| CommandError::Internal(format!("failed to wipe data: {e}")))?;
     }
     Ok(())
 }

@@ -3,6 +3,7 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use super::CommandError;
 use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -102,18 +103,24 @@ pub fn export_pdf_bundle(
     document_ids: Vec<String>,
     title: String,
     output_path: String,
-) -> Result<ExportBundleData, String> {
+) -> Result<ExportBundleData, CommandError> {
     if document_ids.is_empty() {
-        return Err("no documents selected for export".to_string());
+        return Err(CommandError::Internal(
+            "no documents selected for export".to_string(),
+        ));
     }
     if title.trim().is_empty() {
-        return Err("bundle title cannot be empty".to_string());
+        return Err(CommandError::Internal(
+            "bundle title cannot be empty".to_string(),
+        ));
     }
     if output_path.trim().is_empty() {
-        return Err("output path cannot be empty".to_string());
+        return Err(CommandError::Internal(
+            "output path cannot be empty".to_string(),
+        ));
     }
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let documents: Result<Vec<ExportDocumentItem>, String> = document_ids
@@ -121,20 +128,23 @@ pub fn export_pdf_bundle(
         .map(|id| load_export_item(conn, id))
         .collect();
 
+    let docs = documents.map_err(CommandError::Internal)?;
     Ok(ExportBundleData {
         title,
         output_path,
-        documents: documents?,
+        documents: docs,
     })
 }
 
 #[tauri::command]
-pub fn export_save_bytes(output_path: String, bytes_b64: String) -> Result<(), String> {
+pub fn export_save_bytes(output_path: String, bytes_b64: String) -> Result<(), CommandError> {
     if output_path.trim().is_empty() {
-        return Err("output path cannot be empty".to_string());
+        return Err(CommandError::Internal(
+            "output path cannot be empty".to_string(),
+        ));
     }
-    let bytes = b64_decode(&bytes_b64).map_err(|e| e.to_string())?;
-    fs::write(&output_path, &bytes).map_err(|e| e.to_string())
+    let bytes = b64_decode(&bytes_b64).map_err(CommandError::Internal)?;
+    fs::write(&output_path, &bytes).map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 fn b64_decode(input: &str) -> Result<Vec<u8>, String> {
@@ -207,7 +217,7 @@ mod tests {
     #[test]
     fn validate_rejects_empty_ids_at_boundary() {
         let ids: Vec<String> = vec![];
-        let result: Result<(), String> = if ids.is_empty() {
+        let result = if ids.is_empty() {
             Err("no documents selected for export".to_string())
         } else {
             Ok(())

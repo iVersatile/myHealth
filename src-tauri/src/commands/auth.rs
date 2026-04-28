@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{crypto, db};
 
-use super::AppState;
+use super::{AppState, CommandError};
 
 const LEGACY_ITERATIONS: u32 = 64_000;
 
@@ -144,14 +144,15 @@ pub fn auth_set_password(
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
     password: String,
-) -> Result<(), String> {
+) -> Result<(), CommandError> {
     use tauri::Manager;
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("no data dir: {e}"))?;
-    validate_password_strength(&password)?;
-    let (conn, hex) = set_password_internal(&data_dir, &password)?;
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
+    validate_password_strength(&password).map_err(CommandError::Internal)?;
+    let (conn, hex) =
+        set_password_internal(&data_dir, &password).map_err(CommandError::Internal)?;
     *state.db.lock().unwrap() = Some(conn);
     *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
     Ok(())
@@ -162,13 +163,18 @@ pub fn auth_unlock(
     state: tauri::State<'_, AppState>,
     app_handle: tauri::AppHandle,
     password: String,
-) -> Result<(), String> {
+) -> Result<(), CommandError> {
     use tauri::Manager;
-    state.auth_rate_limit.lock().unwrap().check()?;
+    state
+        .auth_rate_limit
+        .lock()
+        .unwrap()
+        .check()
+        .map_err(CommandError::Internal)?;
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("no data dir: {e}"))?;
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
     match unlock_internal(&data_dir, &password) {
         Ok((conn, hex)) => {
             state.auth_rate_limit.lock().unwrap().reset();
@@ -178,7 +184,7 @@ pub fn auth_unlock(
         }
         Err(e) => {
             state.auth_rate_limit.lock().unwrap().record_failure();
-            Err(e)
+            Err(CommandError::Internal(e))
         }
     }
 }
@@ -195,14 +201,14 @@ pub fn auth_change_password(
     app_handle: tauri::AppHandle,
     old_password: String,
     new_password: String,
-) -> Result<(), String> {
+) -> Result<(), CommandError> {
     use tauri::Manager;
     let data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("no data dir: {e}"))?;
-    let salt = load_salt(&data_dir)?;
-    validate_password_strength(&new_password)?;
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
+    let salt = load_salt(&data_dir).map_err(CommandError::Internal)?;
+    validate_password_strength(&new_password).map_err(CommandError::Internal)?;
     let old_hex = crypto::key_to_hex(&crypto::derive_key(&old_password, &salt));
     let new_hex = crypto::key_to_hex(&crypto::derive_key(&new_password, &salt));
 
@@ -210,19 +216,21 @@ pub fn auth_change_password(
     {
         let stored = state.key_hex.lock().unwrap();
         if stored.as_ref().map(|z| z.as_str()) != Some(old_hex.as_str()) {
-            return Err("incorrect current password".into());
+            return Err(CommandError::Internal("incorrect current password".into()));
         }
     }
 
     // Rekey the database.
     {
         let db_guard = state.db.lock().unwrap();
-        let conn = db_guard.as_ref().ok_or("app is locked")?;
+        let conn = db_guard.as_ref().ok_or(CommandError::DbNotOpen)?;
         if new_hex.len() != 64 || !new_hex.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err("rekey value must be exactly 64 hex characters".into());
+            return Err(CommandError::Internal(
+                "rekey value must be exactly 64 hex characters".into(),
+            ));
         }
         conn.execute_batch(&format!("PRAGMA rekey = \"x'{new_hex}'\";"))
-            .map_err(|e| format!("rekey failed: {e}"))?;
+            .map_err(|e| CommandError::Internal(format!("rekey failed: {e}")))?;
     }
 
     *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(new_hex));

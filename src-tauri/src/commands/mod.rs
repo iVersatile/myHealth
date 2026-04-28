@@ -1,5 +1,38 @@
 use rusqlite::Connection;
 
+#[derive(Debug, serde::Serialize)]
+#[serde(tag = "code", content = "message")]
+pub enum CommandError {
+    DbNotOpen,
+    NotFound(String),
+    #[allow(dead_code)]
+    Constraint(String),
+    Internal(String),
+}
+
+impl std::fmt::Display for CommandError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CommandError::DbNotOpen => write!(f, "database not open"),
+            CommandError::NotFound(msg) => write!(f, "not found: {msg}"),
+            CommandError::Constraint(msg) => write!(f, "constraint: {msg}"),
+            CommandError::Internal(msg) => write!(f, "{msg}"),
+        }
+    }
+}
+
+impl From<rusqlite::Error> for CommandError {
+    fn from(e: rusqlite::Error) -> Self {
+        CommandError::Internal(e.to_string())
+    }
+}
+
+impl<T> From<std::sync::PoisonError<T>> for CommandError {
+    fn from(e: std::sync::PoisonError<T>) -> Self {
+        CommandError::Internal(format!("mutex poisoned: {}", e))
+    }
+}
+
 pub mod appointments;
 pub mod auth;
 pub mod calendar;
@@ -62,8 +95,10 @@ pub struct CommandContext<'a> {
 }
 
 impl<'a> CommandContext<'a> {
-    pub fn new(guard: &'a std::sync::MutexGuard<'a, Option<Connection>>) -> Result<Self, String> {
-        let conn = guard.as_ref().ok_or("database not open")?;
+    pub fn new(
+        guard: &'a std::sync::MutexGuard<'a, Option<Connection>>,
+    ) -> Result<Self, CommandError> {
+        let conn = guard.as_ref().ok_or(CommandError::DbNotOpen)?;
         Ok(Self { conn })
     }
 }

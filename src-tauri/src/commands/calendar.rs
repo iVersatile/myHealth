@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use super::CommandError;
 use crate::commands::{AppState, CommandContext};
 use crate::plugins::calendar;
 
@@ -31,23 +32,24 @@ fn row_to_calendar_source(row: &rusqlite::Row) -> rusqlite::Result<CalendarSourc
 /// List calendar sources: existing DB entries + newly discovered macOS calendars.
 /// Returns merged list (DB entries take precedence by external_id).
 #[tauri::command]
-pub fn calendar_list_sources(state: State<'_, AppState>) -> Result<Vec<CalendarSourceRow>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn calendar_list_sources(
+    state: State<'_, AppState>,
+) -> Result<Vec<CalendarSourceRow>, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
     // Fetch existing calendar sources from DB
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, external_id, name, color_hex, enabled, last_synced_at \
+    let mut stmt = conn.prepare(
+        "SELECT id, external_id, name, color_hex, enabled, last_synced_at \
              FROM calendar_sources ORDER BY name ASC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
     let db_sources: Vec<CalendarSourceRow> = stmt
-        .query_map([], row_to_calendar_source)
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+        .query_map([], row_to_calendar_source)?
+        .collect::<Result<Vec<_>, _>>()?;
 
     // Discover new calendars from macOS system
     let system_calendars = calendar::list_calendars().unwrap_or_default();
@@ -66,8 +68,7 @@ pub fn calendar_list_sources(state: State<'_, AppState>) -> Result<Vec<CalendarS
                  (id, external_id, name, color_hex, enabled, last_synced_at) \
                  VALUES (?1, ?2, ?3, ?4, 1, NULL)",
                 rusqlite::params![id, sys_cal.external_id, sys_cal.name, sys_cal.color_hex],
-            )
-            .map_err(|e| e.to_string())?;
+            )?;
 
             result.push(CalendarSourceRow {
                 id,
@@ -86,8 +87,14 @@ pub fn calendar_list_sources(state: State<'_, AppState>) -> Result<Vec<CalendarS
 /// Sync calendar events for specified sources.
 /// Upserts events into calendar_events table and updates last_synced_at.
 #[tauri::command]
-pub fn calendar_sync(source_ids: Vec<String>, state: State<'_, AppState>) -> Result<usize, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn calendar_sync(
+    source_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<usize, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
     if source_ids.is_empty() {
@@ -97,13 +104,11 @@ pub fn calendar_sync(source_ids: Vec<String>, state: State<'_, AppState>) -> Res
     // Fetch external_ids for the given source IDs
     let mut external_ids = Vec::new();
     for source_id in &source_ids {
-        let ext_id: String = conn
-            .query_row(
-                "SELECT external_id FROM calendar_sources WHERE id = ?1",
-                rusqlite::params![source_id],
-                |row| row.get(0),
-            )
-            .map_err(|e| e.to_string())?;
+        let ext_id: String = conn.query_row(
+            "SELECT external_id FROM calendar_sources WHERE id = ?1",
+            rusqlite::params![source_id],
+            |row| row.get(0),
+        )?;
         external_ids.push(ext_id);
     }
 
@@ -139,8 +144,7 @@ pub fn calendar_sync(source_ids: Vec<String>, state: State<'_, AppState>) -> Res
                 event.notes,
                 now
             ],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
 
         upserted_count += 1;
     }
@@ -150,8 +154,7 @@ pub fn calendar_sync(source_ids: Vec<String>, state: State<'_, AppState>) -> Res
         conn.execute(
             "UPDATE calendar_sources SET last_synced_at = ?1 WHERE id = ?2",
             rusqlite::params![now, source_id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     // Record global last sync timestamp in settings
@@ -159,34 +162,34 @@ pub fn calendar_sync(source_ids: Vec<String>, state: State<'_, AppState>) -> Res
         "INSERT INTO settings (key, value) VALUES ('calendar_last_sync', ?1) \
          ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         rusqlite::params![now],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     Ok(upserted_count)
 }
 
 /// Request macOS calendar permission. Returns true if granted.
 #[tauri::command]
-pub fn calendar_request_permission() -> Result<bool, String> {
-    calendar::request_permission()
+pub fn calendar_request_permission() -> Result<bool, CommandError> {
+    calendar::request_permission().map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 /// Import unimported calendar events as appointments.
 /// Skips events already imported (is_imported = 1).
 /// Returns the number of appointments created.
 #[tauri::command]
-pub fn calendar_import_events(state: State<'_, AppState>) -> Result<usize, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn calendar_import_events(state: State<'_, AppState>) -> Result<usize, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let now = Utc::now().to_rfc3339();
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, title, start_at, location, notes \
+    let mut stmt = conn.prepare(
+        "SELECT id, title, start_at, location, notes \
              FROM calendar_events WHERE is_imported = 0",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
     struct EventRow {
         id: String,
@@ -205,10 +208,8 @@ pub fn calendar_import_events(state: State<'_, AppState>) -> Result<usize, Strin
                 location: row.get(3)?,
                 notes: row.get(4)?,
             })
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut created = 0usize;
     for row in &rows {
@@ -226,14 +227,12 @@ pub fn calendar_import_events(state: State<'_, AppState>) -> Result<usize, Strin
                 row.notes,
                 now
             ],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
 
         conn.execute(
             "UPDATE calendar_events SET is_imported = 1 WHERE id = ?1",
             rusqlite::params![row.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
 
         created += 1;
     }
@@ -247,15 +246,17 @@ pub fn calendar_toggle_source(
     id: String,
     enabled: bool,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
     let enabled_int: i64 = if enabled { 1 } else { 0 };
     conn.execute(
         "UPDATE calendar_sources SET enabled = ?1 WHERE id = ?2",
         rusqlite::params![enabled_int, id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
     Ok(())
 }
 

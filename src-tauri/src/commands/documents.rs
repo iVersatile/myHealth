@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use super::CommandError;
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::{AppState, CommandContext};
 use crate::parsing::filename::parse_filename;
@@ -39,10 +40,10 @@ const VALID_CATEGORIES: &[&str] = &[
     "other",
 ];
 
-fn storage_dir() -> Result<PathBuf, String> {
+fn storage_dir() -> Result<PathBuf, CommandError> {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| "cannot determine home directory".to_string())?;
+        .map_err(|_| CommandError::Internal("cannot determine home directory".to_string()))?;
     Ok(PathBuf::from(home)
         .join(".myHealth")
         .join("files")
@@ -65,13 +66,13 @@ fn mime_from_ext(ext: &str) -> &'static str {
     }
 }
 
-fn validate_category(cat: &str) -> Result<(), String> {
+fn validate_category(cat: &str) -> Result<(), CommandError> {
     if VALID_CATEGORIES.contains(&cat) {
         Ok(())
     } else {
-        Err(format!(
+        Err(CommandError::Internal(format!(
             "invalid category '{cat}'; expected one of: {VALID_CATEGORIES:?}"
-        ))
+        )))
     }
 }
 
@@ -86,36 +87,32 @@ fn fetch_tags(conn: &rusqlite::Connection, doc_id: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, String> {
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, filename, file_path, mime_type, file_size_bytes, category, \
+fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, CommandError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, filename, file_path, mime_type, file_size_bytes, category, \
              thumbnail_path, notes, created_at, updated_at, is_deleted, \
              document_date, extracted_metadata, extracted_text \
              FROM documents WHERE id = ?",
-        )
-        .map_err(|e| e.to_string())?;
-    let mut doc = stmt
-        .query_row([id], |row| {
-            Ok(Document {
-                id: row.get(0)?,
-                filename: row.get(1)?,
-                file_path: row.get(2)?,
-                mime_type: row.get(3)?,
-                file_size_bytes: row.get(4)?,
-                category: row.get(5)?,
-                thumbnail_path: row.get(6)?,
-                notes: row.get(7)?,
-                created_at: row.get(8)?,
-                updated_at: row.get(9)?,
-                is_deleted: row.get::<_, i64>(10)? != 0,
-                document_date: row.get(11)?,
-                extracted_metadata: row.get(12)?,
-                extracted_text: row.get(13)?,
-                tags: vec![],
-            })
+    )?;
+    let mut doc = stmt.query_row([id], |row| {
+        Ok(Document {
+            id: row.get(0)?,
+            filename: row.get(1)?,
+            file_path: row.get(2)?,
+            mime_type: row.get(3)?,
+            file_size_bytes: row.get(4)?,
+            category: row.get(5)?,
+            thumbnail_path: row.get(6)?,
+            notes: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
+            is_deleted: row.get::<_, i64>(10)? != 0,
+            document_date: row.get(11)?,
+            extracted_metadata: row.get(12)?,
+            extracted_text: row.get(13)?,
+            tags: vec![],
         })
-        .map_err(|e| e.to_string())?;
+    })?;
     doc.tags = fetch_tags(conn, id);
     Ok(doc)
 }
@@ -128,37 +125,31 @@ pub fn documents_list(
     category: Option<String>,
     page: u32,
     limit: u32,
-) -> Result<Vec<Document>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<Document>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let offset = page.saturating_sub(1) * limit;
 
     let ids: Vec<String> = match &category {
         Some(cat) => {
             validate_category(cat)?;
-            let mut stmt = conn
-                .prepare(
-                    "SELECT id FROM documents WHERE is_deleted = 0 AND category = ? \
+            let mut stmt = conn.prepare(
+                "SELECT id FROM documents WHERE is_deleted = 0 AND category = ? \
                      ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                )
-                .map_err(|e| e.to_string())?;
+            )?;
             let ids: Vec<String> = stmt
-                .query_map(rusqlite::params![cat, limit, offset], |row| row.get(0))
-                .map_err(|e| e.to_string())?
+                .query_map(rusqlite::params![cat, limit, offset], |row| row.get(0))?
                 .filter_map(|r| r.ok())
                 .collect();
             ids
         }
         None => {
-            let mut stmt = conn
-                .prepare(
-                    "SELECT id FROM documents WHERE is_deleted = 0 \
+            let mut stmt = conn.prepare(
+                "SELECT id FROM documents WHERE is_deleted = 0 \
                      ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                )
-                .map_err(|e| e.to_string())?;
+            )?;
             let ids: Vec<String> = stmt
-                .query_map(rusqlite::params![limit, offset], |row| row.get(0))
-                .map_err(|e| e.to_string())?
+                .query_map(rusqlite::params![limit, offset], |row| row.get(0))?
                 .filter_map(|r| r.ok())
                 .collect();
             ids
@@ -169,8 +160,8 @@ pub fn documents_list(
 }
 
 #[tauri::command]
-pub fn documents_get(state: State<'_, AppState>, id: String) -> Result<Document, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn documents_get(state: State<'_, AppState>, id: String) -> Result<Document, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     load_doc(conn, &id)
 }
@@ -181,11 +172,13 @@ pub fn documents_upload(
     file_path: String,
     category: String,
     notes: Option<String>,
-) -> Result<Document, String> {
+) -> Result<Document, CommandError> {
     validate_category(&category)?;
     let src = std::path::Path::new(&file_path);
     if !src.exists() {
-        return Err(format!("file not found: {file_path}"));
+        return Err(CommandError::Internal(format!(
+            "file not found: {file_path}"
+        )));
     }
 
     let ext = src
@@ -199,7 +192,9 @@ pub fn documents_upload(
         .unwrap_or("document")
         .to_string();
     let mime = mime_from_ext(&ext).to_string();
-    let file_size = fs::metadata(src).map_err(|e| e.to_string())?.len() as i64;
+    let file_size = fs::metadata(src)
+        .map_err(|e| CommandError::Internal(e.to_string()))?
+        .len() as i64;
 
     // Parse filename stem for date and tags.
     let stem = src
@@ -213,7 +208,7 @@ pub fn documents_upload(
 
     let id = Uuid::new_v4().to_string();
     let dest_dir = storage_dir()?.join(&id);
-    fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dest_dir).map_err(|e| CommandError::Internal(e.to_string()))?;
 
     let dest_filename = if ext.is_empty() {
         "original".to_string()
@@ -221,17 +216,17 @@ pub fn documents_upload(
         format!("original.{ext}")
     };
     let dest_path = dest_dir.join(&dest_filename);
-    fs::copy(src, &dest_path).map_err(|e| e.to_string())?;
+    fs::copy(src, &dest_path).map_err(|e| CommandError::Internal(e.to_string()))?;
     let dest_str = dest_path
         .to_str()
-        .ok_or("invalid path encoding")?
+        .ok_or(CommandError::Internal("invalid path encoding".to_string()))?
         .to_string();
 
     // TODO: generate 200×200 thumbnail for image/* types (requires `image` crate)
     let thumbnail_path: Option<String> = None;
 
     let now = Utc::now().to_rfc3339();
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "INSERT INTO documents \
@@ -250,16 +245,14 @@ pub fn documents_upload(
             document_date,
             now,
         ],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     // Insert tags parsed from the filename.
     for tag in &parsed.tags {
         conn.execute(
             "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
             rusqlite::params![id, tag],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     let doc = load_doc(conn, &id)?;
@@ -283,11 +276,11 @@ pub fn documents_update(
     id: String,
     category: Option<String>,
     notes: Option<String>,
-) -> Result<Document, String> {
+) -> Result<Document, CommandError> {
     if let Some(ref cat) = category {
         validate_category(cat)?;
     }
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let now = Utc::now().to_rfc3339();
     // COALESCE preserves the existing value when the argument is NULL
@@ -298,8 +291,7 @@ pub fn documents_update(
              updated_at = ?3 \
          WHERE id = ?4 AND is_deleted = 0",
         rusqlite::params![category, notes, now, id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
     let doc = load_doc(conn, &id)?;
     let body = doc.notes.as_deref().unwrap_or("").to_string();
     upsert_search_index(
@@ -316,40 +308,40 @@ pub fn documents_update(
 }
 
 #[tauri::command]
-pub fn documents_delete(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn documents_delete(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let now = Utc::now().to_rfc3339();
-    let affected = conn
-        .execute(
-            "UPDATE documents \
+    let affected = conn.execute(
+        "UPDATE documents \
              SET is_deleted = 1, deleted_at = ?1, updated_at = ?1 \
              WHERE id = ?2 AND is_deleted = 0",
-            rusqlite::params![now, id],
-        )
-        .map_err(|e| e.to_string())?;
+        rusqlite::params![now, id],
+    )?;
     if affected == 0 {
-        return Err(format!("document not found or already deleted: {id}"));
+        return Err(CommandError::NotFound(format!(
+            "document not found or already deleted: {id}"
+        )));
     }
     remove_from_search_index(conn, &id);
     Ok(())
 }
 
 #[tauri::command]
-pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let now = Utc::now().to_rfc3339();
-    let affected = conn
-        .execute(
-            "UPDATE documents \
+    let affected = conn.execute(
+        "UPDATE documents \
              SET is_deleted = 0, deleted_at = NULL, updated_at = ?1 \
              WHERE id = ?2 AND is_deleted = 1",
-            rusqlite::params![now, id],
-        )
-        .map_err(|e| e.to_string())?;
+        rusqlite::params![now, id],
+    )?;
     if affected == 0 {
-        return Err(format!("document not found or not deleted: {id}"));
+        return Err(CommandError::NotFound(format!(
+            "document not found or not deleted: {id}"
+        )));
     }
     if let Ok(doc) = load_doc(conn, &id) {
         let body = doc.notes.as_deref().unwrap_or("").to_string();
@@ -368,15 +360,18 @@ pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn documents_get_file_url(state: State<'_, AppState>, id: String) -> Result<String, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn documents_get_file_url(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<String, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     conn.query_row(
         "SELECT file_path FROM documents WHERE id = ? AND is_deleted = 0",
         [&id],
         |row| row.get(0),
     )
-    .map_err(|e| e.to_string())
+    .map_err(|_| CommandError::NotFound(format!("document not found: {id}")))
 }
 
 #[tauri::command]
@@ -384,8 +379,8 @@ pub fn documents_tags_set(
     state: State<'_, AppState>,
     id: String,
     tags: Vec<String>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let exists: bool = conn
@@ -394,14 +389,12 @@ pub fn documents_tags_set(
             [&id],
             |row| row.get::<_, i64>(0),
         )
-        .map(|n| n > 0)
-        .map_err(|e| e.to_string())?;
+        .map(|n| n > 0)?;
     if !exists {
-        return Err(format!("document not found: {id}"));
+        return Err(CommandError::NotFound(format!("document not found: {id}")));
     }
 
-    conn.execute("DELETE FROM document_tags WHERE document_id = ?", [&id])
-        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM document_tags WHERE document_id = ?", [&id])?;
 
     for tag in &tags {
         let tag = tag.trim();
@@ -411,16 +404,14 @@ pub fn documents_tags_set(
         conn.execute(
             "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
             rusqlite::params![id, tag],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     let now = Utc::now().to_rfc3339();
     conn.execute(
         "UPDATE documents SET updated_at = ?1 WHERE id = ?2",
         rusqlite::params![now, id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     if let Ok(doc) = load_doc(conn, &id) {
         let body = doc.notes.as_deref().unwrap_or("").to_string();
@@ -747,10 +738,13 @@ pub async fn documents_run_extraction(
     state: State<'_, AppState>,
     app_handle: tauri::AppHandle,
     emit_progress: Option<bool>,
-) -> Result<ExtractionSuggestions, String> {
+) -> Result<ExtractionSuggestions, CommandError> {
     // ── cache hit ────────────────────────────────────────────────────────────
     {
-        let guard = state.db.lock().map_err(|e| e.to_string())?;
+        let guard = state
+            .db
+            .lock()
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
         let conn = CommandContext::new(&guard)?.conn;
         let cached: Option<String> = conn
             .query_row(
@@ -761,8 +755,7 @@ pub async fn documents_run_extraction(
                 rusqlite::params![id],
                 |row| row.get(0),
             )
-            .optional()
-            .map_err(|e| e.to_string())?
+            .optional()?
             .flatten();
 
         if let Some(text) = cached {
@@ -793,14 +786,16 @@ pub async fn documents_run_extraction(
 
     // ── cache miss — run extraction ──────────────────────────────────────────
     let file_path: String = {
-        let guard = state.db.lock().map_err(|e| e.to_string())?;
+        let guard = state
+            .db
+            .lock()
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
         let conn = CommandContext::new(&guard)?.conn;
         conn.query_row(
             "SELECT file_path FROM documents WHERE id = ?1 AND is_deleted = 0",
             rusqlite::params![id],
             |row| row.get(0),
-        )
-        .map_err(|e| e.to_string())?
+        )?
     };
 
     let emit = emit_progress.unwrap_or(false);
@@ -816,7 +811,7 @@ pub async fn documents_run_extraction(
         }
     })
     .await
-    .map_err(|e| format!("extraction thread panicked: {e}"))?;
+    .map_err(|e| CommandError::Internal(format!("extraction thread panicked: {e}")))?;
 
     let contact_dtos: Vec<ContactSuggestionDto> = result
         .contact_suggestions
@@ -841,7 +836,10 @@ pub async fn documents_run_extraction(
     .to_string();
 
     {
-        let guard = state.db.lock().map_err(|e| e.to_string())?;
+        let guard = state
+            .db
+            .lock()
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
         let conn = CommandContext::new(&guard)?.conn;
         conn.execute(
             "UPDATE documents \
@@ -851,8 +849,7 @@ pub async fn documents_run_extraction(
                  updated_at = ?3 \
              WHERE id = ?4",
             rusqlite::params![json, result.text, Utc::now().to_rfc3339(), id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     Ok(ExtractionSuggestions {
@@ -873,8 +870,8 @@ pub struct ExtractionStatus {
 pub fn documents_get_extraction_status(
     id: String,
     state: State<'_, crate::commands::AppState>,
-) -> Result<ExtractionStatus, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<ExtractionStatus, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let meta: Option<Option<String>> = conn
@@ -883,11 +880,10 @@ pub fn documents_get_extraction_status(
             rusqlite::params![id],
             |row| row.get(0),
         )
-        .optional()
-        .map_err(|e| e.to_string())?;
+        .optional()?;
 
     match meta {
-        None => Err(format!("document {} not found", id)),
+        None => Err(CommandError::NotFound(format!("document {} not found", id))),
         Some(None) => Ok(ExtractionStatus {
             status: "pending".into(),
             text_length: 0,

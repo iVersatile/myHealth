@@ -4,7 +4,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, strip_html, upsert_search_index};
-use crate::commands::{AppState, CommandContext};
+use crate::commands::{AppState, CommandContext, CommandError};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Note {
@@ -40,7 +40,7 @@ fn fetch_tags(conn: &rusqlite::Connection, note_id: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn load_note(conn: &rusqlite::Connection, id: &str) -> Result<Note, String> {
+fn load_note(conn: &rusqlite::Connection, id: &str) -> Result<Note, CommandError> {
     conn.query_row(
         "SELECT id, title, content, is_pinned, created_at, updated_at
          FROM notes WHERE id = ?",
@@ -59,9 +59,9 @@ fn load_note(conn: &rusqlite::Connection, id: &str) -> Result<Note, String> {
     )
     .map_err(|e| {
         if e == rusqlite::Error::QueryReturnedNoRows {
-            format!("note '{id}' not found")
+            CommandError::NotFound(format!("note '{id}' not found"))
         } else {
-            e.to_string()
+            CommandError::Internal(e.to_string())
         }
     })
     .map(|mut note| {
@@ -74,8 +74,8 @@ fn load_note(conn: &rusqlite::Connection, id: &str) -> Result<Note, String> {
 pub fn notes_list(
     pinned_first: Option<bool>,
     state: State<'_, AppState>,
-) -> Result<Vec<Note>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<Note>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let order = if pinned_first.unwrap_or(false) {
@@ -87,7 +87,7 @@ pub fn notes_list(
     let sql =
         format!("SELECT id, title, content, is_pinned, created_at, updated_at FROM notes {order}");
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(&sql)?;
     let notes: Vec<Note> = stmt
         .query_map([], |row| {
             Ok(Note {
@@ -99,8 +99,7 @@ pub fn notes_list(
                 updated_at: row.get(5)?,
                 tags: vec![],
             })
-        })
-        .map_err(|e| e.to_string())?
+        })?
         .filter_map(|r| r.ok())
         .map(|mut n| {
             n.tags = fetch_tags(conn, &n.id);
@@ -112,26 +111,28 @@ pub fn notes_list(
 }
 
 #[tauri::command]
-pub fn notes_get(id: String, state: State<'_, AppState>) -> Result<Note, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn notes_get(id: String, state: State<'_, AppState>) -> Result<Note, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     load_note(conn, &id)
 }
 
 #[tauri::command]
-pub fn notes_create(input: NoteCreateInput, state: State<'_, AppState>) -> Result<Note, String> {
+pub fn notes_create(
+    input: NoteCreateInput,
+    state: State<'_, AppState>,
+) -> Result<Note, CommandError> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT INTO notes (id, title, content, is_pinned, created_at, updated_at)
          VALUES (?1, ?2, ?3, 0, ?4, ?4)",
         rusqlite::params![id, input.title, input.content, now],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     let note = load_note(conn, &id)?;
     upsert_search_index(
@@ -152,25 +153,23 @@ pub fn notes_update(
     id: String,
     input: NoteUpdateInput,
     state: State<'_, AppState>,
-) -> Result<Note, String> {
+) -> Result<Note, CommandError> {
     let now = Utc::now().to_rfc3339();
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let rows = conn
-        .execute(
-            "UPDATE notes SET
+    let rows = conn.execute(
+        "UPDATE notes SET
              title      = COALESCE(?2, title),
              content    = COALESCE(?3, content),
              updated_at = ?4
              WHERE id = ?1",
-            rusqlite::params![id, input.title, input.content, now],
-        )
-        .map_err(|e| e.to_string())?;
+        rusqlite::params![id, input.title, input.content, now],
+    )?;
 
     if rows == 0 {
-        return Err(format!("note '{id}' not found"));
+        return Err(CommandError::Internal(format!("note '{id}' not found")));
     }
 
     let note = load_note(conn, &id)?;
@@ -188,16 +187,14 @@ pub fn notes_update(
 }
 
 #[tauri::command]
-pub fn notes_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn notes_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let rows = conn
-        .execute("DELETE FROM notes WHERE id = ?", [&id])
-        .map_err(|e| e.to_string())?;
+    let rows = conn.execute("DELETE FROM notes WHERE id = ?", [&id])?;
 
     if rows == 0 {
-        Err(format!("note '{id}' not found"))
+        Err(CommandError::Internal(format!("note '{id}' not found")))
     } else {
         remove_from_search_index(conn, &id);
         Ok(())
@@ -205,21 +202,19 @@ pub fn notes_delete(id: String, state: State<'_, AppState>) -> Result<(), String
 }
 
 #[tauri::command]
-pub fn notes_pin(id: String, pinned: bool, state: State<'_, AppState>) -> Result<(), String> {
+pub fn notes_pin(id: String, pinned: bool, state: State<'_, AppState>) -> Result<(), CommandError> {
     let now = Utc::now().to_rfc3339();
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let rows = conn
-        .execute(
-            "UPDATE notes SET is_pinned = ?2, updated_at = ?3 WHERE id = ?1",
-            rusqlite::params![id, pinned as i64, now],
-        )
-        .map_err(|e| e.to_string())?;
+    let rows = conn.execute(
+        "UPDATE notes SET is_pinned = ?2, updated_at = ?3 WHERE id = ?1",
+        rusqlite::params![id, pinned as i64, now],
+    )?;
 
     if rows == 0 {
-        Err(format!("note '{id}' not found"))
+        Err(CommandError::Internal(format!("note '{id}' not found")))
     } else {
         Ok(())
     }
@@ -230,35 +225,32 @@ pub fn notes_tags_set(
     id: String,
     tags: Vec<String>,
     state: State<'_, AppState>,
-) -> Result<(), String> {
+) -> Result<(), CommandError> {
     let now = Utc::now().to_rfc3339();
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let exists: bool = conn
         .query_row("SELECT 1 FROM notes WHERE id = ?", [&id], |_| Ok(()))
         .is_ok();
     if !exists {
-        return Err(format!("note '{id}' not found"));
+        return Err(CommandError::Internal(format!("note '{id}' not found")));
     }
 
-    conn.execute("DELETE FROM note_tags WHERE note_id = ?", [&id])
-        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM note_tags WHERE note_id = ?", [&id])?;
 
     for tag in &tags {
         conn.execute(
             "INSERT INTO note_tags (note_id, tag) VALUES (?1, ?2)",
             rusqlite::params![id, tag],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     conn.execute(
         "UPDATE notes SET updated_at = ?2 WHERE id = ?1",
         rusqlite::params![id, now],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     if let Ok(note) = load_note(conn, &id) {
         upsert_search_index(
@@ -327,7 +319,8 @@ mod tests {
         let conn = test_conn();
         let result = load_note(&conn, "nonexistent");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not found"));
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not found"));
     }
 
     #[test]

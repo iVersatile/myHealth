@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use super::CommandError;
 use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -40,8 +41,8 @@ fn row_to_link(row: &rusqlite::Row<'_>) -> rusqlite::Result<DocumentLink> {
 pub fn links_create(
     state: State<'_, AppState>,
     input: LinkCreateInput,
-) -> Result<DocumentLink, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<DocumentLink, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -53,7 +54,7 @@ pub fn links_create(
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![id, input.document_id, input.appointment_id, link_type, confidence, now],
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
     conn.query_row(
         "SELECT id, document_id, appointment_id, link_type, confidence, created_at
@@ -61,18 +62,17 @@ pub fn links_create(
         params![id],
         row_to_link,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
-pub fn links_delete(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn links_delete(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "DELETE FROM document_appointments WHERE id = ?1",
         params![id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
     Ok(())
 }
 
@@ -80,46 +80,38 @@ pub fn links_delete(state: State<'_, AppState>, id: String) -> Result<(), String
 pub fn links_list_for_document(
     state: State<'_, AppState>,
     document_id: String,
-) -> Result<Vec<DocumentLink>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<DocumentLink>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, document_id, appointment_id, link_type, confidence, created_at
+    let mut stmt = conn.prepare(
+        "SELECT id, document_id, appointment_id, link_type, confidence, created_at
              FROM document_appointments WHERE document_id = ?1
              ORDER BY created_at DESC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let rows = stmt
-        .query_map(params![document_id], row_to_link)
-        .map_err(|e| e.to_string())?;
+    let rows = stmt.query_map(params![document_id], row_to_link)?;
 
     rows.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
 pub fn links_list_for_appointment(
     state: State<'_, AppState>,
     appointment_id: String,
-) -> Result<Vec<DocumentLink>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<DocumentLink>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, document_id, appointment_id, link_type, confidence, created_at
+    let mut stmt = conn.prepare(
+        "SELECT id, document_id, appointment_id, link_type, confidence, created_at
              FROM document_appointments WHERE appointment_id = ?1
              ORDER BY created_at DESC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let rows = stmt
-        .query_map(params![appointment_id], row_to_link)
-        .map_err(|e| e.to_string())?;
+    let rows = stmt.query_map(params![appointment_id], row_to_link)?;
 
     rows.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 // ─── Task 2.2: typed CRUD commands ──────────────────────────────────────────
@@ -151,8 +143,8 @@ pub fn link_document_to_appointment(
     document_id: String,
     appointment_id: String,
     score: u8,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -161,8 +153,7 @@ pub fn link_document_to_appointment(
          (id, document_id, appointment_id, link_type, confidence, score, created_at) \
          VALUES (?1, ?2, ?3, 'related', 'auto', ?4, ?5)",
         params![id, document_id, appointment_id, score, now],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
     Ok(())
 }
 
@@ -172,15 +163,14 @@ pub fn unlink_document_from_appointment(
     _user_id: String,
     document_id: String,
     appointment_id: String,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "DELETE FROM document_appointments \
          WHERE document_id = ?1 AND appointment_id = ?2",
         params![document_id, appointment_id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
     Ok(())
 }
 
@@ -189,34 +179,30 @@ pub fn get_document_links(
     state: State<'_, AppState>,
     _user_id: String,
     document_id: String,
-) -> Result<Vec<LinkedAppointment>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<LinkedAppointment>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-    let mut stmt = conn
-        .prepare(
-            "SELECT a.id, a.title, a.appt_date, a.doctor_name, da.score, da.created_at
+    let mut stmt = conn.prepare(
+        "SELECT a.id, a.title, a.appt_date, a.doctor_name, da.score, da.created_at
              FROM document_appointments da
              JOIN appointments a ON a.id = da.appointment_id
              WHERE da.document_id = ?1
              ORDER BY da.score DESC, da.created_at DESC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let rows = stmt
-        .query_map(params![document_id], |row| {
-            Ok(LinkedAppointment {
-                appointment_id: row.get(0)?,
-                title: row.get(1)?,
-                appt_date: row.get(2)?,
-                doctor_name: row.get(3)?,
-                score: row.get::<_, u8>(4).unwrap_or(0),
-                created_at: row.get(5)?,
-            })
+    let rows = stmt.query_map(params![document_id], |row| {
+        Ok(LinkedAppointment {
+            appointment_id: row.get(0)?,
+            title: row.get(1)?,
+            appt_date: row.get(2)?,
+            doctor_name: row.get(3)?,
+            score: row.get::<_, u8>(4).unwrap_or(0),
+            created_at: row.get(5)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     rows.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
@@ -224,34 +210,30 @@ pub fn get_appointment_links(
     state: State<'_, AppState>,
     _user_id: String,
     appointment_id: String,
-) -> Result<Vec<LinkedDocument>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<LinkedDocument>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-    let mut stmt = conn
-        .prepare(
-            "SELECT d.id, d.filename, d.category, d.document_date, da.score, da.created_at
+    let mut stmt = conn.prepare(
+        "SELECT d.id, d.filename, d.category, d.document_date, da.score, da.created_at
              FROM document_appointments da
              JOIN documents d ON d.id = da.document_id
              WHERE da.appointment_id = ?1
              ORDER BY da.score DESC, da.created_at DESC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let rows = stmt
-        .query_map(params![appointment_id], |row| {
-            Ok(LinkedDocument {
-                document_id: row.get(0)?,
-                filename: row.get(1)?,
-                category: row.get(2)?,
-                document_date: row.get(3)?,
-                score: row.get::<_, u8>(4).unwrap_or(0),
-                created_at: row.get(5)?,
-            })
+    let rows = stmt.query_map(params![appointment_id], |row| {
+        Ok(LinkedDocument {
+            document_id: row.get(0)?,
+            filename: row.get(1)?,
+            category: row.get(2)?,
+            document_date: row.get(3)?,
+            score: row.get::<_, u8>(4).unwrap_or(0),
+            created_at: row.get(5)?,
         })
-        .map_err(|e| e.to_string())?;
+    })?;
 
     rows.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[derive(Debug, Serialize)]
@@ -266,51 +248,47 @@ pub struct LinkSuggestion {
 pub fn links_score_candidates(
     state: State<'_, AppState>,
     document_id: String,
-) -> Result<Vec<LinkSuggestion>, String> {
+) -> Result<Vec<LinkSuggestion>, CommandError> {
     use crate::commands::appointments::Appointment;
     use crate::services::linking::scorer::score_candidates;
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     // Fetch the document
-    let doc = conn
-        .query_row(
-            "SELECT id, filename, file_path, mime_type, file_size_bytes, category,
+    let doc = conn.query_row(
+        "SELECT id, filename, file_path, mime_type, file_size_bytes, category,
                     thumbnail_path, notes, created_at, updated_at, is_deleted,
                     document_date, extracted_metadata, extracted_text
              FROM documents WHERE id = ?1 AND is_deleted = 0",
-            params![document_id],
-            |row| {
-                Ok(crate::commands::documents::Document {
-                    id: row.get(0)?,
-                    filename: row.get(1)?,
-                    file_path: row.get(2)?,
-                    mime_type: row.get(3)?,
-                    file_size_bytes: row.get(4)?,
-                    category: row.get(5)?,
-                    thumbnail_path: row.get(6)?,
-                    notes: row.get(7)?,
-                    created_at: row.get(8)?,
-                    updated_at: row.get(9)?,
-                    is_deleted: row.get(10)?,
-                    document_date: row.get(11)?,
-                    extracted_metadata: row.get(12)?,
-                    extracted_text: row.get(13)?,
-                    tags: vec![],
-                })
-            },
-        )
-        .map_err(|e| e.to_string())?;
+        params![document_id],
+        |row| {
+            Ok(crate::commands::documents::Document {
+                id: row.get(0)?,
+                filename: row.get(1)?,
+                file_path: row.get(2)?,
+                mime_type: row.get(3)?,
+                file_size_bytes: row.get(4)?,
+                category: row.get(5)?,
+                thumbnail_path: row.get(6)?,
+                notes: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+                is_deleted: row.get(10)?,
+                document_date: row.get(11)?,
+                extracted_metadata: row.get(12)?,
+                extracted_text: row.get(13)?,
+                tags: vec![],
+            })
+        },
+    )?;
 
     // Fetch all appointments
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
+    let mut stmt = conn.prepare(
+        "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
                     duration_min, location, notes, status, reminder_min, created_at, updated_at
              FROM appointments ORDER BY appt_date DESC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
     let appointments: Vec<Appointment> = stmt
         .query_map([], |row| {
@@ -330,29 +308,24 @@ pub fn links_score_candidates(
                 updated_at: row.get(12)?,
                 document_ids: vec![],
             })
-        })
-        .map_err(|e| e.to_string())?
+        })?
         .collect::<Result<_, _>>()
-        .map_err(|e: rusqlite::Error| e.to_string())?;
+        .map_err(|e: rusqlite::Error| CommandError::Internal(e.to_string()))?;
 
     // Build appt_id → category names map
     let mut appt_categories: HashMap<String, Vec<String>> = HashMap::new();
-    let mut cat_stmt = conn
-        .prepare(
-            "SELECT ac.appointment_id, c.name
+    let mut cat_stmt = conn.prepare(
+        "SELECT ac.appointment_id, c.name
              FROM appointment_categories ac
              JOIN categories c ON c.id = ac.category_id",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let cat_rows = cat_stmt
-        .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
-        .map_err(|e| e.to_string())?;
+    let cat_rows = cat_stmt.query_map([], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+    })?;
 
     for row in cat_rows {
-        let (appt_id, cat_name) = row.map_err(|e| e.to_string())?;
+        let (appt_id, cat_name) = row?;
         appt_categories.entry(appt_id).or_default().push(cat_name);
     }
 
@@ -361,13 +334,11 @@ pub fn links_score_candidates(
 
     let mut suggestions: Vec<LinkSuggestion> = Vec::with_capacity(candidates.len());
     for candidate in candidates {
-        let title: String = conn
-            .query_row(
-                "SELECT title FROM appointments WHERE id = ?1",
-                params![candidate.appointment_id],
-                |row| row.get(0),
-            )
-            .map_err(|e| e.to_string())?;
+        let title: String = conn.query_row(
+            "SELECT title FROM appointments WHERE id = ?1",
+            params![candidate.appointment_id],
+            |row| row.get(0),
+        )?;
         suggestions.push(LinkSuggestion {
             appointment_id: candidate.appointment_id,
             appointment_title: title,

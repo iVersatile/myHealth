@@ -4,7 +4,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
-use crate::commands::{AppState, CommandContext};
+use crate::commands::{AppState, CommandContext, CommandError};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Category {
@@ -47,31 +47,27 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
 }
 
 #[tauri::command]
-pub fn categories_list(state: State<'_, AppState>) -> Result<Vec<Category>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn categories_list(state: State<'_, AppState>) -> Result<Vec<Category>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
+    let mut stmt = conn.prepare(
+        "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
              FROM categories ORDER BY is_system DESC, sort_order ASC, name ASC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let rows = stmt
-        .query_map([], row_to_category)
-        .map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], row_to_category)?;
 
     rows.collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
 pub fn categories_create(
     input: CategoryCreateInput,
     state: State<'_, AppState>,
-) -> Result<Category, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Category, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let id = Uuid::new_v4().to_string();
@@ -84,18 +80,14 @@ pub fn categories_create(
          VALUES (?1, ?2, ?3, ?4, 0, ?5, ?6)",
         rusqlite::params![id, input.name, input.parent_id, color_hex, sort_order, created_at],
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
+    let mut stmt = conn.prepare(
+        "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
              FROM categories WHERE id = ?1",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let cat = stmt
-        .query_row(rusqlite::params![id], row_to_category)
-        .map_err(|e| e.to_string())?;
+    let cat = stmt.query_row(rusqlite::params![id], row_to_category)?;
     upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "");
     Ok(cat)
 }
@@ -104,51 +96,44 @@ pub fn categories_create(
 pub fn categories_update(
     input: CategoryUpdateInput,
     state: State<'_, AppState>,
-) -> Result<Category, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Category, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     if let Some(name) = &input.name {
         conn.execute(
             "UPDATE categories SET name = ?1 WHERE id = ?2",
             rusqlite::params![name, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     if let Some(color) = &input.color_hex {
         conn.execute(
             "UPDATE categories SET color_hex = ?1 WHERE id = ?2",
             rusqlite::params![color, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
     if let Some(order) = input.sort_order {
         conn.execute(
             "UPDATE categories SET sort_order = ?1 WHERE id = ?2",
             rusqlite::params![order, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
+    let mut stmt = conn.prepare(
+        "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
              FROM categories WHERE id = ?1",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let cat = stmt
-        .query_row(rusqlite::params![input.id], row_to_category)
-        .map_err(|e| e.to_string())?;
+    let cat = stmt.query_row(rusqlite::params![input.id], row_to_category)?;
     upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "");
     Ok(cat)
 }
 
 #[tauri::command]
-pub fn categories_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn categories_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let is_system: i64 = conn
@@ -157,17 +142,18 @@ pub fn categories_delete(id: String, state: State<'_, AppState>) -> Result<(), S
             rusqlite::params![id],
             |row| row.get(0),
         )
-        .map_err(|_| "category not found".to_string())?;
+        .map_err(|_| CommandError::NotFound("category not found".to_string()))?;
 
     if is_system != 0 {
-        return Err("cannot delete system categories".to_string());
+        return Err(CommandError::Internal(
+            "cannot delete system categories".to_string(),
+        ));
     }
 
     conn.execute(
         "DELETE FROM categories WHERE id = ?1",
         rusqlite::params![id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     remove_from_search_index(conn, &id);
     Ok(())
@@ -178,15 +164,14 @@ pub fn categories_assign_document(
     document_id: String,
     category_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
         rusqlite::params![document_id, category_id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     Ok(())
 }
@@ -196,15 +181,15 @@ pub fn categories_assign_appointment(
     appointment_id: String,
     category_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)",
         rusqlite::params![appointment_id, category_id],
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
     Ok(())
 }
@@ -215,8 +200,8 @@ pub fn categories_unassign(
     category_id: String,
     entity_type: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     match entity_type.as_str() {
@@ -224,17 +209,19 @@ pub fn categories_unassign(
             conn.execute(
                 "DELETE FROM document_categories WHERE document_id = ?1 AND category_id = ?2",
                 rusqlite::params![entity_id, category_id],
-            )
-            .map_err(|e| e.to_string())?;
+            )?;
         }
         "appointment" => {
             conn.execute(
                 "DELETE FROM appointment_categories WHERE appointment_id = ?1 AND category_id = ?2",
                 rusqlite::params![entity_id, category_id],
-            )
-            .map_err(|e| e.to_string())?;
+            )?;
         }
-        _ => return Err(format!("unknown entity_type: {entity_type}")),
+        _ => {
+            return Err(CommandError::Internal(format!(
+                "unknown entity_type: {entity_type}"
+            )))
+        }
     }
 
     Ok(())
@@ -247,8 +234,8 @@ pub fn categories_bulk_link(
     entity_ids: Vec<String>,
     category_id: String,
     state: State<'_, AppState>,
-) -> Result<usize, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<usize, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let sql = match entity_type.as_str() {
@@ -258,10 +245,10 @@ pub fn categories_bulk_link(
         "appointment" => {
             "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)"
         }
-        _ => return Err(format!("unknown entity_type: {entity_type}")),
+        _ => return Err(CommandError::Internal(format!("unknown entity_type: {entity_type}"))),
     };
 
-    conn.execute("BEGIN", []).map_err(|e| e.to_string())?;
+    conn.execute("BEGIN", [])?;
 
     let mut inserted = 0usize;
     for entity_id in &entity_ids {
@@ -269,14 +256,14 @@ pub fn categories_bulk_link(
             Ok(n) => inserted += n,
             Err(e) => {
                 let _ = conn.execute("ROLLBACK", []);
-                return Err(e.to_string());
+                return Err(CommandError::Internal(e.to_string()));
             }
         }
     }
 
     conn.execute("COMMIT", []).map_err(|e| {
         let _ = conn.execute("ROLLBACK", []);
-        e.to_string()
+        CommandError::Internal(e.to_string())
     })?;
 
     Ok(inserted)
@@ -288,15 +275,14 @@ pub fn assign_category_to_document(
     document_id: String,
     category_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
         rusqlite::params![document_id, category_id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     Ok(())
 }
@@ -307,15 +293,14 @@ pub fn unassign_category_from_document(
     document_id: String,
     category_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "DELETE FROM document_categories WHERE document_id = ?1 AND category_id = ?2",
         rusqlite::params![document_id, category_id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     Ok(())
 }
@@ -326,15 +311,15 @@ pub fn assign_category_to_appointment(
     appointment_id: String,
     category_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)",
         rusqlite::params![appointment_id, category_id],
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
     Ok(())
 }
@@ -345,15 +330,14 @@ pub fn unassign_category_from_appointment(
     appointment_id: String,
     category_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "DELETE FROM appointment_categories WHERE appointment_id = ?1 AND category_id = ?2",
         rusqlite::params![appointment_id, category_id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     Ok(())
 }
@@ -362,19 +346,16 @@ pub fn unassign_category_from_appointment(
 pub fn categories_for_document(
     document_id: String,
     state: State<'_, AppState>,
-) -> Result<Vec<String>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<String>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let mut stmt = conn
-        .prepare("SELECT category_id FROM document_categories WHERE document_id = ?1")
-        .map_err(|e| e.to_string())?;
+    let mut stmt =
+        conn.prepare("SELECT category_id FROM document_categories WHERE document_id = ?1")?;
 
     let ids = stmt
-        .query_map([&document_id], |row| row.get::<_, String>(0))
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+        .query_map([&document_id], |row| row.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(ids)
 }
@@ -383,19 +364,16 @@ pub fn categories_for_document(
 pub fn categories_for_appointment(
     appointment_id: String,
     state: State<'_, AppState>,
-) -> Result<Vec<String>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<String>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let mut stmt = conn
-        .prepare("SELECT category_id FROM appointment_categories WHERE appointment_id = ?1")
-        .map_err(|e| e.to_string())?;
+    let mut stmt =
+        conn.prepare("SELECT category_id FROM appointment_categories WHERE appointment_id = ?1")?;
 
     let ids = stmt
-        .query_map([&appointment_id], |row| row.get::<_, String>(0))
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
+        .query_map([&appointment_id], |row| row.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(ids)
 }

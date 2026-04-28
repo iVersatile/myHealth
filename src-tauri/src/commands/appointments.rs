@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use super::CommandError;
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::{AppState, CommandContext};
 
@@ -40,13 +41,13 @@ pub struct AppointmentInput {
 
 const VALID_STATUSES: &[&str] = &["scheduled", "completed", "cancelled", "missed"];
 
-fn validate_status(status: &str) -> Result<(), String> {
+fn validate_status(status: &str) -> Result<(), CommandError> {
     if VALID_STATUSES.contains(&status) {
         Ok(())
     } else {
-        Err(format!(
+        Err(CommandError::Internal(format!(
             "invalid status '{status}'; expected one of: {VALID_STATUSES:?}"
-        ))
+        )))
     }
 }
 
@@ -63,7 +64,7 @@ fn fetch_document_ids(conn: &rusqlite::Connection, appt_id: &str) -> Vec<String>
     .unwrap_or_default()
 }
 
-fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment, String> {
+fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment, CommandError> {
     conn.query_row(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
                 duration_min, location, notes, status, reminder_min, created_at, updated_at
@@ -90,9 +91,9 @@ fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment
     )
     .map_err(|e| {
         if e == rusqlite::Error::QueryReturnedNoRows {
-            format!("appointment '{id}' not found")
+            CommandError::NotFound(format!("appointment '{id}'"))
         } else {
-            e.to_string()
+            CommandError::Internal(e.to_string())
         }
     })
     .map(|mut appt| {
@@ -106,12 +107,15 @@ pub fn appointments_list(
     month: Option<String>,
     status: Option<String>,
     state: State<'_, AppState>,
-) -> Result<Vec<Appointment>, String> {
+) -> Result<Vec<Appointment>, CommandError> {
     if let Some(ref s) = status {
         validate_status(s)?;
     }
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let mut sql = String::from(
@@ -128,15 +132,14 @@ pub fn appointments_list(
     }
     sql.push_str(" ORDER BY appt_date ASC");
 
-    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(&sql)?;
 
     let rows = match (&month, &status) {
         (Some(m), Some(s)) => stmt.query_map(rusqlite::params![m, s], load_row),
         (Some(m), None) => stmt.query_map(rusqlite::params![m], load_row),
         (None, Some(s)) => stmt.query_map(rusqlite::params![s], load_row),
         (None, None) => stmt.query_map([], load_row),
-    }
-    .map_err(|e| e.to_string())?;
+    }?;
 
     let mut appts: Vec<Appointment> = rows
         .filter_map(|r| r.ok())
@@ -156,32 +159,31 @@ pub fn appointments_list(
 pub fn appointments_list_upcoming(
     days_ahead: u32,
     state: State<'_, AppState>,
-) -> Result<Vec<Appointment>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<Appointment>, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let today = Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
     let cutoff = Utc::now()
         .checked_add_signed(chrono::Duration::days(days_ahead as i64))
-        .ok_or("date overflow")?
+        .ok_or(CommandError::Internal("date overflow".into()))?
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
+    let mut stmt = conn.prepare(
+        "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
                     duration_min, location, notes, status, reminder_min, created_at, updated_at
              FROM appointments
              WHERE status = 'scheduled'
                AND appt_date >= ?1
                AND appt_date <= ?2
              ORDER BY appt_date ASC",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
 
-    let rows = stmt
-        .query_map(rusqlite::params![today, cutoff], load_row)
-        .map_err(|e| e.to_string())?;
+    let rows = stmt.query_map(rusqlite::params![today, cutoff], load_row)?;
 
     let appts: Vec<Appointment> = rows
         .filter_map(|r| r.ok())
@@ -214,8 +216,14 @@ fn load_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Appointment> {
 }
 
 #[tauri::command]
-pub fn appointments_get(id: String, state: State<'_, AppState>) -> Result<Appointment, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn appointments_get(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<Appointment, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
     load_appointment(conn, &id)
 }
@@ -224,7 +232,7 @@ pub fn appointments_get(id: String, state: State<'_, AppState>) -> Result<Appoin
 pub fn appointments_create(
     input: AppointmentInput,
     state: State<'_, AppState>,
-) -> Result<Appointment, String> {
+) -> Result<Appointment, CommandError> {
     let status = input.status.as_deref().unwrap_or("scheduled");
     validate_status(status)?;
 
@@ -233,7 +241,10 @@ pub fn appointments_create(
     let duration = input.duration_min.unwrap_or(30);
     let reminder = input.reminder_min.unwrap_or(60);
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
@@ -256,8 +267,7 @@ pub fn appointments_create(
             now,
             now,
         ],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     let appt = load_appointment(conn, &id)?;
     let body = [
@@ -285,18 +295,20 @@ pub fn appointments_update(
     id: String,
     input: AppointmentInput,
     state: State<'_, AppState>,
-) -> Result<Appointment, String> {
+) -> Result<Appointment, CommandError> {
     let status = input.status.as_deref().unwrap_or("scheduled");
     validate_status(status)?;
 
     let now = Utc::now().to_rfc3339();
 
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let rows = conn
-        .execute(
-            "UPDATE appointments SET
+    let rows = conn.execute(
+        "UPDATE appointments SET
              title        = ?2,
              doctor_name  = COALESCE(?3, doctor_name),
              clinic_name  = COALESCE(?4, clinic_name),
@@ -309,25 +321,24 @@ pub fn appointments_update(
              reminder_min = COALESCE(?11, reminder_min),
              updated_at   = ?12
              WHERE id = ?1",
-            rusqlite::params![
-                id,
-                input.title,
-                input.doctor_name,
-                input.clinic_name,
-                input.specialty,
-                input.appt_date,
-                input.duration_min,
-                input.location,
-                input.notes,
-                status,
-                input.reminder_min,
-                now,
-            ],
-        )
-        .map_err(|e| e.to_string())?;
+        rusqlite::params![
+            id,
+            input.title,
+            input.doctor_name,
+            input.clinic_name,
+            input.specialty,
+            input.appt_date,
+            input.duration_min,
+            input.location,
+            input.notes,
+            status,
+            input.reminder_min,
+            now,
+        ],
+    )?;
 
     if rows == 0 {
-        return Err(format!("appointment '{id}' not found"));
+        return Err(CommandError::NotFound(format!("appointment '{id}'")));
     }
 
     let appt = load_appointment(conn, &id)?;
@@ -352,16 +363,17 @@ pub fn appointments_update(
 }
 
 #[tauri::command]
-pub fn appointments_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn appointments_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let rows = conn
-        .execute("DELETE FROM appointments WHERE id = ?", [&id])
-        .map_err(|e| e.to_string())?;
+    let rows = conn.execute("DELETE FROM appointments WHERE id = ?", [&id])?;
 
     if rows == 0 {
-        Err(format!("appointment '{id}' not found"))
+        Err(CommandError::NotFound(format!("appointment '{id}'")))
     } else {
         remove_from_search_index(conn, &id);
         Ok(())
@@ -373,15 +385,17 @@ pub fn appointments_link_document(
     appointment_id: String,
     document_id: String,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO appointment_documents (appointment_id, document_id) VALUES (?1, ?2)",
         rusqlite::params![appointment_id, document_id],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
     Ok(())
 }
@@ -480,7 +494,8 @@ mod tests {
         let conn = test_conn();
         let result = load_appointment(&conn, "nonexistent");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not found"));
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not found"));
     }
 
     #[test]
@@ -502,7 +517,8 @@ mod tests {
     fn validate_status_rejects_unknown() {
         let result = validate_status("pending");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("invalid status"));
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("invalid status"));
     }
 
     #[test]

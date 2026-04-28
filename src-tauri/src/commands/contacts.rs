@@ -4,7 +4,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
-use crate::commands::{AppState, CommandContext};
+use crate::commands::{AppState, CommandContext, CommandError};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Contact {
@@ -66,33 +66,27 @@ fn row_to_contact(row: &rusqlite::Row) -> rusqlite::Result<Contact> {
 pub fn contacts_list(
     role: Option<String>,
     state: State<'_, AppState>,
-) -> Result<Vec<Contact>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<Contact>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let contacts: Vec<Contact> = if let Some(r) = role {
-        let mut stmt = conn
-            .prepare(
-                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+        let mut stmt = conn.prepare(
+            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
                  created_at, updated_at FROM contacts WHERE role = ? ORDER BY name",
-            )
-            .map_err(|e| e.to_string())?;
+        )?;
         let rows: Vec<Contact> = stmt
-            .query_map([r], row_to_contact)
-            .map_err(|e| e.to_string())?
+            .query_map([r], row_to_contact)?
             .filter_map(|r| r.ok())
             .collect();
         rows
     } else {
-        let mut stmt = conn
-            .prepare(
-                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+        let mut stmt = conn.prepare(
+            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
                  created_at, updated_at FROM contacts ORDER BY name",
-            )
-            .map_err(|e| e.to_string())?;
+        )?;
         let rows: Vec<Contact> = stmt
-            .query_map([], row_to_contact)
-            .map_err(|e| e.to_string())?
+            .query_map([], row_to_contact)?
             .filter_map(|r| r.ok())
             .collect();
         rows
@@ -102,8 +96,8 @@ pub fn contacts_list(
 }
 
 #[tauri::command]
-pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.query_row(
@@ -112,15 +106,15 @@ pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, S
         [&id],
         row_to_contact,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]
 pub fn contacts_create(
     input: ContactCreateInput,
     state: State<'_, AppState>,
-) -> Result<Contact, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Contact, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let id = Uuid::new_v4().to_string();
@@ -142,17 +136,14 @@ pub fn contacts_create(
             now,
             now,
         ],
-    )
-    .map_err(|e| e.to_string())?;
+    )?;
 
-    let c = conn
-        .query_row(
-            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+    let c = conn.query_row(
+        "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
              created_at, updated_at FROM contacts WHERE id = ?",
-            [&id],
-            row_to_contact,
-        )
-        .map_err(|e| e.to_string())?;
+        [&id],
+        row_to_contact,
+    )?;
     let body = [
         c.specialty.as_deref().unwrap_or(""),
         c.clinic.as_deref().unwrap_or(""),
@@ -168,8 +159,8 @@ pub fn contacts_create(
 pub fn contacts_update(
     input: ContactUpdateInput,
     state: State<'_, AppState>,
-) -> Result<Contact, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Contact, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     let now = Utc::now().to_rfc3339();
@@ -178,67 +169,57 @@ pub fn contacts_update(
         conn.execute(
             "UPDATE contacts SET name = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![name, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(role) = input.role {
         conn.execute(
             "UPDATE contacts SET role = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![role, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(specialty) = input.specialty {
         conn.execute(
             "UPDATE contacts SET specialty = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![specialty, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(phone) = input.phone {
         conn.execute(
             "UPDATE contacts SET phone = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![phone, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(email) = input.email {
         conn.execute(
             "UPDATE contacts SET email = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![email, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(clinic) = input.clinic {
         conn.execute(
             "UPDATE contacts SET clinic = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![clinic, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(address) = input.address {
         conn.execute(
             "UPDATE contacts SET address = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![address, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
     if let Some(notes) = input.notes {
         conn.execute(
             "UPDATE contacts SET notes = ?, updated_at = ? WHERE id = ?",
             rusqlite::params![notes, now, input.id],
-        )
-        .map_err(|e| e.to_string())?;
+        )?;
     }
 
-    let c = conn
-        .query_row(
-            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+    let c = conn.query_row(
+        "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
              created_at, updated_at FROM contacts WHERE id = ?",
-            [&input.id],
-            row_to_contact,
-        )
-        .map_err(|e| e.to_string())?;
+        [&input.id],
+        row_to_contact,
+    )?;
     let body = [
         c.specialty.as_deref().unwrap_or(""),
         c.clinic.as_deref().unwrap_or(""),
@@ -251,12 +232,11 @@ pub fn contacts_update(
 }
 
 #[tauri::command]
-pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    conn.execute("DELETE FROM contacts WHERE id = ?", [&id])
-        .map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM contacts WHERE id = ?", [&id])?;
     remove_from_search_index(conn, &id);
     Ok(())
 }
@@ -265,8 +245,8 @@ pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), Str
 pub fn contacts_find_similar(
     name: String,
     state: State<'_, AppState>,
-) -> Result<Option<Contact>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Option<Contact>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     Ok(find_similar_contact(&name, conn))
 }
@@ -377,19 +357,16 @@ pub fn find_duplicate_contacts(
     contact_id: Option<String>,
     threshold: f64,
     state: State<'_, AppState>,
-) -> Result<Vec<DuplicateCandidate>, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Vec<DuplicateCandidate>, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+    let mut stmt = conn.prepare(
+        "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
              created_at, updated_at FROM contacts ORDER BY name",
-        )
-        .map_err(|e| e.to_string())?;
+    )?;
     let contacts: Vec<Contact> = stmt
-        .query_map([], row_to_contact)
-        .map_err(|e| e.to_string())?
+        .query_map([], row_to_contact)?
         .filter_map(|r| r.ok())
         .collect();
 
@@ -414,13 +391,13 @@ pub fn merge_contacts(
     primary_id: String,
     duplicate_ids: Vec<String>,
     state: State<'_, AppState>,
-) -> Result<Contact, String> {
-    let guard = state.db.lock().map_err(|e| e.to_string())?;
+) -> Result<Contact, CommandError> {
+    let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+    let tx = conn.unchecked_transaction()?;
 
-    let result: Result<Contact, String> = (|| {
+    let result: Result<Contact, CommandError> = (|| -> Result<Contact, CommandError> {
         // 1. Re-point appointment_contacts rows.
         for dup_id in &duplicate_ids {
             tx.execute(
@@ -429,12 +406,12 @@ pub fn merge_contacts(
                    (SELECT appointment_id FROM appointment_contacts WHERE contact_id = ?2)",
                 rusqlite::params![dup_id, primary_id],
             )
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
             tx.execute(
                 "UPDATE appointment_contacts SET contact_id = ?1 WHERE contact_id = ?2",
                 rusqlite::params![primary_id, dup_id],
             )
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
         }
 
         // 2. Load primary and duplicates; merge null fields from duplicates.
@@ -445,7 +422,7 @@ pub fn merge_contacts(
                 [&primary_id],
                 row_to_contact,
             )
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
 
         let mut merged_specialty = primary.specialty.clone();
         let mut merged_phone = primary.phone.clone();
@@ -462,7 +439,7 @@ pub fn merge_contacts(
                     [dup_id],
                     row_to_contact,
                 )
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| CommandError::Internal(e.to_string()))?;
             if merged_specialty.is_none() {
                 merged_specialty = dup.specialty;
             }
@@ -498,12 +475,12 @@ pub fn merge_contacts(
                 primary_id,
             ],
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
 
         // 3. Delete duplicate rows.
         for dup_id in &duplicate_ids {
             tx.execute("DELETE FROM contacts WHERE id = ?", [dup_id])
-                .map_err(|e| e.to_string())?;
+                .map_err(|e| CommandError::Internal(e.to_string()))?;
         }
 
         // Return updated primary.
@@ -513,12 +490,12 @@ pub fn merge_contacts(
             [&primary_id],
             row_to_contact,
         )
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError::Internal(e.to_string()))
     })();
 
     match result {
         Ok(contact) => {
-            tx.commit().map_err(|e| e.to_string())?;
+            tx.commit()?;
             let body = [
                 contact.specialty.as_deref().unwrap_or(""),
                 contact.clinic.as_deref().unwrap_or(""),
