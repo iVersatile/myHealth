@@ -60,7 +60,7 @@ pub fn remove_from_search_index(conn: &Connection, entity_id: &str) {
 }
 
 /// Build an FTS5 MATCH expression with prefix wildcards for each word.
-fn build_fts_query(q: &str) -> String {
+pub(crate) fn build_fts_query(q: &str) -> String {
     let terms: Vec<String> = q
         .split_whitespace()
         .filter(|w| !w.is_empty())

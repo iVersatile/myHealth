@@ -430,6 +430,130 @@ pub fn documents_tags_set(
     Ok(())
 }
 
+// ── Advanced filtered search ──────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct FilteredDocumentsResult {
+    pub items: Vec<Document>,
+    pub total: i64,
+}
+
+#[tauri::command]
+pub fn documents_search_filtered(
+    query: Option<String>,
+    date_from: Option<String>,
+    date_to: Option<String>,
+    category_ids: Option<Vec<String>>,
+    page: Option<i64>,
+    limit: Option<i64>,
+    state: State<'_, AppState>,
+) -> Result<FilteredDocumentsResult, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let page = page.unwrap_or(0).max(0);
+    let per_page = limit.unwrap_or(50).clamp(1, 200);
+
+    let fts = query
+        .as_deref()
+        .map(str::trim)
+        .filter(|q| !q.is_empty())
+        .map(crate::commands::search::build_fts_query)
+        .filter(|fq| !fq.is_empty());
+
+    let cat_ids: Vec<String> = category_ids
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let mut where_parts: Vec<String> = vec!["d.is_deleted = 0".to_string()];
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+    if let Some(ref from) = date_from {
+        params.push(Box::new(from.clone()));
+        where_parts.push(format!("d.document_date >= ?{}", params.len()));
+    }
+    if let Some(ref to) = date_to {
+        params.push(Box::new(to.clone()));
+        where_parts.push(format!("d.document_date <= ?{}", params.len()));
+    }
+    if let Some(ref fq) = fts {
+        params.push(Box::new(fq.clone()));
+        where_parts.push(format!(
+            "d.id IN (SELECT entity_id FROM search_index \
+             WHERE search_index MATCH ?{} AND entity_type = 'document')",
+            params.len()
+        ));
+    }
+    if !cat_ids.is_empty() {
+        let n = cat_ids.len();
+        let placeholders: Vec<String> = (0..n)
+            .map(|i| format!("?{}", params.len() + i + 1))
+            .collect();
+        for id in &cat_ids {
+            params.push(Box::new(id.clone()));
+        }
+        where_parts.push(format!(
+            "d.id IN (SELECT document_id FROM document_categories \
+             WHERE category_id IN ({}) \
+             GROUP BY document_id HAVING COUNT(DISTINCT category_id) = {})",
+            placeholders.join(", "),
+            n
+        ));
+    }
+
+    let where_clause = where_parts.join(" AND ");
+
+    // count query (no pagination params needed)
+    let count_sql = format!("SELECT COUNT(DISTINCT d.id) FROM documents d WHERE {where_clause}");
+    let count_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    let total: i64 = conn.query_row(&count_sql, count_refs.as_slice(), |r| r.get(0))?;
+
+    // data query
+    params.push(Box::new(per_page));
+    params.push(Box::new(page * per_page));
+    let data_sql = format!(
+        "SELECT DISTINCT d.id, d.filename, d.file_path, d.mime_type, d.file_size_bytes, \
+         d.category, d.thumbnail_path, d.notes, d.created_at, d.updated_at, d.is_deleted, \
+         d.document_date, d.extracted_metadata, d.extracted_text \
+         FROM documents d WHERE {where_clause} \
+         ORDER BY d.created_at DESC LIMIT ?{} OFFSET ?{}",
+        params.len() - 1,
+        params.len()
+    );
+    let data_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    let mut stmt = conn.prepare(&data_sql)?;
+    let items: Vec<Document> = stmt
+        .query_map(data_refs.as_slice(), |row| {
+            Ok(Document {
+                id: row.get(0)?,
+                filename: row.get(1)?,
+                file_path: row.get(2)?,
+                mime_type: row.get(3)?,
+                file_size_bytes: row.get(4)?,
+                category: row.get(5)?,
+                thumbnail_path: row.get(6)?,
+                notes: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+                is_deleted: row.get(10)?,
+                document_date: row.get(11)?,
+                extracted_metadata: row.get(12)?,
+                extracted_text: row.get(13)?,
+                tags: vec![],
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .map(|mut doc| {
+            doc.tags = fetch_tags(conn, &doc.id);
+            doc
+        })
+        .collect();
+
+    Ok(FilteredDocumentsResult { items, total })
+}
+
 // ── Unit tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -464,6 +588,11 @@ mod tests {
                 document_id TEXT NOT NULL,
                 tag         TEXT NOT NULL,
                 PRIMARY KEY (document_id, tag)
+            );
+            CREATE TABLE document_categories (
+                document_id TEXT NOT NULL,
+                category_id TEXT NOT NULL,
+                PRIMARY KEY (document_id, category_id)
             );",
         )
         .unwrap();
@@ -711,6 +840,147 @@ mod tests {
             .flatten();
 
         assert!(cached.is_none());
+    }
+
+    // ── documents_search_filtered tests ──────────────────────────────────────
+
+    fn assign_category(conn: &Connection, doc_id: &str, cat_id: &str) {
+        conn.execute(
+            "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
+            rusqlite::params![doc_id, cat_id],
+        )
+        .unwrap();
+    }
+
+    fn filtered_ids(
+        conn: &Connection,
+        date_from: Option<&str>,
+        date_to: Option<&str>,
+        category_ids: &[&str],
+    ) -> Vec<String> {
+        let mut where_parts: Vec<String> = vec!["d.is_deleted = 0".to_string()];
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        if let Some(f) = date_from {
+            params.push(Box::new(f.to_string()));
+            where_parts.push(format!("d.document_date >= ?{}", params.len()));
+        }
+        if let Some(t) = date_to {
+            params.push(Box::new(t.to_string()));
+            where_parts.push(format!("d.document_date <= ?{}", params.len()));
+        }
+        if !category_ids.is_empty() {
+            let n = category_ids.len();
+            let placeholders: Vec<String> = (0..n)
+                .map(|i| format!("?{}", params.len() + i + 1))
+                .collect();
+            for id in category_ids {
+                params.push(Box::new(id.to_string()));
+            }
+            where_parts.push(format!(
+                "d.id IN (SELECT document_id FROM document_categories \
+                 WHERE category_id IN ({}) \
+                 GROUP BY document_id HAVING COUNT(DISTINCT category_id) = {})",
+                placeholders.join(", "),
+                n
+            ));
+        }
+
+        let sql = format!(
+            "SELECT DISTINCT d.id FROM documents d WHERE {} ORDER BY d.id",
+            where_parts.join(" AND ")
+        );
+        let refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let mut stmt = conn.prepare(&sql).unwrap();
+        stmt.query_map(refs.as_slice(), |r| r.get::<_, String>(0))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect()
+    }
+
+    #[test]
+    fn filtered_search_date_range_only() {
+        let conn = test_conn();
+        insert_doc(&conn, "d-early", "lab", false);
+        insert_doc(&conn, "d-mid", "lab", false);
+        insert_doc(&conn, "d-late", "lab", false);
+        conn.execute(
+            "UPDATE documents SET document_date = '2024-01-15' WHERE id = 'd-early'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE documents SET document_date = '2024-06-15' WHERE id = 'd-mid'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE documents SET document_date = '2024-11-30' WHERE id = 'd-late'",
+            [],
+        )
+        .unwrap();
+
+        let ids = filtered_ids(&conn, Some("2024-03-01"), Some("2024-09-01"), &[]);
+        assert_eq!(ids, vec!["d-mid"]);
+    }
+
+    #[test]
+    fn filtered_search_multi_category_and() {
+        let conn = test_conn();
+        insert_doc(&conn, "d-both", "lab", false);
+        insert_doc(&conn, "d-one", "lab", false);
+        insert_doc(&conn, "d-none", "lab", false);
+
+        assign_category(&conn, "d-both", "cat-a");
+        assign_category(&conn, "d-both", "cat-b");
+        assign_category(&conn, "d-one", "cat-a");
+
+        let ids = filtered_ids(&conn, None, None, &["cat-a", "cat-b"]);
+        assert_eq!(ids, vec!["d-both"]);
+    }
+
+    #[test]
+    fn filtered_search_combined_date_and_category() {
+        let conn = test_conn();
+        insert_doc(&conn, "d-match", "lab", false);
+        insert_doc(&conn, "d-wrong-date", "lab", false);
+        insert_doc(&conn, "d-wrong-cat", "lab", false);
+
+        conn.execute(
+            "UPDATE documents SET document_date = '2024-05-01' WHERE id = 'd-match'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE documents SET document_date = '2023-01-01' WHERE id = 'd-wrong-date'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE documents SET document_date = '2024-05-01' WHERE id = 'd-wrong-cat'",
+            [],
+        )
+        .unwrap();
+
+        assign_category(&conn, "d-match", "cat-x");
+        assign_category(&conn, "d-wrong-date", "cat-x");
+        // d-wrong-cat has no category
+
+        let ids = filtered_ids(&conn, Some("2024-01-01"), None, &["cat-x"]);
+        assert_eq!(ids, vec!["d-match"]);
+    }
+
+    #[test]
+    fn filtered_search_empty_filters_returns_all() {
+        let conn = test_conn();
+        insert_doc(&conn, "e1", "lab", false);
+        insert_doc(&conn, "e2", "lab", false);
+        insert_doc(&conn, "e3", "lab", false);
+        insert_doc(&conn, "e-deleted", "lab", true);
+
+        let ids = filtered_ids(&conn, None, None, &[]);
+        assert_eq!(ids.len(), 3);
+        assert!(!ids.contains(&"e-deleted".to_string()));
     }
 }
 

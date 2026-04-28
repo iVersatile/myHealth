@@ -17,6 +17,7 @@ export const IPC = {
   documentsGetExtractionStatus: 'documents_get_extraction_status',
   documentsRunExtraction: 'documents_run_extraction',
   documentsTagsSet: 'documents_tags_set',
+  documentsSearchFiltered: 'documents_search_filtered',
 
   // Appointments
   appointmentsList: 'appointments_list',
