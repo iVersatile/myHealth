@@ -8,9 +8,15 @@ import type { Document } from '../../../store/documentsStore'
 import type { Note } from '../../../store/notesStore'
 
 interface Stats {
-  docCount: number
-  upcomingCount: number
-  noteCount: number
+  total_documents: number
+  total_notes: number
+  upcoming_appointments: number
+}
+
+interface StatsSummary {
+  total_documents: number
+  total_notes: number
+  upcoming_appointments: number
 }
 
 function StatCard({ label, value, sub }: { label: string; value: number; sub: string }) {
@@ -75,7 +81,7 @@ function stripHtml(html: string): string {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats>({ docCount: 0, upcomingCount: 0, noteCount: 0 })
+  const [stats, setStats] = useState<Stats>({ total_documents: 0, total_notes: 0, upcoming_appointments: 0 })
   const [nextAppt, setNextAppt] = useState<Appointment | null>(null)
   const [recentDocs, setRecentDocs] = useState<Document[]>([])
   const [pinnedNotes, setPinnedNotes] = useState<Note[]>([])
@@ -84,8 +90,9 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [docs, appts, notes] = await Promise.all([
-          invoke<Document[]>('documents_list', { category: null, page: 1, limit: 500 }),
+        const [statsData, docs, appts, notes] = await Promise.all([
+          invoke<StatsSummary>('stats_summary'),
+          invoke<Document[]>('documents_list', { category: null, page: 1, limit: 10 }),
           invoke<Appointment[]>('appointments_list', { month: null, status: null }),
           invoke<Note[]>('notes_list'),
         ])
@@ -95,7 +102,7 @@ export default function DashboardPage() {
           .filter(a => a.status === 'scheduled' && a.appt_date >= today)
           .sort((a, b) => a.appt_date.localeCompare(b.appt_date))
 
-        setStats({ docCount: docs.length, upcomingCount: upcoming.length, noteCount: notes.length })
+        setStats(statsData)
         setNextAppt(upcoming[0] ?? null)
         setRecentDocs(docs.slice(0, 3))
         setPinnedNotes(notes.filter(n => n.is_pinned))
@@ -122,9 +129,9 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-8)' }}>
-        <StatCard label="Documents" value={stats.docCount} sub="total uploaded" />
-        <StatCard label="Upcoming Appointments" value={stats.upcomingCount} sub="scheduled" />
-        <StatCard label="Notes" value={stats.noteCount} sub="total notes" />
+        <StatCard label="Documents" value={stats.total_documents} sub="total uploaded" />
+        <StatCard label="Upcoming Appointments" value={stats.upcoming_appointments} sub="scheduled" />
+        <StatCard label="Notes" value={stats.total_notes} sub="total notes" />
       </div>
 
       {/* Next Appointment */}

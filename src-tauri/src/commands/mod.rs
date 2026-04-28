@@ -13,6 +13,7 @@ pub mod notes;
 pub mod scoring;
 pub mod search;
 pub mod settings;
+pub mod stats;
 
 pub struct AppState {
     pub db: std::sync::Mutex<Option<Connection>>,

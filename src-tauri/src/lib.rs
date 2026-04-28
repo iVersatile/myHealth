@@ -51,6 +51,7 @@ use commands::search::search_query;
 use commands::settings::{
     settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data,
 };
+use commands::stats::stats_summary;
 use commands::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -134,6 +135,7 @@ pub fn run() {
             settings_set,
             settings_get_data_dir,
             settings_wipe_all_data,
+            stats_summary,
             export_pdf_bundle,
             export_save_bytes,
             links_create,
