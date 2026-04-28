@@ -383,4 +383,304 @@ mod tests {
 
         assert_eq!(title, "Test Event");
     }
+
+    fn insert_unimported_event(conn: &rusqlite::Connection, id: &str, ext_id: &str, title: &str) {
+        conn.execute(
+            "INSERT INTO calendar_sources (id, external_id, name, enabled) \
+             VALUES ('src-imp', 'ext-imp', 'Import Cal', 1) \
+             ON CONFLICT(external_id) DO NOTHING",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO calendar_events \
+             (id, external_id, calendar_id, title, start_at, is_imported, last_synced_at) \
+             VALUES (?1, ?2, 'src-imp', ?3, '2025-06-01T09:00:00Z', 0, '2025-06-01T00:00:00Z')",
+            rusqlite::params![id, ext_id, title],
+        )
+        .unwrap();
+    }
+
+    fn run_import_logic(conn: &rusqlite::Connection) -> usize {
+        let now = chrono::Utc::now().to_rfc3339();
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, title, start_at, location, notes \
+                 FROM calendar_events WHERE is_imported = 0",
+            )
+            .unwrap();
+
+        struct EventRow {
+            id: String,
+            title: String,
+            start_at: String,
+            location: Option<String>,
+            notes: Option<String>,
+        }
+
+        let rows: Vec<EventRow> = stmt
+            .query_map([], |row| {
+                Ok(EventRow {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    start_at: row.get(2)?,
+                    location: row.get(3)?,
+                    notes: row.get(4)?,
+                })
+            })
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        let mut created = 0usize;
+        for row in &rows {
+            let appt_id = Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO appointments \
+                 (id, title, doctor_name, clinic_name, specialty, appt_date, \
+                  duration_min, location, notes, status, reminder_min, created_at, updated_at) \
+                 VALUES (?1, ?2, NULL, NULL, NULL, ?3, 60, ?4, ?5, 'scheduled', NULL, ?6, ?6)",
+                rusqlite::params![
+                    appt_id,
+                    row.title,
+                    row.start_at,
+                    row.location,
+                    row.notes,
+                    now
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE calendar_events SET is_imported = 1 WHERE id = ?1",
+                rusqlite::params![row.id],
+            )
+            .unwrap();
+            created += 1;
+        }
+        created
+    }
+
+    #[test]
+    fn import_events_creates_appointments() {
+        let conn = open_test_db();
+        insert_unimported_event(&conn, "ev-a", "ext-a", "Doctor Visit");
+        insert_unimported_event(&conn, "ev-b", "ext-b", "Lab Test");
+
+        let created = run_import_logic(&conn);
+        assert_eq!(created, 2);
+
+        let appt_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM appointments", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(appt_count, 2);
+    }
+
+    #[test]
+    fn import_events_is_idempotent() {
+        let conn = open_test_db();
+        insert_unimported_event(&conn, "ev-c", "ext-c", "Checkup");
+
+        // First import
+        let first = run_import_logic(&conn);
+        assert_eq!(first, 1);
+
+        // Second import — is_imported = 1 now, nothing to import
+        let second = run_import_logic(&conn);
+        assert_eq!(second, 0);
+
+        // Appointments count stays at 1
+        let appt_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM appointments", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(appt_count, 1);
+    }
+
+    #[test]
+    fn import_sets_is_imported_flag() {
+        let conn = open_test_db();
+        insert_unimported_event(&conn, "ev-d", "ext-d", "Follow-up");
+
+        run_import_logic(&conn);
+
+        let is_imported: i64 = conn
+            .query_row(
+                "SELECT is_imported FROM calendar_events WHERE id = 'ev-d'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_imported, 1);
+    }
+
+    #[test]
+    fn calendar_sync_stores_last_sync_in_settings() {
+        let conn = open_test_db();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        // Insert (first sync)
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES ('calendar_last_sync', ?1) \
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            rusqlite::params![now],
+        )
+        .unwrap();
+
+        let stored: String = conn
+            .query_row(
+                "SELECT value FROM settings WHERE key = 'calendar_last_sync'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(stored, now);
+
+        // Upsert (second sync) updates timestamp
+        let later = "2099-01-01T00:00:00+00:00";
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES ('calendar_last_sync', ?1) \
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            rusqlite::params![later],
+        )
+        .unwrap();
+
+        let updated: String = conn
+            .query_row(
+                "SELECT value FROM settings WHERE key = 'calendar_last_sync'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(updated, later);
+
+        // Only one row in settings for this key
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM settings WHERE key = 'calendar_last_sync'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn toggle_source_updates_enabled_flag() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT INTO calendar_sources (id, external_id, name, enabled) \
+             VALUES ('src-t', 'ext-t', 'Toggle Cal', 1)",
+            [],
+        )
+        .unwrap();
+
+        // Disable
+        conn.execute(
+            "UPDATE calendar_sources SET enabled = 0 WHERE id = 'src-t'",
+            [],
+        )
+        .unwrap();
+
+        let enabled: i64 = conn
+            .query_row(
+                "SELECT enabled FROM calendar_sources WHERE id = 'src-t'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(enabled, 0);
+
+        // Re-enable
+        conn.execute(
+            "UPDATE calendar_sources SET enabled = 1 WHERE id = 'src-t'",
+            [],
+        )
+        .unwrap();
+
+        let re_enabled: i64 = conn
+            .query_row(
+                "SELECT enabled FROM calendar_sources WHERE id = 'src-t'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(re_enabled, 1);
+    }
+
+    #[test]
+    fn calendar_events_upsert_on_conflict() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT INTO calendar_sources (id, external_id, name, enabled) \
+             VALUES ('src-uc', 'ext-uc', 'Upsert Cal', 1)",
+            [],
+        )
+        .unwrap();
+
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO calendar_events \
+             (id, external_id, calendar_id, title, start_at, is_imported, last_synced_at) \
+             VALUES ('ev-u1', 'ext-dup', 'src-uc', 'Original', '2025-01-01T10:00:00Z', 0, ?1)",
+            rusqlite::params![now],
+        )
+        .unwrap();
+
+        // Upsert with same external_id — should update title
+        conn.execute(
+            "INSERT INTO calendar_events \
+             (id, external_id, calendar_id, title, start_at, is_imported, last_synced_at) \
+             VALUES ('ev-u2', 'ext-dup', 'src-uc', 'Updated', '2025-01-01T10:00:00Z', 0, ?1) \
+             ON CONFLICT(external_id) DO UPDATE SET \
+               title = excluded.title, last_synced_at = excluded.last_synced_at",
+            rusqlite::params![now],
+        )
+        .unwrap();
+
+        let title: String = conn
+            .query_row(
+                "SELECT title FROM calendar_events WHERE external_id = 'ext-dup'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(title, "Updated");
+
+        // Only one row (no duplicate)
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM calendar_events WHERE external_id = 'ext-dup'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn row_to_calendar_source_maps_enabled_correctly() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT INTO calendar_sources (id, external_id, name, color_hex, enabled) \
+             VALUES ('src-m', 'ext-m', 'Mapped', '#AABBCC', 0)",
+            [],
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, external_id, name, color_hex, enabled, last_synced_at \
+                 FROM calendar_sources WHERE id = 'src-m'",
+            )
+            .unwrap();
+        let source = stmt
+            .query_map([], row_to_calendar_source)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap();
+
+        assert!(!source.enabled);
+        assert_eq!(source.color_hex.as_deref(), Some("#AABBCC"));
+        assert!(source.last_synced_at.is_none());
+    }
 }
