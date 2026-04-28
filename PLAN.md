@@ -1,4 +1,4 @@
-# myHealth v1.1 — Execution Plan
+# myHealth — Execution Plan (v1.1 / v1.2 / v1.3)
 
 > **HOW TO RESUME:** Type `go` in any session. Claude will read this file, find the ▶ marker, and start executing from that exact task. No context needed — every task is self-contained.
 
@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 5 — Apple Calendar Integration
-Current: COMPLETE — all 5 tasks done; Phase 5 fully shipped
+Phase 8 — v1.2 Enhancements
+Current task: 8.3 — F3.4 Drag-to-organize categories
 ```
 
 ---
@@ -25,18 +25,37 @@ Current: COMPLETE — all 5 tasks done; Phase 5 fully shipped
 
 ## Scope Reference
 
+**v1.1 (SHIPPED)**
+
+| Feature | PRD_V2 Section | Priority | Status |
+|---------|---------------|----------|--------|
+| F5.3–F5.4 Contact deduplication + merge | §F5 | HIGH | ✅ done |
+| F6 Document-appointment link scoring | §F6 | HIGH | ✅ done |
+| F2.2–F2.5 OCR pipeline | §F2 | HIGH | ✅ done |
+| F3.2–F3.5 Many-to-many categories + bulk ops | §F3 | MED | ✅ done |
+| F4 Apple Calendar integration (macOS) | §F4 | LOW | ✅ done |
+
+**v1.2 (next)**
+
 | Feature | PRD_V2 Section | Priority | Effort |
 |---------|---------------|----------|--------|
-| F5.3–F5.4 Contact deduplication + merge | §F5 | HIGH | Medium |
-| F6 Document-appointment link scoring | §F6 | HIGH | Large |
-| F2.2–F2.5 OCR pipeline | §F2 | HIGH | Large |
-| F3.2–F3.5 Many-to-many categories + bulk ops | §F3 | MED | Medium |
-| F4 Apple Calendar integration (macOS) | §F4 | LOW | Large |
+| Advanced search filters (date range, category combo) | §F3/F6 | HIGH | Small |
+| F3.4 Drag-to-organize categories | §F3 | SHOULD | Small |
+| F3.7 Auto-archive empty categories | §F3 | SHOULD | Small |
+| F4.5 Calendar conflict resolution UI | §F4 | SHOULD | Medium |
+| PDF summary report export | Phase 2 | MED | Medium |
 
-**Release target:** v1.1.0 — Q2 2026 (end of June 2026)
+**v1.3+ (future)**
+
+| Feature | PRD_V2 Section | Priority | Effort |
+|---------|---------------|----------|--------|
+| Outlook Calendar sync (Windows) | Phase 3 | MED | Large |
+| iCalendar import/export (.ics) | Phase 3 | MED | Medium |
+| AI appointment notes summarization | Phase 3 | LOW | Large |
+| Medical code tagging (ICD-10) | Phase 3 | LOW | Medium |
+| Multi-user vault support | Phase 3 | LOW | Large |
+
 **Coverage requirement:** ≥ 80% across all new code
-
-> **Timeline note (2026-04-22):** 10 sprints × 2 weeks = 20 weeks; end of June is 10 weeks away. To meet the deadline, Phase 5 (Apple Calendar, F4) should target v1.2 (Q3 2026) unless explicitly re-prioritised. Phases 0–4 fit comfortably in 10 weeks.
 
 ---
 
@@ -298,6 +317,156 @@ Current: COMPLETE — all 5 tasks done; Phase 5 fully shipped
 
 [x] **6.3 — Verify GitHub Release**
    - Confirm 4 platform artifacts published; update README Known Issues if needed
+
+---
+
+## Phase 8 — v1.2 Enhancements
+
+> **Target:** v1.2.0 — Q3 2026  
+> Covers the 5 PRD_V2 Phase 2 items plus unimplemented v1.1 SHOULD requirements (F3.4, F3.7, F4.5).
+
+### Sprint 12: Search + Category housekeeping
+
+[x] **8.1 — Advanced search filters (Rust backend)**
+   - Add `documents_search_filtered(user_id, query, date_from, date_to, category_ids, page, limit)` Tauri command in `src-tauri/src/commands/documents.rs`
+   - `date_from` / `date_to`: optional ISO-8601 strings; filter on `documents.document_date`
+   - `category_ids`: optional `Vec<String>`; JOIN via `document_categories` junction; requires ALL listed categories (AND semantics)
+   - Combine with existing FTS5 full-text search when `query` is non-empty
+   - Add `documentsSearchFiltered: 'documents_search_filtered'` to `src/lib/ipc.ts`
+   - Done when: `cargo test` covers (a) date-range-only query returns docs within range, (b) multi-category AND filter returns only intersection, (c) combined text + date query, (d) empty filter returns unfiltered results; all under 200ms on 10 000 docs
+
+[x] **8.2 — Advanced search UI**
+   - Add filter bar to `src/app/(app)/documents/page.tsx`: date-from/date-to pickers + multi-select category chips
+   - On filter change debounce 300ms, call `documents_search_filtered`; show result count
+   - Done when: filtering by date range narrows document list; combining date + category further narrows; clearing filters restores full list
+
+▶ **8.3 — F3.4 Drag-to-organize categories**
+   - Install drag-and-drop dependencies first: `npm install @dnd-kit/core @dnd-kit/sortable` (not yet in `package.json`)
+   - Add `category_reorder(user_id: String, category_id: String, new_parent_id: Option<String>, new_position: u32)` command in `src-tauri/src/commands/categories.rs`
+   - Add `categoryReorder: 'category_reorder'` to `src/lib/ipc.ts`
+   - In `src/app/(app)/categories/` render category tree as sortable list; on drop call `category_reorder`
+   - Done when: dragging a subcategory to a new parent persists after page reload; tree depth limit 5 enforced (drop rejected if depth would exceed 5)
+
+[ ] **8.4 — F3.7 Auto-archive empty categories**
+   - Add `categories_archive_stale(user_id: String, months_inactive: u32)` command in `src-tauri/src/commands/categories.rs`
+   - Archive (set `is_archived = 1`) any category with zero linked documents/appointments for `months_inactive` months
+   - Add `is_archived` column via migration v5 in `src-tauri/src/db/migrations.rs`; update `categories_list` to exclude archived by default; add `include_archived: bool` flag
+   - Add `categoriesArchiveStale: 'categories_archive_stale'` to `src/lib/ipc.ts`
+   - Expose "Auto-archive inactive categories" toggle in `src/app/(app)/settings/page.tsx` with configurable threshold (default 12 months)
+   - Done when: `cargo test` verifies (a) category with 0 links for 13 months → archived; (b) category with 1+ links within 12 months → not archived; (c) settings persist threshold across restarts
+
+### Sprint 13: Conflict resolution + PDF export
+
+[ ] **8.5 — F4.5 Calendar conflict resolution UI**
+   - Detect conflicts server-side: add `calendar_detect_conflicts(user_id: String)` command in `src-tauri/src/commands/calendar.rs`
+   - Conflict = two `calendar_events` with overlapping `(start_time, end_time)` on the same calendar source
+   - Return `Vec<ConflictPair> { event_a: CalendarEventDto, event_b: CalendarEventDto, overlap_minutes: u32 }`
+   - Add `calendarDetectConflicts: 'calendar_detect_conflicts'` to `src/lib/ipc.ts`
+   - Add "Conflicts" badge on Calendar Sync settings page (`src/app/(app)/settings/page.tsx`) showing count
+   - "Resolve Conflicts" panel: side-by-side event cards; user can "Keep A", "Keep B", or "Keep Both"; chosen action calls `calendar_events_delete` or `calendar_events_keep_both`
+   - Done when: two overlapping test events inserted → conflict detected → UI shows merge dialog → user keeps one → other deleted; zero conflicts → badge hidden
+
+[ ] **8.6 — PDF summary report export**
+   - Note: `export_pdf_bundle` (zip of original files) already exists in `src-tauri/src/commands/export.rs` — this task adds a new *formatted summary* PDF, distinct from the bundle.
+   - Generate the summary PDF on the **frontend** using `pdf-lib` (`^1.17.1`, already in `package.json`) — no new Rust crate needed.
+   - Add a thin `export_pdf_summary_bytes(user_id, date_from, date_to, include_documents, include_appointments, include_contacts)` Tauri command in `src-tauri/src/commands/export.rs` that returns the raw JSON data (documents list, appointment list, contacts list) for the given filters; the frontend assembles the PDF.
+   - Frontend (`src/components/ExportDialog.tsx` or new `SummaryExportDialog.tsx`):
+     - Use `pdf-lib` to create a PDF with cover page (user name, date range, timestamp) + one section per entity type listing title, date, category tags, and extracted text snippet (first 200 chars)
+     - Prompt save path via `@tauri-apps/plugin-dialog` `save()` dialog; write bytes via Tauri `writeFile`
+   - Add `exportPdfSummaryBytes: 'export_pdf_summary_bytes'` to `src/lib/ipc.ts`
+   - Done when: `tsc --noEmit` passes; generated PDF is non-empty and opens in system viewer; `cargo test` covers the data-fetch command returning correct entity counts for given filters
+
+[ ] **8.7 — v1.2 acceptance tests**
+   - Run acceptance test cases from `docs/ACCEPTANCE_TESTS_V2.md`:
+     - F7 (advanced search filters): TC-F7-01 through TC-F7-04
+     - F8 (category drag-reorder + auto-archive): TC-F8-01 through TC-F8-03
+     - F9 (calendar conflict resolution): TC-F9-01 through TC-F9-03
+     - F10 (PDF summary export): TC-F10-01 through TC-F10-03
+   - Also run `docs/MANUAL_TEST_GUIDE.md` checklists F7–F10
+   - Add Rust unit tests for `documents_search_filtered`, `category_reorder`, `categories_archive_stale`, `calendar_detect_conflicts`, `export_pdf_summary_bytes`
+   - Done when: ≥ 80% coverage on all new code; `cargo test` + `npx tsc --noEmit` both pass; all Phase 8 TC IDs manually verified
+
+### Sprint 13 — Release
+
+[ ] **8.8 — v1.2 smoke test**
+   - Manual walkthrough: advanced search, drag-reorder categories, auto-archive toggle, conflict resolution, PDF export
+   - Verify no regressions in v1.1 flows
+
+[ ] **8.9 — Bump version & tag v1.2.0**
+   - Update `package.json` version to `1.2.0`
+   - Update `src-tauri/tauri.conf.json` version to `1.2.0`
+   - **Requires explicit user approval before running `git tag`**
+
+[ ] **8.10 — Verify GitHub Release**
+   - Confirm 4 platform artifacts published; update README if needed
+
+---
+
+## Phase 9 — v1.3+ Extended Features
+
+> **Target:** v1.3.0 — Q4 2026 / Q1 2027  
+> Covers all 5 PRD_V2 Phase 3 items. Each is independently shippable; order by dependency then effort.
+
+### Sprint 14: Calendar extensions
+
+[ ] **9.1 — iCalendar import/export (.ics)**
+   - Add `icalendar_import(user_id: String, file_path: String)` and `icalendar_export(user_id: String, appointment_ids: Vec<String>, file_path: String)` in `src-tauri/src/commands/calendar.rs`
+   - Use `icalendar` crate (add to `src-tauri/Cargo.toml` — not yet present)
+   - Import: parse VEVENT components → `appointments` rows; skip duplicates by `external_event_id`
+   - Export: serialize selected appointments as VCALENDAR → write to chosen file path
+   - Add `icalendarImport: 'icalendar_import', icalendarExport: 'icalendar_export'` to `src/lib/ipc.ts`
+   - Add "Import .ics" + "Export .ics" buttons to Appointments page toolbar (`src/app/(app)/appointments/page.tsx`)
+   - Done when: `cargo test` verifies (a) round-trip VEVENT → appointment → VEVENT preserves title/date/location; (b) duplicate import skips, no new row; (c) export produces valid .ics parseable by `icalendar` crate
+
+[ ] **9.2 — Outlook Calendar sync (Windows)**
+   - Windows-only (`#[cfg(target_os = "windows")]`) — no-op stubs compiled on macOS/Linux
+   - Use Microsoft Graph REST API via `reqwest` (offline-first caveat: sync only when network available; clearly communicate this in UI)
+   - Add `outlook_auth_url()` → OAuth2 PKCE flow via system browser; store refresh token encrypted in SQLite `settings`
+   - Add `outlook_sync(user_id: String)` → fetch events from `/me/calendarView` for ±90 days; upsert into `calendar_events`
+   - Add Outlook section in settings (Windows only); hidden on macOS/Linux
+   - Done when: `cargo test` (mocked HTTP) verifies auth token storage + event upsert; integration test on Windows CI runner confirms sync returns events (use test account)
+
+### Sprint 15: Intelligence features
+
+[ ] **9.3 — AI appointment notes summarization (local heuristic)**
+   - Offline-first: no external AI API. Implement rule-based extractive summarization in `src-tauri/src/services/summarizer.rs`:
+     - Sentence scoring: TF-IDF weight using existing FTS5 term frequencies + position bias (first/last sentences)
+     - Return top-3 ranked sentences as summary (extractive, not generative)
+   - Add `summarize_appointment_notes(user_id: String, appointment_id: String)` Tauri command
+   - Add `summarizeAppointmentNotes: 'summarize_appointment_notes'` to `src/lib/ipc.ts`
+   - In appointment detail page `src/app/(app)/appointments/[id]/page.tsx`, add "Summarize Notes" button; show summary in collapsible panel
+   - Done when: `cargo test` verifies (a) 10-sentence notes → 3-sentence summary, (b) notes < 3 sentences → return as-is; summary renders in UI without layout shift
+
+[ ] **9.4 — Medical code tagging (ICD-10)**
+   - Bundle a compressed ICD-10-CM lookup table (top 2 000 codes by frequency) as a Rust constant or embedded SQLite table; no network required
+   - Add `icd10_suggest(text: String)` command in `src-tauri/src/commands/tags.rs` (new file):
+     - Tokenize input, fuzzy-match against ICD-10 descriptions using Levenshtein distance ≤ 2
+     - Return `Vec<Icd10Suggestion> { code: String, description: String, confidence: f32 }`
+   - Add `icd10Suggest: 'icd10_suggest'` to `src/lib/ipc.ts`
+   - In document detail and appointment detail pages, add "Suggest ICD-10 Codes" button; user can accept/reject suggestions stored as tags in `document_tags` / `appointment_tags`
+   - Done when: `cargo test` verifies (a) "chest pain" → at least one suggestion with code `R07.*`; (b) gibberish input → empty result; (c) accepted tag persists to DB
+
+[ ] **9.5 — Multi-user vault support**
+   - Extend DB schema (migration v6): add `users (id, display_name, password_hash, created_at)` table; add `user_id` FK to `documents`, `appointments`, `contacts`, `categories`, `calendar_events`, `settings`
+   - Add `auth_add_user(display_name: String, password: String)` and `auth_switch_user(user_id: String, password: String)` commands in `src-tauri/src/commands/auth.rs`
+   - Add `authAddUser: 'auth_add_user', authSwitchUser: 'auth_switch_user'` to `src/lib/ipc.ts`
+   - Each user has their own PBKDF2-derived SQLCipher key (key rotation on user switch via `PRAGMA rekey`)
+   - Login screen (`src/app/page.tsx`) shows user picker; each user logs in with own password
+   - Done when: `cargo test` verifies (a) two users can be created; (b) documents created by user A not visible when logged in as user B; (c) switching users re-encrypts connection; (d) deleting a user cascades all their rows
+
+### Sprint 16 — Release
+
+[ ] **9.6 — v1.3 smoke test**
+   - Manual walkthrough of all new v1.3 flows on each platform
+   - Confirm no regressions in v1.1 / v1.2 flows
+
+[ ] **9.7 — Bump version & tag v1.3.0**
+   - Update `package.json` version to `1.3.0`
+   - Update `src-tauri/tauri.conf.json` version to `1.3.0`
+   - **Requires explicit user approval before running `git tag`**
+
+[ ] **9.8 — Verify GitHub Release**
+   - Confirm 4 platform artifacts published; update README if needed
 
 ---
 
