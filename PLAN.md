@@ -8,7 +8,7 @@
 
 ```
 Phase 8 — v1.2 Enhancements
-Current task: 8.7 — v1.2 acceptance tests
+Current task: 8.8 — v1.2 smoke test
 ```
 
 ---
@@ -376,7 +376,7 @@ Current task: 8.7 — v1.2 acceptance tests
    - Add `exportPdfSummaryBytes: 'export_pdf_summary_bytes'` to `src/lib/ipc.ts`
    - Done when: `tsc --noEmit` passes; generated PDF is non-empty and opens in system viewer; `cargo test` covers the data-fetch command returning correct entity counts for given filters
 
-▶ **8.7 — v1.2 acceptance tests**
+[x] **8.7 — v1.2 acceptance tests**
    - Run acceptance test cases from `docs/ACCEPTANCE_TESTS_V2.md`:
      - F7 (advanced search filters): TC-F7-01 through TC-F7-04
      - F8 (category drag-reorder + auto-archive): TC-F8-01 through TC-F8-03
@@ -388,7 +388,7 @@ Current task: 8.7 — v1.2 acceptance tests
 
 ### Sprint 13 — Release
 
-[ ] **8.8 — v1.2 smoke test**
+▶ **8.8 — v1.2 smoke test**
    - Manual walkthrough: advanced search, drag-reorder categories, auto-archive toggle, conflict resolution, PDF export
    - Verify no regressions in v1.1 flows
 
