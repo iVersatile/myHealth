@@ -24,7 +24,8 @@ use commands::categories::{
     assign_category_to_appointment, assign_category_to_document, categories_assign_appointment,
     categories_assign_document, categories_bulk_link, categories_create, categories_delete,
     categories_for_appointment, categories_for_document, categories_list, categories_unassign,
-    categories_update, unassign_category_from_appointment, unassign_category_from_document,
+    categories_update, category_reorder, unassign_category_from_appointment,
+    unassign_category_from_document,
 };
 use commands::clinics::{
     clinics_create, clinics_delete, clinics_get, clinics_list, clinics_update,
@@ -110,6 +111,7 @@ pub fn run() {
             categories_for_appointment,
             categories_unassign,
             categories_bulk_link,
+            category_reorder,
             assign_category_to_document,
             unassign_category_from_document,
             assign_category_to_appointment,

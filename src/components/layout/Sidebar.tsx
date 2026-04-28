@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/notes', label: 'Notes' },
   { href: '/contacts', label: 'Contacts' },
   { href: '/timeline', label: 'Timeline' },
+  { href: '/categories', label: 'Categories' },
 ] as const
 
 export function Sidebar() {

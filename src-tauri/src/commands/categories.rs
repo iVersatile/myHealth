@@ -378,6 +378,83 @@ pub fn categories_for_appointment(
     Ok(ids)
 }
 
+fn category_depth(conn: &rusqlite::Connection, category_id: &str) -> Result<u32, CommandError> {
+    let mut depth = 0u32;
+    let mut current = category_id.to_string();
+    loop {
+        let parent: Option<String> = conn
+            .query_row(
+                "SELECT parent_id FROM categories WHERE id = ?1",
+                rusqlite::params![current],
+                |row| row.get(0),
+            )
+            .map_err(|_| CommandError::NotFound("category not found".to_string()))?;
+        match parent {
+            None => return Ok(depth),
+            Some(p) => {
+                depth += 1;
+                if depth > 5 {
+                    return Ok(depth);
+                }
+                current = p;
+            }
+        }
+    }
+}
+
+#[tauri::command]
+pub fn category_reorder(
+    category_id: String,
+    new_parent_id: Option<String>,
+    new_position: u32,
+    state: State<'_, AppState>,
+) -> Result<Category, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    // Verify category exists and is not a system category
+    let is_system: i64 = conn
+        .query_row(
+            "SELECT is_system FROM categories WHERE id = ?1",
+            rusqlite::params![category_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| CommandError::NotFound("category not found".to_string()))?;
+    if is_system != 0 {
+        return Err(CommandError::Internal(
+            "cannot reorder system categories".to_string(),
+        ));
+    }
+
+    // Prevent circular reference: new_parent cannot be the category itself or one of its descendants
+    if let Some(ref pid) = new_parent_id {
+        if pid == &category_id {
+            return Err(CommandError::Internal(
+                "category cannot be its own parent".to_string(),
+            ));
+        }
+        // Check depth of the new parent — moving category under it adds 1
+        let parent_depth = category_depth(conn, pid)?;
+        if parent_depth >= 4 {
+            return Err(CommandError::Internal(
+                "maximum category depth of 5 would be exceeded".to_string(),
+            ));
+        }
+    }
+
+    conn.execute(
+        "UPDATE categories SET parent_id = ?1, sort_order = ?2 WHERE id = ?3",
+        rusqlite::params![new_parent_id, new_position as i64, category_id],
+    )?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, name, parent_id, color_hex, is_system, sort_order, created_at \
+         FROM categories WHERE id = ?1",
+    )?;
+    let cat = stmt.query_row(rusqlite::params![category_id], row_to_category)?;
+    Ok(cat)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -48,6 +48,7 @@ export const IPC = {
   categoriesForAppointment: 'categories_for_appointment',
   categoriesUnassign: 'categories_unassign',
   categoriesBulkLink: 'categories_bulk_link',
+  categoryReorder: 'category_reorder',
   assignCategoryToDocument: 'assign_category_to_document',
   unassignCategoryFromDocument: 'unassign_category_from_document',
   assignCategoryToAppointment: 'assign_category_to_appointment',
