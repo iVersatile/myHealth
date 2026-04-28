@@ -3,6 +3,20 @@ use rusqlite::{Connection, Result};
 const SCHEMA_V1: &str = include_str!("schema.sql");
 const SCHEMA_V2: &str = include_str!("migrations/v2.sql");
 const SCHEMA_V3: &str = include_str!("migrations/v3.sql");
+const SCHEMA_V4: &str = "
+    CREATE INDEX IF NOT EXISTS idx_documents_category
+        ON documents (category);
+    CREATE INDEX IF NOT EXISTS idx_appointments_appt_date
+        ON appointments (appt_date);
+    CREATE INDEX IF NOT EXISTS idx_calendar_events_appointment_id
+        ON calendar_events (appointment_id);
+    CREATE INDEX IF NOT EXISTS idx_contacts_is_deduped_with
+        ON contacts (is_deduped_with);
+    CREATE INDEX IF NOT EXISTS idx_document_appointments_appointment_id
+        ON document_appointments (appointment_id);
+    CREATE INDEX IF NOT EXISTS idx_documents_created_at
+        ON documents (created_at);
+";
 
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
@@ -39,6 +53,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 4 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V4)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [4])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -65,7 +86,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
     }
 
     #[test]
@@ -79,7 +100,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
     }
 
     // ── Categories ───────────────────────────────────────────────────────────
@@ -614,5 +635,49 @@ mod tests {
             )
             .unwrap();
         assert_eq!(score, 5);
+    }
+
+    #[test]
+    fn migration_v4_creates_indexes() {
+        let conn = migrated_conn();
+
+        // Check that all 6 indexes exist in sqlite_master
+        let mut stmt = conn
+            .prepare(
+                "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' \
+                 ORDER BY name",
+            )
+            .unwrap();
+
+        let indexes: Vec<String> = stmt
+            .query_map([], |row| row.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<Vec<String>>>()
+            .unwrap();
+
+        // Expected indexes from SCHEMA_V4
+        let expected = vec![
+            "idx_documents_category",
+            "idx_appointments_appt_date",
+            "idx_calendar_events_appointment_id",
+            "idx_contacts_is_deduped_with",
+            "idx_document_appointments_appointment_id",
+            "idx_documents_created_at",
+        ];
+
+        // v2 already created idx_calendar_events_calendar_id; v4 adds 6 more
+        assert!(
+            indexes.len() >= 6,
+            "Expected at least 6 indexes, found: {:?}",
+            indexes
+        );
+        for expected_idx in expected {
+            assert!(
+                indexes.contains(&expected_idx.to_string()),
+                "Index {} not found in {:?}",
+                expected_idx,
+                indexes
+            );
+        }
     }
 }
