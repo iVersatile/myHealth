@@ -6,12 +6,30 @@ use crate::{crypto, db};
 
 use super::AppState;
 
+const LEGACY_ITERATIONS: u32 = 64_000;
+
 fn db_path(data_dir: &Path) -> PathBuf {
     data_dir.join("myhealth.db")
 }
 
 fn salt_path(data_dir: &Path) -> PathBuf {
     data_dir.join("myhealth.salt")
+}
+
+fn kdf_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("myhealth.kdf")
+}
+
+fn read_stored_iterations(data_dir: &Path) -> u32 {
+    std::fs::read_to_string(kdf_path(data_dir))
+        .ok()
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(LEGACY_ITERATIONS)
+}
+
+fn write_iterations(data_dir: &Path, iterations: u32) -> Result<(), String> {
+    std::fs::write(kdf_path(data_dir), iterations.to_string())
+        .map_err(|e| format!("write kdf: {e}"))
 }
 
 fn generate_salt() -> [u8; 32] {
@@ -59,6 +77,7 @@ pub fn set_password_internal(
     let salt = generate_salt();
     std::fs::create_dir_all(data_dir).map_err(|e| format!("create data dir: {e}"))?;
     std::fs::write(salt_path(data_dir), salt).map_err(|e| format!("write salt: {e}"))?;
+    write_iterations(data_dir, crypto::ITERATIONS)?;
     let hex = crypto::key_to_hex(&crypto::derive_key(password, &salt));
     let conn = open_db_for_path(data_dir, &hex)?;
     Ok((conn, hex))
@@ -66,8 +85,26 @@ pub fn set_password_internal(
 
 pub fn unlock_internal(data_dir: &Path, password: &str) -> Result<(Connection, String), String> {
     let salt = load_salt(data_dir)?;
-    let hex = crypto::key_to_hex(&crypto::derive_key(password, &salt));
+    let stored_iters = read_stored_iterations(data_dir);
+    let hex = {
+        use hmac::Hmac;
+        use pbkdf2::pbkdf2;
+        use sha2::Sha512;
+        let mut key = [0u8; crypto::KEY_LEN];
+        pbkdf2::<Hmac<Sha512>>(password.as_bytes(), &salt, stored_iters, &mut key)
+            .expect("HMAC<Sha512> key length is always valid");
+        crypto::key_to_hex(&key)
+    };
     let conn = open_db_for_path(data_dir, &hex).map_err(|_| "incorrect password".to_string())?;
+
+    if stored_iters < crypto::ITERATIONS {
+        let new_hex = crypto::key_to_hex(&crypto::derive_key(password, &salt));
+        conn.execute_batch(&format!("PRAGMA rekey = \"x'{new_hex}'\";"))
+            .map_err(|e| format!("rekey during migration: {e}"))?;
+        write_iterations(data_dir, crypto::ITERATIONS)?;
+        return Ok((conn, new_hex));
+    }
+
     Ok((conn, hex))
 }
 
@@ -190,6 +227,51 @@ mod tests {
         drop(conn);
         assert!(db_path(&dir).exists(), "db file should exist");
         assert!(salt_path(&dir).exists(), "salt file should exist");
+        assert!(kdf_path(&dir).exists(), "kdf file should exist");
+        let stored = read_stored_iterations(&dir);
+        assert_eq!(
+            stored,
+            crypto::ITERATIONS,
+            "kdf should store current iterations"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn legacy_db_migrates_to_new_iterations() {
+        use hmac::Hmac;
+        use pbkdf2::pbkdf2;
+        use sha2::Sha512;
+
+        let dir = test_dir();
+        let salt = generate_salt();
+        std::fs::write(salt_path(&dir), salt).unwrap();
+
+        let mut old_key = [0u8; crypto::KEY_LEN];
+        pbkdf2::<Hmac<Sha512>>(
+            "mypassword".as_bytes(),
+            &salt,
+            LEGACY_ITERATIONS,
+            &mut old_key,
+        )
+        .unwrap();
+        let old_hex = crypto::key_to_hex(&old_key);
+        let conn = open_db_for_path(&dir, &old_hex).unwrap();
+        drop(conn);
+
+        let (conn2, new_hex) = unlock_internal(&dir, "mypassword").unwrap();
+        drop(conn2);
+
+        assert_ne!(new_hex, old_hex, "key should change after migration");
+        assert_eq!(
+            read_stored_iterations(&dir),
+            crypto::ITERATIONS,
+            "kdf should be updated after migration"
+        );
+
+        let (conn3, _) = unlock_internal(&dir, "mypassword").unwrap();
+        drop(conn3);
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 
