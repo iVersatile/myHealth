@@ -8,7 +8,7 @@
 
 ```
 Phase 7 — Upload Analysis Gap Closing
-Current: 7.4 — International phone numbers (Gap 4)
+Current: COMPLETE — all gaps closed; Phase 5 next (or deferred to v1.2)
 ```
 
 ---
@@ -251,7 +251,7 @@ Current: 7.4 — International phone numbers (Gap 4)
    - Add `INSTITUTION_SUFFIXES`; emit `clinic:<Name>` tag for institution-bearing tokens
    - Done when: `parse_filename("StMarysHospital_2024_BloodTest")` returns tag `"clinic:St Marys Hospital"`
 
-▶ **7.4 — Gap 4: International phone numbers**
+[x] **7.4 — Gap 4: International phone numbers**
    - File: `src-tauri/src/extraction/contact.rs`
    - Add E.164 fallback regex after existing UK pattern
    - Done when: PDF containing `+1 (555) 123-4567` returns that number in `ContactSuggestionDto.phone`
