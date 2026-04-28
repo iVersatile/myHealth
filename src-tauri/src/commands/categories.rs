@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::AppState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -92,8 +93,11 @@ pub fn categories_create(
         )
         .map_err(|e| e.to_string())?;
 
-    stmt.query_row(rusqlite::params![id], row_to_category)
-        .map_err(|e| e.to_string())
+    let cat = stmt
+        .query_row(rusqlite::params![id], row_to_category)
+        .map_err(|e| e.to_string())?;
+    upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "");
+    Ok(cat)
 }
 
 #[tauri::command]
@@ -135,8 +139,11 @@ pub fn categories_update(
         )
         .map_err(|e| e.to_string())?;
 
-    stmt.query_row(rusqlite::params![input.id], row_to_category)
-        .map_err(|e| e.to_string())
+    let cat = stmt
+        .query_row(rusqlite::params![input.id], row_to_category)
+        .map_err(|e| e.to_string())?;
+    upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "");
+    Ok(cat)
 }
 
 #[tauri::command]
@@ -162,6 +169,7 @@ pub fn categories_delete(id: String, state: State<'_, AppState>) -> Result<(), S
     )
     .map_err(|e| e.to_string())?;
 
+    remove_from_search_index(conn, &id);
     Ok(())
 }
 
