@@ -16,7 +16,10 @@ use commands::appointments::{
 use commands::auth::{
     auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
 };
-use commands::calendar::{calendar_list_sources, calendar_sync, calendar_toggle_source};
+use commands::calendar::{
+    calendar_import_events, calendar_list_sources, calendar_request_permission, calendar_sync,
+    calendar_toggle_source,
+};
 use commands::categories::{
     assign_category_to_appointment, assign_category_to_document, categories_assign_appointment,
     categories_assign_document, categories_bulk_link, categories_create, categories_delete,
@@ -111,6 +114,8 @@ pub fn run() {
             calendar_list_sources,
             calendar_sync,
             calendar_toggle_source,
+            calendar_request_permission,
+            calendar_import_events,
             clinics_list,
             clinics_get,
             clinics_create,

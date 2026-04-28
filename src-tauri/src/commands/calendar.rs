@@ -154,7 +154,91 @@ pub fn calendar_sync(source_ids: Vec<String>, state: State<'_, AppState>) -> Res
         .map_err(|e| e.to_string())?;
     }
 
+    // Record global last sync timestamp in settings
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES ('calendar_last_sync', ?1) \
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        rusqlite::params![now],
+    )
+    .map_err(|e| e.to_string())?;
+
     Ok(upserted_count)
+}
+
+/// Request macOS calendar permission. Returns true if granted.
+#[tauri::command]
+pub fn calendar_request_permission() -> Result<bool, String> {
+    calendar::request_permission()
+}
+
+/// Import unimported calendar events as appointments.
+/// Skips events already imported (is_imported = 1).
+/// Returns the number of appointments created.
+#[tauri::command]
+pub fn calendar_import_events(state: State<'_, AppState>) -> Result<usize, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    let now = Utc::now().to_rfc3339();
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, title, start_at, location, notes \
+             FROM calendar_events WHERE is_imported = 0",
+        )
+        .map_err(|e| e.to_string())?;
+
+    struct EventRow {
+        id: String,
+        title: String,
+        start_at: String,
+        location: Option<String>,
+        notes: Option<String>,
+    }
+
+    let rows: Vec<EventRow> = stmt
+        .query_map([], |row| {
+            Ok(EventRow {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                start_at: row.get(2)?,
+                location: row.get(3)?,
+                notes: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let mut created = 0usize;
+    for row in &rows {
+        let appt_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO appointments \
+             (id, title, doctor_name, clinic_name, specialty, appt_date, \
+              duration_min, location, notes, status, reminder_min, created_at, updated_at) \
+             VALUES (?1, ?2, NULL, NULL, NULL, ?3, 60, ?4, ?5, 'scheduled', NULL, ?6, ?6)",
+            rusqlite::params![
+                appt_id,
+                row.title,
+                row.start_at,
+                row.location,
+                row.notes,
+                now
+            ],
+        )
+        .map_err(|e| e.to_string())?;
+
+        conn.execute(
+            "UPDATE calendar_events SET is_imported = 1 WHERE id = ?1",
+            rusqlite::params![row.id],
+        )
+        .map_err(|e| e.to_string())?;
+
+        created += 1;
+    }
+
+    Ok(created)
 }
 
 /// Enable or disable a calendar source.

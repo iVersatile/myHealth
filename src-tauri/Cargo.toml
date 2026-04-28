@@ -36,3 +36,11 @@ strsim = "0.11"
 pdf-extract = "0.7"
 image = "0.25"
 tokio = { version = "1", features = ["process", "time", "rt", "rt-multi-thread", "macros"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc = "0.2"
+block = "0.1"
+
+[lints.rust]
+# objc 0.2 macros internally use cfg(cargo-clippy) — suppress the lint globally for this crate
+unexpected_cfgs = "allow"

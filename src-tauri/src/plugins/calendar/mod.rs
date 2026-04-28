@@ -24,6 +24,18 @@ pub struct CalendarEvent {
     pub notes: Option<String>,
 }
 
+/// Request calendar permission from the OS. Must be called before list_calendars/fetch_events.
+pub fn request_permission() -> Result<bool, String> {
+    #[cfg(target_os = "macos")]
+    {
+        macos::request_permission()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Err("Calendar sync is only supported on macOS".to_string())
+    }
+}
+
 /// List available macOS calendars.
 pub fn list_calendars() -> Result<Vec<CalendarSource>, String> {
     #[cfg(target_os = "macos")]
