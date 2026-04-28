@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import DOMPurify from 'dompurify'
 
 interface SearchResult {
   entity_type: string
@@ -140,7 +141,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
                 {r.snippet && (
                   <div
                     className="mt-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)] [&_mark]:bg-[var(--color-accent)]/20 [&_mark]:text-[var(--color-accent)] [&_mark]:rounded-sm [&_mark]:px-0.5"
-                    dangerouslySetInnerHTML={{ __html: r.snippet }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(r.snippet) }}
                   />
                 )}
               </button>
