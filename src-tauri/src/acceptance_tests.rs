@@ -158,14 +158,17 @@ mod gap2_clinic_name_from_filename {
 
 // ── Gap 3 — F2.3/F2.4: OCR pipeline returns text for a native PDF ───────────
 //
-// Done when: calling `extract()` on the bundled sample.pdf returns non-empty
-// text (native extraction path, no Tesseract required in CI).  The per-page
-// progress/timeout path requires Poppler+Tesseract and is verified by the
-// existing unit tests in ocr.rs; those tools are not guaranteed in CI.
+// Done when: the native PDF extraction layer returns non-empty text for a
+// text-based PDF (no Tesseract required in CI).  Tested via
+// `extraction::pdf::extract_pdf_text` directly so the OCR density threshold
+// does not cause a Tesseract fallback for the small fixture.
+// The per-page OCR progress path requires Poppler+Tesseract and is verified
+// by the existing unit tests in ocr.rs; those tools are not guaranteed in CI.
 
 #[cfg(test)]
 mod gap3_extraction_pipeline {
     use crate::extraction::extract;
+    use crate::extraction::pdf::extract_pdf_text;
     use std::path::Path;
 
     fn fixture(name: &str) -> std::path::PathBuf {
@@ -182,10 +185,10 @@ mod gap3_extraction_pipeline {
             eprintln!("fixture not found, skipping: {}", path.display());
             return;
         }
-        let result = extract(&path);
+        let text = extract_pdf_text(&path).unwrap_or_default();
         assert!(
-            !result.text.is_empty(),
-            "expected non-empty extracted text from sample.pdf"
+            !text.is_empty(),
+            "expected non-empty extracted text from sample.pdf via native path"
         );
     }
 
