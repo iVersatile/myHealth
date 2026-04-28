@@ -7,8 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Current: Phase 6 — Release
-Task 6.3 — Verify GitHub Release
+ALL v1.1.0 TASKS COMPLETE ✅
+v1.1.0 released — 4 artifacts on GitHub Releases
+Next: v1.2 planning (Phase 5 — Apple Calendar, deferred)
 ```
 
 ---
@@ -273,7 +274,7 @@ Task 6.3 — Verify GitHub Release
    - Update `src-tauri/tauri.conf.json` version to `1.1.0`
    - **Requires explicit user approval before running `git tag`** (see `docs/COMMIT_STRATEGY.md`)
 
-▶ [ ] **6.3 — Verify GitHub Release**
+[x] **6.3 — Verify GitHub Release**
    - Confirm 4 platform artifacts published; update README Known Issues if needed
 
 ---
