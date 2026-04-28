@@ -4,7 +4,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Category {
@@ -49,7 +49,7 @@ fn row_to_category(row: &rusqlite::Row) -> rusqlite::Result<Category> {
 #[tauri::command]
 pub fn categories_list(state: State<'_, AppState>) -> Result<Vec<Category>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let mut stmt = conn
         .prepare(
@@ -72,7 +72,7 @@ pub fn categories_create(
     state: State<'_, AppState>,
 ) -> Result<Category, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let id = Uuid::new_v4().to_string();
     let color_hex = input.color_hex.unwrap_or_else(|| "#6B7280".to_string());
@@ -106,7 +106,7 @@ pub fn categories_update(
     state: State<'_, AppState>,
 ) -> Result<Category, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     if let Some(name) = &input.name {
         conn.execute(
@@ -149,7 +149,7 @@ pub fn categories_update(
 #[tauri::command]
 pub fn categories_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let is_system: i64 = conn
         .query_row(
@@ -180,7 +180,7 @@ pub fn categories_assign_document(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
@@ -198,7 +198,7 @@ pub fn categories_assign_appointment(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)",
@@ -217,7 +217,7 @@ pub fn categories_unassign(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     match entity_type.as_str() {
         "document" => {
@@ -249,7 +249,7 @@ pub fn categories_bulk_link(
     state: State<'_, AppState>,
 ) -> Result<usize, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let sql = match entity_type.as_str() {
         "document" => {
@@ -290,7 +290,7 @@ pub fn assign_category_to_document(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
@@ -309,7 +309,7 @@ pub fn unassign_category_from_document(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "DELETE FROM document_categories WHERE document_id = ?1 AND category_id = ?2",
@@ -328,7 +328,7 @@ pub fn assign_category_to_appointment(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO appointment_categories (appointment_id, category_id) VALUES (?1, ?2)",
@@ -347,7 +347,7 @@ pub fn unassign_category_from_appointment(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "DELETE FROM appointment_categories WHERE appointment_id = ?1 AND category_id = ?2",
@@ -364,7 +364,7 @@ pub fn categories_for_document(
     state: State<'_, AppState>,
 ) -> Result<Vec<String>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let mut stmt = conn
         .prepare("SELECT category_id FROM document_categories WHERE document_id = ?1")
@@ -385,7 +385,7 @@ pub fn categories_for_appointment(
     state: State<'_, AppState>,
 ) -> Result<Vec<String>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let mut stmt = conn
         .prepare("SELECT category_id FROM appointment_categories WHERE appointment_id = ?1")

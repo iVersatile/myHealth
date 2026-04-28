@@ -2,7 +2,7 @@ use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchResult {
@@ -88,7 +88,7 @@ pub fn search_query(
     }
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let filter_types = types.as_ref().filter(|t| !t.is_empty());
 

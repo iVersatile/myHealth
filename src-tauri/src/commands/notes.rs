@@ -4,7 +4,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, strip_html, upsert_search_index};
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Note {
@@ -76,7 +76,7 @@ pub fn notes_list(
     state: State<'_, AppState>,
 ) -> Result<Vec<Note>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let order = if pinned_first.unwrap_or(false) {
         "ORDER BY is_pinned DESC, updated_at DESC"
@@ -114,7 +114,7 @@ pub fn notes_list(
 #[tauri::command]
 pub fn notes_get(id: String, state: State<'_, AppState>) -> Result<Note, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     load_note(conn, &id)
 }
 
@@ -124,7 +124,7 @@ pub fn notes_create(input: NoteCreateInput, state: State<'_, AppState>) -> Resul
     let now = Utc::now().to_rfc3339();
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT INTO notes (id, title, content, is_pinned, created_at, updated_at)
@@ -156,7 +156,7 @@ pub fn notes_update(
     let now = Utc::now().to_rfc3339();
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let rows = conn
         .execute(
@@ -190,7 +190,7 @@ pub fn notes_update(
 #[tauri::command]
 pub fn notes_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let rows = conn
         .execute("DELETE FROM notes WHERE id = ?", [&id])
@@ -209,7 +209,7 @@ pub fn notes_pin(id: String, pinned: bool, state: State<'_, AppState>) -> Result
     let now = Utc::now().to_rfc3339();
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let rows = conn
         .execute(
@@ -234,7 +234,7 @@ pub fn notes_tags_set(
     let now = Utc::now().to_rfc3339();
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let exists: bool = conn
         .query_row("SELECT 1 FROM notes WHERE id = ?", [&id], |_| Ok(()))

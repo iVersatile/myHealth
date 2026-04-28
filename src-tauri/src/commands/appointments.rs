@@ -4,7 +4,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Appointment {
@@ -112,7 +112,7 @@ pub fn appointments_list(
     }
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let mut sql = String::from(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
@@ -158,7 +158,7 @@ pub fn appointments_list_upcoming(
     state: State<'_, AppState>,
 ) -> Result<Vec<Appointment>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let today = Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
     let cutoff = Utc::now()
@@ -216,7 +216,7 @@ fn load_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Appointment> {
 #[tauri::command]
 pub fn appointments_get(id: String, state: State<'_, AppState>) -> Result<Appointment, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     load_appointment(conn, &id)
 }
 
@@ -234,7 +234,7 @@ pub fn appointments_create(
     let reminder = input.reminder_min.unwrap_or(60);
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT INTO appointments
@@ -292,7 +292,7 @@ pub fn appointments_update(
     let now = Utc::now().to_rfc3339();
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let rows = conn
         .execute(
@@ -354,7 +354,7 @@ pub fn appointments_update(
 #[tauri::command]
 pub fn appointments_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let rows = conn
         .execute("DELETE FROM appointments WHERE id = ?", [&id])
@@ -375,7 +375,7 @@ pub fn appointments_link_document(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
         "INSERT OR IGNORE INTO appointment_documents (appointment_id, document_id) VALUES (?1, ?2)",

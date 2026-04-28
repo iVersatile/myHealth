@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Clinic {
@@ -42,7 +42,7 @@ fn row_to_clinic(row: &rusqlite::Row) -> rusqlite::Result<Clinic> {
 #[tauri::command]
 pub fn clinics_list(state: State<'_, AppState>) -> Result<Vec<Clinic>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let mut stmt = conn
         .prepare(
@@ -62,7 +62,7 @@ pub fn clinics_list(state: State<'_, AppState>) -> Result<Vec<Clinic>, String> {
 #[tauri::command]
 pub fn clinics_get(id: String, state: State<'_, AppState>) -> Result<Clinic, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.query_row(
         "SELECT id, name, address, phone, created_at FROM clinics WHERE id = ?",
@@ -78,7 +78,7 @@ pub fn clinics_create(
     state: State<'_, AppState>,
 ) -> Result<Clinic, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
@@ -103,7 +103,7 @@ pub fn clinics_update(
     state: State<'_, AppState>,
 ) -> Result<Clinic, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     if let Some(name) = input.name {
         conn.execute(
@@ -138,7 +138,7 @@ pub fn clinics_update(
 #[tauri::command]
 pub fn clinics_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute("DELETE FROM clinics WHERE id = ?", [&id])
         .map_err(|e| e.to_string())

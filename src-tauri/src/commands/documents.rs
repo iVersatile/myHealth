@@ -8,7 +8,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 use crate::parsing::filename::parse_filename;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -130,7 +130,7 @@ pub fn documents_list(
     limit: u32,
 ) -> Result<Vec<Document>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let offset = page.saturating_sub(1) * limit;
 
     let ids: Vec<String> = match &category {
@@ -171,7 +171,7 @@ pub fn documents_list(
 #[tauri::command]
 pub fn documents_get(state: State<'_, AppState>, id: String) -> Result<Document, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     load_doc(conn, &id)
 }
 
@@ -232,7 +232,7 @@ pub fn documents_upload(
 
     let now = Utc::now().to_rfc3339();
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "INSERT INTO documents \
          (id, filename, file_path, mime_type, file_size_bytes, category, \
@@ -288,7 +288,7 @@ pub fn documents_update(
         validate_category(cat)?;
     }
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let now = Utc::now().to_rfc3339();
     // COALESCE preserves the existing value when the argument is NULL
     conn.execute(
@@ -318,7 +318,7 @@ pub fn documents_update(
 #[tauri::command]
 pub fn documents_delete(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let now = Utc::now().to_rfc3339();
     let affected = conn
         .execute(
@@ -338,7 +338,7 @@ pub fn documents_delete(state: State<'_, AppState>, id: String) -> Result<(), St
 #[tauri::command]
 pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let now = Utc::now().to_rfc3339();
     let affected = conn
         .execute(
@@ -370,7 +370,7 @@ pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), S
 #[tauri::command]
 pub fn documents_get_file_url(state: State<'_, AppState>, id: String) -> Result<String, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     conn.query_row(
         "SELECT file_path FROM documents WHERE id = ? AND is_deleted = 0",
         [&id],
@@ -386,7 +386,7 @@ pub fn documents_tags_set(
     tags: Vec<String>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let exists: bool = conn
         .query_row(
@@ -751,7 +751,7 @@ pub async fn documents_run_extraction(
     // ── cache hit ────────────────────────────────────────────────────────────
     {
         let guard = state.db.lock().map_err(|e| e.to_string())?;
-        let conn = guard.as_ref().ok_or("database not open")?;
+        let conn = CommandContext::new(&guard)?.conn;
         let cached: Option<String> = conn
             .query_row(
                 "SELECT extracted_text FROM documents \
@@ -794,7 +794,7 @@ pub async fn documents_run_extraction(
     // ── cache miss — run extraction ──────────────────────────────────────────
     let file_path: String = {
         let guard = state.db.lock().map_err(|e| e.to_string())?;
-        let conn = guard.as_ref().ok_or("database not open")?;
+        let conn = CommandContext::new(&guard)?.conn;
         conn.query_row(
             "SELECT file_path FROM documents WHERE id = ?1 AND is_deleted = 0",
             rusqlite::params![id],
@@ -842,7 +842,7 @@ pub async fn documents_run_extraction(
 
     {
         let guard = state.db.lock().map_err(|e| e.to_string())?;
-        let conn = guard.as_ref().ok_or("database not open")?;
+        let conn = CommandContext::new(&guard)?.conn;
         conn.execute(
             "UPDATE documents \
              SET extracted_metadata = ?1, \
@@ -875,7 +875,7 @@ pub fn documents_get_extraction_status(
     state: State<'_, crate::commands::AppState>,
 ) -> Result<ExtractionStatus, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let meta: Option<Option<String>> = conn
         .query_row(

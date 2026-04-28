@@ -3,7 +3,7 @@ use std::fs;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ExportDocumentItem {
@@ -114,7 +114,7 @@ pub fn export_pdf_bundle(
     }
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let documents: Result<Vec<ExportDocumentItem>, String> = document_ids
         .iter()

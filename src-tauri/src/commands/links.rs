@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DocumentLink {
@@ -42,7 +42,7 @@ pub fn links_create(
     input: LinkCreateInput,
 ) -> Result<DocumentLink, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let link_type = input.link_type.unwrap_or_else(|| "related".to_string());
@@ -67,7 +67,7 @@ pub fn links_create(
 #[tauri::command]
 pub fn links_delete(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "DELETE FROM document_appointments WHERE id = ?1",
         params![id],
@@ -82,7 +82,7 @@ pub fn links_list_for_document(
     document_id: String,
 ) -> Result<Vec<DocumentLink>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let mut stmt = conn
         .prepare(
             "SELECT id, document_id, appointment_id, link_type, confidence, created_at
@@ -105,7 +105,7 @@ pub fn links_list_for_appointment(
     appointment_id: String,
 ) -> Result<Vec<DocumentLink>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let mut stmt = conn
         .prepare(
             "SELECT id, document_id, appointment_id, link_type, confidence, created_at
@@ -153,7 +153,7 @@ pub fn link_document_to_appointment(
     score: u8,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     conn.execute(
@@ -174,7 +174,7 @@ pub fn unlink_document_from_appointment(
     appointment_id: String,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "DELETE FROM document_appointments \
          WHERE document_id = ?1 AND appointment_id = ?2",
@@ -191,7 +191,7 @@ pub fn get_document_links(
     document_id: String,
 ) -> Result<Vec<LinkedAppointment>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let mut stmt = conn
         .prepare(
             "SELECT a.id, a.title, a.appt_date, a.doctor_name, da.score, da.created_at
@@ -226,7 +226,7 @@ pub fn get_appointment_links(
     appointment_id: String,
 ) -> Result<Vec<LinkedDocument>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let mut stmt = conn
         .prepare(
             "SELECT d.id, d.filename, d.category, d.document_date, da.score, da.created_at
@@ -271,7 +271,7 @@ pub fn links_score_candidates(
     use crate::services::linking::scorer::score_candidates;
 
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     // Fetch the document
     let doc = conn

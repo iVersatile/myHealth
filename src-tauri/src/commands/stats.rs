@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::AppState;
+use super::{AppState, CommandContext};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsSummary {
@@ -11,31 +11,32 @@ pub struct StatsSummary {
 
 #[tauri::command]
 pub fn stats_summary(state: tauri::State<'_, AppState>) -> Result<StatsSummary, String> {
-    state.with_db(|conn| {
-        let total_documents: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM documents WHERE is_deleted = 0",
-                [],
-                |row| row.get(0),
-            )
-            .map_err(|e| format!("failed to count documents: {e}"))?;
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = CommandContext::new(&guard)?.conn;
 
-        let total_notes: i64 = conn
-            .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
-            .map_err(|e| format!("failed to count notes: {e}"))?;
+    let total_documents: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM documents WHERE is_deleted = 0",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("failed to count documents: {e}"))?;
 
-        let upcoming_appointments: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM appointments WHERE status = 'scheduled' AND appt_date >= date('now')",
-                [],
-                |row| row.get(0),
-            )
-            .map_err(|e| format!("failed to count upcoming appointments: {e}"))?;
+    let total_notes: i64 = conn
+        .query_row("SELECT COUNT(*) FROM notes", [], |row| row.get(0))
+        .map_err(|e| format!("failed to count notes: {e}"))?;
 
-        Ok(StatsSummary {
-            total_documents,
-            total_notes,
-            upcoming_appointments,
-        })
+    let upcoming_appointments: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM appointments WHERE status = 'scheduled' AND appt_date >= date('now')",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("failed to count upcoming appointments: {e}"))?;
+
+    Ok(StatsSummary {
+        total_documents,
+        total_notes,
+        upcoming_appointments,
     })
 }

@@ -1,11 +1,11 @@
 use tauri::State;
 
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[tauri::command]
 pub fn settings_get(key: String, state: State<'_, AppState>) -> Result<Option<String>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let result = conn.query_row("SELECT value FROM settings WHERE key = ?", [&key], |row| {
         row.get::<_, String>(0)
     });
@@ -19,7 +19,7 @@ pub fn settings_get(key: String, state: State<'_, AppState>) -> Result<Option<St
 #[tauri::command]
 pub fn settings_set(key: String, value: String, state: State<'_, AppState>) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     conn.execute(
         "INSERT INTO settings (key, value) VALUES (?1, ?2)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value",

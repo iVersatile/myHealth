@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 use crate::plugins::calendar;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -33,7 +33,7 @@ fn row_to_calendar_source(row: &rusqlite::Row) -> rusqlite::Result<CalendarSourc
 #[tauri::command]
 pub fn calendar_list_sources(state: State<'_, AppState>) -> Result<Vec<CalendarSourceRow>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     // Fetch existing calendar sources from DB
     let mut stmt = conn
@@ -88,7 +88,7 @@ pub fn calendar_list_sources(state: State<'_, AppState>) -> Result<Vec<CalendarS
 #[tauri::command]
 pub fn calendar_sync(source_ids: Vec<String>, state: State<'_, AppState>) -> Result<usize, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     if source_ids.is_empty() {
         return Ok(0);
@@ -177,7 +177,7 @@ pub fn calendar_request_permission() -> Result<bool, String> {
 #[tauri::command]
 pub fn calendar_import_events(state: State<'_, AppState>) -> Result<usize, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let now = Utc::now().to_rfc3339();
 
@@ -249,7 +249,7 @@ pub fn calendar_toggle_source(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     let enabled_int: i64 = if enabled { 1 } else { 0 };
     conn.execute(
         "UPDATE calendar_sources SET enabled = ?1 WHERE id = ?2",

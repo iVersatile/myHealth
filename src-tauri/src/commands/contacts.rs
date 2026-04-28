@@ -4,7 +4,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
-use crate::commands::AppState;
+use crate::commands::{AppState, CommandContext};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Contact {
@@ -68,7 +68,7 @@ pub fn contacts_list(
     state: State<'_, AppState>,
 ) -> Result<Vec<Contact>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let contacts: Vec<Contact> = if let Some(r) = role {
         let mut stmt = conn
@@ -104,7 +104,7 @@ pub fn contacts_list(
 #[tauri::command]
 pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
@@ -121,7 +121,7 @@ pub fn contacts_create(
     state: State<'_, AppState>,
 ) -> Result<Contact, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
@@ -170,7 +170,7 @@ pub fn contacts_update(
     state: State<'_, AppState>,
 ) -> Result<Contact, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let now = Utc::now().to_rfc3339();
 
@@ -253,7 +253,7 @@ pub fn contacts_update(
 #[tauri::command]
 pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute("DELETE FROM contacts WHERE id = ?", [&id])
         .map_err(|e| e.to_string())?;
@@ -267,7 +267,7 @@ pub fn contacts_find_similar(
     state: State<'_, AppState>,
 ) -> Result<Option<Contact>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
     Ok(find_similar_contact(&name, conn))
 }
 
@@ -379,7 +379,7 @@ pub fn find_duplicate_contacts(
     state: State<'_, AppState>,
 ) -> Result<Vec<DuplicateCandidate>, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let mut stmt = conn
         .prepare(
@@ -416,7 +416,7 @@ pub fn merge_contacts(
     state: State<'_, AppState>,
 ) -> Result<Contact, String> {
     let guard = state.db.lock().map_err(|e| e.to_string())?;
-    let conn = guard.as_ref().ok_or("database not open")?;
+    let conn = CommandContext::new(&guard)?.conn;
 
     let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
 
