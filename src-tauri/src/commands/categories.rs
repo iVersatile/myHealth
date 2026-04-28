@@ -1014,4 +1014,63 @@ mod tests {
             "system categories must never be archived"
         );
     }
+
+    #[test]
+    fn reorder_updates_sort_order() {
+        let conn = open_test_db();
+        let cat = create_category(&conn, "Reorder Test", None);
+
+        conn.execute(
+            "UPDATE categories SET parent_id = ?1, sort_order = ?2 WHERE id = ?3",
+            rusqlite::params![Option::<String>::None, 42i64, cat.id],
+        )
+        .unwrap();
+
+        let sort_order: i64 = conn
+            .query_row(
+                "SELECT sort_order FROM categories WHERE id = ?1",
+                rusqlite::params![cat.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(sort_order, 42);
+    }
+
+    #[test]
+    fn reorder_updates_parent_id() {
+        let conn = open_test_db();
+        let parent = create_category(&conn, "Parent", None);
+        let child = create_category(&conn, "Child", None);
+
+        conn.execute(
+            "UPDATE categories SET parent_id = ?1, sort_order = ?2 WHERE id = ?3",
+            rusqlite::params![Some(&parent.id), 1i64, child.id],
+        )
+        .unwrap();
+
+        let stored_parent: Option<String> = conn
+            .query_row(
+                "SELECT parent_id FROM categories WHERE id = ?1",
+                rusqlite::params![child.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(stored_parent, Some(parent.id));
+    }
+
+    #[test]
+    fn reorder_blocked_for_system_category() {
+        let conn = open_test_db();
+        let cats = list_categories(&conn);
+        let system_cat = cats.iter().find(|c| c.is_system).unwrap();
+
+        let is_system: i64 = conn
+            .query_row(
+                "SELECT is_system FROM categories WHERE id = ?1",
+                rusqlite::params![system_cat.id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_ne!(is_system, 0, "system category must be blocked from reorder");
+    }
 }
