@@ -11,7 +11,7 @@ mod acceptance_tests;
 
 use commands::appointments::{
     appointments_create, appointments_delete, appointments_get, appointments_link_document,
-    appointments_list, appointments_update,
+    appointments_list, appointments_list_upcoming, appointments_update,
 };
 use commands::auth::{
     auth_change_password, auth_is_locked, auth_lock, auth_set_password, auth_unlock,
@@ -86,6 +86,7 @@ pub fn run() {
             documents_run_extraction,
             documents_tags_set,
             appointments_list,
+            appointments_list_upcoming,
             appointments_get,
             appointments_create,
             appointments_update,

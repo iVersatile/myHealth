@@ -90,17 +90,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [statsData, docs, appts, notes] = await Promise.all([
+        const [statsData, docs, upcoming, notes] = await Promise.all([
           invoke<StatsSummary>('stats_summary'),
           invoke<Document[]>('documents_list', { category: null, page: 1, limit: 10 }),
-          invoke<Appointment[]>('appointments_list', { month: null, status: null }),
+          invoke<Appointment[]>('appointments_list_upcoming', { daysAhead: 365 }),
           invoke<Note[]>('notes_list'),
         ])
-
-        const today = new Date().toISOString()
-        const upcoming = appts
-          .filter(a => a.status === 'scheduled' && a.appt_date >= today)
-          .sort((a, b) => a.appt_date.localeCompare(b.appt_date))
 
         setStats(statsData)
         setNextAppt(upcoming[0] ?? null)

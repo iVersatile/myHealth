@@ -150,6 +150,50 @@ pub fn appointments_list(
     Ok(appts)
 }
 
+/// Returns upcoming scheduled appointments within the next `days_ahead` days,
+/// ordered by date ascending. Filtering happens in SQLite rather than client JS.
+#[tauri::command]
+pub fn appointments_list_upcoming(
+    days_ahead: u32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Appointment>, String> {
+    let guard = state.db.lock().map_err(|e| e.to_string())?;
+    let conn = guard.as_ref().ok_or("database not open")?;
+
+    let today = Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let cutoff = Utc::now()
+        .checked_add_signed(chrono::Duration::days(days_ahead as i64))
+        .ok_or("date overflow")?
+        .format("%Y-%m-%dT%H:%M:%S")
+        .to_string();
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
+                    duration_min, location, notes, status, reminder_min, created_at, updated_at
+             FROM appointments
+             WHERE status = 'scheduled'
+               AND appt_date >= ?1
+               AND appt_date <= ?2
+             ORDER BY appt_date ASC",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![today, cutoff], load_row)
+        .map_err(|e| e.to_string())?;
+
+    let appts: Vec<Appointment> = rows
+        .filter_map(|r| r.ok())
+        .map(|mut a| {
+            a.document_ids = fetch_document_ids(conn, &a.id);
+            a
+        })
+        .collect();
+
+    Ok(appts)
+}
+
 fn load_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Appointment> {
     Ok(Appointment {
         id: row.get(0)?,
