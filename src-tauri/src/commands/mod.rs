@@ -28,8 +28,7 @@ impl AppState {
         }
     }
 
-    /// Run `f` with a reference to the open database connection.
-    /// Returns `Err("database not open")` when the app is locked.
+    #[allow(dead_code)]
     pub fn with_db<T, F>(&self, f: F) -> Result<T, String>
     where
         F: FnOnce(&Connection) -> Result<T, String>,
