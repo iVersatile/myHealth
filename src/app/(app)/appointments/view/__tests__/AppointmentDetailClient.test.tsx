@@ -146,6 +146,79 @@ describe('AppointmentDetailClient', () => {
     expect(mockRouterBack).toHaveBeenCalledOnce()
   })
 
+  it('shows Summarize Notes button when notes are present', async () => {
+    setupInvoke({ notes: 'Patient presented with back pain.' })
+    render(<AppointmentDetailClient />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Summarize Notes/i })).toBeDefined(),
+    )
+  })
+
+  it('does not show Summarize Notes button when notes are absent', async () => {
+    setupInvoke({ notes: null })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    expect(screen.queryByRole('button', { name: /Summarize Notes/i })).toBeNull()
+  })
+
+  it('calls summarize_appointment_notes and shows summary panel', async () => {
+    const sentences = ['Patient has back pain.', 'Prescribed medication.']
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt({ notes: 'Patient has back pain. Prescribed medication.' }))
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'summarize_appointment_notes') return Promise.resolve(sentences)
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('button', { name: /Summarize Notes/i }))
+    await waitFor(() =>
+      expect(screen.getByLabelText('Appointment notes summary')).toBeDefined(),
+    )
+    expect(screen.getByText('Patient has back pain.')).toBeDefined()
+    expect(screen.getByText('Prescribed medication.')).toBeDefined()
+  })
+
+  it('toggles summary panel closed then open', async () => {
+    const sentences = ['Key finding.']
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt({ notes: 'Key finding.' }))
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'summarize_appointment_notes') return Promise.resolve(sentences)
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('button', { name: /Summarize Notes/i }))
+    await waitFor(() => screen.getByLabelText('Appointment notes summary'))
+    const toggle = screen.getByRole('button', { name: /AI Summary/i })
+    fireEvent.click(toggle)
+    expect(screen.queryByLabelText('Appointment notes summary')).toBeNull()
+    fireEvent.click(toggle)
+    expect(screen.getByLabelText('Appointment notes summary')).toBeDefined()
+  })
+
+  it('shows error message when summarize_appointment_notes fails', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt({ notes: 'Some notes.' }))
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'summarize_appointment_notes') return Promise.reject(new Error('summarizer error'))
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('button', { name: /Summarize Notes/i }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('summarizer error'),
+    )
+  })
+
   it('calls assign_category_to_appointment when category toggled on', async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'appointments_get') return Promise.resolve(makeAppt())

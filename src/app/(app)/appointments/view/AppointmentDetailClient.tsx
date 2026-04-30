@@ -46,6 +46,11 @@ export default function AppointmentDetailClient() {
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
 
+  const [summary, setSummary] = useState<string[] | null>(null)
+  const [summarizing, setSummarizing] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+
   useEffect(() => {
     if (!id) return
     async function load() {
@@ -91,6 +96,23 @@ export default function AppointmentDetailClient() {
       setError(String(e))
     } finally {
       setUnlinking(null)
+    }
+  }
+
+  async function handleSummarize() {
+    setSummarizing(true)
+    setSummaryError(null)
+    try {
+      const sentences = await invoke<string[]>('summarize_appointment_notes', {
+        userId: '',
+        appointmentId: id,
+      })
+      setSummary(sentences)
+      setSummaryOpen(true)
+    } catch (e) {
+      setSummaryError(String(e))
+    } finally {
+      setSummarizing(false)
     }
   }
 
@@ -209,8 +231,51 @@ export default function AppointmentDetailClient() {
 
         {appt.notes && (
           <div className="mt-4">
-            <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">Notes</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">Notes</p>
+              <button
+                type="button"
+                onClick={() => void handleSummarize()}
+                disabled={summarizing}
+                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-accent)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
+              >
+                {summarizing ? 'Summarizing…' : 'Summarize Notes'}
+              </button>
+            </div>
             <p className="mt-1 whitespace-pre-wrap text-[var(--text-sm)] text-[var(--color-text)]">{appt.notes}</p>
+
+            {summaryError && (
+              <p className="mt-2 text-[var(--text-xs)] text-[var(--color-danger)]" role="alert">
+                {summaryError}
+              </p>
+            )}
+
+            {summary !== null && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  aria-expanded={summaryOpen}
+                  onClick={() => setSummaryOpen((o) => !o)}
+                  className="flex items-center gap-1 text-[var(--text-xs)] font-medium text-[var(--color-accent)] hover:underline"
+                >
+                  <span>{summaryOpen ? '▾' : '▸'}</span>
+                  <span>AI Summary ({summary.length} key {summary.length === 1 ? 'point' : 'points'})</span>
+                </button>
+                {summaryOpen && (
+                  <ul
+                    aria-label="Appointment notes summary"
+                    className="mt-2 space-y-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
+                  >
+                    {summary.map((sentence, i) => (
+                      <li key={i} className="flex gap-2 text-[var(--text-sm)] text-[var(--color-text)]">
+                        <span className="mt-0.5 shrink-0 text-[var(--color-accent)]">•</span>
+                        <span>{sentence}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         )}
       </section>

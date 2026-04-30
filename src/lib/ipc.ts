@@ -27,6 +27,7 @@ export const IPC = {
   appointmentsUpdate: 'appointments_update',
   appointmentsDelete: 'appointments_delete',
   appointmentsLinkDocument: 'appointments_link_document',
+  summarizeAppointmentNotes: 'summarize_appointment_notes',
 
   // Notes
   notesList: 'notes_list',
