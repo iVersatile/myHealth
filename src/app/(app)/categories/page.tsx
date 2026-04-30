@@ -71,26 +71,26 @@ function SortableRow({ item, userCategories, onParentChange, onDelete }: Sortabl
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10"
+      className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 hover:bg-[var(--color-surface-sunken)]"
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none text-white/30 hover:text-white/60 active:cursor-grabbing"
+        className="cursor-grab touch-none text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] active:cursor-grabbing"
         aria-label="Drag to reorder"
       >
         ⠿
       </button>
       <div style={{ width: item.depth * 20 }} />
       <span
-        className="h-4 w-4 flex-shrink-0 rounded-full border border-white/20"
+        className="h-4 w-4 flex-shrink-0 rounded-full border border-[var(--color-border)]"
         style={{ backgroundColor: item.color_hex }}
       />
-      <span className="flex-1 text-sm text-white">{item.name}</span>
+      <span className="flex-1 text-sm text-[var(--color-text)]">{item.name}</span>
       <select
         value={item.parent_id ?? ''}
         onChange={(e) => onParentChange(item.id, e.target.value || null)}
-        className="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/70 focus:outline-none"
+        className="rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-2 py-1 text-xs text-[var(--color-text-secondary)] focus:outline-none"
       >
         <option value="">No parent</option>
         {userCategories
@@ -217,7 +217,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 p-6">
-      <h1 className="text-2xl font-semibold text-white">Categories</h1>
+      <h1 className="text-2xl font-semibold text-[var(--color-text)]">Categories</h1>
 
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
@@ -230,31 +230,31 @@ export default function CategoriesPage() {
 
       {systemCategories.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
             System Categories
           </h2>
           {systemCategories.map((c) => (
             <div
               key={c.id}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+              className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2"
             >
               <span
-                className="h-4 w-4 flex-shrink-0 rounded-full border border-white/20"
+                className="h-4 w-4 flex-shrink-0 rounded-full border border-[var(--color-border)]"
                 style={{ backgroundColor: c.color_hex }}
               />
-              <span className="flex-1 text-sm text-white/60">{c.name}</span>
-              <span className="text-xs text-white/30">System</span>
+              <span className="flex-1 text-sm text-[var(--color-text-secondary)]">{c.name}</span>
+              <span className="text-xs text-[var(--color-text-muted)]">System</span>
             </div>
           ))}
         </section>
       )}
 
       <section className="space-y-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
           Your Categories
         </h2>
         {flatUser.length === 0 ? (
-          <p className="text-sm text-white/40">No categories yet. Add one below.</p>
+          <p className="text-sm text-[var(--color-text-muted)]">No categories yet. Add one below.</p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext
@@ -278,35 +278,35 @@ export default function CategoriesPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
           Add Category
         </h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-white/50">Name</label>
+            <label className="text-xs text-[var(--color-text-secondary)]">Name</label>
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Category name"
               required
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-3 py-2 text-sm text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-white/50">Color</label>
+            <label className="text-xs text-[var(--color-text-secondary)]">Color</label>
             <input
               type="color"
               value={newColor}
               onChange={(e) => setNewColor(e.target.value)}
-              className="h-9 w-14 cursor-pointer rounded-lg border border-white/10 bg-white/5 p-1"
+              className="h-9 w-14 cursor-pointer rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-1"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-white/50">Parent</label>
+            <label className="text-xs text-[var(--color-text-secondary)]">Parent</label>
             <select
               value={newParentId}
               onChange={(e) => setNewParentId(e.target.value)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none"
             >
               <option value="">None</option>
               {userCategories.map((c) => (

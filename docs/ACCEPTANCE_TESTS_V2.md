@@ -935,3 +935,266 @@ Edge Cases / Negative Tests:
   - Entry has multiple links (e.g., document linked to two appointments): indicator still shows once, clicking reveals all links
   - Entry is very long (exceeds line width): indicator position adjusts or moves to separate line
   - Large number of linked entries (50+): visual performance is maintained, all indicators render correctly
+
+---
+
+## Phase 8 (v1.2) — New Feature Acceptance Tests
+
+---
+
+### TC-F7-01: Advanced search — date-range filter returns only matching documents
+
+**Feature:** Advanced Search Filters  
+**Screen(s):** Screen 4 (Documents) — Search / Filter panel  
+**Precondition:** At least 4 documents uploaded; two with dates in Jan 2024, two with dates in Mar 2024  
+**Steps:**
+  1. Open the Search / Filter panel on Documents screen
+  2. Set "From" date to `2024-01-01` and "To" date to `2024-01-31`
+  3. Apply filter
+  4. Observe document list
+  5. Clear filter and verify all documents return
+**Expected Result:**
+  - Only documents whose date falls within `2024-01-01`–`2024-01-31` are shown
+  - Documents from March 2024 are hidden
+  - Result count badge updates to reflect filtered count
+  - Clearing the filter restores the full list
+**Edge Cases / Negative Tests:**
+  - "From" > "To": filter is rejected with inline validation error; no query executed
+  - No documents in range: empty state shown with "No results for this date range" message
+  - Single-day range ("From" = "To"): documents from that exact date shown
+
+---
+
+### TC-F7-02: Advanced search — category filter limits results
+
+**Feature:** Advanced Search Filters  
+**Screen(s):** Screen 4 (Documents) — Filter panel  
+**Precondition:** 3+ categories exist; documents assigned to at least two different categories  
+**Steps:**
+  1. Open the Filter panel
+  2. Select "Lab Results" from the category dropdown
+  3. Apply filter and verify list
+  4. Add a second category ("Prescriptions") to the active filter
+  5. Verify results include documents from both categories
+**Expected Result:**
+  - Step 3: only documents in "Lab Results" are shown
+  - Step 5: documents from either "Lab Results" OR "Prescriptions" appear (union, not intersection)
+  - Active filter pills are visible above the list, each individually removable
+**Edge Cases / Negative Tests:**
+  - Selecting a category with no documents: empty state shown
+  - Removing one pill from multi-category filter: list updates immediately without full reset
+
+---
+
+### TC-F7-03: Advanced search — combined text query and date range
+
+**Feature:** Advanced Search Filters  
+**Screen(s):** Screen 4 (Documents) — Search bar + Filter panel  
+**Precondition:** At least one document contains the word "cholesterol" and has a date in 2024  
+**Steps:**
+  1. Type `cholesterol` in the search bar
+  2. Set date range to `2024-01-01`–`2024-12-31`
+  3. Apply both simultaneously
+  4. Verify results satisfy both constraints
+**Expected Result:**
+  - Only documents containing "cholesterol" AND within 2024 are shown
+  - No result that matches text but has a 2023 date appears
+**Edge Cases / Negative Tests:**
+  - Text matches documents but none fall in date range: empty state "No matches combining these filters"
+  - Date range matches documents but none contain the search term: empty state
+
+---
+
+### TC-F7-04: Advanced search — filter state persists during navigation within session
+
+**Feature:** Advanced Search Filters  
+**Screen(s):** Screen 4 (Documents) → other screen → back to Documents  
+**Precondition:** An active date-range + category filter is applied  
+**Steps:**
+  1. Apply a date-range filter and a category filter in Documents
+  2. Navigate to Appointments screen
+  3. Navigate back to Documents screen
+  4. Observe filter state
+**Expected Result:**
+  - Active filters are still applied on return — list shows filtered results
+  - Filter pills are still visible
+  - User can clear filters with the "Clear all" button
+**Edge Cases / Negative Tests:**
+  - App is relaunched: filters are cleared (no persistence across restarts required)
+
+---
+
+### TC-F8-01: Category drag-reorder persists after reload
+
+**Feature:** Category Management — Drag to Reorder  
+**Screen(s):** Screen 6 (Settings → Categories)  
+**Precondition:** At least 4 categories exist at the same hierarchy level  
+**Steps:**
+  1. Open Settings → Categories
+  2. Drag "Prescriptions" above "Lab Results" using the drag handle
+  3. Release to drop
+  4. Verify new order in the list
+  5. Quit and relaunch the app
+  6. Return to Settings → Categories
+**Expected Result:**
+  - After drag: "Prescriptions" appears above "Lab Results" immediately
+  - After relaunch: order is preserved
+  - Reorder applies only to siblings at the same level; parent–child structure is unchanged
+**Edge Cases / Negative Tests:**
+  - Dragging a parent to become a child of another: depth limit enforced — move rejected if it would exceed 3 levels
+  - Drag cancelled (Escape / pointer released outside drop zone): order reverts to pre-drag state
+
+---
+
+### TC-F8-02: Category auto-archive applies after threshold and is reversible
+
+**Feature:** Category Management — Auto-Archive  
+**Screen(s):** Screen 6 (Settings → Categories), Screen 4 (Documents — category filter)  
+**Precondition:** One category ("Old Tests") has zero documents and has not been modified for longer than the configured threshold  
+**Steps:**
+  1. Open Settings → Categories — set auto-archive threshold to 30 days
+  2. Ensure "Old Tests" has no documents and was last used > 30 days ago
+  3. Restart the app
+  4. Open Settings → Categories — verify "Old Tests" is archived
+  5. Open the category filter in Documents — verify "Old Tests" is not in the active list
+  6. Restore "Old Tests" from the archived view
+  7. Verify "Old Tests" reappears in the active filter list
+**Expected Result:**
+  - On restart, "Old Tests" is moved to archived state automatically
+  - Archived categories do not appear in the Documents filter picker
+  - Restoring brings the category back to the active list
+**Edge Cases / Negative Tests:**
+  - Category with documents but no recent activity: NOT archived (only empty categories eligible)
+  - Auto-archive disabled (threshold = Never): no categories archived automatically
+
+---
+
+### TC-F8-03: Category auto-archive threshold setting persists across sessions
+
+**Feature:** Category Management — Auto-Archive  
+**Screen(s):** Screen 6 (Settings → Categories)  
+**Precondition:** Default threshold is set  
+**Steps:**
+  1. Open Settings → Categories
+  2. Change auto-archive threshold to "60 days"
+  3. Quit and relaunch the app
+  4. Open Settings → Categories
+  5. Verify threshold reads "60 days"
+**Expected Result:**
+  - Threshold is stored in SQLite `settings` table and survives restart
+**Edge Cases / Negative Tests:**
+  - Threshold set to "Never": auto-archive disabled; no categories moved automatically
+
+---
+
+### TC-F9-01: Calendar conflict detection surfaces overlapping appointments
+
+**Feature:** Calendar Conflict Resolution  
+**Screen(s):** Screen 7 (Appointments — calendar view)  
+**Precondition:** Two appointments with overlapping time slots on the same day (e.g., both 10:00–11:00 on 2024-06-15)  
+**Steps:**
+  1. Navigate to Appointments — calendar view
+  2. Locate 2024-06-15
+  3. Look for a conflict indicator on the day cell
+  4. Click the conflict indicator to open the conflict resolution panel
+  5. Verify both appointments are shown side-by-side with full details
+**Expected Result:**
+  - Day cell shows a conflict badge (e.g., orange `!` or "2 conflicts" label)
+  - Side-by-side panel clearly labels each appointment and highlights the overlapping time
+**Edge Cases / Negative Tests:**
+  - Same-day appointments with non-overlapping times: no conflict badge shown
+  - All-day appointment vs. timed appointment: flagged as potential conflict; shown in panel
+
+---
+
+### TC-F9-02: Conflict resolution — keep one appointment and delete the other
+
+**Feature:** Calendar Conflict Resolution  
+**Screen(s):** Conflict resolution panel  
+**Precondition:** TC-F9-01 conflict visible; panel open  
+**Steps:**
+  1. In the conflict panel, click "Keep This" on the first appointment
+  2. Confirm deletion in the confirmation dialog
+  3. Return to calendar view
+  4. Verify the deleted appointment is gone and the kept one remains
+  5. Verify the conflict badge on the day cell is cleared
+**Expected Result:**
+  - Second appointment is permanently deleted
+  - First appointment retains all details and linked documents
+  - Conflict badge disappears from the day cell
+**Edge Cases / Negative Tests:**
+  - Clicking "Cancel" in the confirmation dialog: no appointment deleted; panel remains open
+  - Deleted appointment had linked documents: documents remain; appointment link removed
+
+---
+
+### TC-F9-03: Conflict badge absent when no conflicts exist
+
+**Feature:** Calendar Conflict Resolution  
+**Screen(s):** Screen 7 (Appointments — calendar view)  
+**Precondition:** All conflicts resolved  
+**Steps:**
+  1. Resolve all conflicts as per TC-F9-02
+  2. Navigate away from calendar and back
+  3. Inspect all day cells
+**Expected Result:**
+  - No conflict badges appear on any day cell
+**Edge Cases / Negative Tests:**
+  - Fresh installation with no appointments: no conflict badge shown
+
+---
+
+### TC-F10-01: PDF summary export generates a valid structured file
+
+**Feature:** PDF Summary Export  
+**Screen(s):** Screen 4 (Documents) — export action  
+**Precondition:** At least 3 documents and 2 appointments exist  
+**Steps:**
+  1. Click the PDF Summary Export button
+  2. Choose a save path in the system file dialog
+  3. Wait for export to complete
+  4. Open the exported PDF in the system viewer
+**Expected Result:**
+  - A valid PDF file is saved to the chosen path
+  - PDF opens without error
+  - PDF contains: a cover page with export date and app name; a Documents section with metadata and text snippets; an Appointments section listing each appointment
+  - Page numbers present
+**Edge Cases / Negative Tests:**
+  - User cancels the file dialog: no file is written; no error shown
+  - Document with no extracted text: entry still appears with metadata; snippet field is blank
+
+---
+
+### TC-F10-02: PDF summary export covers all entity sections
+
+**Feature:** PDF Summary Export  
+**Screen(s):** Exported PDF  
+**Precondition:** Database contains documents, appointments, and contacts  
+**Steps:**
+  1. Run PDF summary export (TC-F10-01)
+  2. Open exported PDF and scroll all pages
+  3. Verify headed sections exist for each entity type
+**Expected Result:**
+  - Each entity type has its own section header
+  - All database records appear (no silent omissions)
+  - Long text is truncated with ellipsis rather than overflowing page margin
+**Edge Cases / Negative Tests:**
+  - Empty section (e.g., no contacts): header present with "No records" note
+  - Very long document title (100+ chars): title wraps or is truncated
+
+---
+
+### TC-F10-03: PDF export cancelled at file dialog leaves no temp files
+
+**Feature:** PDF Summary Export  
+**Screen(s):** File dialog during export  
+**Precondition:** Export button clicked; file dialog open  
+**Steps:**
+  1. Click PDF Summary Export
+  2. When file dialog appears, click Cancel
+  3. Check Downloads folder and `/tmp` for partial files
+**Expected Result:**
+  - No `.pdf` file written to disk; any temporary file cleaned up
+  - App returns to normal state; no error notification shown
+**Edge Cases / Negative Tests:**
+  - Export interrupted mid-write (disk full): partial file cleaned up; error notification "Export failed — disk full" shown

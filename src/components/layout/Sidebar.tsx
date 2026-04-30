@@ -32,9 +32,22 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-full w-[var(--sidebar-width,220px)] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]">
-      <div className="flex h-[var(--topbar-height,56px)] shrink-0 items-center px-5">
+      <div className="flex h-[var(--topbar-height,56px)] shrink-0 items-center gap-2 px-5">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+          className="flex-shrink-0 text-[var(--color-primary)]"
+        >
+          <path
+            d="M10 17s-7-4.35-7-9a4 4 0 0 1 7-2.646A4 4 0 0 1 17 8c0 4.65-7 9-7 9z"
+            fill="currentColor"
+          />
+        </svg>
         <span className="text-[var(--text-base)] font-semibold tracking-tight text-[var(--color-text)]">
-          myHealth
+          MyHealth
         </span>
       </div>
 

@@ -8,7 +8,7 @@
 
 ```
 Phase 9 — v1.3 Intelligence features
-Current task: 9.5 — Multi-user vault support
+Current task: 9.6 — v1.3 smoke test
 ```
 
 ---
@@ -469,7 +469,7 @@ Current task: 9.5 — Multi-user vault support
    - In document detail and appointment detail pages, add "Suggest ICD-10 Codes" button; user can accept/reject suggestions stored as tags in `document_tags` / `appointment_tags`
    - Done when: `cargo test` verifies (a) "chest pain" → at least one suggestion with code `R07.*`; (b) gibberish input → empty result; (c) accepted tag persists to DB
 
-▶ **9.5 — Multi-user vault support**
+[x] **9.5 — Multi-user vault support**
    - Extend DB schema (migration v6): add `users (id, display_name, password_hash, created_at)` table; add `user_id` FK to `documents`, `appointments`, `contacts`, `categories`, `calendar_events`, `settings`
    - Add `auth_add_user(display_name: String, password: String)` and `auth_switch_user(user_id: String, password: String)` commands in `src-tauri/src/commands/auth.rs`
    - Add `authAddUser: 'auth_add_user', authSwitchUser: 'auth_switch_user'` to `src/lib/ipc.ts`
@@ -479,7 +479,7 @@ Current task: 9.5 — Multi-user vault support
 
 ### Sprint 16 — Release
 
-[ ] **9.6 — v1.3 smoke test**
+▶ **9.6 — v1.3 smoke test**
    - Manual walkthrough of all new v1.3 flows on each platform
    - Confirm no regressions in v1.1 / v1.2 flows
 

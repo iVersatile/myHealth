@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event'
 const mockHasPassword = vi.fn()
 const mockUnlock = vi.fn()
 const mockSetup = vi.fn()
+const mockListUsers = vi.fn()
+const mockSwitchUser = vi.fn()
 const mockPush = vi.fn()
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -13,6 +15,8 @@ vi.mock('../../hooks/useAuth', () => ({
     unlock: mockUnlock,
     setup: mockSetup,
     lock: vi.fn(),
+    listUsers: mockListUsers,
+    switchUser: mockSwitchUser,
   }),
 }))
 
@@ -28,6 +32,7 @@ async function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.resetModules()
+  mockListUsers.mockResolvedValue([])
 })
 
 describe('LockScreen — first-run detection', () => {
@@ -66,9 +71,9 @@ describe('LockScreen — unlock flow', () => {
   it('calls unlock with entered password and navigates on success', async () => {
     mockUnlock.mockResolvedValue(undefined)
     await renderPage()
-    await waitFor(() => screen.getByLabelText(/master password/i))
+    await waitFor(() => screen.getByLabelText(/^password$/i))
 
-    await userEvent.type(screen.getByLabelText(/master password/i), 'MyPassword1!')
+    await userEvent.type(screen.getByLabelText(/^password$/i), 'MyPassword1!')
     await userEvent.click(screen.getByRole('button', { name: /unlock/i }))
 
     await waitFor(() => expect(mockUnlock).toHaveBeenCalledWith('MyPassword1!'))
@@ -78,9 +83,9 @@ describe('LockScreen — unlock flow', () => {
   it('shows incorrect password error when unlock rejects with plain Error', async () => {
     mockUnlock.mockRejectedValue(new Error('incorrect password (detail: open db: ...)'))
     await renderPage()
-    await waitFor(() => screen.getByLabelText(/master password/i))
+    await waitFor(() => screen.getByLabelText(/^password$/i))
 
-    await userEvent.type(screen.getByLabelText(/master password/i), 'WrongPass1!')
+    await userEvent.type(screen.getByLabelText(/^password$/i), 'WrongPass1!')
     await userEvent.click(screen.getByRole('button', { name: /unlock/i }))
 
     await waitFor(() =>
@@ -93,9 +98,9 @@ describe('LockScreen — unlock flow', () => {
     // Tauri v2 serializes CommandError::Internal as { Internal: "..." } on the JS side
     mockUnlock.mockRejectedValue({ Internal: 'incorrect password (detail: open db: bad key)' })
     await renderPage()
-    await waitFor(() => screen.getByLabelText(/master password/i))
+    await waitFor(() => screen.getByLabelText(/^password$/i))
 
-    await userEvent.type(screen.getByLabelText(/master password/i), 'WrongPass1!')
+    await userEvent.type(screen.getByLabelText(/^password$/i), 'WrongPass1!')
     await userEvent.click(screen.getByRole('button', { name: /unlock/i }))
 
     await waitFor(() =>
@@ -106,9 +111,9 @@ describe('LockScreen — unlock flow', () => {
   it('switches to setup mode when Tauri structured error contains failed to read salt', async () => {
     mockUnlock.mockRejectedValue({ Internal: 'failed to read salt: No such file or directory' })
     await renderPage()
-    await waitFor(() => screen.getByLabelText(/master password/i))
+    await waitFor(() => screen.getByLabelText(/^password$/i))
 
-    await userEvent.type(screen.getByLabelText(/master password/i), 'AnyPass1!')
+    await userEvent.type(screen.getByLabelText(/^password$/i), 'AnyPass1!')
     await userEvent.click(screen.getByRole('button', { name: /unlock/i }))
 
     await waitFor(() =>
