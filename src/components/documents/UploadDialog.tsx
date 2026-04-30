@@ -25,6 +25,7 @@ interface ExtractionSuggestions {
   doctor_candidates: string[]
   category_suggestion: string | null
   document_tags: string[]
+  auto_tags: string[]
   contact_suggestions: ContactSuggestion[]
 }
 
@@ -134,11 +135,15 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           setCategorySuggestion(suggestions.category_suggestion)
           setContactSuggestions(suggestions.contact_suggestions)
 
-          for (const name of suggestions.doctor_candidates) {
-            if (!extractedTags.includes(name)) extractedTags.push(name)
-          }
-          for (const tag of suggestions.document_tags) {
-            if (!extractedTags.includes(tag)) extractedTags.push(tag)
+          for (const tag of [
+            ...suggestions.auto_tags,
+            ...suggestions.doctor_candidates,
+            ...suggestions.document_tags,
+          ]) {
+            const lower = tag.toLowerCase()
+            if (!extractedTags.some((t) => t.toLowerCase() === lower)) {
+              extractedTags.push(tag)
+            }
           }
         } catch {
           unlistenRef.current?.()

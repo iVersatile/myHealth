@@ -33,7 +33,7 @@ function setupInvoke() {
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === 'categories_list') return Promise.resolve([])
     if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
-    if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
+    if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
     if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
     if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
     if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
@@ -158,7 +158,7 @@ describe('UploadDialog', () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(docWithDate)
-      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
       if (cmd === 'documents_update') return Promise.resolve(docWithDate)
       if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
       if (cmd === 'documents_get') return Promise.resolve(docWithDate)
@@ -371,7 +371,37 @@ describe('UploadDialog', () => {
     expect(screen.getByText(/4s elapsed/i)).toBeTruthy()
 
     // Finish extraction so component doesn't hang
-    resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
+    resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
+  })
+
+  it('pre-populates tags from auto_tags with case-insensitive dedup', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: ['John Green'],
+        category_suggestion: null,
+        document_tags: ['Invoice'],
+        auto_tags: ['invoice', 'PHYSIOTHERAPY', '2023-03-09'],
+        contact_suggestions: [],
+      })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    const tagsInput = screen.getByLabelText(/tags/i) as HTMLInputElement
+    const tagValues = tagsInput.value.split(',').map((t) => t.trim()).filter(Boolean)
+    // 'invoice' from auto_tags and 'Invoice' from document_tags → only one should appear
+    const invoiceTags = tagValues.filter((t) => t.toLowerCase() === 'invoice')
+    expect(invoiceTags).toHaveLength(1)
+    // All four unique tags should be present
+    expect(tagValues.some((t) => t === 'John Green')).toBe(true)
+    expect(tagValues.some((t) => t === 'PHYSIOTHERAPY')).toBe(true)
+    expect(tagValues.some((t) => t === '2023-03-09')).toBe(true)
   })
 
   it('hides OCR progressbar after extraction completes', async () => {
@@ -402,7 +432,7 @@ describe('UploadDialog', () => {
     ocrCallback!({ payload: { page: 1, total: 3, elapsed_ms: 1000 } })
     await waitFor(() => expect(screen.getByRole('progressbar')).toBeTruthy())
 
-    resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [] })
+    resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
 
     await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull())
     // Component should now be in review step
