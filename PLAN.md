@@ -8,7 +8,7 @@
 
 ```
 Phase 8 — v1.2 Enhancements
-Current task: 8.8 — v1.2 smoke test
+Current task: 8.8a — Settings: "Reset App Data" danger zone
 ```
 
 ---
@@ -44,6 +44,16 @@ Current task: 8.8 — v1.2 smoke test
 | F3.7 Auto-archive empty categories | §F3 | SHOULD | Small |
 | F4.5 Calendar conflict resolution UI | §F4 | SHOULD | Medium |
 | PDF summary report export | Phase 2 | MED | Medium |
+
+**v1.4 (after v1.3)**
+
+| Feature | PRD_V3 Section | Priority | Effort |
+|---------|---------------|----------|--------|
+| V3-F4 Tag auto-extraction (invoice type, provider, specialty, activity date) | §V3-F4 | MUST | M |
+| V3-F5 Timeline uses medical activity date + prescribed format | §V3-F5 | MUST | M |
+| V3-F2 Contact auto-creation (UK phone regex + full save flow) | §V3-F2 | MUST | M |
+| V3-F1 Category auto-creation when suggestion accepted | §V3-F1 | MUST | S |
+| V3-F3 Clinic: company reg no, multi-address, clinic↔contact link | §V3-F3 | MUST | L |
 
 **v1.3+ (future)**
 
@@ -388,9 +398,22 @@ Current task: 8.8 — v1.2 smoke test
 
 ### Sprint 13 — Release
 
-▶ **8.8 — v1.2 smoke test**
+[x] **8.8 — v1.2 smoke test**
    - Manual walkthrough: advanced search, drag-reorder categories, auto-archive toggle, conflict resolution, PDF export
    - Verify no regressions in v1.1 flows
+   - Automated Playwright smoke: 18/18 passed (NEXT_PUBLIC_SKIP_AUTH=1 bypass added to AuthGuard for dev)
+
+▶ **8.8a — Settings: "Reset App Data" danger zone**
+   - **Why:** The only password recovery path is the CLI reset script; users should not need a terminal for this.
+   - **Rust:** Add `app_reset_data(confirm: bool)` Tauri command in `src-tauri/src/commands/auth.rs`
+     - Returns early with error if `!confirm` (double-safety guard)
+     - Deletes `myhealth.db`, `myhealth.salt`, `myhealth.kdf` from app data dir
+     - Emits Tauri event `app_data_reset` so the frontend can redirect to setup
+   - **Frontend:** Add "Danger Zone" section at the bottom of `src/app/(app)/settings/page.tsx`
+     - "Reset All App Data" button → confirmation dialog ("This will permanently delete all your health records and cannot be undone. Type RESET to confirm.")
+     - On confirm, call `app_reset_data(true)` → listen for `app_data_reset` event → navigate to `/` (setup/unlock screen)
+   - Add `appResetData: 'app_reset_data'` to `src/lib/ipc.ts`
+   - Done when: clicking Reset in Settings → confirmation dialog → wipes data → redirected to fresh setup screen; `cargo test` covers (a) `confirm=false` returns error, (b) `confirm=true` deletes all three files
 
 [ ] **8.9 — Bump version & tag v1.2.0**
    - Update `package.json` version to `1.2.0`
@@ -470,13 +493,155 @@ Current task: 8.8 — v1.2 smoke test
 
 ---
 
+## Phase 10 — v1.4 Upload Intelligence (PRD_V3)
+
+> **Target:** v1.4.0 — Q4 2026  
+> **Source:** `docs/PRD_V3.md` — 5 feature gaps identified from physiotherapy invoice upload smoke test (2026-04-30).  
+> **Implementation priority order (from PRD_V3):** V3-F4 → V3-F5 → V3-F2 → V3-F1 → V3-F3
+
+### Sprint 17: Schema migrations
+
+[ ] **10.0 — V3 DB schema migrations**
+   - Migration v6 in `src-tauri/src/db/migrations.rs`:
+     - `ALTER TABLE clinics ADD COLUMN company_registration_number TEXT`
+     - `CREATE TABLE clinic_addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE, address TEXT NOT NULL, is_primary INTEGER NOT NULL DEFAULT 0)`
+     - `ALTER TABLE documents ADD COLUMN activity_date TEXT` — ISO-8601 medical activity date; separate from `document_date` (filename-parsed) and `created_at` (upload timestamp)
+   - Verify `timeline_entries.event_date` reads from `documents.activity_date` (not `created_at`) — document in migration comment if fix needed
+   - Done when: `cargo test` passes migration; all three schema changes present; existing rows unaffected (new columns NULL for existing rows)
+
+### Sprint 18: Rust extraction backend
+
+[ ] **10.1 — V3-F4 Tag auto-extraction (all 4 tag types)**
+   - File: `src-tauri/src/services/extraction/mod.rs` and/or `src-tauri/src/parsing/tags.rs` (new file if needed)
+   - **Type tags:** Scan extracted text for keywords `INVOICE`, `RECEIPT`, `BILL`, `REFERRAL`, `PRESCRIPTION`, `REPORT`, `SUMMARY`, `DISCHARGE`; emit the matched keyword lowercased as a tag
+   - **Provider name tags:** Every doctor/provider name already detected (contact suggestion pipeline) must also be emitted as a tag
+   - **Specialty tags:** The category keyword extracted for V3-F1 (e.g. `PHYSIOTHERAPY`, `CARDIOLOGY`) must also be emitted as a tag
+   - **Activity date tags:** The medical activity date (see 10.2) emitted as a tag in `YYYY-MM-DD` format
+   - **De-duplicate** all tags case-insensitively before returning
+   - Add `extractionTagsAutoExtract: 'extraction_tags_auto_extract'` or extend existing extraction command result to include `auto_tags: Vec<String>`
+   - Done when: `cargo test` verifies (a) PDF with "INVOICE" → tag `"invoice"`; (b) provider "John Green" detected → tag `"John Green"`; (c) keyword `PHYSIOTHERAPY` → tag `"PHYSIOTHERAPY"`; (d) activity date `2023-03-09` → tag `"2023-03-09"`; (e) duplicate tags de-duplicated; all 4 tags present for physiotherapy invoice fixture
+
+[ ] **10.2 — V3-F5 Activity date extraction + timeline entry format**
+   - **Activity date extraction** in `src-tauri/src/services/extraction/mod.rs`:
+     - Priority 1: Scan PDF body for labelled date patterns: `Date of Service`, `Invoice Date`, `Appointment Date`, `Date:` followed by `DD/MM/YYYY`, `DD Month YYYY`, `YYYY-MM-DD`
+     - Priority 2: Filename-parsed `document_date`
+     - Priority 3: Upload timestamp (`created_at`)
+     - Store resolved date in `documents.activity_date` (ISO-8601)
+   - **Timeline entry format** in `src-tauri/src/commands/timeline.rs` (or wherever timeline entries are created):
+     - Format: `{YYYY-MM-DD} {SPECIALTY} with {Title} {Provider Name}` when specialty and provider detected
+     - Fallback: substitute document type for specialty if no specialty; clinic name for provider if no provider name
+     - Timeline `event_date` must use `activity_date`; never `created_at`
+   - Done when: `cargo test` verifies (a) labelled body date → `activity_date` = body date; (b) no body date + filename date → `activity_date` = filename date; (c) no body or filename date → `activity_date` = upload timestamp; (d) timeline entry for physio invoice → description `"2023-03-09 PHYSIOTHERAPY with Mr John Green"`; (e) `event_date` = `2023-03-09`, not upload date
+
+[ ] **10.3 — V3-F2 Phone regex expansion + contact save command**
+   - File: `src-tauri/src/services/extraction/contact.rs`
+   - Extend phone regex to match:
+     - UK mobile: `07\d{3}\s?\d{6}` (e.g. `07544 370440`)
+     - UK landline: `01\d{3}\s?\d{6}`, `02\d\s?\d{4}\s?\d{4}`
+     - International: already handled by E.164 fallback from Task 7.4 — verify still working
+   - `ContactSuggestionDto` must include `name`, `phone`, `email`, `title` (salutation) fields — add missing fields if absent
+   - Verify `contacts_create` Tauri command accepts and persists all four fields from the DTO
+   - `document_contacts` junction: ensure a record is created linking the new contact to the document when "Save as Contact" is invoked (V3-F2.6)
+   - Done when: `cargo test` verifies (a) `07544 370440` matched; (b) `01234 567890` matched; (c) `+44 20 7946 0958` matched; (d) `ContactSuggestionDto` contains name + phone + email + title for physio invoice fixture; (e) `contacts_create` persists all four fields
+
+[ ] **10.4 — V3-F1 Category auto-creation from specialty keyword**
+   - File: `src-tauri/src/commands/categories.rs`
+   - Add `categories_create_if_not_exists(user_id: String, name: String)` command:
+     - Case-insensitive lookup: if a category with the same name (normalised to title-case) already exists, return its `id`
+     - If not found, create it with a default colour and return the new `id`
+   - Add `categoriesCreateIfNotExists: 'categories_create_if_not_exists'` to `src/lib/ipc.ts`
+   - The specialty keyword from extraction (already used for tags in 10.1) is normalised to title-case for category name (e.g. `PHYSIOTHERAPY` → `"Physiotherapy"`)
+   - Done when: `cargo test` verifies (a) calling with `"Physiotherapy"` when none exists → creates and returns new id; (b) calling again → returns same id, count unchanged; (c) calling with `"physiotherapy"` (lowercase) → returns same id as `"Physiotherapy"`
+
+[ ] **10.5 — V3-F3 Clinic extraction: company reg, multi-address, clinic↔contact link**
+   - **Extraction** in `src-tauri/src/services/extraction/clinic.rs` (extend or create):
+     - Extract company registration number via pattern `Company Registration (?:No|Number|No\.|Number:)[.:\s]*(\d{6,8})`
+     - Extract up to 5 postal addresses from PDF body (lines matching UK postcode pattern `[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}` as anchor)
+     - Normalise clinic name to title-case
+   - **Schema** (migration done in 10.0): `clinic_addresses` table + `company_registration_number` column
+   - **Commands** in `src-tauri/src/commands/clinics.rs`:
+     - Extend `clinics_create` to accept `company_registration_number: Option<String>` and `addresses: Vec<String>`; insert addresses into `clinic_addresses`
+     - Add `clinics_link_contact(clinic_id: String, contact_id: String)` for `clinic_contacts` junction
+     - Add `clinics_create_if_not_exists(user_id, name, ...)` — same idempotency pattern as 10.4
+   - Add IPC keys to `src/lib/ipc.ts`
+   - Done when: `cargo test` verifies (a) `Company Registration No: 6780032` → `company_registration_number = "6780032"`; (b) 3 postal addresses extracted → 3 `clinic_addresses` rows; (c) duplicate name → returns existing id; (d) `clinics_link_contact` inserts junction row; (e) `clinics_create_if_not_exists` → idempotent
+
+### Sprint 19: Frontend — upload dialog integration
+
+[ ] **10.6 — Upload dialog: tags pre-populated + editable (V3-F4)**
+   - File: `src/components/UploadDialog.tsx` (or equivalent upload dialog component)
+   - On reaching the review step, call extraction result's `auto_tags` and pre-populate the tags input field
+   - Tags field must remain editable: user can add/remove before saving
+   - De-duplicate tags display (case-insensitive)
+   - Done when: uploading physio invoice fixture → tags field shows `invoice`, `John Green`, `PHYSIOTHERAPY`, `2023-03-09`; user can delete or add a tag before saving; saved document has the final edited tags
+
+[ ] **10.7 — Upload dialog: category suggestion banner + auto-create (V3-F1)**
+   - Add dismissible suggestion banner below the tags field in the review step
+   - Banner shows: category name (title-cased specialty), source label `"Detected from document content"`, **Accept** and **Dismiss** buttons
+   - Accept → calls `categories_create_if_not_exists` → assigns returned category id to document → dismisses banner
+   - Dismiss → banner hidden for this session; no category created or assigned
+   - Done when: uploading physio invoice fixture → banner shows `"Physiotherapy — Detected from document content"`; Accept creates/reuses category and assigns; Dismiss shows nothing; banner not shown again on re-review within same session
+
+[ ] **10.8 — Upload dialog: contact card save flow + duplicate detection (V3-F2)**
+   - Contact suggestion card (already rendered from prior work) must now show all fields: name, phone, email, title
+   - "Save as Contact" button:
+     1. Calls `find_duplicate_contacts` with candidate name + email
+     2. If similarity ≥ 0.85 match → show inline merge prompt ("Possible duplicate: [name] — merge or create new?")
+     3. If no match → call `contacts_create` with all four fields → create `document_contacts` junction record → show success state on card
+   - Closing dialog without saving must NOT auto-save the contact
+   - Done when: uploading physio fixture → card shows `John Green / 07544 370440 / jg@johngreenphysio.com`; Save persists all fields; existing contact with same name shows merge prompt; close without save → no contact created
+
+[ ] **10.9 — Upload dialog: clinic suggestion card + save (V3-F3)**
+   - Add clinic suggestion card to upload dialog review step (below contact card)
+   - Card shows: clinic name, company registration number (if found), detected address count
+   - "Save as Clinic" button:
+     1. Calls `clinics_create_if_not_exists` with name, company_reg_no, addresses
+     2. If a contact was saved in the same session (10.8), calls `clinics_link_contact` automatically
+     3. Duplicate name → inline merge prompt
+   - Done when: uploading physio fixture → card shows `"John Green Physiotherapy Ltd / Reg: 6780032 / 3 addresses"`; Save creates clinic with addresses; contact link created automatically; duplicate name → merge prompt
+
+[ ] **10.10 — Upload dialog: timeline description pre-fill + editable (V3-F5)**
+   - In the review step, pre-populate the timeline description field with the formatted string from 10.2
+   - Format: `{YYYY-MM-DD} {SPECIALTY} with {Title} {Provider Name}` (falling back per V3-F5.6/F5.7)
+   - Field must be editable before the user clicks Save
+   - Timeline entry `event_date` saved as `activity_date` value (not upload date)
+   - Done when: uploading physio fixture → timeline field shows `"2023-03-09 PHYSIOTHERAPY with Mr John Green"` pre-filled; user can edit; saved timeline entry has `event_date = 2023-03-09`
+
+### Sprint 20: Tests + Release
+
+[ ] **10.11 — V3 acceptance tests**
+   - Run Playwright test cases from `docs/ACCEPTANCE_TESTS_V3.md` (20 cases, suites V3-F1 through V3-F5)
+   - Add Rust unit tests for all new/modified extraction functions: `categories_create_if_not_exists`, `clinics_create_if_not_exists`, phone regex patterns, activity date priority resolution, tag de-duplication
+   - Done when: ≥ 80% coverage on all Phase 10 new code; `cargo test` + `npx tsc --noEmit` both pass; all V3 TC IDs manually verified
+
+[ ] **10.12 — v1.4 smoke test**
+   - Manual walkthrough using `sample-Upload (09Mar2023-16_31_26).pdf` fixture:
+     - Upload → verify tags: `invoice`, `John Green`, `PHYSIOTHERAPY`, `2023-03-09`
+     - Verify category suggestion banner shows `Physiotherapy` → Accept → category assigned
+     - Verify contact card shows all fields → Save → contact linked to document
+     - Verify clinic card shows company reg + address count → Save → clinic linked to contact
+     - Verify timeline entry: date `2023-03-09`, description `"2023-03-09 PHYSIOTHERAPY with Mr John Green"`
+   - Verify no regressions in v1.1 / v1.2 / v1.3 flows
+
+[ ] **10.13 — Bump version & tag v1.4.0**
+   - Update `package.json` version to `1.4.0`
+   - Update `src-tauri/tauri.conf.json` version to `1.4.0`
+   - **Requires explicit user approval before running `git tag`**
+
+[ ] **10.14 — Verify GitHub Release**
+   - Confirm 4 platform artifacts published; update README if needed
+
+---
+
 ## Quick Reference
 
 | Concern | File |
 |---------|------|
-| Feature requirements | `docs/PRD_V2.md` |
+| Feature requirements (v1 + v1.1) | `docs/PRD_V2.md` |
+| Feature requirements (v1.4 upload intelligence) | `docs/PRD_V3.md` |
 | Architecture | `docs/ARCHITECTURE_V2.md` |
-| Acceptance tests | `docs/ACCEPTANCE_TESTS_V2.md` |
+| Acceptance tests (v1.2) | `docs/ACCEPTANCE_TESTS_V2.md` |
+| Acceptance tests (v1.4 upload) | `docs/ACCEPTANCE_TESTS_V3.md` |
 | Wireframes | `docs/WIREFRAMES_V2.md` |
 | CI/CD pipeline | `.github/workflows/` |
 | Commit strategy | `docs/COMMIT_STRATEGY.md` |
