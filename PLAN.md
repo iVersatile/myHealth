@@ -8,7 +8,7 @@
 
 ```
 Phase 10 — v1.4 Upload Intelligence (PRD_V3)
-Current task: 10.2 — V3-F5 Activity date extraction + timeline entry format
+Current task: 10.3 — V3-F2 Phone regex expansion + contact save command
 ```
 
 ---
@@ -521,7 +521,7 @@ Current task: 10.2 — V3-F5 Activity date extraction + timeline entry format
    - Add `extractionTagsAutoExtract: 'extraction_tags_auto_extract'` or extend existing extraction command result to include `auto_tags: Vec<String>`
    - Done when: `cargo test` verifies (a) PDF with "INVOICE" → tag `"invoice"`; (b) provider "John Green" detected → tag `"John Green"`; (c) keyword `PHYSIOTHERAPY` → tag `"PHYSIOTHERAPY"`; (d) activity date `2023-03-09` → tag `"2023-03-09"`; (e) duplicate tags de-duplicated; all 4 tags present for physiotherapy invoice fixture
 
-▶ **10.2 — V3-F5 Activity date extraction + timeline entry format**
+[x] **10.2 — V3-F5 Activity date extraction + timeline entry format**
    - **Activity date extraction** in `src-tauri/src/services/extraction/mod.rs`:
      - Priority 1: Scan PDF body for labelled date patterns: `Date of Service`, `Invoice Date`, `Appointment Date`, `Date:` followed by `DD/MM/YYYY`, `DD Month YYYY`, `YYYY-MM-DD`
      - Priority 2: Filename-parsed `document_date`
@@ -533,7 +533,7 @@ Current task: 10.2 — V3-F5 Activity date extraction + timeline entry format
      - Timeline `event_date` must use `activity_date`; never `created_at`
    - Done when: `cargo test` verifies (a) labelled body date → `activity_date` = body date; (b) no body date + filename date → `activity_date` = filename date; (c) no body or filename date → `activity_date` = upload timestamp; (d) timeline entry for physio invoice → description `"2023-03-09 PHYSIOTHERAPY with Mr John Green"`; (e) `event_date` = `2023-03-09`, not upload date
 
-[ ] **10.3 — V3-F2 Phone regex expansion + contact save command**
+▶ **10.3 — V3-F2 Phone regex expansion + contact save command**
    - File: `src-tauri/src/services/extraction/contact.rs`
    - Extend phone regex to match:
      - UK mobile: `07\d{3}\s?\d{6}` (e.g. `07544 370440`)
