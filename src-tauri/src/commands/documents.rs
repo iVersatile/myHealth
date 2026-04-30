@@ -991,6 +991,7 @@ mod tests {
 #[derive(Debug, Serialize)]
 pub struct ContactSuggestionDto {
     pub name: String,
+    pub title: Option<String>,
     pub specialty: Option<String>,
     pub clinic: Option<String>,
     pub address: Option<String>,
@@ -1043,6 +1044,7 @@ pub async fn documents_run_extraction(
                 .iter()
                 .map(|c| ContactSuggestionDto {
                     name: c.name.clone(),
+                    title: c.title.clone(),
                     specialty: c.specialty.clone(),
                     clinic: c.clinic.clone(),
                     address: c.address.clone(),
@@ -1101,6 +1103,7 @@ pub async fn documents_run_extraction(
         .iter()
         .map(|c| ContactSuggestionDto {
             name: c.name.clone(),
+            title: c.title.clone(),
             specialty: c.specialty.clone(),
             clinic: c.clinic.clone(),
             address: c.address.clone(),

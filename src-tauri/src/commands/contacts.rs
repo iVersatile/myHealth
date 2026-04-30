@@ -11,6 +11,7 @@ pub struct Contact {
     pub id: String,
     pub name: String,
     pub role: String,
+    pub title: Option<String>,
     pub specialty: Option<String>,
     pub phone: Option<String>,
     pub email: Option<String>,
@@ -25,6 +26,7 @@ pub struct Contact {
 pub struct ContactCreateInput {
     pub name: String,
     pub role: String,
+    pub title: Option<String>,
     pub specialty: Option<String>,
     pub phone: Option<String>,
     pub email: Option<String>,
@@ -38,6 +40,7 @@ pub struct ContactUpdateInput {
     pub id: String,
     pub name: Option<String>,
     pub role: Option<String>,
+    pub title: Option<String>,
     pub specialty: Option<String>,
     pub phone: Option<String>,
     pub email: Option<String>,
@@ -59,6 +62,7 @@ fn row_to_contact(row: &rusqlite::Row) -> rusqlite::Result<Contact> {
         notes: row.get(8)?,
         created_at: row.get(9)?,
         updated_at: row.get(10)?,
+        title: row.get(11)?,
     })
 }
 
@@ -73,7 +77,7 @@ pub fn contacts_list(
     let contacts: Vec<Contact> = if let Some(r) = role {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at FROM contacts WHERE role = ? ORDER BY name",
+                 created_at, updated_at, title FROM contacts WHERE role = ? ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([r], row_to_contact)?
@@ -83,7 +87,7 @@ pub fn contacts_list(
     } else {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at FROM contacts ORDER BY name",
+                 created_at, updated_at, title FROM contacts ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([], row_to_contact)?
@@ -102,7 +106,7 @@ pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, C
 
     conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-         created_at, updated_at FROM contacts WHERE id = ?",
+         created_at, updated_at, title FROM contacts WHERE id = ?",
         [&id],
         row_to_contact,
     )
@@ -121,12 +125,13 @@ pub fn contacts_create(
     let now = Utc::now().to_rfc3339();
 
     conn.execute(
-        "INSERT INTO contacts (id, name, role, specialty, phone, email, clinic, address, notes, \
-         created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO contacts (id, name, role, title, specialty, phone, email, clinic, address, \
+         notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         rusqlite::params![
             id,
             input.name,
             input.role,
+            input.title,
             input.specialty,
             input.phone,
             input.email,
@@ -140,7 +145,7 @@ pub fn contacts_create(
 
     let c = conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at FROM contacts WHERE id = ?",
+             created_at, updated_at, title FROM contacts WHERE id = ?",
         [&id],
         row_to_contact,
     )?;
@@ -213,10 +218,16 @@ pub fn contacts_update(
             rusqlite::params![notes, now, input.id],
         )?;
     }
+    if let Some(title) = input.title {
+        conn.execute(
+            "UPDATE contacts SET title = ?, updated_at = ? WHERE id = ?",
+            rusqlite::params![title, now, input.id],
+        )?;
+    }
 
     let c = conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at FROM contacts WHERE id = ?",
+             created_at, updated_at, title FROM contacts WHERE id = ?",
         [&input.id],
         row_to_contact,
     )?;
@@ -363,7 +374,7 @@ pub fn find_duplicate_contacts(
 
     let mut stmt = conn.prepare(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at FROM contacts ORDER BY name",
+             created_at, updated_at, title FROM contacts ORDER BY name",
     )?;
     let contacts: Vec<Contact> = stmt
         .query_map([], row_to_contact)?
@@ -418,7 +429,7 @@ pub fn merge_contacts(
         let primary = tx
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at FROM contacts WHERE id = ?",
+                 created_at, updated_at, title FROM contacts WHERE id = ?",
                 [&primary_id],
                 row_to_contact,
             )
@@ -435,7 +446,7 @@ pub fn merge_contacts(
             let dup = tx
                 .query_row(
                     "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                     created_at, updated_at FROM contacts WHERE id = ?",
+                     created_at, updated_at, title FROM contacts WHERE id = ?",
                     [dup_id],
                     row_to_contact,
                 )
@@ -486,7 +497,7 @@ pub fn merge_contacts(
         // Return updated primary.
         tx.query_row(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at FROM contacts WHERE id = ?",
+             created_at, updated_at, title FROM contacts WHERE id = ?",
             [&primary_id],
             row_to_contact,
         )
@@ -539,7 +550,7 @@ pub fn find_similar_contact(name: &str, conn: &rusqlite::Connection) -> Option<C
     let mut stmt = conn
         .prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at FROM contacts ORDER BY name",
+             created_at, updated_at, title FROM contacts ORDER BY name",
         )
         .ok()?;
 
@@ -591,7 +602,7 @@ mod tests {
         let c = conn
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at FROM contacts WHERE id = ?",
+                 created_at, updated_at, title FROM contacts WHERE id = ?",
                 [&id],
                 row_to_contact,
             )
@@ -615,7 +626,7 @@ mod tests {
         let mut stmt = conn
             .prepare(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at FROM contacts WHERE role = ? ORDER BY name",
+                 created_at, updated_at, title FROM contacts WHERE role = ? ORDER BY name",
             )
             .unwrap();
         let gps: Vec<Contact> = stmt
@@ -709,6 +720,7 @@ mod tests {
             id: id.to_string(),
             name: name.to_string(),
             role: "gp".to_string(),
+            title: None,
             specialty: None,
             phone: phone.map(str::to_string),
             email: email.map(str::to_string),
@@ -968,5 +980,39 @@ mod tests {
             start.elapsed().as_millis() < 500,
             "200-contact scan exceeded 500ms"
         );
+    }
+
+    #[test]
+    fn contacts_create_persists_name_phone_email_title() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, title, phone, email, created_at, updated_at) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                id,
+                "Dr. Sarah Green",
+                "specialist",
+                "Dr.",
+                "+1 (555) 123-4567",
+                "sarah@example.com",
+                now,
+                now,
+            ],
+        )
+        .unwrap();
+        let c = conn
+            .query_row(
+                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+                 created_at, updated_at, title FROM contacts WHERE id = ?",
+                [&id],
+                row_to_contact,
+            )
+            .unwrap();
+        assert_eq!(c.name, "Dr. Sarah Green");
+        assert_eq!(c.phone.as_deref(), Some("+1 (555) 123-4567"));
+        assert_eq!(c.email.as_deref(), Some("sarah@example.com"));
+        assert_eq!(c.title.as_deref(), Some("Dr."));
     }
 }

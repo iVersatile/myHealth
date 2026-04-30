@@ -4,6 +4,7 @@ use std::sync::OnceLock;
 #[derive(Debug, Clone)]
 pub struct ContactSuggestion {
     pub name: String,
+    pub title: Option<String>,
     pub specialty: Option<String>,
     pub clinic: Option<String>,
     pub address: Option<String>,
@@ -17,16 +18,22 @@ static INTL_PHONE_PATTERN: OnceLock<Regex> = OnceLock::new();
 static EMAIL_PATTERN: OnceLock<Regex> = OnceLock::new();
 static CLINIC_PATTERN: OnceLock<Regex> = OnceLock::new();
 static POSTCODE_PATTERN: OnceLock<Regex> = OnceLock::new();
+static TITLE_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 fn dr_re() -> &'static Regex {
     DR_PATTERN.get_or_init(|| {
-        Regex::new(r"\bDr\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)").expect("doctor regex valid")
+        Regex::new(r"\b(?:Dr\.?|Prof\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)")
+            .expect("doctor regex valid")
     })
 }
 
 fn phone_re() -> &'static Regex {
-    PHONE_PATTERN
-        .get_or_init(|| Regex::new(r"(?:\+44\s?|0)\d[\d\s\-]{8,12}\d").expect("phone regex valid"))
+    PHONE_PATTERN.get_or_init(|| {
+        Regex::new(
+            r"(?:\+44[\s\-]?20[\s\-]?\d{4}[\s\-]?\d{4}|\+44[\s\-]?\d{3,4}[\s\-]?\d{6}|07\d{3}[\s\-]?\d{6}|01\d{3}[\s\-]?\d{6}|02\d[\s\-]?\d{4}[\s\-]?\d{4})",
+        )
+        .expect("phone regex valid")
+    })
 }
 
 fn intl_phone_re() -> &'static Regex {
@@ -56,6 +63,20 @@ fn postcode_re() -> &'static Regex {
     POSTCODE_PATTERN.get_or_init(|| {
         Regex::new(r"\b[A-Z]{1,2}\d{1,2}[A-Z]?\s*\d[A-Z]{2}\b").expect("postcode regex valid")
     })
+}
+
+fn title_re() -> &'static Regex {
+    TITLE_PATTERN.get_or_init(|| {
+        Regex::new(r"^(Dr\.?|Prof\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Sir)(?:\s|$)")
+            .expect("title regex valid")
+    })
+}
+
+fn extract_title_from_name(name: &str) -> Option<String> {
+    title_re()
+        .captures(name)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().to_string())
 }
 
 fn first_email(text: &str) -> Option<String> {
@@ -164,6 +185,7 @@ pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
         }
 
         let specialty = specialty_near(text, full_match.end());
+        let title = extract_title_from_name(&name);
 
         let (c, p, e, a) = if suggestions.is_empty() {
             (
@@ -178,6 +200,7 @@ pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
 
         suggestions.push(ContactSuggestion {
             name,
+            title,
             specialty,
             clinic: c,
             phone: p,
@@ -270,5 +293,39 @@ mod tests {
         assert_eq!(suggestions.len(), 2);
         assert!(suggestions[1].phone.is_none());
         assert!(suggestions[1].clinic.is_none());
+    }
+
+    #[test]
+    fn extracts_uk_mobile_number() {
+        let text = "Call us on 07544 370440 to book.";
+        assert_eq!(first_phone(text), Some("07544 370440".to_string()));
+    }
+
+    #[test]
+    fn extracts_uk_landline_number() {
+        let text = "Appointments: 01234 567890";
+        assert_eq!(first_phone(text), Some("01234 567890".to_string()));
+    }
+
+    #[test]
+    fn extracts_plus44_london_number() {
+        let text = "International line: +44 20 7946 0958";
+        assert_eq!(first_phone(text), Some("+44 20 7946 0958".to_string()));
+    }
+
+    #[test]
+    fn extracts_title_from_dr_name() {
+        let text = "Dr. John Smith consulted on the case.";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].title.as_deref(), Some("Dr."));
+    }
+
+    #[test]
+    fn extracts_title_from_prof_name() {
+        let text = "Prof. Alice Brown led the seminar.";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].title.as_deref(), Some("Prof."));
     }
 }

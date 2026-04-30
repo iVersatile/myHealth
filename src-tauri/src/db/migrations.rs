@@ -53,6 +53,15 @@ const SCHEMA_V8: &str = "
     ALTER TABLE documents ADD COLUMN activity_date TEXT;
 ";
 
+const SCHEMA_V9: &str = "
+    ALTER TABLE contacts ADD COLUMN title TEXT;
+    CREATE TABLE IF NOT EXISTS document_contacts (
+        document_id  TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+        contact_id   TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+        PRIMARY KEY (document_id, contact_id)
+    );
+";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -123,6 +132,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 9 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V9)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [9])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -149,7 +165,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 8);
+        assert_eq!(version, 9);
     }
 
     #[test]
@@ -163,7 +179,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 8);
+        assert_eq!(version, 9);
     }
 
     #[test]
@@ -866,6 +882,42 @@ mod tests {
             )
             .unwrap();
         assert!(date.is_none(), "activity_date must be NULL for pre-v8 rows");
+    }
+
+    // ── v9 schema additions ──────────────────────────────────────────────────
+
+    #[test]
+    fn v9_adds_title_column_to_contacts() {
+        let conn = migrated_conn();
+        let now = "2024-01-01T00:00:00Z";
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, title, created_at, updated_at) \
+             VALUES ('con-v9-1', 'Dr. Smith', 'specialist', 'Dr.', ?, ?)",
+            rusqlite::params![now, now],
+        )
+        .unwrap();
+        let title: Option<String> = conn
+            .query_row(
+                "SELECT title FROM contacts WHERE id = 'con-v9-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(title.as_deref(), Some("Dr."));
+    }
+
+    #[test]
+    fn v9_creates_document_contacts_table() {
+        let conn = migrated_conn();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master \
+                 WHERE type='table' AND name='document_contacts'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "document_contacts table must exist after v9");
     }
 
     #[test]
