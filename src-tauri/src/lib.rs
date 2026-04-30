@@ -25,9 +25,10 @@ use commands::calendar::{
 use commands::categories::{
     assign_category_to_appointment, assign_category_to_document, categories_archive_stale,
     categories_assign_appointment, categories_assign_document, categories_bulk_link,
-    categories_create, categories_delete, categories_for_appointment, categories_for_document,
-    categories_list, categories_unassign, categories_update, category_reorder,
-    unassign_category_from_appointment, unassign_category_from_document,
+    categories_create, categories_create_if_not_exists, categories_delete,
+    categories_for_appointment, categories_for_document, categories_list, categories_unassign,
+    categories_update, category_reorder, unassign_category_from_appointment,
+    unassign_category_from_document,
 };
 use commands::clinics::{
     clinics_create, clinics_delete, clinics_get, clinics_list, clinics_update,
@@ -116,6 +117,7 @@ pub fn run() {
             notes_tags_set,
             categories_list,
             categories_create,
+            categories_create_if_not_exists,
             categories_update,
             categories_delete,
             categories_assign_document,

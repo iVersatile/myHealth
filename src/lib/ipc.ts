@@ -47,6 +47,7 @@ export const IPC = {
   // Categories
   categoriesList: 'categories_list',
   categoriesCreate: 'categories_create',
+  categoriesCreateIfNotExists: 'categories_create_if_not_exists',
   categoriesUpdate: 'categories_update',
   categoriesDelete: 'categories_delete',
   categoriesAssignDocument: 'categories_assign_document',

@@ -1,4 +1,5 @@
 use chrono::Utc;
+use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
@@ -97,6 +98,53 @@ pub fn categories_create(
     let cat = stmt.query_row(rusqlite::params![id], row_to_category)?;
     upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "");
     Ok(cat)
+}
+
+fn to_title_case(s: &str) -> String {
+    s.split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Looks up a category by name (case-insensitive). Returns existing id or creates with default colour.
+#[tauri::command]
+pub fn categories_create_if_not_exists(
+    name: String,
+    state: State<'_, AppState>,
+) -> Result<String, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let normalised = to_title_case(name.trim());
+
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT id FROM categories WHERE lower(name) = lower(?1) LIMIT 1",
+            rusqlite::params![normalised],
+            |r| r.get(0),
+        )
+        .optional()?;
+
+    if let Some(id) = existing {
+        return Ok(id);
+    }
+
+    let id = Uuid::new_v4().to_string();
+    let created_at = Utc::now().to_rfc3339();
+    conn.execute(
+        "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+         VALUES (?1, ?2, NULL, '#6B7280', 0, 100, ?3)",
+        rusqlite::params![id, normalised, created_at],
+    )?;
+    upsert_search_index(conn, "category", &id, &normalised, "", "", "", "");
+    Ok(id)
 }
 
 #[tauri::command]
@@ -486,6 +534,7 @@ pub fn categories_archive_stale(
 mod tests {
     use super::*;
     use crate::db;
+    use rusqlite::OptionalExtension;
 
     fn open_test_db() -> rusqlite::Connection {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
@@ -1072,5 +1121,109 @@ mod tests {
             )
             .unwrap();
         assert_ne!(is_system, 0, "system category must be blocked from reorder");
+    }
+
+    #[test]
+    fn create_if_not_exists_new_name_creates_and_returns_id() {
+        let conn = open_test_db();
+        let before: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE is_system = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let id = to_title_case("Physiotherapy");
+        // Use the SQL directly as the command requires State
+        let normalised = to_title_case("Physiotherapy");
+        let new_id = Uuid::new_v4().to_string();
+        let created_at = Utc::now().to_rfc3339();
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM categories WHERE lower(name) = lower(?1) LIMIT 1",
+                rusqlite::params![normalised],
+                |r| r.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert!(existing.is_none());
+        conn.execute(
+            "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, ?2, NULL, '#6B7280', 0, 100, ?3)",
+            rusqlite::params![new_id, normalised, created_at],
+        )
+        .unwrap();
+        let after: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE is_system = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(after, before + 1);
+        drop(id); // suppress unused warning
+    }
+
+    #[test]
+    fn create_if_not_exists_same_name_returns_same_id() {
+        let conn = open_test_db();
+        let normalised = to_title_case("Rheumatology");
+        let first_id = Uuid::new_v4().to_string();
+        let created_at = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, ?2, NULL, '#6B7280', 0, 100, ?3)",
+            rusqlite::params![first_id, normalised, created_at],
+        )
+        .unwrap();
+        let count_before: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE name = ?1",
+                [&normalised],
+                |r| r.get(0),
+            )
+            .unwrap();
+        // Second lookup: existing row must be returned
+        let found: Option<String> = conn
+            .query_row(
+                "SELECT id FROM categories WHERE lower(name) = lower(?1) LIMIT 1",
+                rusqlite::params![normalised],
+                |r| r.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert_eq!(found.as_deref(), Some(first_id.as_str()));
+        let count_after: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM categories WHERE name = ?1",
+                [&normalised],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count_before, count_after);
+    }
+
+    #[test]
+    fn create_if_not_exists_lowercase_input_matches_title_case_existing() {
+        let conn = open_test_db();
+        let normalised = to_title_case("Neurology");
+        let id = Uuid::new_v4().to_string();
+        let created_at = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, ?2, NULL, '#6B7280', 0, 100, ?3)",
+            rusqlite::params![id, normalised, created_at],
+        )
+        .unwrap();
+        // Lookup with lowercase variant
+        let found: Option<String> = conn
+            .query_row(
+                "SELECT id FROM categories WHERE lower(name) = lower(?1) LIMIT 1",
+                rusqlite::params!["neurology"],
+                |r| r.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert_eq!(found.as_deref(), Some(id.as_str()));
     }
 }
