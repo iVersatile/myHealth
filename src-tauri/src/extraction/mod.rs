@@ -6,7 +6,8 @@ pub mod pdf;
 
 pub use contact::ContactSuggestion;
 
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
+use regex::Regex;
 use std::path::Path;
 use std::time::Instant;
 
@@ -26,6 +27,136 @@ pub struct ExtractionResult {
     /// Unified auto-extracted tags: type tags (lowercase), specialty tags (uppercase),
     /// provider name tags (as detected), and activity date tag (YYYY-MM-DD).
     pub auto_tags: Vec<String>,
+    /// Medical activity date extracted from the document body (Priority 1).
+    /// Falls back to filename date or upload timestamp in the command layer.
+    pub activity_date: Option<String>,
+}
+
+// ── Activity date extraction ──────────────────────────────────────────────────
+
+/// Scans the document body for labelled date patterns (Priority 1).
+/// Recognised labels: "Date of Service", "Invoice Date", "Appointment Date", "Date".
+/// Recognised formats: DD/MM/YYYY, DD Month YYYY, YYYY-MM-DD.
+/// Returns the first match as an ISO-8601 string (YYYY-MM-DD).
+pub fn extract_activity_date(text: &str) -> Option<String> {
+    // Patterns tried in order; first match wins.
+    // Group 1 = the date value (varies per pattern).
+    const LABELLED: &[(&str, &str)] = &[
+        // "Date of Service: 09/03/2023"  or  "Date of Service : 2023-03-09"
+        (
+            r"(?i)date\s+of\s+service\s*[:\-]\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4})",
+            "dmy_slash",
+        ),
+        (
+            r"(?i)date\s+of\s+service\s*[:\-]\s*([0-9]{4}-[0-9]{2}-[0-9]{2})",
+            "ymd",
+        ),
+        (
+            r"(?i)date\s+of\s+service\s*[:\-]\s*([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4})",
+            "dmonthy",
+        ),
+        (
+            r"(?i)invoice\s+date\s*[:\-]\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4})",
+            "dmy_slash",
+        ),
+        (
+            r"(?i)invoice\s+date\s*[:\-]\s*([0-9]{4}-[0-9]{2}-[0-9]{2})",
+            "ymd",
+        ),
+        (
+            r"(?i)invoice\s+date\s*[:\-]\s*([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4})",
+            "dmonthy",
+        ),
+        (
+            r"(?i)appointment\s+date\s*[:\-]\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4})",
+            "dmy_slash",
+        ),
+        (
+            r"(?i)appointment\s+date\s*[:\-]\s*([0-9]{4}-[0-9]{2}-[0-9]{2})",
+            "ymd",
+        ),
+        (
+            r"(?i)appointment\s+date\s*[:\-]\s*([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4})",
+            "dmonthy",
+        ),
+        // Generic "Date: …"
+        (
+            r"(?i)(?:^|\s)date\s*[:\-]\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4})",
+            "dmy_slash",
+        ),
+        (
+            r"(?i)(?:^|\s)date\s*[:\-]\s*([0-9]{4}-[0-9]{2}-[0-9]{2})",
+            "ymd",
+        ),
+        (
+            r"(?i)(?:^|\s)date\s*[:\-]\s*([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4})",
+            "dmonthy",
+        ),
+    ];
+
+    for (pattern, fmt) in LABELLED {
+        let Ok(re) = Regex::new(pattern) else {
+            continue;
+        };
+        if let Some(caps) = re.captures(text) {
+            if let Some(m) = caps.get(1) {
+                if let Some(iso) = parse_date_to_iso(m.as_str().trim(), fmt) {
+                    return Some(iso);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Parses a date string in one of three formats and returns YYYY-MM-DD.
+fn parse_date_to_iso(s: &str, fmt: &str) -> Option<String> {
+    match fmt {
+        "ymd" => NaiveDate::parse_from_str(s, "%Y-%m-%d")
+            .ok()
+            .map(|d| d.format("%Y-%m-%d").to_string()),
+        "dmy_slash" => NaiveDate::parse_from_str(s, "%d/%m/%Y")
+            .ok()
+            .map(|d| d.format("%Y-%m-%d").to_string()),
+        "dmonthy" => {
+            // "09 March 2023"
+            NaiveDate::parse_from_str(s, "%d %B %Y")
+                .ok()
+                .map(|d| d.format("%Y-%m-%d").to_string())
+        }
+        _ => None,
+    }
+}
+
+/// Builds the timeline description for a document.
+///
+/// Format: `{YYYY-MM-DD} {SPECIALTY} with {Title} {Provider Name}`
+/// Falls back gracefully when tags are missing.
+#[cfg(test)]
+pub fn format_timeline_description(activity_date: &str, auto_tags: &[String]) -> String {
+    let specialty = auto_tags
+        .iter()
+        .find(|t| {
+            t.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
+                && t.chars().all(|c| c.is_uppercase() || c == '_' || c == ' ')
+        })
+        .map(String::as_str)
+        .unwrap_or("DOCUMENT");
+
+    // Provider tags: start with uppercase AND contain lowercase (rules out type tags
+    // which are all-lowercase, and specialty tags which are all-uppercase).
+    let provider: Option<&str> = auto_tags
+        .iter()
+        .find(|t| {
+            t.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
+                && t.chars().any(|c| c.is_lowercase())
+        })
+        .map(String::as_str);
+
+    match provider {
+        Some(p) => format!("{activity_date} {specialty} with {p}"),
+        None => format!("{activity_date} {specialty}"),
+    }
 }
 
 // ── Tag helpers ───────────────────────────────────────────────────────────────
@@ -233,7 +364,8 @@ fn extract_inner(path: &Path, app_handle: Option<&tauri::AppHandle>) -> Extracti
     let document_tags = category::extract_document_tags(&text);
     let contact_suggestions = contact::extract_contact_suggestions(&text);
 
-    let auto_tags = auto_extract_tags(&text, &doctor_candidates, None);
+    let activity_date = extract_activity_date(&text);
+    let auto_tags = auto_extract_tags(&text, &doctor_candidates, activity_date.as_deref());
 
     ExtractionResult {
         text,
@@ -243,6 +375,7 @@ fn extract_inner(path: &Path, app_handle: Option<&tauri::AppHandle>) -> Extracti
         document_tags,
         contact_suggestions,
         auto_tags,
+        activity_date,
     }
 }
 
@@ -410,6 +543,69 @@ mod tests {
             !tags.contains(&"bill".to_string()),
             "false positive; tags: {tags:?}"
         );
+    }
+
+    // ── extract_activity_date tests (criteria a–c) ────────────────────────────
+
+    #[test]
+    fn activity_date_labelled_body_dmy_slash() {
+        // (a) "Date of Service: 09/03/2023" → "2023-03-09"
+        let date = extract_activity_date("Date of Service: 09/03/2023\nsome other text");
+        assert_eq!(date.as_deref(), Some("2023-03-09"));
+    }
+
+    #[test]
+    fn activity_date_labelled_body_iso() {
+        let date = extract_activity_date("Invoice Date: 2023-03-09\npatient info");
+        assert_eq!(date.as_deref(), Some("2023-03-09"));
+    }
+
+    #[test]
+    fn activity_date_labelled_body_month_name() {
+        let date = extract_activity_date("Appointment Date: 09 March 2023");
+        assert_eq!(date.as_deref(), Some("2023-03-09"));
+    }
+
+    #[test]
+    fn activity_date_generic_date_label() {
+        let date = extract_activity_date("Date: 09/03/2023");
+        assert_eq!(date.as_deref(), Some("2023-03-09"));
+    }
+
+    #[test]
+    fn activity_date_none_when_no_label() {
+        // No labelled pattern — should return None
+        let date = extract_activity_date("09/03/2023 something happened");
+        assert!(date.is_none(), "expected None but got {date:?}");
+    }
+
+    // ── format_timeline_description tests (criterion d) ──────────────────────
+
+    #[test]
+    fn timeline_description_physio_with_provider() {
+        // (d) "2023-03-09 PHYSIOTHERAPY with Mr John Green"
+        let tags = vec![
+            "invoice".to_string(),
+            "PHYSIOTHERAPY".to_string(),
+            "Mr John Green".to_string(),
+            "2023-03-09".to_string(),
+        ];
+        let desc = format_timeline_description("2023-03-09", &tags);
+        assert_eq!(desc, "2023-03-09 PHYSIOTHERAPY with Mr John Green");
+    }
+
+    #[test]
+    fn timeline_description_no_provider_fallback() {
+        let tags = vec!["CARDIOLOGY".to_string(), "2024-01-15".to_string()];
+        let desc = format_timeline_description("2024-01-15", &tags);
+        assert_eq!(desc, "2024-01-15 CARDIOLOGY");
+    }
+
+    #[test]
+    fn timeline_description_no_specialty_uses_document() {
+        let tags = vec!["invoice".to_string(), "Dr Smith".to_string()];
+        let desc = format_timeline_description("2024-01-15", &tags);
+        assert_eq!(desc, "2024-01-15 DOCUMENT with Dr Smith");
     }
 
     #[test]

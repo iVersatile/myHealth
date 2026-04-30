@@ -1005,6 +1005,7 @@ pub struct ExtractionSuggestions {
     pub document_tags: Vec<String>,
     pub contact_suggestions: Vec<ContactSuggestionDto>,
     pub auto_tags: Vec<String>,
+    pub activity_date: Option<String>,
 }
 
 #[tauri::command]
@@ -1021,19 +1022,18 @@ pub async fn documents_run_extraction(
             .lock()
             .map_err(|e| CommandError::Internal(e.to_string()))?;
         let conn = CommandContext::new(&guard)?.conn;
-        let cached: Option<String> = conn
+        let cached: Option<(String, Option<String>)> = conn
             .query_row(
-                "SELECT extracted_text FROM documents \
+                "SELECT extracted_text, activity_date FROM documents \
                  WHERE id = ?1 AND is_deleted = 0 \
                    AND extraction_status = 'EXTRACTED' \
                    AND extracted_text IS NOT NULL",
                 rusqlite::params![id],
-                |row| row.get(0),
+                |row| Ok((row.get(0)?, row.get(1)?)),
             )
-            .optional()?
-            .flatten();
+            .optional()?;
 
-        if let Some(text) = cached {
+        if let Some((text, activity_date)) = cached {
             let doctor_candidates = crate::extraction::doctor::extract_doctor_candidates(&text);
             let category_suggestion = crate::extraction::category::suggest_category(&text);
             let document_tags = crate::extraction::category::extract_document_tags(&text);
@@ -1050,28 +1050,34 @@ pub async fn documents_run_extraction(
                     email: c.email.clone(),
                 })
                 .collect();
-            let auto_tags = crate::extraction::auto_extract_tags(&text, &doctor_candidates, None);
+            let auto_tags = crate::extraction::auto_extract_tags(
+                &text,
+                &doctor_candidates,
+                activity_date.as_deref(),
+            );
             return Ok(ExtractionSuggestions {
                 doctor_candidates,
                 category_suggestion,
                 document_tags,
                 contact_suggestions: contact_dtos,
                 auto_tags,
+                activity_date,
             });
         }
     }
 
     // ── cache miss — run extraction ──────────────────────────────────────────
-    let file_path: String = {
+    let (file_path, document_date, created_at): (String, Option<String>, String) = {
         let guard = state
             .db
             .lock()
             .map_err(|e| CommandError::Internal(e.to_string()))?;
         let conn = CommandContext::new(&guard)?.conn;
         conn.query_row(
-            "SELECT file_path FROM documents WHERE id = ?1 AND is_deleted = 0",
+            "SELECT file_path, document_date, created_at \
+             FROM documents WHERE id = ?1 AND is_deleted = 0",
             rusqlite::params![id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )?
     };
 
@@ -1103,6 +1109,22 @@ pub async fn documents_run_extraction(
         })
         .collect();
 
+    // Priority chain: (1) body text → (2) document_date from filename → (3) created_at
+    let resolved_activity_date: String = result
+        .activity_date
+        .clone()
+        .or(document_date)
+        .unwrap_or_else(|| {
+            // Truncate RFC-3339 timestamp to date-only
+            created_at.get(..10).unwrap_or(&created_at).to_string()
+        });
+
+    let auto_tags = crate::extraction::auto_extract_tags(
+        &result.text,
+        &result.doctor_candidates,
+        Some(&resolved_activity_date),
+    );
+
     let json = serde_json::json!({
         "text": result.text,
         "extracted_at": result.extracted_at,
@@ -1123,9 +1145,16 @@ pub async fn documents_run_extraction(
              SET extracted_metadata = ?1, \
                  extracted_text = ?2, \
                  extraction_status = 'EXTRACTED', \
-                 updated_at = ?3 \
-             WHERE id = ?4",
-            rusqlite::params![json, result.text, Utc::now().to_rfc3339(), id],
+                 activity_date = ?3, \
+                 updated_at = ?4 \
+             WHERE id = ?5",
+            rusqlite::params![
+                json,
+                result.text,
+                resolved_activity_date,
+                Utc::now().to_rfc3339(),
+                id
+            ],
         )?;
     }
 
@@ -1134,7 +1163,8 @@ pub async fn documents_run_extraction(
         category_suggestion: result.category_suggestion,
         document_tags: result.document_tags,
         contact_suggestions: contact_dtos,
-        auto_tags: result.auto_tags,
+        auto_tags,
+        activity_date: Some(resolved_activity_date),
     })
 }
 

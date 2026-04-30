@@ -40,6 +40,21 @@ interface DocumentLink {
 
 // ── Converters ────────────────────────────────────────────────────────────────
 
+function buildDocTitle(d: Document): string {
+  const eventDate = (d.activity_date ?? d.created_at).slice(0, 10)
+  const tags: string[] = d.tags ?? []
+
+  const specialty = tags.find(
+    (t) => t === t.toUpperCase() && t.length > 2 && /^[A-Z]/.test(t),
+  )
+  const provider = tags.find((t) => /[a-z]/.test(t) || (t.includes(' ') && t !== eventDate))
+
+  if (specialty && provider) return `${eventDate} ${specialty} with ${provider}`
+  if (specialty) return `${eventDate} ${specialty}`
+  if (provider) return `${eventDate} DOCUMENT with ${provider}`
+  return `${eventDate} DOCUMENT`
+}
+
 function docToEvent(d: Document): TimelineEvent {
   const ext = d.filename.split('.').pop()?.toUpperCase() ?? 'FILE'
   const badge = ext === 'PDF' ? 'PDF' : ['JPG', 'JPEG', 'PNG', 'WEBP'].includes(ext) ? 'IMG' : ext
@@ -48,7 +63,7 @@ function docToEvent(d: Document): TimelineEvent {
     rawId: d.id,
     type: 'document',
     date: new Date(d.activity_date ?? d.created_at),
-    title: `${d.filename} uploaded`,
+    title: buildDocTitle(d),
     subtitle: d.category.charAt(0).toUpperCase() + d.category.slice(1),
     badge,
     href: `/documents/view?id=${d.id}`,
