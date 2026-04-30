@@ -8,7 +8,7 @@
 
 ```
 Phase 9 — v1.3 Intelligence features
-Current task: 9.8 — Verify GitHub Release
+Current task: 10.0 — V3 DB schema migrations
 ```
 
 ---
@@ -488,7 +488,7 @@ Current task: 9.8 — Verify GitHub Release
    - Update `src-tauri/tauri.conf.json` version to `1.3.0`
    - **Requires explicit user approval before running `git tag`**
 
-▶ **9.8 — Verify GitHub Release**
+[x] **9.8 — Verify GitHub Release**
    - Confirm 4 platform artifacts published; update README if needed
 
 ---
@@ -501,7 +501,7 @@ Current task: 9.8 — Verify GitHub Release
 
 ### Sprint 17: Schema migrations
 
-[ ] **10.0 — V3 DB schema migrations**
+▶ **10.0 — V3 DB schema migrations**
    - Migration v6 in `src-tauri/src/db/migrations.rs`:
      - `ALTER TABLE clinics ADD COLUMN company_registration_number TEXT`
      - `CREATE TABLE clinic_addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE, address TEXT NOT NULL, is_primary INTEGER NOT NULL DEFAULT 0)`
