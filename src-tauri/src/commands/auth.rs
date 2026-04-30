@@ -42,6 +42,22 @@ fn load_salt(data_dir: &Path) -> Result<Vec<u8>, String> {
     std::fs::read(salt_path(data_dir)).map_err(|e| format!("failed to read salt: {e}"))
 }
 
+fn users_dir(data_dir: &Path) -> PathBuf {
+    data_dir.join("users")
+}
+
+fn user_salt_path(data_dir: &Path, user_id: &str) -> PathBuf {
+    users_dir(data_dir).join(format!("{user_id}.salt"))
+}
+
+fn user_wrapped_key_path(data_dir: &Path, user_id: &str) -> PathBuf {
+    users_dir(data_dir).join(format!("{user_id}.wrapped_key"))
+}
+
+fn roster_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("myhealth_users.json")
+}
+
 fn open_db_for_path(data_dir: &Path, hex: &str) -> Result<Connection, String> {
     let path = db_path(data_dir);
     let path_str = path.to_str().ok_or("db path is not valid UTF-8")?;
@@ -66,6 +82,96 @@ fn validate_password_strength(password: &str) -> Result<(), String> {
         return Err("Password must contain at least one special character".into());
     }
     Ok(())
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UserEntry {
+    pub id: String,
+    pub display_name: String,
+}
+
+fn read_roster(data_dir: &Path) -> Vec<UserEntry> {
+    std::fs::read_to_string(roster_path(data_dir))
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn write_roster(data_dir: &Path, roster: &[UserEntry]) -> Result<(), String> {
+    let json = serde_json::to_string(roster).map_err(|e| format!("serialize roster: {e}"))?;
+    std::fs::write(roster_path(data_dir), json).map_err(|e| format!("write roster: {e}"))
+}
+
+fn hex_to_bytes32(hex: &str) -> Result<[u8; 32], String> {
+    if hex.len() != 64 {
+        return Err(format!("expected 64 hex chars, got {}", hex.len()));
+    }
+    let mut out = [0u8; 32];
+    for i in 0..32 {
+        out[i] = u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16)
+            .map_err(|e| format!("invalid hex at {}: {e}", i * 2))?;
+    }
+    Ok(out)
+}
+
+fn xor_keys(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    for i in 0..32 {
+        out[i] = a[i] ^ b[i];
+    }
+    out
+}
+
+pub fn add_user_internal(
+    data_dir: &Path,
+    vault_key_hex: &str,
+    user_id: &str,
+    display_name: &str,
+    password: &str,
+    conn: &Connection,
+) -> Result<(), String> {
+    validate_password_strength(password)?;
+    let user_salt = generate_salt();
+    let user_key = crypto::derive_key(password, &user_salt);
+    let vault_key = hex_to_bytes32(vault_key_hex)?;
+    let wrapped = xor_keys(&vault_key, &user_key);
+    let dir = users_dir(data_dir);
+    std::fs::create_dir_all(&dir).map_err(|e| format!("create users dir: {e}"))?;
+    std::fs::write(user_salt_path(data_dir, user_id), user_salt)
+        .map_err(|e| format!("write user salt: {e}"))?;
+    std::fs::write(user_wrapped_key_path(data_dir, user_id), wrapped)
+        .map_err(|e| format!("write wrapped key: {e}"))?;
+    conn.execute(
+        "INSERT INTO users (id, display_name) VALUES (?1, ?2)",
+        rusqlite::params![user_id, display_name],
+    )
+    .map_err(|e| format!("insert user: {e}"))?;
+    let mut roster = read_roster(data_dir);
+    roster.push(UserEntry {
+        id: user_id.to_string(),
+        display_name: display_name.to_string(),
+    });
+    write_roster(data_dir, &roster)
+}
+
+pub fn switch_user_internal(
+    data_dir: &Path,
+    user_id: &str,
+    password: &str,
+) -> Result<(Connection, String), String> {
+    let user_salt = std::fs::read(user_salt_path(data_dir, user_id))
+        .map_err(|e| format!("failed to read user salt: {e}"))?;
+    let user_key = crypto::derive_key(password, &user_salt);
+    let wrapped_bytes = std::fs::read(user_wrapped_key_path(data_dir, user_id))
+        .map_err(|e| format!("failed to read wrapped key: {e}"))?;
+    let wrapped: [u8; 32] = wrapped_bytes
+        .try_into()
+        .map_err(|_| "wrapped key file is corrupt".to_string())?;
+    let vault_key = xor_keys(&wrapped, &user_key);
+    let vault_hex = crypto::key_to_hex(&vault_key);
+    let conn =
+        open_db_for_path(data_dir, &vault_hex).map_err(|_| "incorrect password".to_string())?;
+    Ok((conn, vault_hex))
 }
 
 // Internal functions — testable without Tauri runtime.
@@ -286,6 +392,80 @@ pub fn app_reset_data(
     Ok(())
 }
 
+#[tauri::command]
+pub fn auth_list_users(app_handle: tauri::AppHandle) -> Result<Vec<UserEntry>, CommandError> {
+    use tauri::Manager;
+    let data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
+    Ok(read_roster(&data_dir))
+}
+
+#[tauri::command]
+pub fn auth_add_user(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    display_name: String,
+    password: String,
+) -> Result<String, CommandError> {
+    use tauri::Manager;
+    let data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
+    let vault_key_hex = {
+        let guard = state.key_hex.lock().unwrap();
+        guard.as_ref().ok_or(CommandError::DbNotOpen)?.to_string()
+    };
+    let db_guard = state.db.lock().unwrap();
+    let conn = db_guard.as_ref().ok_or(CommandError::DbNotOpen)?;
+    let user_id = uuid::Uuid::new_v4().to_string();
+    add_user_internal(
+        &data_dir,
+        &vault_key_hex,
+        &user_id,
+        &display_name,
+        &password,
+        conn,
+    )
+    .map_err(CommandError::Internal)?;
+    Ok(user_id)
+}
+
+#[tauri::command]
+pub fn auth_switch_user(
+    state: tauri::State<'_, AppState>,
+    app_handle: tauri::AppHandle,
+    user_id: String,
+    password: String,
+) -> Result<(), CommandError> {
+    use tauri::Manager;
+    state
+        .auth_rate_limit
+        .lock()
+        .unwrap()
+        .check()
+        .map_err(CommandError::Internal)?;
+    let data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
+    match switch_user_internal(&data_dir, &user_id, &password) {
+        Ok((conn, hex)) => {
+            state.auth_rate_limit.lock().unwrap().reset();
+            *state.db.lock().unwrap() = Some(conn);
+            *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
+            *state.current_user_id.lock().unwrap() = Some(user_id);
+            Ok(())
+        }
+        Err(e) => {
+            state.auth_rate_limit.lock().unwrap().record_failure();
+            Err(CommandError::Internal(e))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -504,6 +684,84 @@ mod tests {
         assert!(!db_path(&dir).exists(), "db should be deleted");
         assert!(!salt_path(&dir).exists(), "salt should be deleted");
         assert!(!kdf_path(&dir).exists(), "kdf should be deleted");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn two_users_can_be_created() {
+        let dir = test_dir();
+        let (conn, vault_hex) = set_password_internal(&dir, "VaultPass1!xx").unwrap();
+        add_user_internal(&dir, &vault_hex, "alice", "Alice", "AlicePass1!xx", &conn).unwrap();
+        add_user_internal(&dir, &vault_hex, "bob", "Bob", "BobPass99!xxx", &conn).unwrap();
+        let roster = read_roster(&dir);
+        assert_eq!(roster.len(), 2);
+        assert!(roster.iter().any(|u| u.id == "alice"));
+        assert!(roster.iter().any(|u| u.id == "bob"));
+        drop(conn);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn user_isolation_documents_not_visible_cross_user() {
+        let dir = test_dir();
+        let (conn, vault_hex) = set_password_internal(&dir, "VaultPass1!xx").unwrap();
+        add_user_internal(&dir, &vault_hex, "alice", "Alice", "AlicePass1!xx", &conn).unwrap();
+        add_user_internal(&dir, &vault_hex, "bob", "Bob", "BobPass99!xxx", &conn).unwrap();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, user_id) \
+             VALUES ('doc-a', 'alice.pdf', 'docs/alice.pdf', 'application/pdf', 100, 'lab', 'alice')",
+            [],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM documents WHERE user_id = 'bob'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "bob should see no documents");
+        drop(conn);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn switch_user_re_opens_connection() {
+        let dir = test_dir();
+        let (conn, vault_hex) = set_password_internal(&dir, "VaultPass1!xx").unwrap();
+        add_user_internal(&dir, &vault_hex, "alice", "Alice", "AlicePass1!xx", &conn).unwrap();
+        drop(conn);
+        let (conn2, _) = switch_user_internal(&dir, "alice", "AlicePass1!xx").unwrap();
+        let result: i64 = conn2
+            .query_row("SELECT COUNT(*) FROM documents", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(result, 0);
+        drop(conn2);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn delete_user_cascades_documents() {
+        let dir = test_dir();
+        let (conn, vault_hex) = set_password_internal(&dir, "VaultPass1!xx").unwrap();
+        add_user_internal(&dir, &vault_hex, "alice", "Alice", "AlicePass1!xx", &conn).unwrap();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, user_id) \
+             VALUES ('doc-a', 'alice.pdf', 'docs/alice.pdf', 'application/pdf', 100, 'lab', 'alice')",
+            [],
+        )
+        .unwrap();
+        conn.execute("DELETE FROM users WHERE id = 'alice'", [])
+            .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM documents WHERE user_id = 'alice'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "cascade delete should remove alice's documents");
+        drop(conn);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

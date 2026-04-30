@@ -5,6 +5,9 @@ export const IPC = {
   authLock: 'auth_lock',
   authChangePassword: 'auth_change_password',
   authIsLocked: 'auth_is_locked',
+  authListUsers: 'auth_list_users',
+  authAddUser: 'auth_add_user',
+  authSwitchUser: 'auth_switch_user',
 
   // Documents
   documentsList: 'documents_list',

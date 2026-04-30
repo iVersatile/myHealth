@@ -2,9 +2,9 @@
 
 import { useState, useEffect, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth, UserEntry } from '../hooks/useAuth'
 
-type Mode = 'unlock' | 'setup'
+type Mode = 'unlock' | 'setup' | 'pick-user' | 'switch-user'
 
 function validatePasswordStrength(password: string): string | null {
   if (password.length < 12) {
@@ -42,19 +42,26 @@ function tauriErrorMessage(err: unknown): string {
 
 export default function LockScreen() {
   const router = useRouter()
-  const { unlock, setup, hasPassword } = useAuth()
+  const { unlock, setup, hasPassword, listUsers, switchUser } = useAuth()
 
   const [mode, setMode] = useState<Mode>('unlock')
+  const [users, setUsers] = useState<UserEntry[]>([])
+  const [selectedUser, setSelectedUser] = useState<UserEntry | null>(null)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    hasPassword().then((exists) => {
-      if (!exists) setMode('setup')
+    Promise.all([hasPassword(), listUsers()]).then(([exists, roster]) => {
+      if (roster.length > 0) {
+        setUsers(roster)
+        setMode('pick-user')
+      } else if (!exists) {
+        setMode('setup')
+      }
     }).catch(() => {
-      // If the check fails, stay in unlock mode; user will see an error on submit
+      // Stay in unlock mode; user will see an error on submit
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -78,9 +85,11 @@ export default function LockScreen() {
 
     setIsLoading(true)
     try {
-      if (mode === 'unlock') {
+      if (mode === 'switch-user' && selectedUser) {
+        await switchUser(selectedUser.id, password)
+      } else if (mode === 'unlock') {
         await unlock(password)
-      } else {
+      } else if (mode === 'setup') {
         await setup(password)
       }
       router.push('/dashboard')
@@ -90,7 +99,7 @@ export default function LockScreen() {
         setMode('setup')
         setPassword('')
         setError('No database found. Create a master password to get started.')
-      } else if (mode === 'unlock') {
+      } else if (mode === 'unlock' || mode === 'switch-user') {
         setError('Incorrect password. Please try again.')
       } else {
         setError('Failed to create password. Please try again.')
@@ -100,7 +109,43 @@ export default function LockScreen() {
     }
   }
 
+  if (mode === 'pick-user') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface)] px-4">
+        <div className="w-full max-w-sm">
+          <div className="mb-10 text-center">
+            <h1 className="text-[var(--text-3xl)] font-semibold tracking-tight text-[var(--color-text)]">
+              myHealth
+            </h1>
+            <p className="mt-2 text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+              Who is using this device?
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {users.map((user) => (
+              <button
+                key={user.id}
+                type="button"
+                onClick={() => {
+                  setSelectedUser(user)
+                  setPassword('')
+                  setError(null)
+                  setMode('switch-user')
+                }}
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-left text-[var(--text-base)] font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)] hover:border-[var(--color-primary)]"
+              >
+                {user.display_name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const isSetup = mode === 'setup'
+  const isSwitchUser = mode === 'switch-user'
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface)] px-4">
@@ -110,7 +155,9 @@ export default function LockScreen() {
             myHealth
           </h1>
           <p className="mt-2 text-[var(--text-sm)] text-[var(--color-text-secondary)]">
-            Your health records, private.
+            {isSwitchUser && selectedUser
+              ? `Welcome back, ${selectedUser.display_name}`
+              : 'Your health records, private.'}
           </p>
         </div>
 
@@ -120,7 +167,7 @@ export default function LockScreen() {
               htmlFor="password"
               className="text-[var(--text-sm)] font-medium text-[var(--color-text)]"
             >
-              Master Password
+              {isSetup ? 'Master Password' : 'Password'}
             </label>
             <input
               id="password"
@@ -129,7 +176,7 @@ export default function LockScreen() {
               autoComplete={isSetup ? 'new-password' : 'current-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={isSetup ? 'Create a master password' : 'Enter your master password'}
+              placeholder={isSetup ? 'Create a master password' : 'Enter your password'}
               required
               className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-base)] text-[var(--color-text)] placeholder:text-[var(--color-text-disabled)] outline-none transition-colors focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
             />
@@ -172,6 +219,21 @@ export default function LockScreen() {
           >
             {isLoading ? 'Please wait…' : isSetup ? 'Create & Unlock' : 'Unlock'}
           </button>
+
+          {isSwitchUser && users.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('pick-user')
+                setSelectedUser(null)
+                setPassword('')
+                setError(null)
+              }}
+              className="text-center text-[var(--text-sm)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+            >
+              Back to user list
+            </button>
+          )}
         </form>
       </div>
     </div>

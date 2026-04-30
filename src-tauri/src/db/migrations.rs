@@ -28,6 +28,20 @@ const SCHEMA_V6: &str = "
     );
 ";
 
+const SCHEMA_V7: &str = "
+    CREATE TABLE IF NOT EXISTS users (
+        id           TEXT PRIMARY KEY,
+        display_name TEXT NOT NULL,
+        created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    ALTER TABLE documents       ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+    ALTER TABLE appointments    ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+    ALTER TABLE contacts        ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+    ALTER TABLE notes           ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+    ALTER TABLE categories      ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+    ALTER TABLE calendar_events ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -84,6 +98,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 7 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V7)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [7])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -110,7 +131,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 6);
+        assert_eq!(version, 7);
     }
 
     #[test]
@@ -124,7 +145,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 6);
+        assert_eq!(version, 7);
     }
 
     #[test]

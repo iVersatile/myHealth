@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 8 — v1.2 Enhancements
-Current task: 9.2 — Outlook Calendar sync (Windows)
+Phase 9 — v1.3 Intelligence features
+Current task: 9.5 — Multi-user vault support
 ```
 
 ---
@@ -441,7 +441,7 @@ Current task: 9.2 — Outlook Calendar sync (Windows)
    - Add "Import .ics" + "Export .ics" buttons to Appointments page toolbar (`src/app/(app)/appointments/page.tsx`)
    - Done when: `cargo test` verifies (a) round-trip VEVENT → appointment → VEVENT preserves title/date/location; (b) duplicate import skips, no new row; (c) export produces valid .ics parseable by `icalendar` crate
 
-▶ **9.2 — Outlook Calendar sync (Windows)**
+[x] **9.2 — Outlook Calendar sync (Windows)**
    - Windows-only (`#[cfg(target_os = "windows")]`) — no-op stubs compiled on macOS/Linux
    - Use Microsoft Graph REST API via `reqwest` (offline-first caveat: sync only when network available; clearly communicate this in UI)
    - Add `outlook_auth_url()` → OAuth2 PKCE flow via system browser; store refresh token encrypted in SQLite `settings`
@@ -451,7 +451,7 @@ Current task: 9.2 — Outlook Calendar sync (Windows)
 
 ### Sprint 15: Intelligence features
 
-[ ] **9.3 — AI appointment notes summarization (local heuristic)**
+[x] **9.3 — AI appointment notes summarization (local heuristic)**
    - Offline-first: no external AI API. Implement rule-based extractive summarization in `src-tauri/src/services/summarizer.rs`:
      - Sentence scoring: TF-IDF weight using existing FTS5 term frequencies + position bias (first/last sentences)
      - Return top-3 ranked sentences as summary (extractive, not generative)
@@ -460,7 +460,7 @@ Current task: 9.2 — Outlook Calendar sync (Windows)
    - In appointment detail page `src/app/(app)/appointments/[id]/page.tsx`, add "Summarize Notes" button; show summary in collapsible panel
    - Done when: `cargo test` verifies (a) 10-sentence notes → 3-sentence summary, (b) notes < 3 sentences → return as-is; summary renders in UI without layout shift
 
-[ ] **9.4 — Medical code tagging (ICD-10)**
+[x] **9.4 — Medical code tagging (ICD-10)**
    - Bundle a compressed ICD-10-CM lookup table (top 2 000 codes by frequency) as a Rust constant or embedded SQLite table; no network required
    - Add `icd10_suggest(text: String)` command in `src-tauri/src/commands/tags.rs` (new file):
      - Tokenize input, fuzzy-match against ICD-10 descriptions using Levenshtein distance ≤ 2
@@ -469,7 +469,7 @@ Current task: 9.2 — Outlook Calendar sync (Windows)
    - In document detail and appointment detail pages, add "Suggest ICD-10 Codes" button; user can accept/reject suggestions stored as tags in `document_tags` / `appointment_tags`
    - Done when: `cargo test` verifies (a) "chest pain" → at least one suggestion with code `R07.*`; (b) gibberish input → empty result; (c) accepted tag persists to DB
 
-[ ] **9.5 — Multi-user vault support**
+▶ **9.5 — Multi-user vault support**
    - Extend DB schema (migration v6): add `users (id, display_name, password_hash, created_at)` table; add `user_id` FK to `documents`, `appointments`, `contacts`, `categories`, `calendar_events`, `settings`
    - Add `auth_add_user(display_name: String, password: String)` and `auth_switch_user(user_id: String, password: String)` commands in `src-tauri/src/commands/auth.rs`
    - Add `authAddUser: 'auth_add_user', authSwitchUser: 'auth_switch_user'` to `src/lib/ipc.ts`

@@ -110,6 +110,7 @@ pub struct AppState {
     pub db: std::sync::Mutex<Option<Connection>>,
     pub key_hex: std::sync::Mutex<Option<zeroize::Zeroizing<String>>>,
     pub auth_rate_limit: std::sync::Mutex<AuthRateLimit>,
+    pub current_user_id: std::sync::Mutex<Option<String>>,
 }
 
 impl AppState {
@@ -121,6 +122,7 @@ impl AppState {
                 fail_count: 0,
                 locked_until: None,
             }),
+            current_user_id: std::sync::Mutex::new(None),
         }
     }
 }
