@@ -8,7 +8,7 @@
 
 ```
 Phase 8 — v1.2 Enhancements
-Current task: 8.8a — Settings: "Reset App Data" danger zone
+Current task: Phase 9 — v1.3+ Extended Features (Sprint 14)
 ```
 
 ---
@@ -403,7 +403,7 @@ Current task: 8.8a — Settings: "Reset App Data" danger zone
    - Verify no regressions in v1.1 flows
    - Automated Playwright smoke: 18/18 passed (NEXT_PUBLIC_SKIP_AUTH=1 bypass added to AuthGuard for dev)
 
-▶ **8.8a — Settings: "Reset App Data" danger zone**
+[x] **8.8a — Settings: "Reset App Data" danger zone**
    - **Why:** The only password recovery path is the CLI reset script; users should not need a terminal for this.
    - **Rust:** Add `app_reset_data(confirm: bool)` Tauri command in `src-tauri/src/commands/auth.rs`
      - Returns early with error if `!confirm` (double-safety guard)
@@ -415,12 +415,12 @@ Current task: 8.8a — Settings: "Reset App Data" danger zone
    - Add `appResetData: 'app_reset_data'` to `src/lib/ipc.ts`
    - Done when: clicking Reset in Settings → confirmation dialog → wipes data → redirected to fresh setup screen; `cargo test` covers (a) `confirm=false` returns error, (b) `confirm=true` deletes all three files
 
-[ ] **8.9 — Bump version & tag v1.2.0**
+[x] **8.9 — Bump version & tag v1.2.0**
    - Update `package.json` version to `1.2.0`
    - Update `src-tauri/tauri.conf.json` version to `1.2.0`
    - **Requires explicit user approval before running `git tag`**
 
-[ ] **8.10 — Verify GitHub Release**
+[x] **8.10 — Verify GitHub Release**
    - Confirm 4 platform artifacts published; update README if needed
 
 ---
@@ -432,7 +432,7 @@ Current task: 8.8a — Settings: "Reset App Data" danger zone
 
 ### Sprint 14: Calendar extensions
 
-[ ] **9.1 — iCalendar import/export (.ics)**
+▶ **9.1 — iCalendar import/export (.ics)**
    - Add `icalendar_import(user_id: String, file_path: String)` and `icalendar_export(user_id: String, appointment_ids: Vec<String>, file_path: String)` in `src-tauri/src/commands/calendar.rs`
    - Use `icalendar` crate (add to `src-tauri/Cargo.toml` — not yet present)
    - Import: parse VEVENT components → `appointments` rows; skip duplicates by `external_event_id`
