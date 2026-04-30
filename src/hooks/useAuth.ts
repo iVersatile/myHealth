@@ -4,6 +4,10 @@ import { useAuthStore } from '../store/authStore'
 export function useAuth() {
   const setLocked = useAuthStore((s) => s.setLocked)
 
+  async function hasPassword(): Promise<boolean> {
+    return invoke<boolean>('auth_has_password')
+  }
+
   async function unlock(password: string): Promise<void> {
     await invoke('auth_unlock', { password })
     setLocked(false)
@@ -19,5 +23,5 @@ export function useAuth() {
     setLocked(true)
   }
 
-  return { unlock, setup, lock }
+  return { unlock, setup, lock, hasPassword }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../hooks/useAuth'
 
@@ -30,15 +30,34 @@ function validatePasswordStrength(password: string): string | null {
   return null
 }
 
+function tauriErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === 'object') {
+    const obj = err as Record<string, unknown>
+    if (typeof obj['Internal'] === 'string') return obj['Internal']
+    if (typeof obj['message'] === 'string') return obj['message']
+  }
+  return String(err)
+}
+
 export default function LockScreen() {
   const router = useRouter()
-  const { unlock, setup } = useAuth()
+  const { unlock, setup, hasPassword } = useAuth()
 
   const [mode, setMode] = useState<Mode>('unlock')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    hasPassword().then((exists) => {
+      if (!exists) setMode('setup')
+    }).catch(() => {
+      // If the check fails, stay in unlock mode; user will see an error on submit
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -66,7 +85,7 @@ export default function LockScreen() {
       }
       router.push('/dashboard')
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = tauriErrorMessage(err)
       if (mode === 'unlock' && msg.includes('failed to read salt')) {
         setMode('setup')
         setPassword('')

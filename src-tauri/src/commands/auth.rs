@@ -95,7 +95,8 @@ pub fn unlock_internal(data_dir: &Path, password: &str) -> Result<(Connection, S
             .expect("HMAC<Sha512> key length is always valid");
         crypto::key_to_hex(&key)
     };
-    let conn = open_db_for_path(data_dir, &hex).map_err(|_| "incorrect password".to_string())?;
+    let conn = open_db_for_path(data_dir, &hex)
+        .map_err(|e| format!("incorrect password (detail: {e})"))?;
 
     if stored_iters < crypto::ITERATIONS {
         let new_hex = crypto::key_to_hex(&crypto::derive_key(password, &salt));
@@ -242,6 +243,16 @@ pub fn auth_is_locked(state: tauri::State<'_, AppState>) -> bool {
     state.db.lock().unwrap().is_none()
 }
 
+#[tauri::command]
+pub fn auth_has_password(app_handle: tauri::AppHandle) -> Result<bool, CommandError> {
+    use tauri::Manager;
+    let data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
+    Ok(salt_path(&data_dir).exists())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,5 +385,50 @@ mod tests {
         assert_eq!(rl.fail_count, 0);
         assert!(rl.locked_until.is_none());
         assert!(rl.check().is_ok());
+    }
+
+    #[test]
+    fn has_password_false_when_no_salt() {
+        let dir = test_dir();
+        // No salt file — should report no password set
+        assert!(!salt_path(&dir).exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn has_password_true_after_set_password() {
+        let dir = test_dir();
+        let (conn, _) = set_password_internal(&dir, "ValidPass1!").unwrap();
+        drop(conn);
+        assert!(
+            salt_path(&dir).exists(),
+            "salt must exist after set_password"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn wrong_password_error_contains_detail() {
+        let dir = test_dir();
+        let (conn, _) = set_password_internal(&dir, "ValidPass1!").unwrap();
+        drop(conn);
+        let err = unlock_internal(&dir, "WrongPass1!").unwrap_err();
+        assert!(
+            err.contains("incorrect password"),
+            "error should say 'incorrect password', got: {err}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn unlock_propagates_real_error_when_no_salt() {
+        let dir = test_dir();
+        // No salt file at all — should fail with "failed to read salt", not "incorrect password"
+        let err = unlock_internal(&dir, "AnyPass1!").unwrap_err();
+        assert!(
+            err.contains("failed to read salt"),
+            "expected 'failed to read salt' error, got: {err}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
