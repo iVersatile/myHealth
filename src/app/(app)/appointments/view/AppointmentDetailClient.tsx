@@ -51,20 +51,34 @@ export default function AppointmentDetailClient() {
   const [summaryError, setSummaryError] = useState<string | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
 
+  interface Icd10Suggestion {
+    code: string
+    description: string
+    confidence: number
+  }
+  const [savedTags, setSavedTags] = useState<string[]>([])
+  const [suggestions, setSuggestions] = useState<Icd10Suggestion[]>([])
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set())
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestError, setSuggestError] = useState<string | null>(null)
+  const [savingTags, setSavingTags] = useState(false)
+
   useEffect(() => {
     if (!id) return
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetchedAppt, fetchedLinks, catRows, assignedIds] = await Promise.all([
+        const [fetchedAppt, fetchedLinks, catRows, assignedIds, fetchedTags] = await Promise.all([
           invoke<Appointment>('appointments_get', { id }),
           invoke<LinkedDocument[]>('get_appointment_links', { userId: '', appointmentId: id }),
           invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list'),
           invoke<string[]>('categories_for_appointment', { appointmentId: id }),
+          invoke<string[]>('appointment_tags_get', { appointmentId: id }),
         ])
         setAppt(fetchedAppt)
         setLinkedDocs(fetchedLinks)
+        setSavedTags(fetchedTags)
         setAllCategories(catRows.map(r => ({
           id: r.id,
           name: r.name,
@@ -113,6 +127,57 @@ export default function AppointmentDetailClient() {
       setSummaryError(String(e))
     } finally {
       setSummarizing(false)
+    }
+  }
+
+  async function handleSuggestIcd10() {
+    if (!appt) return
+    setSuggesting(true)
+    setSuggestError(null)
+    setSuggestions([])
+    setSelectedCodes(new Set())
+    try {
+      const text = [appt.title, appt.specialty, appt.notes].filter(Boolean).join(' ')
+      const results = await invoke<Icd10Suggestion[]>('icd10_suggest', { text })
+      setSuggestions(results)
+    } catch (e) {
+      setSuggestError(String(e))
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
+  function toggleSuggestion(code: string) {
+    setSelectedCodes((prev) => {
+      const next = new Set(prev)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
+      return next
+    })
+  }
+
+  async function handleSaveTags() {
+    const merged = Array.from(new Set([...savedTags, ...Array.from(selectedCodes)]))
+    setSavingTags(true)
+    try {
+      await invoke('appointment_tags_set', { appointmentId: id, tags: merged })
+      setSavedTags(merged)
+      setSuggestions([])
+      setSelectedCodes(new Set())
+    } catch (e) {
+      setSuggestError(String(e))
+    } finally {
+      setSavingTags(false)
+    }
+  }
+
+  async function handleRemoveTag(tag: string) {
+    const next = savedTags.filter((t) => t !== tag)
+    try {
+      await invoke('appointment_tags_set', { appointmentId: id, tags: next })
+      setSavedTags(next)
+    } catch (e) {
+      setError(String(e))
     }
   }
 
@@ -293,6 +358,93 @@ export default function AppointmentDetailClient() {
           />
         </section>
       )}
+
+      {/* ICD-10 tags */}
+      <section aria-label="ICD-10 medical codes">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-[var(--text-lg)] font-semibold text-[var(--color-text)]">
+            ICD-10 Codes
+          </h2>
+          <button
+            type="button"
+            onClick={() => void handleSuggestIcd10()}
+            disabled={suggesting || !appt?.notes}
+            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-xs)] text-[var(--color-accent)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
+          >
+            {suggesting ? 'Suggesting…' : 'Suggest ICD-10 Codes'}
+          </button>
+        </div>
+
+        {savedTags.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {savedTags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1 text-[var(--text-xs)] font-medium text-[var(--color-text)]"
+              >
+                {tag}
+                <button
+                  type="button"
+                  aria-label={`Remove tag ${tag}`}
+                  onClick={() => void handleRemoveTag(tag)}
+                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {suggestError && (
+          <p className="mb-2 text-[var(--text-xs)] text-[var(--color-danger)]" role="alert">
+            {suggestError}
+          </p>
+        )}
+
+        {suggestions.length > 0 && (
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4">
+            <p className="mb-3 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+              Select codes to add:
+            </p>
+            <ul className="space-y-2">
+              {suggestions.map((s) => (
+                <li key={s.code} className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id={`icd-${s.code}`}
+                    checked={selectedCodes.has(s.code)}
+                    onChange={() => toggleSuggestion(s.code)}
+                    className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--color-accent)]"
+                  />
+                  <label htmlFor={`icd-${s.code}`} className="cursor-pointer text-[var(--text-sm)] text-[var(--color-text)]">
+                    <span className="font-mono font-semibold text-[var(--color-accent)]">{s.code}</span>
+                    {' — '}
+                    {s.description}
+                    <span className="ml-2 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                      ({Math.round(s.confidence * 100)}%)
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => void handleSaveTags()}
+              disabled={savingTags || selectedCodes.size === 0}
+              className="mt-4 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-1.5 text-[var(--text-sm)] font-medium text-white transition-opacity duration-[var(--duration-fast)] hover:opacity-90 disabled:opacity-50"
+            >
+              {savingTags ? 'Saving…' : `Accept ${selectedCodes.size} Code${selectedCodes.size !== 1 ? 's' : ''}`}
+            </button>
+          </div>
+        )}
+
+        {suggestions.length === 0 && savedTags.length === 0 && !suggesting && (
+          <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+            No ICD-10 codes added yet. Click &quot;Suggest ICD-10 Codes&quot; to get suggestions from the appointment notes.
+          </p>
+        )}
+      </section>
 
       {/* Linked documents */}
       <section aria-label="Linked documents">

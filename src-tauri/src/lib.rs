@@ -60,6 +60,7 @@ use commands::settings::{
 };
 use commands::stats::stats_summary;
 use commands::summarizer::summarize_appointment_notes;
+use commands::tags::{appointment_tags_get, appointment_tags_set, icd10_suggest};
 use commands::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -172,6 +173,9 @@ pub fn run() {
             outlook_is_connected,
             outlook_disconnect,
             summarize_appointment_notes,
+            icd10_suggest,
+            appointment_tags_get,
+            appointment_tags_set,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

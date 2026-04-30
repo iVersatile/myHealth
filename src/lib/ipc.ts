@@ -28,6 +28,9 @@ export const IPC = {
   appointmentsDelete: 'appointments_delete',
   appointmentsLinkDocument: 'appointments_link_document',
   summarizeAppointmentNotes: 'summarize_appointment_notes',
+  icd10Suggest: 'icd10_suggest',
+  appointmentTagsGet: 'appointment_tags_get',
+  appointmentTagsSet: 'appointment_tags_set',
 
   // Notes
   notesList: 'notes_list',

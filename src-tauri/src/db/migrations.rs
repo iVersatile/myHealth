@@ -20,6 +20,14 @@ const SCHEMA_V4: &str = "
 
 const SCHEMA_V5: &str = "ALTER TABLE categories ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0;";
 
+const SCHEMA_V6: &str = "
+    CREATE TABLE IF NOT EXISTS appointment_tags (
+        appointment_id  TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+        tag             TEXT NOT NULL,
+        PRIMARY KEY (appointment_id, tag)
+    );
+";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -69,6 +77,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 6 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V6)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [6])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -95,7 +110,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 5);
+        assert_eq!(version, 6);
     }
 
     #[test]
@@ -109,7 +124,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 5);
+        assert_eq!(version, 6);
     }
 
     #[test]
@@ -289,6 +304,40 @@ mod tests {
         let count: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM appointment_categories WHERE appointment_id = 'appt-v2-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn appointment_tags_cascade_delete() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, status, created_at, updated_at) \
+             VALUES ('appt-tag-1','Checkup','2024-06-01','scheduled','2024-01-01','2024-01-01')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO appointment_tags (appointment_id, tag) VALUES ('appt-tag-1', 'R07.9')",
+            [],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointment_tags WHERE appointment_id = 'appt-tag-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+        conn.execute("DELETE FROM appointments WHERE id = 'appt-tag-1'", [])
+            .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointment_tags WHERE appointment_id = 'appt-tag-1'",
                 [],
                 |r| r.get(0),
             )
