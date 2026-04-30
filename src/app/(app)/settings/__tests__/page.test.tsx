@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -510,5 +510,144 @@ describe('SettingsPage', () => {
 
     const syncBtn = screen.getByText('Sync Now') as HTMLButtonElement
     expect(syncBtn.disabled).toBe(true)
+  })
+})
+
+describe('SettingsPage — Outlook Calendar Sync (Windows)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      configurable: true,
+    })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'outlook_is_connected') return Promise.resolve(false)
+      if (cmd === 'outlook_get_auth_url') return Promise.resolve({ url: 'https://login.microsoft.com/auth', code_verifier: 'verifier123' })
+      if (cmd === 'outlook_exchange_code') return Promise.resolve()
+      if (cmd === 'outlook_sync') return Promise.resolve(5)
+      if (cmd === 'outlook_disconnect') return Promise.resolve()
+      return Promise.resolve()
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: '',
+      configurable: true,
+    })
+  })
+
+  it('renders Outlook section on Windows', async () => {
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Outlook Calendar Sync')).toBeDefined())
+    expect(screen.getByText('Connect Outlook')).toBeDefined()
+  })
+
+  it('calls outlook_is_connected on mount', async () => {
+    await renderPage()
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('outlook_is_connected', { userId: 'default' }))
+  })
+
+  it('shows connected state when outlook_is_connected returns true', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'outlook_is_connected') return Promise.resolve(true)
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('✓ Connected to Outlook')).toBeDefined())
+  })
+
+  it('transitions to awaiting_code after clicking Connect Outlook', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Connect Outlook')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Connect Outlook'))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('outlook_get_auth_url')
+      expect(screen.getByPlaceholderText('Paste code here…')).toBeDefined()
+    })
+    openSpy.mockRestore()
+  })
+
+  it('exchanges code and shows connected state', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Connect Outlook')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Connect Outlook'))
+    await waitFor(() => expect(screen.getByPlaceholderText('Paste code here…')).toBeDefined())
+
+    const input = screen.getByPlaceholderText('Paste code here…')
+    await userEvent.type(input, 'auth-code-abc')
+
+    fireEvent.click(screen.getByText('Authorize'))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('outlook_exchange_code', expect.objectContaining({ code: 'auth-code-abc' }))
+      expect(screen.getByText('Connected to Outlook successfully.')).toBeDefined()
+    })
+    openSpy.mockRestore()
+  })
+
+  it('syncs outlook and shows success message', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'outlook_is_connected') return Promise.resolve(true)
+      if (cmd === 'outlook_sync') return Promise.resolve(5)
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('✓ Connected to Outlook')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Sync Now'))
+
+    await waitFor(() =>
+      expect(screen.getByText('Synced 5 events from Outlook.')).toBeDefined()
+    )
+  })
+
+  it('disconnects outlook and returns to idle state', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'outlook_is_connected') return Promise.resolve(true)
+      if (cmd === 'outlook_disconnect') return Promise.resolve()
+      return Promise.resolve()
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('✓ Connected to Outlook')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Disconnect'))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('outlook_disconnect', { userId: 'default' })
+      expect(screen.getByText('Disconnected from Outlook.')).toBeDefined()
+    })
+  })
+
+  it('cancel button returns to idle from awaiting_code', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Connect Outlook')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Connect Outlook'))
+    await waitFor(() => expect(screen.getByPlaceholderText('Paste code here…')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Cancel'))
+
+    await waitFor(() => expect(screen.getByText('Connect Outlook')).toBeDefined())
+    openSpy.mockRestore()
   })
 })

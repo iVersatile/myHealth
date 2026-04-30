@@ -1113,7 +1113,7 @@ mod tests {
             rusqlite::params![id, now],
         )
         .unwrap();
-        let ics = export_to_ics_content(&conn, &[id.clone()]).unwrap();
+        let ics = export_to_ics_content(&conn, std::slice::from_ref(&id)).unwrap();
         assert!(!ics.is_empty());
         assert!(ics.contains("BEGIN:VCALENDAR"));
         assert!(ics.contains("VEVENT"));
