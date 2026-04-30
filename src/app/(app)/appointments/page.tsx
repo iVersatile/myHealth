@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog'
 import { useAppointments, AppointmentInput } from '../../../hooks/useAppointments'
 import { AppointmentCard } from '../../../components/appointments/AppointmentCard'
 import { AppointmentForm } from '../../../components/appointments/AppointmentForm'
 import { Appointment, AppointmentStatus } from '../../../store/appointmentsStore'
+import { IPC } from '../../../lib/ipc'
 
 type FilterValue = AppointmentStatus | 'all'
 
@@ -46,6 +49,7 @@ export default function AppointmentsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [icsMessage, setIcsMessage] = useState<string | null>(null)
 
   const groups = groupByMonth(appointments)
 
@@ -78,6 +82,35 @@ export default function AppointmentsPage() {
     setEditingAppt(null)
   }
 
+  async function handleIcsImport() {
+    try {
+      const filePath = await openDialog({
+        multiple: false,
+        filters: [{ name: 'iCalendar', extensions: ['ics'] }],
+      })
+      if (!filePath) return
+      const count = await invoke<number>(IPC.icalendarImport, { filePath })
+      setIcsMessage(`Imported ${count} appointment${count === 1 ? '' : 's'}.`)
+    } catch (e) {
+      setIcsMessage(`Import failed: ${e}`)
+    }
+  }
+
+  async function handleIcsExport() {
+    try {
+      const filePath = await saveDialog({
+        defaultPath: 'appointments.ics',
+        filters: [{ name: 'iCalendar', extensions: ['ics'] }],
+      })
+      if (!filePath) return
+      const ids = appointments.map((a) => a.id)
+      await invoke(IPC.icalendarExport, { appointmentIds: ids, filePath })
+      setIcsMessage('Exported successfully.')
+    } catch (e) {
+      setIcsMessage(`Export failed: ${e}`)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
       {/* Header */}
@@ -86,15 +119,45 @@ export default function AppointmentsPage() {
           Appointments
         </h1>
         {!showForm && (
-          <button
-            type="button"
-            onClick={() => { setEditingAppt(null); setShowForm(true) }}
-            className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-[var(--text-sm)] font-medium text-white transition-opacity duration-[var(--duration-fast)] hover:opacity-90"
-          >
-            + New
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleIcsImport}
+              className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
+            >
+              Import .ics
+            </button>
+            <button
+              type="button"
+              onClick={handleIcsExport}
+              className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
+            >
+              Export .ics
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEditingAppt(null); setShowForm(true) }}
+              className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-[var(--text-sm)] font-medium text-white transition-opacity duration-[var(--duration-fast)] hover:opacity-90"
+            >
+              + New
+            </button>
+          </div>
         )}
       </div>
+
+      {/* ICS feedback */}
+      {icsMessage && (
+        <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2">
+          <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">{icsMessage}</p>
+          <button
+            type="button"
+            onClick={() => setIcsMessage(null)}
+            className="ml-4 text-[var(--text-sm)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Form panel */}
       {showForm && (

@@ -338,6 +338,159 @@ pub fn calendar_event_delete(id: String, state: State<'_, AppState>) -> Result<(
     Ok(())
 }
 
+fn import_from_ics_content(
+    conn: &rusqlite::Connection,
+    content: &str,
+) -> Result<usize, CommandError> {
+    use icalendar::{CalendarComponent, Component, EventLike};
+    let calendar: icalendar::Calendar = content
+        .parse()
+        .map_err(|_| CommandError::Internal("failed to parse .ics file".into()))?;
+    let now = Utc::now().to_rfc3339();
+    let mut imported = 0usize;
+    for component in &calendar.components {
+        let CalendarComponent::Event(event) = component else {
+            continue;
+        };
+        let title = event.get_summary().unwrap_or("Untitled").to_string();
+        let uid = event.get_uid().unwrap_or("").to_string();
+        let location = event.get_location().map(str::to_owned);
+        let raw_description = event.get_description().map(str::to_owned);
+        let notes = if uid.is_empty() {
+            raw_description
+        } else {
+            Some(format!(
+                "[ics-uid:{}]\n{}",
+                uid,
+                raw_description.as_deref().unwrap_or("")
+            ))
+        };
+        if !uid.is_empty() {
+            let uid_pattern = format!("[ics-uid:{}]%", uid);
+            let exists: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM appointments WHERE notes LIKE ?1",
+                    rusqlite::params![uid_pattern],
+                    |r| r.get(0),
+                )
+                .unwrap_or(0);
+            if exists > 0 {
+                continue;
+            }
+        }
+        let appt_date = ics_event_start_rfc3339(event).unwrap_or_else(|| now.clone());
+        let id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO appointments \
+             (id, title, doctor_name, clinic_name, specialty, appt_date, \
+              duration_min, location, notes, status, reminder_min, created_at, updated_at) \
+             VALUES (?1, ?2, NULL, NULL, NULL, ?3, 60, ?4, ?5, 'scheduled', NULL, ?6, ?6)",
+            rusqlite::params![id, title, appt_date, location, notes, now],
+        )?;
+        imported += 1;
+    }
+    Ok(imported)
+}
+
+fn ics_event_start_rfc3339(event: &icalendar::Event) -> Option<String> {
+    use icalendar::{CalendarDateTime, Component, DatePerhapsTime};
+    match event.get_start()? {
+        DatePerhapsTime::DateTime(cdt) => match cdt {
+            CalendarDateTime::Floating(ndt) => Some(ndt.and_utc().to_rfc3339()),
+            CalendarDateTime::Utc(dt) => Some(dt.to_rfc3339()),
+            CalendarDateTime::WithTimezone { date_time, .. } => {
+                Some(date_time.and_utc().to_rfc3339())
+            }
+        },
+        DatePerhapsTime::Date(nd) => nd
+            .and_hms_opt(0, 0, 0)
+            .map(|ndt| ndt.and_utc().to_rfc3339()),
+    }
+}
+
+fn export_to_ics_content(
+    conn: &rusqlite::Connection,
+    appointment_ids: &[String],
+) -> Result<String, CommandError> {
+    use icalendar::{Component, EventLike};
+    let mut cal = icalendar::Calendar::new();
+    for appt_id in appointment_ids {
+        let row = conn.query_row(
+            "SELECT title, appt_date, duration_min, location, notes \
+             FROM appointments WHERE id = ?1",
+            rusqlite::params![appt_id],
+            |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, Option<i64>>(2)?,
+                    r.get::<_, Option<String>>(3)?,
+                    r.get::<_, Option<String>>(4)?,
+                ))
+            },
+        );
+        let Ok((title, appt_date, duration_min, location, notes)) = row else {
+            continue;
+        };
+        let mut event = icalendar::Event::new();
+        event.summary(&title).uid(appt_id);
+        if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&appt_date) {
+            let utc: chrono::DateTime<chrono::Utc> = dt.into();
+            let duration_mins = duration_min.unwrap_or(60);
+            event
+                .starts(utc)
+                .ends(utc + chrono::Duration::minutes(duration_mins));
+        }
+        if let Some(loc) = &location {
+            event.location(loc);
+        }
+        if let Some(n) = &notes {
+            let description = if n.starts_with("[ics-uid:") {
+                n.find('\n').map(|i| &n[i + 1..]).unwrap_or("")
+            } else {
+                n.as_str()
+            };
+            if !description.is_empty() {
+                event.description(description);
+            }
+        }
+        cal.push(event.done());
+    }
+    Ok(cal.to_string())
+}
+
+#[tauri::command]
+pub fn icalendar_import(
+    file_path: String,
+    state: State<'_, AppState>,
+) -> Result<usize, CommandError> {
+    let content = std::fs::read_to_string(&file_path)
+        .map_err(|e| CommandError::Internal(format!("failed to read file: {e}")))?;
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+    import_from_ics_content(conn, &content)
+}
+
+#[tauri::command]
+pub fn icalendar_export(
+    appointment_ids: Vec<String>,
+    file_path: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let content = export_to_ics_content(conn, &appointment_ids)?;
+    std::fs::write(&file_path, content)
+        .map_err(|e| CommandError::Internal(format!("failed to write file: {e}")))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -915,5 +1068,70 @@ mod tests {
             .query_row("SELECT id FROM calendar_events", [], |r| r.get(0))
             .unwrap();
         assert_eq!(kept_id, "ev-keep");
+    }
+
+    #[test]
+    fn ics_import_creates_appointments() {
+        let conn = open_test_db();
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:test-uid-001@example.com\r\nSUMMARY:Cardiology Follow-up\r\nDTSTART:20251015T090000Z\r\nLOCATION:City Hospital\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let count = import_from_ics_content(&conn, ics).unwrap();
+        assert_eq!(count, 1);
+        let (title, location): (String, Option<String>) = conn
+            .query_row("SELECT title, location FROM appointments", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert_eq!(title, "Cardiology Follow-up");
+        assert_eq!(location.as_deref(), Some("City Hospital"));
+    }
+
+    #[test]
+    fn ics_import_skips_duplicate_uid() {
+        let conn = open_test_db();
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:dup-uid-001@example.com\r\nSUMMARY:Duplicate Event\r\nDTSTART:20251015T090000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let first = import_from_ics_content(&conn, ics).unwrap();
+        assert_eq!(first, 1);
+        let second = import_from_ics_content(&conn, ics).unwrap();
+        assert_eq!(second, 0);
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM appointments", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn ics_export_produces_parseable_ics() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO appointments \
+             (id, title, doctor_name, clinic_name, specialty, appt_date, \
+              duration_min, location, notes, status, reminder_min, created_at, updated_at) \
+             VALUES (?1, 'Eye Exam', NULL, NULL, NULL, '2025-11-20T14:00:00+00:00', \
+                     30, 'Eye Clinic', NULL, 'scheduled', NULL, ?2, ?2)",
+            rusqlite::params![id, now],
+        )
+        .unwrap();
+        let ics = export_to_ics_content(&conn, &[id.clone()]).unwrap();
+        assert!(!ics.is_empty());
+        assert!(ics.contains("BEGIN:VCALENDAR"));
+        assert!(ics.contains("VEVENT"));
+        assert!(ics.contains("Eye Exam"));
+        use icalendar::{CalendarComponent, Component};
+        let reparsed: icalendar::Calendar = ics.parse().expect("exported ICS must be parseable");
+        let events: Vec<_> = reparsed
+            .components
+            .iter()
+            .filter_map(|c| {
+                if let CalendarComponent::Event(e) = c {
+                    Some(e)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].get_summary(), Some("Eye Exam"));
     }
 }

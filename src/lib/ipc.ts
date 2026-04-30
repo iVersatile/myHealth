@@ -63,6 +63,8 @@ export const IPC = {
   calendarImportEvents: 'calendar_import_events',
   calendarDetectConflicts: 'calendar_detect_conflicts',
   calendarEventDelete: 'calendar_event_delete',
+  icalendarImport: 'icalendar_import',
+  icalendarExport: 'icalendar_export',
 
   // Clinics
   clinicsList: 'clinics_list',

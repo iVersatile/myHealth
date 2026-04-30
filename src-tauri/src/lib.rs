@@ -20,6 +20,7 @@ use commands::auth::{
 use commands::calendar::{
     calendar_detect_conflicts, calendar_event_delete, calendar_import_events,
     calendar_list_sources, calendar_request_permission, calendar_sync, calendar_toggle_source,
+    icalendar_export, icalendar_import,
 };
 use commands::categories::{
     assign_category_to_appointment, assign_category_to_document, categories_archive_stale,
@@ -127,6 +128,8 @@ pub fn run() {
             calendar_import_events,
             calendar_detect_conflicts,
             calendar_event_delete,
+            icalendar_import,
+            icalendar_export,
             clinics_list,
             clinics_get,
             clinics_create,
