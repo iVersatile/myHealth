@@ -36,7 +36,7 @@ use commands::clinics::{
 };
 use commands::contacts::{
     contacts_create, contacts_delete, contacts_find_similar, contacts_get, contacts_list,
-    contacts_update, find_duplicate_contacts, merge_contacts,
+    contacts_update, documents_link_contact, find_duplicate_contacts, merge_contacts,
 };
 use commands::documents::{
     documents_delete, documents_get, documents_get_extraction_status, documents_get_file_url,
@@ -157,6 +157,7 @@ pub fn run() {
             contacts_find_similar,
             find_duplicate_contacts,
             merge_contacts,
+            documents_link_contact,
             search_query,
             settings_get,
             settings_set,

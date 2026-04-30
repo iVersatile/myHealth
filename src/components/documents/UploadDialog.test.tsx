@@ -333,6 +333,63 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
   })
 
+  it('calls documents_link_contact after no-duplicate contact save', async () => {
+    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: null, email: null }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'new-c1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([])
+      if (cmd === 'documents_link_contact') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_contact', {
+      documentId: 'new-doc',
+      contactId: 'new-c1',
+    }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+  })
+
+  it('calls documents_link_contact with primary contact id after merge', async () => {
+    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: null, email: null }
+    const existingContact = { id: 'existing-c1', name: 'Dr. Greg House' }
+    const dupCandidate = { primary_contact_id: 'new-c1', contact: existingContact, similarity_score: 0.92, match_reason: 'name similarity' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'new-c1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([dupCandidate])
+      if (cmd === 'merge_contacts') return Promise.resolve(existingContact)
+      if (cmd === 'documents_link_contact') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /^merge$/i }))
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_contact', {
+      documentId: 'new-doc',
+      contactId: 'existing-c1',
+    }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+  })
+
   it('cancel on duplicate prompt returns to idle even if delete fails', async () => {
     const contactSugg = { name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
     const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.92, match_reason: 'name similarity' }

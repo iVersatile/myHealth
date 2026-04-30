@@ -253,6 +253,21 @@ pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), Com
 }
 
 #[tauri::command]
+pub fn documents_link_contact(
+    document_id: String,
+    contact_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    conn.execute(
+        "INSERT OR IGNORE INTO document_contacts (document_id, contact_id) VALUES (?, ?)",
+        [&document_id, &contact_id],
+    )?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn contacts_find_similar(
     name: String,
     state: State<'_, AppState>,

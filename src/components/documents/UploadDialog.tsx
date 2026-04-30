@@ -448,6 +448,12 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                         if (topDupe) {
                           setPhase({ kind: 'duplicate', newId: newContact.id, match: topDupe })
                         } else {
+                          if (uploadedDoc) {
+                            await invoke('documents_link_contact', {
+                              documentId: uploadedDoc.id,
+                              contactId: newContact.id,
+                            })
+                          }
                           setPhase({ kind: 'saved' })
                         }
                       } catch {
@@ -462,6 +468,12 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                           primaryId: existingId,
                           duplicateIds: [newId],
                         })
+                        if (uploadedDoc) {
+                          await invoke('documents_link_contact', {
+                            documentId: uploadedDoc.id,
+                            contactId: existingId,
+                          })
+                        }
                       } catch {
                         // merge failure is non-fatal — contact still exists
                       }
