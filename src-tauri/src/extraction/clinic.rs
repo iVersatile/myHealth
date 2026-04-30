@@ -2,7 +2,6 @@ use regex::Regex;
 
 /// Extract a UK company registration number from OCR text.
 /// Matches patterns like "Company Registration No: 6780032" or "Company Registration Number 01234567".
-#[allow(dead_code)]
 pub fn extract_company_registration_number(text: &str) -> Option<String> {
     let re = Regex::new(r"(?i)Company\s+Registration\s+(?:No\.?|Number)[.:\s]*(\d{6,8})")
         .expect("valid regex");
@@ -13,7 +12,6 @@ pub fn extract_company_registration_number(text: &str) -> Option<String> {
 
 /// Extract up to 5 postal addresses from OCR text.
 /// An address is a contiguous block of lines that contains a UK postcode.
-#[allow(dead_code)]
 pub fn extract_clinic_addresses(text: &str) -> Vec<String> {
     let postcode_re = Regex::new(r"[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}").expect("valid regex");
 

@@ -416,6 +416,81 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
   })
 
+  it('shows clinic card with name, reg no, and address count from extraction', async () => {
+    const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA', '2 Health St, Manchester, M1 1AE', '3 Physio Ave, Birmingham, B1 1BB'] }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [], clinic_suggestions: [clinicSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByText(/John Green Physiotherapy Ltd \/ Reg: 6780032 \/ 3 addresses/)).toBeTruthy())
+    expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy()
+  })
+
+  it('clicking Save as Clinic calls clinics_create_if_not_exists and shows Saved', async () => {
+    const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA'] }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [], clinic_suggestions: [clinicSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'clinics_create_if_not_exists') return Promise.resolve({ id: 'clinic-1' })
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as clinic/i }))
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('clinics_create_if_not_exists', {
+      name: 'John Green Physiotherapy Ltd',
+      addresses: ['1 Clinic Rd, London, SW1A 1AA'],
+    }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /^saved$/i })).toBeTruthy())
+  })
+
+  it('auto-links saved contact to clinic when contact was saved in the same session', async () => {
+    const contactSugg = { name: 'Dr. John Green', specialty: 'Physiotherapy', clinic: 'John Green Physiotherapy Ltd', address: null, phone: null, email: null }
+    const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA'] }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [contactSugg], clinic_suggestions: [clinicSugg] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      if (cmd === 'contacts_create') return Promise.resolve({ id: 'contact-1' })
+      if (cmd === 'find_duplicate_contacts') return Promise.resolve([])
+      if (cmd === 'documents_link_contact') return Promise.resolve(undefined)
+      if (cmd === 'clinics_create_if_not_exists') return Promise.resolve({ id: 'clinic-1' })
+      if (cmd === 'clinics_link_contact') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    // Save contact first
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /saved/i })).toBeTruthy())
+    // Now save clinic — should auto-link contact
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /save as clinic/i }))
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('clinics_link_contact', {
+      clinicId: 'clinic-1',
+      contactId: 'contact-1',
+    }))
+  })
+
   it('processes file via drag and drop', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     const dropZone = screen.getByRole('button', { name: /drop file here/i })

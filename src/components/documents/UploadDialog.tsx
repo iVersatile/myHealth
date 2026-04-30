@@ -21,12 +21,19 @@ interface ContactSuggestion {
   email: string | null
 }
 
+interface ClinicSuggestion {
+  name: string
+  company_registration_number: string | null
+  addresses: string[]
+}
+
 interface ExtractionSuggestions {
   doctor_candidates: string[]
   category_suggestion: string | null
   document_tags: string[]
   auto_tags: string[]
   contact_suggestions: ContactSuggestion[]
+  clinic_suggestions: ClinicSuggestion[]
 }
 
 interface DuplicateCandidate {
@@ -46,7 +53,9 @@ type ContactPhase =
   | { kind: 'idle' }
   | { kind: 'saving' }
   | { kind: 'duplicate'; newId: string; match: DuplicateCandidate }
-  | { kind: 'saved' }
+  | { kind: 'saved'; contactId: string }
+
+type ClinicPhase = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' }
 
 type Step = 'pick' | 'analyzing' | 'review'
 
@@ -68,6 +77,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [categorySuggestionDismissed, setCategorySuggestionDismissed] = useState(false)
   const [contactSuggestions, setContactSuggestions] = useState<ContactSuggestion[]>([])
   const [contactPhases, setContactPhases] = useState<Map<string, ContactPhase>>(new Map())
+  const [clinicSuggestions, setClinicSuggestions] = useState<ClinicSuggestion[]>([])
+  const [clinicPhase, setClinicPhase] = useState<ClinicPhase>({ kind: 'idle' })
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null)
@@ -134,6 +145,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
           setCategorySuggestion(suggestions.category_suggestion)
           setContactSuggestions(suggestions.contact_suggestions)
+          setClinicSuggestions(suggestions.clinic_suggestions ?? [])
 
           for (const tag of [
             ...suggestions.auto_tags,
@@ -454,7 +466,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                               contactId: newContact.id,
                             })
                           }
-                          setPhase({ kind: 'saved' })
+                          setPhase({ kind: 'saved', contactId: newContact.id })
                         }
                       } catch {
                         setPhase({ kind: 'idle' })
@@ -477,7 +489,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       } catch {
                         // merge failure is non-fatal — contact still exists
                       }
-                      setPhase({ kind: 'saved' })
+                      setPhase({ kind: 'saved', contactId: existingId })
                     }
 
                     async function handleCancelDuplicate(newId: string) {
@@ -542,7 +554,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setPhase({ kind: 'saved' })}
+                                onClick={() => setPhase({ kind: 'saved', contactId: phase.newId })}
                                 className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)]"
                               >
                                 Keep both
@@ -557,6 +569,65 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                             </div>
                           </div>
                         )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Clinic suggestions */}
+              {clinicSuggestions.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">Clinic detected</p>
+                  {clinicSuggestions.map((clinic) => {
+                    async function handleSaveClinic() {
+                      setClinicPhase({ kind: 'saving' })
+                      try {
+                        const result = await invoke<{ id: string }>('clinics_create_if_not_exists', {
+                          name: clinic.name,
+                          addresses: clinic.addresses,
+                        })
+                        const savedContactId = [...contactPhases.values()].find(
+                          (p) => p.kind === 'saved'
+                        ) as { kind: 'saved'; contactId: string } | undefined
+                        if (savedContactId) {
+                          try {
+                            await invoke('clinics_link_contact', {
+                              clinicId: result.id,
+                              contactId: savedContactId.contactId,
+                            })
+                          } catch {
+                            // link failure is non-fatal
+                          }
+                        }
+                        setClinicPhase({ kind: 'saved' })
+                      } catch {
+                        setClinicPhase({ kind: 'idle' })
+                      }
+                    }
+
+                    const label = [
+                      clinic.name,
+                      clinic.company_registration_number ? `Reg: ${clinic.company_registration_number}` : null,
+                      clinic.addresses.length > 0 ? `${clinic.addresses.length} address${clinic.addresses.length !== 1 ? 'es' : ''}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' / ')
+
+                    return (
+                      <div
+                        key={clinic.name}
+                        className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2"
+                      >
+                        <span className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">{label}</span>
+                        <button
+                          type="button"
+                          disabled={clinicPhase.kind === 'saving' || clinicPhase.kind === 'saved'}
+                          onClick={() => void handleSaveClinic()}
+                          className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
+                        >
+                          {clinicPhase.kind === 'saved' ? 'Saved' : clinicPhase.kind === 'saving' ? 'Saving…' : 'Save as Clinic'}
+                        </button>
                       </div>
                     )
                   })}

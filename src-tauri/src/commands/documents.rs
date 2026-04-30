@@ -1000,11 +1000,19 @@ pub struct ContactSuggestionDto {
 }
 
 #[derive(Debug, Serialize)]
+pub struct ClinicSuggestionDto {
+    pub name: String,
+    pub company_registration_number: Option<String>,
+    pub addresses: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ExtractionSuggestions {
     pub doctor_candidates: Vec<String>,
     pub category_suggestion: Option<String>,
     pub document_tags: Vec<String>,
     pub contact_suggestions: Vec<ContactSuggestionDto>,
+    pub clinic_suggestions: Vec<ClinicSuggestionDto>,
     pub auto_tags: Vec<String>,
     pub activity_date: Option<String>,
 }
@@ -1052,6 +1060,21 @@ pub async fn documents_run_extraction(
                     email: c.email.clone(),
                 })
                 .collect();
+            let clinic_suggestions = {
+                let clinic_name = contact_dtos.first().and_then(|c| c.clinic.clone());
+                if let Some(name) = clinic_name {
+                    let company_registration_number =
+                        crate::extraction::clinic::extract_company_registration_number(&text);
+                    let addresses = crate::extraction::clinic::extract_clinic_addresses(&text);
+                    vec![ClinicSuggestionDto {
+                        name,
+                        company_registration_number,
+                        addresses,
+                    }]
+                } else {
+                    vec![]
+                }
+            };
             let auto_tags = crate::extraction::auto_extract_tags(
                 &text,
                 &doctor_candidates,
@@ -1062,6 +1085,7 @@ pub async fn documents_run_extraction(
                 category_suggestion,
                 document_tags,
                 contact_suggestions: contact_dtos,
+                clinic_suggestions,
                 auto_tags,
                 activity_date,
             });
@@ -1111,6 +1135,25 @@ pub async fn documents_run_extraction(
             email: c.email.clone(),
         })
         .collect();
+
+    let clinic_suggestions = {
+        let clinic_name = result
+            .contact_suggestions
+            .first()
+            .and_then(|c| c.clinic.clone());
+        if let Some(name) = clinic_name {
+            let company_registration_number =
+                crate::extraction::clinic::extract_company_registration_number(&result.text);
+            let addresses = crate::extraction::clinic::extract_clinic_addresses(&result.text);
+            vec![ClinicSuggestionDto {
+                name,
+                company_registration_number,
+                addresses,
+            }]
+        } else {
+            vec![]
+        }
+    };
 
     // Priority chain: (1) body text → (2) document_date from filename → (3) created_at
     let resolved_activity_date: String = result
@@ -1166,6 +1209,7 @@ pub async fn documents_run_extraction(
         category_suggestion: result.category_suggestion,
         document_tags: result.document_tags,
         contact_suggestions: contact_dtos,
+        clinic_suggestions,
         auto_tags,
         activity_date: Some(resolved_activity_date),
     })
