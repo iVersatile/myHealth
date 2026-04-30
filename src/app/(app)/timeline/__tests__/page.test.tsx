@@ -237,4 +237,47 @@ describe('TimelinePage', () => {
     await waitFor(() => expect(screen.getByText('No events found')).toBeDefined())
     expect(screen.queryByText('deleted.pdf uploaded')).toBeNull()
   })
+
+  it('sorts "No doctor assigned" group last when mixed doctors present', async () => {
+    mockAppointments = [
+      { ...APPT, id: 'a3', doctor_name: null as unknown as string, clinic_name: null as unknown as string },
+      APPT,
+      { ...APPT, id: 'a4', doctor_name: 'Dr. Adams', clinic_name: 'Adams Clinic' },
+    ]
+    await renderPage()
+    fireEvent.click(screen.getByText('By Doctor'))
+    await waitFor(() => expect(screen.getByText('Dr. Smith')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('No doctor assigned')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('Dr. Adams')).toBeDefined())
+    const headings = screen.getAllByText(/Dr\.|No doctor assigned/)
+    expect(headings.at(-1)?.textContent).toBe('No doctor assigned')
+  })
+
+  it('handles links_list_for_appointment invoke failure gracefully', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'links_list_for_appointment') return Promise.reject(new Error('network error'))
+      return Promise.resolve([])
+    })
+    await renderPage()
+    fireEvent.click(screen.getByText('By Doctor'))
+    await waitFor(() => expect(screen.getByText('Dr. Smith')).toBeDefined())
+    expect(screen.queryByText('linked')).toBeNull()
+  })
+
+  it('shows uncategorized group with plain swatch in By Category view', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([CAT])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'links_list_for_appointment') return Promise.resolve([])
+      return Promise.resolve([])
+    })
+    await renderPage()
+    fireEvent.click(screen.getByText('By Category'))
+    await waitFor(() => expect(screen.getByText('Uncategorized')).toBeDefined())
+    expect(screen.queryByTitle('Click to change category color')).toBeNull()
+  })
 })

@@ -37,7 +37,7 @@ describe('useNotes', () => {
     expect(result.current.notes).toEqual(list)
   })
 
-  it('sets error when fetch fails', async () => {
+  it('sets error when fetch fails with Error object', async () => {
     const { useNotes } = await import('../useNotes')
     mockInvoke.mockRejectedValueOnce(new Error('DB error'))
 
@@ -45,6 +45,16 @@ describe('useNotes', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.error).toBe('DB error')
+  })
+
+  it('sets error when fetch fails with non-Error value', async () => {
+    const { useNotes } = await import('../useNotes')
+    mockInvoke.mockRejectedValueOnce('string error')
+
+    const { result } = renderHook(() => useNotes())
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.error).toBe('string error')
   })
 
   it('createNote invokes notes_create and prepends to store', async () => {

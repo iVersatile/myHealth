@@ -60,6 +60,16 @@ describe('useAppointments', () => {
     expect(result.current.error).toBe('DB error')
   })
 
+  it('sets error string when fetch fails with non-Error value', async () => {
+    const { useAppointments } = await import('../useAppointments')
+    mockInvoke.mockRejectedValueOnce('raw string error')
+
+    const { result } = renderHook(() => useAppointments())
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.error).toBe('raw string error')
+  })
+
   it('passes status filter to invoke when not all', async () => {
     const { useAppointments } = await import('../useAppointments')
     useAppointmentsStore.setState({ statusFilter: 'completed' })
