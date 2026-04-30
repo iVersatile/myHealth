@@ -205,6 +205,18 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
     onClose()
   }
 
+  async function handleAcceptCategorySuggestion(suggestion: string) {
+    try {
+      const created = await invoke<{ id: string }>('categories_create_if_not_exists', { name: suggestion })
+      setSelectedCategoryIds((prev) =>
+        prev.includes(created.id) ? prev : [...prev, created.id]
+      )
+    } catch {
+      // Non-fatal — user can still pick manually
+    }
+    setCategorySuggestionDismissed(true)
+  }
+
   async function handleConfirm(e: React.FormEvent) {
     e.preventDefault()
     if (!uploadedDoc) return
@@ -368,12 +380,26 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
               {/* Category suggestion from PDF extraction */}
               {categorySuggestion && !categorySuggestionDismissed && (
-                <div className="flex items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-3 py-2">
-                  <p className="text-[var(--text-sm)] text-[var(--color-text)]">
-                    Suggested category:{' '}
-                    <span className="font-medium">{categorySuggestion}</span>
-                  </p>
+                <div className="flex items-start justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-3 py-2">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                      {categorySuggestion
+                        .split(' ')
+                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                        .join(' ')}
+                    </p>
+                    <p className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                      Detected from document content
+                    </p>
+                  </div>
                   <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleAcceptCategorySuggestion(categorySuggestion)}
+                      className="rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-2 py-0.5 text-[var(--text-xs)] font-medium text-[var(--color-text-inverse)]"
+                    >
+                      Accept
+                    </button>
                     <button
                       type="button"
                       onClick={() => setCategorySuggestionDismissed(true)}

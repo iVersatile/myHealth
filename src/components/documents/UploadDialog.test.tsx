@@ -254,11 +254,11 @@ describe('UploadDialog', () => {
     expect(mockInvoke).not.toHaveBeenCalledWith('merge_contacts', expect.anything())
   })
 
-  it('shows and dismisses category suggestion', async () => {
+  it('shows category suggestion banner with detected label and dismisses', async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
-      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: 'prescription', document_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: 'prescription', document_tags: [], auto_tags: [], contact_suggestions: [] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
       if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
@@ -267,10 +267,43 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByText(/suggested category/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Prescription', { selector: 'p' })).toBeTruthy())
+    expect(screen.getByText(/detected from document content/i)).toBeTruthy()
     const dismissBtn = screen.getByRole('button', { name: /dismiss/i })
     await userEvent.click(dismissBtn)
-    await waitFor(() => expect(screen.queryByText(/suggested category/i)).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Prescription', { selector: 'p' })).toBeNull())
+  })
+
+  it('Accept on category suggestion calls categories_create_if_not_exists and assigns category', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: 'physiotherapy', document_tags: [], auto_tags: [], contact_suggestions: [] })
+      if (cmd === 'categories_create_if_not_exists') return Promise.resolve({ id: 'cat-physio' })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'categories_assign_document') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByRole('button', { name: /accept/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /accept/i }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('categories_create_if_not_exists', { name: 'physiotherapy' })
+    )
+    // Banner should be dismissed after accept
+    await waitFor(() => expect(screen.queryByText('Physiotherapy')).toBeNull())
+    // Confirm should assign the created category
+    await userEvent.click(screen.getByRole('button', { name: /confirm upload/i }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('categories_assign_document', {
+        documentId: 'new-doc',
+        categoryId: 'cat-physio',
+      })
+    )
   })
 
   it('cancel on duplicate prompt deletes new contact and returns to idle', async () => {
