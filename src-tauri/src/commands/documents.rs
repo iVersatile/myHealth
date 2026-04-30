@@ -26,6 +26,7 @@ pub struct Document {
     pub updated_at: String,
     pub is_deleted: bool,
     pub document_date: Option<String>,
+    pub activity_date: Option<String>,
     pub extracted_metadata: Option<String>,
     pub extracted_text: Option<String>,
     pub tags: Vec<String>,
@@ -91,7 +92,7 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, CommandEr
     let mut stmt = conn.prepare(
         "SELECT id, filename, file_path, mime_type, file_size_bytes, category, \
              thumbnail_path, notes, created_at, updated_at, is_deleted, \
-             document_date, extracted_metadata, extracted_text \
+             document_date, activity_date, extracted_metadata, extracted_text \
              FROM documents WHERE id = ?",
     )?;
     let mut doc = stmt.query_row([id], |row| {
@@ -108,8 +109,9 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, CommandEr
             updated_at: row.get(9)?,
             is_deleted: row.get::<_, i64>(10)? != 0,
             document_date: row.get(11)?,
-            extracted_metadata: row.get(12)?,
-            extracted_text: row.get(13)?,
+            activity_date: row.get(12)?,
+            extracted_metadata: row.get(13)?,
+            extracted_text: row.get(14)?,
             tags: vec![],
         })
     })?;
@@ -516,7 +518,7 @@ pub fn documents_search_filtered(
     let data_sql = format!(
         "SELECT DISTINCT d.id, d.filename, d.file_path, d.mime_type, d.file_size_bytes, \
          d.category, d.thumbnail_path, d.notes, d.created_at, d.updated_at, d.is_deleted, \
-         d.document_date, d.extracted_metadata, d.extracted_text \
+         d.document_date, d.activity_date, d.extracted_metadata, d.extracted_text \
          FROM documents d WHERE {where_clause} \
          ORDER BY d.created_at DESC LIMIT ?{} OFFSET ?{}",
         params.len() - 1,
@@ -539,8 +541,9 @@ pub fn documents_search_filtered(
                 updated_at: row.get(9)?,
                 is_deleted: row.get(10)?,
                 document_date: row.get(11)?,
-                extracted_metadata: row.get(12)?,
-                extracted_text: row.get(13)?,
+                activity_date: row.get(12)?,
+                extracted_metadata: row.get(13)?,
+                extracted_text: row.get(14)?,
                 tags: vec![],
             })
         })?
@@ -580,6 +583,7 @@ mod tests {
                 is_deleted      BOOLEAN  NOT NULL DEFAULT 0,
                 deleted_at      DATETIME,
                 document_date   TEXT,
+                activity_date   TEXT,
                 extracted_metadata TEXT,
                 extracted_text  TEXT,
                 extraction_status TEXT

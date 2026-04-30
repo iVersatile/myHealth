@@ -259,7 +259,7 @@ pub fn links_score_candidates(
     let doc = conn.query_row(
         "SELECT id, filename, file_path, mime_type, file_size_bytes, category,
                     thumbnail_path, notes, created_at, updated_at, is_deleted,
-                    document_date, extracted_metadata, extracted_text
+                    document_date, activity_date, extracted_metadata, extracted_text
              FROM documents WHERE id = ?1 AND is_deleted = 0",
         params![document_id],
         |row| {
@@ -276,8 +276,9 @@ pub fn links_score_candidates(
                 updated_at: row.get(9)?,
                 is_deleted: row.get(10)?,
                 document_date: row.get(11)?,
-                extracted_metadata: row.get(12)?,
-                extracted_text: row.get(13)?,
+                activity_date: row.get(12)?,
+                extracted_metadata: row.get(13)?,
+                extracted_text: row.get(14)?,
                 tags: vec![],
             })
         },

@@ -20,6 +20,7 @@ const makeDoc = (id: string): Document => ({
   updated_at: '2026-04-14T09:00:00Z',
   is_deleted: false,
   document_date: null,
+  activity_date: null,
   tags: [],
 })
 

@@ -47,7 +47,7 @@ function docToEvent(d: Document): TimelineEvent {
     id: `doc-${d.id}`,
     rawId: d.id,
     type: 'document',
-    date: new Date(d.created_at),
+    date: new Date(d.activity_date ?? d.created_at),
     title: `${d.filename} uploaded`,
     subtitle: d.category.charAt(0).toUpperCase() + d.category.slice(1),
     badge,

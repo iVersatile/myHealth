@@ -42,6 +42,17 @@ const SCHEMA_V7: &str = "
     ALTER TABLE calendar_events ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
 ";
 
+const SCHEMA_V8: &str = "
+    ALTER TABLE clinics ADD COLUMN company_registration_number TEXT;
+    CREATE TABLE IF NOT EXISTS clinic_addresses (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id  INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+        address    TEXT NOT NULL,
+        is_primary INTEGER NOT NULL DEFAULT 0
+    );
+    ALTER TABLE documents ADD COLUMN activity_date TEXT;
+";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -105,6 +116,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 8 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V8)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [8])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -131,7 +149,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 7);
+        assert_eq!(version, 8);
     }
 
     #[test]
@@ -145,7 +163,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 7);
+        assert_eq!(version, 8);
     }
 
     #[test]
@@ -749,6 +767,105 @@ mod tests {
             )
             .unwrap();
         assert_eq!(score, 5);
+    }
+
+    // ── v8 schema additions ──────────────────────────────────────────────────
+
+    #[test]
+    fn clinics_has_company_registration_number_column() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO clinics (id, name, company_registration_number) \
+             VALUES ('clin-v8-1', 'PhysioPlus', 'CRN-12345')",
+            [],
+        )
+        .unwrap();
+        let crn: String = conn
+            .query_row(
+                "SELECT company_registration_number FROM clinics WHERE id = 'clin-v8-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(crn, "CRN-12345");
+    }
+
+    #[test]
+    fn clinic_addresses_cascade_delete() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO clinics (id, name) VALUES ('clin-v8-2', 'BackCare')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) \
+             VALUES ('clin-v8-2', '10 Spine St', 1)",
+            [],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = 'clin-v8-2'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+        conn.execute("DELETE FROM clinics WHERE id = 'clin-v8-2'", [])
+            .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = 'clin-v8-2'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "clinic_addresses must cascade-delete with clinic");
+    }
+
+    #[test]
+    fn documents_has_activity_date_column() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              created_at, updated_at, is_deleted, activity_date) \
+             VALUES ('doc-v8-1','invoice.pdf','/tmp/invoice.pdf','application/pdf',1024,'other', \
+             '2024-01-01','2024-01-01',0,'2024-11-15')",
+            [],
+        )
+        .unwrap();
+        let date: String = conn
+            .query_row(
+                "SELECT activity_date FROM documents WHERE id = 'doc-v8-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(date, "2024-11-15");
+    }
+
+    #[test]
+    fn existing_documents_have_null_activity_date() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              created_at, updated_at, is_deleted) \
+             VALUES ('doc-v8-old','old.pdf','/tmp/old.pdf','application/pdf',512,'other', \
+             '2024-01-01','2024-01-01',0)",
+            [],
+        )
+        .unwrap();
+        let date: Option<String> = conn
+            .query_row(
+                "SELECT activity_date FROM documents WHERE id = 'doc-v8-old'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(date.is_none(), "activity_date must be NULL for pre-v8 rows");
     }
 
     #[test]

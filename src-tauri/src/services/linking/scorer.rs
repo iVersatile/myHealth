@@ -158,6 +158,7 @@ mod tests {
             updated_at: "2024-01-01T00:00:00Z".to_string(),
             is_deleted: false,
             document_date: document_date.map(str::to_string),
+            activity_date: None,
             extracted_metadata: None,
             extracted_text: extracted_text.map(str::to_string),
             tags: vec![],
