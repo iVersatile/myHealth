@@ -150,6 +150,7 @@ pub fn extract_document_tags(text: &str) -> Vec<String> {
         (&["ophthalmol"], "ophthalmology"),
         (&["haematol", "hematol"], "haematology"),
         (&["psychiatr", "psychol"], "psychiatry"),
+        (&["physiother"], "physiotherapy"),
     ];
 
     for (keywords, tag) in specialty_tags {

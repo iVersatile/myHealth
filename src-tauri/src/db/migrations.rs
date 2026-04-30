@@ -62,6 +62,14 @@ const SCHEMA_V9: &str = "
     );
 ";
 
+const SCHEMA_V10: &str = "
+    CREATE TABLE IF NOT EXISTS clinic_contacts (
+        clinic_id   TEXT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+        contact_id  TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+        PRIMARY KEY (clinic_id, contact_id)
+    );
+";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -139,6 +147,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 10 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V10)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [10])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -165,7 +180,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 9);
+        assert_eq!(version, 10);
     }
 
     #[test]
@@ -179,7 +194,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 9);
+        assert_eq!(version, 10);
     }
 
     #[test]
@@ -918,6 +933,54 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1, "document_contacts table must exist after v9");
+    }
+
+    // ── v10 schema additions ─────────────────────────────────────────────────
+
+    #[test]
+    fn v10_creates_clinic_contacts_table() {
+        let conn = migrated_conn();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master \
+                 WHERE type='table' AND name='clinic_contacts'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "clinic_contacts table must exist after v10");
+    }
+
+    #[test]
+    fn v10_clinic_contacts_cascade_delete() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO clinics (id, name) VALUES ('clin-v10-1', 'Heart Centre')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES ('con-v10-1', 'Dr. Lee', 'specialist', '2024-01-01', '2024-01-01')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO clinic_contacts (clinic_id, contact_id) \
+             VALUES ('clin-v10-1', 'con-v10-1')",
+            [],
+        )
+        .unwrap();
+        conn.execute("DELETE FROM clinics WHERE id = 'clin-v10-1'", [])
+            .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinic_contacts WHERE clinic_id = 'clin-v10-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "clinic_contacts must cascade-delete with clinic");
     }
 
     #[test]

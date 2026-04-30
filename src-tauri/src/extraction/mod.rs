@@ -1,4 +1,5 @@
 pub mod category;
+pub mod clinic;
 pub mod contact;
 pub mod doctor;
 pub mod ocr;
