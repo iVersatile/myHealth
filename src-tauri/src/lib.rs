@@ -31,7 +31,8 @@ use commands::categories::{
     unassign_category_from_document,
 };
 use commands::clinics::{
-    clinics_create, clinics_delete, clinics_get, clinics_list, clinics_update,
+    clinics_create, clinics_create_if_not_exists, clinics_delete, clinics_get,
+    clinics_link_contact, clinics_list, clinics_update,
 };
 use commands::contacts::{
     contacts_create, contacts_delete, contacts_find_similar, contacts_get, contacts_list,
@@ -146,6 +147,8 @@ pub fn run() {
             clinics_create,
             clinics_update,
             clinics_delete,
+            clinics_create_if_not_exists,
+            clinics_link_contact,
             contacts_list,
             contacts_get,
             contacts_create,

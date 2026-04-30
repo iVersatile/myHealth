@@ -87,6 +87,8 @@ export const IPC = {
   clinicsCreate: 'clinics_create',
   clinicsUpdate: 'clinics_update',
   clinicsDelete: 'clinics_delete',
+  clinicsCreateIfNotExists: 'clinics_create_if_not_exists',
+  clinicsLinkContact: 'clinics_link_contact',
 
   // Contacts
   contactsList: 'contacts_list',
