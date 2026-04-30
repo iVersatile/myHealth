@@ -110,7 +110,7 @@ describe('TimelinePage', () => {
 
   it('shows chronological events on load', async () => {
     await renderPage()
-    await waitFor(() => expect(screen.getByText('bloodwork.pdf uploaded')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('2024-03-15 DOCUMENT')).toBeDefined())
     expect(screen.getByText(/Cardiology checkup/)).toBeDefined()
     expect(screen.getByText('Post-visit notes')).toBeDefined()
   })
@@ -122,9 +122,9 @@ describe('TimelinePage', () => {
 
   it('filters to documents only when Documents chip clicked', async () => {
     await renderPage()
-    await waitFor(() => expect(screen.getByText('bloodwork.pdf uploaded')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('2024-03-15 DOCUMENT')).toBeDefined())
     fireEvent.click(screen.getByText('Documents'))
-    expect(screen.getByText('bloodwork.pdf uploaded')).toBeDefined()
+    expect(screen.getByText('2024-03-15 DOCUMENT')).toBeDefined()
     expect(screen.queryByText('Post-visit notes')).toBeNull()
   })
 
@@ -140,7 +140,7 @@ describe('TimelinePage', () => {
 
   it('switches to By Category view and loads categories', async () => {
     await renderPage()
-    await waitFor(() => expect(screen.getByText('bloodwork.pdf uploaded')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('2024-03-15 DOCUMENT')).toBeDefined())
     fireEvent.click(screen.getByText('By Category'))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('categories_list'))
     await waitFor(() => expect(screen.getByText('Cardiology')).toBeDefined())
@@ -222,11 +222,11 @@ describe('TimelinePage', () => {
 
   it('date range filters out events outside range', async () => {
     await renderPage()
-    await waitFor(() => expect(screen.getByText('bloodwork.pdf uploaded')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('2024-03-15 DOCUMENT')).toBeDefined())
     const toInput = screen.getByTitle('To date')
-    // bloodwork.pdf uploaded on 2024-03-15 — set toDate before that
+    // bloodwork.pdf (2024-03-15) — set toDate before that
     fireEvent.change(toInput, { target: { value: '2024-03-05' } })
-    await waitFor(() => expect(screen.queryByText('bloodwork.pdf uploaded')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('2024-03-15 DOCUMENT')).toBeNull())
   })
 
   it('deleted documents do not appear in timeline', async () => {
