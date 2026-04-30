@@ -23,6 +23,104 @@ pub struct ExtractionResult {
     pub category_suggestion: Option<String>,
     pub document_tags: Vec<String>,
     pub contact_suggestions: Vec<ContactSuggestion>,
+    /// Unified auto-extracted tags: type tags (lowercase), specialty tags (uppercase),
+    /// provider name tags (as detected), and activity date tag (YYYY-MM-DD).
+    pub auto_tags: Vec<String>,
+}
+
+// ── Tag helpers ───────────────────────────────────────────────────────────────
+
+fn tags_contains_ci(tags: &[String], candidate: &str) -> bool {
+    let lower = candidate.to_lowercase();
+    tags.iter().any(|t| t.to_lowercase() == lower)
+}
+
+/// Returns true if `word` appears as a complete word (bounded by non-alphabetic
+/// characters) inside `lower_text` (which must already be lowercased).
+fn text_has_word(lower_text: &str, word: &str) -> bool {
+    lower_text
+        .split(|c: char| !c.is_alphabetic())
+        .any(|w| w == word)
+}
+
+/// Auto-extracts all four tag types and de-duplicates case-insensitively.
+///
+/// 1. **Type tags** (lowercase): invoice, receipt, bill, referral, prescription,
+///    report, summary, discharge — whole-word match in text.
+/// 2. **Specialty tags** (uppercase): PHYSIOTHERAPY, CARDIOLOGY, etc.
+/// 3. **Provider name tags**: each entry from `doctor_candidates`.
+/// 4. **Activity date tag**: `activity_date` as-is (YYYY-MM-DD).
+pub fn auto_extract_tags(
+    text: &str,
+    doctor_candidates: &[String],
+    activity_date: Option<&str>,
+) -> Vec<String> {
+    let lower = text.to_lowercase();
+    let mut tags: Vec<String> = Vec::new();
+
+    // 1. Type tags — whole-word match, emit lowercase
+    const TYPE_KEYWORDS: &[&str] = &[
+        "invoice",
+        "receipt",
+        "bill",
+        "referral",
+        "prescription",
+        "report",
+        "summary",
+        "discharge",
+    ];
+    for &kw in TYPE_KEYWORDS {
+        if text_has_word(&lower, kw) && !tags_contains_ci(&tags, kw) {
+            tags.push(kw.to_string());
+        }
+    }
+
+    // 2. Specialty tags — substring match on lowercase, emit uppercase
+    const SPECIALTY_MAP: &[(&[&str], &str)] = &[
+        (&["physiother"], "PHYSIOTHERAPY"),
+        (&["gastroenterolog"], "GASTROENTEROLOGY"),
+        (&["cardiol"], "CARDIOLOGY"),
+        (&["neurol", "neurolog"], "NEUROLOGY"),
+        (&["dermatol"], "DERMATOLOGY"),
+        (&["orthopaed", "orthoped"], "ORTHOPAEDICS"),
+        (&["oncol"], "ONCOLOGY"),
+        (&["endocrinol"], "ENDOCRINOLOGY"),
+        (&["respirator", "pulmonol"], "RESPIRATORY"),
+        (&["rheumatol"], "RHEUMATOLOGY"),
+        (&["ophthalmol"], "OPHTHALMOLOGY"),
+        (&["urol"], "UROLOGY"),
+        (&["gynaecol", "gynecol"], "GYNAECOLOGY"),
+        (&["haematol", "hematol"], "HAEMATOLOGY"),
+        (&["nephrol"], "NEPHROLOGY"),
+        (&["psychiatr", "psychol"], "PSYCHIATRY"),
+        (&["radiol"], "RADIOLOGY"),
+    ];
+    for (keywords, tag) in SPECIALTY_MAP {
+        for &kw in *keywords {
+            if lower.contains(kw) && !tags_contains_ci(&tags, tag) {
+                tags.push(tag.to_string());
+                break;
+            }
+        }
+    }
+
+    // 3. Provider name tags — as detected
+    for name in doctor_candidates {
+        let name = name.trim();
+        if !name.is_empty() && !tags_contains_ci(&tags, name) {
+            tags.push(name.to_string());
+        }
+    }
+
+    // 4. Activity date tag
+    if let Some(date) = activity_date {
+        let date = date.trim();
+        if !date.is_empty() && !tags_contains_ci(&tags, date) {
+            tags.push(date.to_string());
+        }
+    }
+
+    tags
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -135,6 +233,8 @@ fn extract_inner(path: &Path, app_handle: Option<&tauri::AppHandle>) -> Extracti
     let document_tags = category::extract_document_tags(&text);
     let contact_suggestions = contact::extract_contact_suggestions(&text);
 
+    let auto_tags = auto_extract_tags(&text, &doctor_candidates, None);
+
     ExtractionResult {
         text,
         extracted_at: Utc::now().to_rfc3339(),
@@ -142,6 +242,7 @@ fn extract_inner(path: &Path, app_handle: Option<&tauri::AppHandle>) -> Extracti
         category_suggestion,
         document_tags,
         contact_suggestions,
+        auto_tags,
     }
 }
 
@@ -223,6 +324,92 @@ mod tests {
         let result = extract(&path);
         // The important assertion: no panic, extracted_at is set
         assert!(!result.extracted_at.is_empty());
+    }
+
+    // ── auto_extract_tags tests (criteria a–e) ────────────────────────────────
+
+    #[test]
+    fn auto_tags_type_invoice_lowercase() {
+        // (a) PDF with 'INVOICE' → tag 'invoice'
+        let tags = auto_extract_tags("INVOICE for consultation", &[], None);
+        assert!(tags.contains(&"invoice".to_string()), "tags: {tags:?}");
+    }
+
+    #[test]
+    fn auto_tags_provider_name_included() {
+        // (b) provider 'John Green' detected → tag 'John Green'
+        let candidates = vec!["John Green".to_string()];
+        let tags = auto_extract_tags("referral letter", &candidates, None);
+        assert!(tags.contains(&"John Green".to_string()), "tags: {tags:?}");
+    }
+
+    #[test]
+    fn auto_tags_specialty_physiotherapy_uppercase() {
+        // (c) keyword 'PHYSIOTHERAPY' → tag 'PHYSIOTHERAPY'
+        let tags = auto_extract_tags("Physiotherapy assessment report", &[], None);
+        assert!(
+            tags.contains(&"PHYSIOTHERAPY".to_string()),
+            "tags: {tags:?}"
+        );
+    }
+
+    #[test]
+    fn auto_tags_activity_date() {
+        // (d) activity date '2023-03-09' → tag '2023-03-09'
+        let tags = auto_extract_tags("", &[], Some("2023-03-09"));
+        assert!(tags.contains(&"2023-03-09".to_string()), "tags: {tags:?}");
+    }
+
+    #[test]
+    fn auto_tags_deduplication_case_insensitive() {
+        // (e) duplicate tags are de-duplicated case-insensitively
+        let candidates = vec!["INVOICE".to_string()];
+        let tags = auto_extract_tags("INVOICE total due", &candidates, None);
+        let count = tags
+            .iter()
+            .filter(|t| t.to_lowercase() == "invoice")
+            .count();
+        assert_eq!(
+            count, 1,
+            "expected 1 'invoice' tag, got {count}; tags: {tags:?}"
+        );
+    }
+
+    #[test]
+    fn auto_tags_all_four_types_present() {
+        // All 4 tag types present for a physiotherapy invoice with provider and date
+        let candidates = vec!["Dr Smith".to_string()];
+        let tags = auto_extract_tags(
+            "Invoice for physiotherapy session",
+            &candidates,
+            Some("2024-01-15"),
+        );
+        assert!(
+            tags.contains(&"invoice".to_string()),
+            "missing type tag; tags: {tags:?}"
+        );
+        assert!(
+            tags.contains(&"PHYSIOTHERAPY".to_string()),
+            "missing specialty tag; tags: {tags:?}"
+        );
+        assert!(
+            tags.contains(&"Dr Smith".to_string()),
+            "missing provider tag; tags: {tags:?}"
+        );
+        assert!(
+            tags.contains(&"2024-01-15".to_string()),
+            "missing date tag; tags: {tags:?}"
+        );
+    }
+
+    #[test]
+    fn auto_tags_type_whole_word_no_false_positive() {
+        // 'ability' must NOT produce 'bill'; 'billion' must NOT produce 'bill'
+        let tags = auto_extract_tags("ability billion", &[], None);
+        assert!(
+            !tags.contains(&"bill".to_string()),
+            "false positive; tags: {tags:?}"
+        );
     }
 
     #[test]

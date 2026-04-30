@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 9 — v1.3 Intelligence features
-Current task: 10.0 — V3 DB schema migrations
+Phase 10 — v1.4 Upload Intelligence (PRD_V3)
+Current task: 10.2 — V3-F5 Activity date extraction + timeline entry format
 ```
 
 ---
@@ -501,7 +501,7 @@ Current task: 10.0 — V3 DB schema migrations
 
 ### Sprint 17: Schema migrations
 
-▶ **10.0 — V3 DB schema migrations**
+[x] **10.0 — V3 DB schema migrations**
    - Migration v6 in `src-tauri/src/db/migrations.rs`:
      - `ALTER TABLE clinics ADD COLUMN company_registration_number TEXT`
      - `CREATE TABLE clinic_addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE, address TEXT NOT NULL, is_primary INTEGER NOT NULL DEFAULT 0)`
@@ -511,7 +511,7 @@ Current task: 10.0 — V3 DB schema migrations
 
 ### Sprint 18: Rust extraction backend
 
-[ ] **10.1 — V3-F4 Tag auto-extraction (all 4 tag types)**
+[x] **10.1 — V3-F4 Tag auto-extraction (all 4 tag types)**
    - File: `src-tauri/src/services/extraction/mod.rs` and/or `src-tauri/src/parsing/tags.rs` (new file if needed)
    - **Type tags:** Scan extracted text for keywords `INVOICE`, `RECEIPT`, `BILL`, `REFERRAL`, `PRESCRIPTION`, `REPORT`, `SUMMARY`, `DISCHARGE`; emit the matched keyword lowercased as a tag
    - **Provider name tags:** Every doctor/provider name already detected (contact suggestion pipeline) must also be emitted as a tag
@@ -521,7 +521,7 @@ Current task: 10.0 — V3 DB schema migrations
    - Add `extractionTagsAutoExtract: 'extraction_tags_auto_extract'` or extend existing extraction command result to include `auto_tags: Vec<String>`
    - Done when: `cargo test` verifies (a) PDF with "INVOICE" → tag `"invoice"`; (b) provider "John Green" detected → tag `"John Green"`; (c) keyword `PHYSIOTHERAPY` → tag `"PHYSIOTHERAPY"`; (d) activity date `2023-03-09` → tag `"2023-03-09"`; (e) duplicate tags de-duplicated; all 4 tags present for physiotherapy invoice fixture
 
-[ ] **10.2 — V3-F5 Activity date extraction + timeline entry format**
+▶ **10.2 — V3-F5 Activity date extraction + timeline entry format**
    - **Activity date extraction** in `src-tauri/src/services/extraction/mod.rs`:
      - Priority 1: Scan PDF body for labelled date patterns: `Date of Service`, `Invoice Date`, `Appointment Date`, `Date:` followed by `DD/MM/YYYY`, `DD Month YYYY`, `YYYY-MM-DD`
      - Priority 2: Filename-parsed `document_date`

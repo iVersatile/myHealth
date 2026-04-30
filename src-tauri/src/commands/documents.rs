@@ -1004,6 +1004,7 @@ pub struct ExtractionSuggestions {
     pub category_suggestion: Option<String>,
     pub document_tags: Vec<String>,
     pub contact_suggestions: Vec<ContactSuggestionDto>,
+    pub auto_tags: Vec<String>,
 }
 
 #[tauri::command]
@@ -1049,11 +1050,13 @@ pub async fn documents_run_extraction(
                     email: c.email.clone(),
                 })
                 .collect();
+            let auto_tags = crate::extraction::auto_extract_tags(&text, &doctor_candidates, None);
             return Ok(ExtractionSuggestions {
                 doctor_candidates,
                 category_suggestion,
                 document_tags,
                 contact_suggestions: contact_dtos,
+                auto_tags,
             });
         }
     }
@@ -1131,6 +1134,7 @@ pub async fn documents_run_extraction(
         category_suggestion: result.category_suggestion,
         document_tags: result.document_tags,
         contact_suggestions: contact_dtos,
+        auto_tags: result.auto_tags,
     })
 }
 
