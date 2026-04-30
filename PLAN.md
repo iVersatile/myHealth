@@ -8,7 +8,7 @@
 
 ```
 Phase 8 — v1.2 Enhancements
-Current task: Phase 9 — v1.3+ Extended Features (Sprint 14)
+Current task: 9.2 — Outlook Calendar sync (Windows)
 ```
 
 ---
@@ -432,7 +432,7 @@ Current task: Phase 9 — v1.3+ Extended Features (Sprint 14)
 
 ### Sprint 14: Calendar extensions
 
-▶ **9.1 — iCalendar import/export (.ics)**
+[x] **9.1 — iCalendar import/export (.ics)**
    - Add `icalendar_import(user_id: String, file_path: String)` and `icalendar_export(user_id: String, appointment_ids: Vec<String>, file_path: String)` in `src-tauri/src/commands/calendar.rs`
    - Use `icalendar` crate (add to `src-tauri/Cargo.toml` — not yet present)
    - Import: parse VEVENT components → `appointments` rows; skip duplicates by `external_event_id`
@@ -441,7 +441,7 @@ Current task: Phase 9 — v1.3+ Extended Features (Sprint 14)
    - Add "Import .ics" + "Export .ics" buttons to Appointments page toolbar (`src/app/(app)/appointments/page.tsx`)
    - Done when: `cargo test` verifies (a) round-trip VEVENT → appointment → VEVENT preserves title/date/location; (b) duplicate import skips, no new row; (c) export produces valid .ics parseable by `icalendar` crate
 
-[ ] **9.2 — Outlook Calendar sync (Windows)**
+▶ **9.2 — Outlook Calendar sync (Windows)**
    - Windows-only (`#[cfg(target_os = "windows")]`) — no-op stubs compiled on macOS/Linux
    - Use Microsoft Graph REST API via `reqwest` (offline-first caveat: sync only when network available; clearly communicate this in UI)
    - Add `outlook_auth_url()` → OAuth2 PKCE flow via system browser; store refresh token encrypted in SQLite `settings`
