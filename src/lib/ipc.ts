@@ -66,6 +66,13 @@ export const IPC = {
   icalendarImport: 'icalendar_import',
   icalendarExport: 'icalendar_export',
 
+  // Outlook
+  outlookGetAuthUrl: 'outlook_get_auth_url',
+  outlookExchangeCode: 'outlook_exchange_code',
+  outlookSync: 'outlook_sync',
+  outlookIsConnected: 'outlook_is_connected',
+  outlookDisconnect: 'outlook_disconnect',
+
   // Clinics
   clinicsList: 'clinics_list',
   clinicsGet: 'clinics_get',

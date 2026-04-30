@@ -50,6 +50,10 @@ use commands::links::{
 use commands::notes::{
     notes_create, notes_delete, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
 };
+use commands::outlook::{
+    outlook_disconnect, outlook_exchange_code, outlook_get_auth_url, outlook_is_connected,
+    outlook_sync,
+};
 use commands::search::search_query;
 use commands::settings::{
     settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data,
@@ -161,6 +165,11 @@ pub fn run() {
             unlink_document_from_appointment,
             get_document_links,
             get_appointment_links,
+            outlook_get_auth_url,
+            outlook_exchange_code,
+            outlook_sync,
+            outlook_is_connected,
+            outlook_disconnect,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
