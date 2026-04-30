@@ -75,17 +75,18 @@ type ClinicPhase = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' }
 
 type Step = 'pick' | 'analyzing' | 'review'
 
+const fieldCls =
+  'rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]'
+
 export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [step, setStep] = useState<Step>('pick')
   const [dragging, setDragging] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
-
-  // Set after upload in the analyzing step
   const [uploadedDoc, setUploadedDoc] = useState<Document | null>(null)
 
-  // Review step state — pre-populated from extraction results
   const [category, setCategory] = useState<DocumentCategory>('lab')
-  const [tagsRaw, setTagsRaw] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
   const [notes, setNotes] = useState('')
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
@@ -93,8 +94,10 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [categorySuggestionDismissed, setCategorySuggestionDismissed] = useState(false)
   const [contactSuggestions, setContactSuggestions] = useState<ContactSuggestion[]>([])
   const [contactPhases, setContactPhases] = useState<Map<string, ContactPhase>>(new Map())
+  const [dismissedContacts, setDismissedContacts] = useState<Set<string>>(new Set())
   const [clinicSuggestions, setClinicSuggestions] = useState<ClinicSuggestion[]>([])
   const [clinicPhase, setClinicPhase] = useState<ClinicPhase>({ kind: 'idle' })
+  const [dismissedClinics, setDismissedClinics] = useState<Set<string>>(new Set())
   const [timelineDescription, setTimelineDescription] = useState('')
   const [activityDate, setActivityDate] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -103,24 +106,16 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const unlistenRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    return () => {
-      unlistenRef.current?.()
-    }
+    return () => { unlistenRef.current?.() }
   }, [])
 
   useEffect(() => {
     invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list')
       .then((rows) =>
-        setAllCategories(
-          rows.map((r) => ({
-            id: r.id,
-            name: r.name,
-            parentId: r.parent_id,
-            colorHex: r.color_hex,
-            isSystem: r.is_system,
-            sortOrder: r.sort_order,
-          }))
-        )
+        setAllCategories(rows.map((r) => ({
+          id: r.id, name: r.name, parentId: r.parent_id,
+          colorHex: r.color_hex, isSystem: r.is_system, sortOrder: r.sort_order,
+        })))
       )
       .catch(() => {})
   }, [])
@@ -129,27 +124,18 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
     setStep('analyzing')
     setAnalyzeError(null)
     try {
-      const doc = await invoke<Document>('documents_upload', {
-        filePath,
-        category: 'lab',
-        notes: null,
-      })
+      const doc = await invoke<Document>('documents_upload', { filePath, category: 'lab', notes: null })
       setUploadedDoc(doc)
 
-      // Run PDF extraction only for PDFs
       const extractedTags: string[] = [...doc.tags]
-      if (doc.document_date) {
-        extractedTags.push(doc.document_date)
-      }
+      if (doc.document_date) extractedTags.push(doc.document_date)
 
       const isOcrCandidate =
         doc.mime_type === 'application/pdf' || (doc.mime_type?.startsWith('image/') ?? false)
 
       if (isOcrCandidate) {
         try {
-          const unlisten = await listen<OcrProgress>('ocr_progress', (e) => {
-            setOcrProgress(e.payload)
-          })
+          const unlisten = await listen<OcrProgress>('ocr_progress', (e) => setOcrProgress(e.payload))
           unlistenRef.current = unlisten
 
           const suggestions = await invoke<ExtractionSuggestions>('documents_run_extraction', {
@@ -166,30 +152,20 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           setClinicSuggestions(suggestions.clinic_suggestions ?? [])
           const actDate = suggestions.activity_date ?? null
           setActivityDate(actDate)
-          setTimelineDescription(
-            buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null),
-          )
+          setTimelineDescription(buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null))
 
-          for (const tag of [
-            ...suggestions.auto_tags,
-            ...suggestions.doctor_candidates,
-            ...suggestions.document_tags,
-          ]) {
+          for (const tag of [...suggestions.auto_tags, ...suggestions.doctor_candidates, ...suggestions.document_tags]) {
             const lower = tag.toLowerCase()
-            if (!extractedTags.some((t) => t.toLowerCase() === lower)) {
-              extractedTags.push(tag)
-            }
+            if (!extractedTags.some((t) => t.toLowerCase() === lower)) extractedTags.push(tag)
           }
         } catch {
           unlistenRef.current?.()
           unlistenRef.current = null
           setOcrProgress(null)
-          // Extraction failure is non-fatal — still proceed to review
         }
       }
 
-      setTagsRaw(extractedTags.filter(Boolean).join(', '))
-
+      setTags(extractedTags.filter(Boolean))
       setStep('review')
     } catch (err: unknown) {
       setAnalyzeError(err instanceof Error ? err.message : String(err))
@@ -200,23 +176,13 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   async function pickFile() {
     const selected = await open({
       multiple: false,
-      filters: [
-        { name: 'Documents', extensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'tiff'] },
-      ],
+      filters: [{ name: 'Documents', extensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'tiff'] }],
     })
-    if (typeof selected === 'string') {
-      await processFile(selected)
-    }
+    if (typeof selected === 'string') await processFile(selected)
   }
 
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault()
-    setDragging(true)
-  }
-
-  function handleDragLeave() {
-    setDragging(false)
-  }
+  function handleDragOver(e: React.DragEvent) { e.preventDefault(); setDragging(true) }
+  function handleDragLeave() { setDragging(false) }
 
   async function handleDrop(e: React.DragEvent) {
     e.preventDefault()
@@ -224,18 +190,12 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
     const file = e.dataTransfer.files[0]
     if (!file) return
     const nativePath = (file as File & { path?: string }).path
-    if (nativePath) {
-      await processFile(nativePath)
-    }
+    if (nativePath) await processFile(nativePath)
   }
 
   async function handleCancel() {
     if (uploadedDoc) {
-      try {
-        await invoke('documents_delete', { id: uploadedDoc.id })
-      } catch {
-        // Best-effort cleanup
-      }
+      try { await invoke('documents_delete', { id: uploadedDoc.id }) } catch { /* best-effort */ }
     }
     onClose()
   }
@@ -243,12 +203,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   async function handleAcceptCategorySuggestion(suggestion: string) {
     try {
       const created = await invoke<{ id: string }>('categories_create_if_not_exists', { name: suggestion })
-      setSelectedCategoryIds((prev) =>
-        prev.includes(created.id) ? prev : [...prev, created.id]
-      )
-    } catch {
-      // Non-fatal — user can still pick manually
-    }
+      setSelectedCategoryIds((prev) => prev.includes(created.id) ? prev : [...prev, created.id])
+    } catch { /* non-fatal */ }
     setCategorySuggestionDismissed(true)
   }
 
@@ -258,17 +214,14 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
     setConfirming(true)
     setConfirmError(null)
     try {
-      const finalTags = tagsRaw
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
+      const pendingTag = tagInput.trim()
+      const finalTags =
+        pendingTag && !tags.some((t) => t.toLowerCase() === pendingTag.toLowerCase())
+          ? [...tags, pendingTag]
+          : tags
 
       await Promise.all([
-        invoke<Document>('documents_update', {
-          id: uploadedDoc.id,
-          category,
-          notes: notes.trim() || null,
-        }),
+        invoke<Document>('documents_update', { id: uploadedDoc.id, category, notes: notes.trim() || null, activityDate: activityDate ?? null }),
         invoke('documents_tags_set', { id: uploadedDoc.id, tags: finalTags }),
         ...selectedCategoryIds.map((categoryId) =>
           invoke('categories_assign_document', { documentId: uploadedDoc.id, categoryId })
@@ -285,7 +238,18 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
     }
   }
 
-  const categories = DOCUMENT_CATEGORIES.filter((c) => c !== 'all')
+  function addTag(value: string) {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    if (!tags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
+      setTags((prev) => [...prev, trimmed])
+    }
+    setTagInput('')
+  }
+
+  const visibleContacts = contactSuggestions.filter((cs) => !dismissedContacts.has(cs.name))
+  const visibleClinics = clinicSuggestions.filter((c) => !dismissedClinics.has(c.name))
+  const docCategories = DOCUMENT_CATEGORIES.filter((c) => c !== 'all')
 
   return (
     <div
@@ -294,16 +258,13 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       aria-labelledby="upload-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center"
     >
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50"
         onClick={step === 'pick' ? onClose : undefined}
         aria-hidden="true"
       />
 
-      {/* Panel — max-height + flex column so footer stays pinned and body scrolls */}
       <div className="relative z-10 flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-lg)]">
-        {/* Header — always visible */}
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-6 py-4">
           <h2
             id="upload-dialog-title"
@@ -325,7 +286,6 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           )}
         </div>
 
-        {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto">
           {/* ── Step 1: Pick ── */}
           {step === 'pick' && (
@@ -395,6 +355,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           {step === 'review' && uploadedDoc && (
             <form
               id="upload-review-form"
+              data-testid="upload-review-step"
               onSubmit={(e) => void handleConfirm(e)}
               className="flex flex-col gap-4 p-6"
             >
@@ -406,22 +367,20 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                 {uploadedDoc.document_date && (
                   <p className="mt-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
                     Date detected from filename:{' '}
-                    <span className="font-medium text-[var(--color-text)]">
-                      {uploadedDoc.document_date}
-                    </span>
+                    <span className="font-medium text-[var(--color-text)]">{uploadedDoc.document_date}</span>
                   </p>
                 )}
               </div>
 
-              {/* Category suggestion from PDF extraction */}
+              {/* Category suggestion */}
               {categorySuggestion && !categorySuggestionDismissed && (
-                <div className="flex items-start justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-3 py-2">
+                <div
+                  data-testid="category-suggestion-banner"
+                  className="flex items-start justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 px-3 py-2"
+                >
                   <div className="flex flex-col gap-0.5">
                     <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
-                      {categorySuggestion
-                        .split(' ')
-                        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                        .join(' ')}
+                      {categorySuggestion.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')}
                     </p>
                     <p className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">
                       Detected from document content
@@ -430,6 +389,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                   <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
+                      data-testid="category-suggestion-accept"
                       onClick={() => void handleAcceptCategorySuggestion(categorySuggestion)}
                       className="rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-2 py-0.5 text-[var(--text-xs)] font-medium text-[var(--color-text-inverse)]"
                     >
@@ -437,6 +397,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                     </button>
                     <button
                       type="button"
+                      data-testid="category-suggestion-dismiss"
                       onClick={() => setCategorySuggestionDismissed(true)}
                       className="text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
                     >
@@ -446,13 +407,11 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                 </div>
               )}
 
-              {/* Detected contacts from PDF extraction */}
-              {contactSuggestions.length > 0 && (
+              {/* Contact suggestions */}
+              {visibleContacts.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
-                    Detected contacts
-                  </p>
-                  {contactSuggestions.map((cs) => {
+                  <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">Detected contacts</p>
+                  {visibleContacts.map((cs) => {
                     const phase = contactPhases.get(cs.name) ?? { kind: 'idle' as const }
 
                     function setPhase(p: ContactPhase) {
@@ -463,31 +422,17 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       setPhase({ kind: 'saving' })
                       try {
                         const newContact = await invoke<{ id: string }>('contacts_create', {
-                          input: {
-                            name: cs.name,
-                            role: 'Doctor',
-                            specialty: cs.specialty,
-                            phone: cs.phone,
-                            email: cs.email,
-                            clinic: cs.clinic,
-                            address: cs.address,
-                            notes: null,
-                          },
+                          input: { name: cs.name, role: 'Doctor', specialty: cs.specialty, phone: cs.phone, email: cs.email, clinic: cs.clinic, address: cs.address, notes: null },
                         })
                         const dupes = await invoke<DuplicateCandidate[]>('find_duplicate_contacts', {
-                          userId: '',
-                          contactId: newContact.id,
-                          threshold: 0.85,
+                          userId: '', contactId: newContact.id, threshold: 0.85,
                         })
                         const topDupe = dupes[0]
                         if (topDupe) {
                           setPhase({ kind: 'duplicate', newId: newContact.id, match: topDupe })
                         } else {
                           if (uploadedDoc) {
-                            await invoke('documents_link_contact', {
-                              documentId: uploadedDoc.id,
-                              contactId: newContact.id,
-                            })
+                            await invoke('documents_link_contact', { documentId: uploadedDoc.id, contactId: newContact.id })
                           }
                           setPhase({ kind: 'saved', contactId: newContact.id })
                         }
@@ -498,66 +443,65 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
                     async function handleMerge(newId: string, existingId: string) {
                       try {
-                        await invoke('merge_contacts', {
-                          userId: '',
-                          primaryId: existingId,
-                          duplicateIds: [newId],
-                        })
+                        await invoke('merge_contacts', { userId: '', primaryId: existingId, duplicateIds: [newId] })
                         if (uploadedDoc) {
-                          await invoke('documents_link_contact', {
-                            documentId: uploadedDoc.id,
-                            contactId: existingId,
-                          })
+                          await invoke('documents_link_contact', { documentId: uploadedDoc.id, contactId: existingId })
                         }
-                      } catch {
-                        // merge failure is non-fatal — contact still exists
-                      }
+                      } catch { /* non-fatal */ }
                       setPhase({ kind: 'saved', contactId: existingId })
                     }
 
                     async function handleCancelDuplicate(newId: string) {
-                      try {
-                        await invoke('contacts_delete', { id: newId })
-                      } catch {
-                        // best-effort cleanup
-                      }
+                      try { await invoke('contacts_delete', { id: newId }) } catch { /* best-effort */ }
                       setPhase({ kind: 'idle' })
                     }
 
                     return (
                       <div
                         key={cs.name}
+                        data-testid="contact-suggestion-card"
                         className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex flex-col gap-0.5 text-[var(--text-xs)]">
                             <span className="font-medium text-[var(--color-text)]">{cs.name}</span>
-                            {cs.specialty && (
-                              <span className="text-[var(--color-text-secondary)]">{cs.specialty}</span>
-                            )}
-                            {cs.clinic && (
-                              <span className="text-[var(--color-text-secondary)]">{cs.clinic}</span>
-                            )}
-                            {cs.address && (
-                              <span className="text-[var(--color-text-secondary)]">{cs.address}</span>
-                            )}
+                            {cs.specialty && <span className="text-[var(--color-text-secondary)]">{cs.specialty}</span>}
+                            {cs.clinic && <span className="text-[var(--color-text-secondary)]">{cs.clinic}</span>}
+                            {cs.address && <span className="text-[var(--color-text-secondary)]">{cs.address}</span>}
                             {cs.phone && (
-                              <span className="text-[var(--color-text-secondary)]">{cs.phone}</span>
+                              <input
+                                type="text"
+                                readOnly
+                                data-testid="contact-suggestion-phone"
+                                value={cs.phone}
+                                className="bg-transparent text-[var(--color-text-secondary)] focus:outline-none"
+                              />
                             )}
-                            {cs.email && (
-                              <span className="text-[var(--color-text-secondary)]">{cs.email}</span>
+                            {cs.email && <span className="text-[var(--color-text-secondary)]">{cs.email}</span>}
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            {phase.kind !== 'duplicate' && (
+                              <button
+                                type="button"
+                                data-testid="contact-suggestion-save"
+                                disabled={phase.kind === 'saving' || phase.kind === 'saved'}
+                                onClick={() => void handleSave()}
+                                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
+                              >
+                                {phase.kind === 'saved' ? 'Saved' : phase.kind === 'saving' ? 'Checking…' : 'Save as Contact'}
+                              </button>
+                            )}
+                            {phase.kind === 'idle' && (
+                              <button
+                                type="button"
+                                data-testid="contact-suggestion-dismiss"
+                                onClick={() => setDismissedContacts((prev) => new Set([...prev, cs.name]))}
+                                className="text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                              >
+                                Dismiss
+                              </button>
                             )}
                           </div>
-                          {phase.kind !== 'duplicate' && (
-                            <button
-                              type="button"
-                              disabled={phase.kind === 'saving' || phase.kind === 'saved'}
-                              onClick={() => void handleSave()}
-                              className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
-                            >
-                              {phase.kind === 'saved' ? 'Saved' : phase.kind === 'saving' ? 'Checking…' : 'Save as Contact'}
-                            </button>
-                          )}
                         </div>
 
                         {phase.kind === 'duplicate' && (
@@ -570,6 +514,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                             <div className="flex gap-2">
                               <button
                                 type="button"
+                                data-testid="contact-suggestion-merge"
                                 onClick={() => void handleMerge(phase.newId, phase.match.contact.id)}
                                 className="rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-2 py-0.5 text-[var(--text-xs)] font-medium text-[var(--color-text-inverse)]"
                               >
@@ -599,10 +544,10 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
               )}
 
               {/* Clinic suggestions */}
-              {clinicSuggestions.length > 0 && (
+              {visibleClinics.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <p className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">Clinic detected</p>
-                  {clinicSuggestions.map((clinic) => {
+                  {visibleClinics.map((clinic) => {
                     async function handleSaveClinic() {
                       setClinicPhase({ kind: 'saving' })
                       try {
@@ -615,13 +560,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                         ) as { kind: 'saved'; contactId: string } | undefined
                         if (savedContactId) {
                           try {
-                            await invoke('clinics_link_contact', {
-                              clinicId: result.id,
-                              contactId: savedContactId.contactId,
-                            })
-                          } catch {
-                            // link failure is non-fatal
-                          }
+                            await invoke('clinics_link_contact', { clinicId: result.id, contactId: savedContactId.contactId })
+                          } catch { /* link failure is non-fatal */ }
                         }
                         setClinicPhase({ kind: 'saved' })
                       } catch {
@@ -629,35 +569,87 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       }
                     }
 
-                    const label = [
-                      clinic.name,
-                      clinic.company_registration_number ? `Reg: ${clinic.company_registration_number}` : null,
-                      clinic.addresses.length > 0 ? `${clinic.addresses.length} address${clinic.addresses.length !== 1 ? 'es' : ''}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' / ')
-
                     return (
                       <div
                         key={clinic.name}
-                        className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2"
+                        data-testid="clinic-suggestion-card"
+                        className="flex items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2"
                       >
-                        <span className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">{label}</span>
-                        <button
-                          type="button"
-                          disabled={clinicPhase.kind === 'saving' || clinicPhase.kind === 'saved'}
-                          onClick={() => void handleSaveClinic()}
-                          className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
-                        >
-                          {clinicPhase.kind === 'saved' ? 'Saved' : clinicPhase.kind === 'saving' ? 'Saving…' : 'Save as Clinic'}
-                        </button>
+                        <div className="flex flex-col gap-1 text-[var(--text-xs)] min-w-0 flex-1">
+                          <span className="font-medium text-[var(--color-text)]">{clinic.name}</span>
+                          {clinic.company_registration_number && (
+                            <div className="flex items-center gap-1 text-[var(--color-text-secondary)]">
+                              <span>Reg:</span>
+                              <input
+                                type="text"
+                                readOnly
+                                data-testid="clinic-suggestion-reg-number"
+                                value={clinic.company_registration_number}
+                                className="bg-transparent focus:outline-none"
+                              />
+                            </div>
+                          )}
+                          {clinic.addresses.map((addr, i) => (
+                            <div
+                              key={i}
+                              data-testid="clinic-address-item"
+                              className="text-[var(--color-text-secondary)]"
+                            >
+                              {addr}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <button
+                            type="button"
+                            data-testid="clinic-suggestion-save"
+                            disabled={clinicPhase.kind === 'saving' || clinicPhase.kind === 'saved'}
+                            onClick={() => void handleSaveClinic()}
+                            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
+                          >
+                            {clinicPhase.kind === 'saved' ? 'Saved' : clinicPhase.kind === 'saving' ? 'Saving…' : 'Save as Clinic'}
+                          </button>
+                          {clinicPhase.kind === 'idle' && (
+                            <button
+                              type="button"
+                              data-testid="clinic-suggestion-dismiss"
+                              onClick={() => setDismissedClinics((prev) => new Set([...prev, clinic.name]))}
+                              className="text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                            >
+                              Dismiss
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )
                   })}
                 </div>
               )}
 
-              {/* Timeline entry description */}
+              {/* Activity date — always shown in review */}
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="upload-activity-date"
+                  className="text-[var(--text-sm)] font-medium text-[var(--color-text)]"
+                >
+                  Activity date{' '}
+                  <span className="font-normal text-[var(--color-text-secondary)]">(optional)</span>
+                </label>
+                <input
+                  id="upload-activity-date"
+                  data-testid="activity-date-field"
+                  type="date"
+                  value={activityDate?.slice(0, 10) ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value || null
+                    setActivityDate(val)
+                    setTimelineDescription(buildTimelineDescription(val, contactSuggestions[0] ?? null))
+                  }}
+                  className={fieldCls}
+                />
+              </div>
+
+              {/* Timeline description */}
               {(timelineDescription || activityDate) && (
                 <div className="flex flex-col gap-1">
                   <label
@@ -672,29 +664,24 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                     rows={2}
                     value={timelineDescription}
                     onChange={(e) => setTimelineDescription(e.target.value)}
-                    className="resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    className={`resize-none ${fieldCls}`}
                   />
                 </div>
               )}
 
               {/* Category */}
               <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="upload-category"
-                  className="text-[var(--text-sm)] font-medium text-[var(--color-text)]"
-                >
+                <label htmlFor="upload-category" className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
                   Category
                 </label>
                 <select
                   id="upload-category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value as DocumentCategory)}
-                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  className={fieldCls}
                 >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {CATEGORY_LABELS[cat]}
-                    </option>
+                  {docCategories.map((cat) => (
+                    <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
                   ))}
                 </select>
               </div>
@@ -714,33 +701,51 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                 </div>
               )}
 
-              {/* Tags — pre-populated from filename parsing */}
+              {/* Tags — chip UI */}
               <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="upload-tags"
-                  className="text-[var(--text-sm)] font-medium text-[var(--color-text)]"
-                >
-                  Tags{' '}
-                  <span className="font-normal text-[var(--color-text-secondary)]">
-                    (comma-separated)
-                  </span>
+                <label htmlFor="upload-tags" className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                  Tags
                 </label>
-                <input
-                  id="upload-tags"
-                  type="text"
-                  value={tagsRaw}
-                  onChange={(e) => setTagsRaw(e.target.value)}
-                  placeholder="e.g. blood test, annual, Dr. Smith"
-                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                />
+                <div className="flex min-h-[2.5rem] flex-wrap items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2 py-1.5 focus-within:ring-2 focus-within:ring-[var(--color-primary)]">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      data-testid="tag-chip"
+                      data-value={tag}
+                      className="flex items-center gap-0.5 rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)]"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        aria-label={`Remove tag ${tag}`}
+                        onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                        className="ml-0.5 leading-none hover:text-[var(--color-text)]"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    id="upload-tags"
+                    data-testid="tag-input"
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault()
+                        addTag(tagInput)
+                      }
+                    }}
+                    placeholder={tags.length === 0 ? 'Type a tag and press Enter' : ''}
+                    className="min-w-[8rem] flex-1 bg-transparent text-[var(--text-sm)] text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* Notes */}
               <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="upload-notes"
-                  className="text-[var(--text-sm)] font-medium text-[var(--color-text)]"
-                >
+                <label htmlFor="upload-notes" className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
                   Notes{' '}
                   <span className="font-normal text-[var(--color-text-secondary)]">(optional)</span>
                 </label>
@@ -750,7 +755,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Any additional context…"
-                  className="resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  className={`resize-none ${fieldCls}`}
                 />
               </div>
 
@@ -763,7 +768,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           )}
         </div>
 
-        {/* Footer — pinned at bottom for review step */}
+        {/* Footer */}
         {step === 'review' && (
           <div className="flex shrink-0 justify-end gap-3 border-t border-[var(--color-border)] px-6 py-4">
             <button

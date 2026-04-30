@@ -47,7 +47,7 @@ function buildDocTitle(d: Document): string {
   const specialty = tags.find(
     (t) => t === t.toUpperCase() && t.length > 2 && /^[A-Z]/.test(t),
   )
-  const provider = tags.find((t) => /[a-z]/.test(t) || (t.includes(' ') && t !== eventDate))
+  const provider = tags.find((t) => /^[A-Z]/.test(t) && /[a-z]/.test(t))
 
   if (specialty && provider) return `${eventDate} ${specialty} with ${provider}`
   if (specialty) return `${eventDate} ${specialty}`
@@ -139,7 +139,7 @@ function TimelineItem({
     : { backgroundColor: 'var(--color-tag-bg)', color: 'var(--color-tag-text)' }
 
   return (
-    <a href={event.href} className="flex gap-4 no-underline group">
+    <a href={event.href} data-testid="timeline-entry" className="flex gap-4 no-underline group">
       <div className="flex flex-col items-center">
         <div
           className="w-2 h-2 rounded-full mt-1.5 shrink-0"

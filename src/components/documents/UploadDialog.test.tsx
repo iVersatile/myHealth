@@ -149,6 +149,7 @@ describe('UploadDialog', () => {
         id: 'new-doc',
         category: 'lab',
         notes: 'Annual checkup',
+        activityDate: null,
       })
     })
   })
@@ -167,8 +168,10 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    const tagsInput = screen.getByLabelText(/tags/i) as HTMLInputElement
-    expect(tagsInput.value).toContain('2026-03-15')
+    await waitFor(() => {
+      const chips = screen.getAllByTestId('tag-chip')
+      expect(chips.some((chip) => chip.getAttribute('data-value') === '2026-03-15')).toBe(true)
+    })
   })
 
   it('shows contact suggestions from extraction and saves one (no duplicate)', async () => {
@@ -430,7 +433,12 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByText(/John Green Physiotherapy Ltd \/ Reg: 6780032 \/ 3 addresses/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-card')).toBeTruthy())
+    expect(screen.getByText('John Green Physiotherapy Ltd')).toBeTruthy()
+    const regInput = screen.getByTestId('clinic-suggestion-reg-number') as HTMLInputElement
+    expect(regInput.value).toBe('6780032')
+    const addressItems = screen.getAllByTestId('clinic-address-item')
+    expect(addressItems).toHaveLength(3)
     expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy()
   })
 
@@ -558,8 +566,12 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    const tagsInput = screen.getByLabelText(/tags/i) as HTMLInputElement
-    const tagValues = tagsInput.value.split(',').map((t) => t.trim()).filter(Boolean)
+    await waitFor(() => {
+      const chips = screen.getAllByTestId('tag-chip')
+      expect(chips.length).toBeGreaterThan(0)
+    })
+    const chips = screen.getAllByTestId('tag-chip')
+    const tagValues = chips.map((el) => el.getAttribute('data-value') ?? '')
     // 'invoice' from auto_tags and 'Invoice' from document_tags → only one should appear
     const invoiceTags = tagValues.filter((t) => t.toLowerCase() === 'invoice')
     expect(invoiceTags).toHaveLength(1)

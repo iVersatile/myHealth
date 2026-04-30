@@ -278,6 +278,7 @@ pub fn documents_update(
     id: String,
     category: Option<String>,
     notes: Option<String>,
+    activity_date: Option<String>,
 ) -> Result<Document, CommandError> {
     if let Some(ref cat) = category {
         validate_category(cat)?;
@@ -288,11 +289,12 @@ pub fn documents_update(
     // COALESCE preserves the existing value when the argument is NULL
     conn.execute(
         "UPDATE documents \
-         SET category   = COALESCE(?1, category), \
-             notes      = COALESCE(?2, notes), \
-             updated_at = ?3 \
-         WHERE id = ?4 AND is_deleted = 0",
-        rusqlite::params![category, notes, now, id],
+         SET category      = COALESCE(?1, category), \
+             notes         = COALESCE(?2, notes), \
+             activity_date = COALESCE(?3, activity_date), \
+             updated_at    = ?4 \
+         WHERE id = ?5 AND is_deleted = 0",
+        rusqlite::params![category, notes, activity_date, now, id],
     )?;
     let doc = load_doc(conn, &id)?;
     let body = doc.notes.as_deref().unwrap_or("").to_string();

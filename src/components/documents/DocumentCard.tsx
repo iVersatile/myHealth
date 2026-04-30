@@ -40,7 +40,7 @@ export function DocumentCard({ document: doc, onDelete }: DocumentCardProps) {
   const catLabel = CATEGORY_LABELS[doc.category] ?? doc.category
 
   return (
-    <article className="flex items-start gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[var(--shadow-sm)] transition-shadow duration-[var(--duration-fast)] hover:shadow-[var(--shadow-md)]">
+    <article data-testid="document-card" className="flex items-start gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[var(--shadow-sm)] transition-shadow duration-[var(--duration-fast)] hover:shadow-[var(--shadow-md)]">
       {/* Thumbnail / type badge */}
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] text-[var(--text-xs)] font-semibold tracking-wide text-[var(--color-text-secondary)]">
         {doc.thumbnail_path ? (
@@ -68,6 +68,8 @@ export function DocumentCard({ document: doc, onDelete }: DocumentCardProps) {
             {doc.tags.map((tag) => (
               <li
                 key={tag}
+                data-testid="tag-chip"
+                data-value={tag}
                 className="rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)]"
               >
                 #{tag}
