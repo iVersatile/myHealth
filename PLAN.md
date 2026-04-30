@@ -8,7 +8,7 @@
 
 ```
 Phase 10 — v1.4 Upload Intelligence (PRD_V3)
-Current task: 10.4 — V3-F1 Category auto-creation from specialty keyword
+Current task: 10.6 — Upload dialog: tags pre-populated + editable (V3-F4)
 ```
 
 ---
@@ -544,7 +544,7 @@ Current task: 10.4 — V3-F1 Category auto-creation from specialty keyword
    - `document_contacts` junction: ensure a record is created linking the new contact to the document when "Save as Contact" is invoked (V3-F2.6)
    - Done when: `cargo test` verifies (a) `07544 370440` matched; (b) `01234 567890` matched; (c) `+44 20 7946 0958` matched; (d) `ContactSuggestionDto` contains name + phone + email + title for physio invoice fixture; (e) `contacts_create` persists all four fields
 
-▶ **10.4 — V3-F1 Category auto-creation from specialty keyword**
+[x] **10.4 — V3-F1 Category auto-creation from specialty keyword**
    - File: `src-tauri/src/commands/categories.rs`
    - Add `categories_create_if_not_exists(user_id: String, name: String)` command:
      - Case-insensitive lookup: if a category with the same name (normalised to title-case) already exists, return its `id`
@@ -553,7 +553,7 @@ Current task: 10.4 — V3-F1 Category auto-creation from specialty keyword
    - The specialty keyword from extraction (already used for tags in 10.1) is normalised to title-case for category name (e.g. `PHYSIOTHERAPY` → `"Physiotherapy"`)
    - Done when: `cargo test` verifies (a) calling with `"Physiotherapy"` when none exists → creates and returns new id; (b) calling again → returns same id, count unchanged; (c) calling with `"physiotherapy"` (lowercase) → returns same id as `"Physiotherapy"`
 
-[ ] **10.5 — V3-F3 Clinic extraction: company reg, multi-address, clinic↔contact link**
+[x] **10.5 — V3-F3 Clinic extraction: company reg, multi-address, clinic↔contact link**
    - **Extraction** in `src-tauri/src/services/extraction/clinic.rs` (extend or create):
      - Extract company registration number via pattern `Company Registration (?:No|Number|No\.|Number:)[.:\s]*(\d{6,8})`
      - Extract up to 5 postal addresses from PDF body (lines matching UK postcode pattern `[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}` as anchor)
@@ -568,7 +568,7 @@ Current task: 10.4 — V3-F1 Category auto-creation from specialty keyword
 
 ### Sprint 19: Frontend — upload dialog integration
 
-[ ] **10.6 — Upload dialog: tags pre-populated + editable (V3-F4)**
+▶ **10.6 — Upload dialog: tags pre-populated + editable (V3-F4)**
    - File: `src/components/UploadDialog.tsx` (or equivalent upload dialog component)
    - On reaching the review step, call extraction result's `auto_tags` and pre-populate the tags input field
    - Tags field must remain editable: user can add/remove before saving
