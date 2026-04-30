@@ -14,6 +14,7 @@ interface UploadDialogProps {
 
 interface ContactSuggestion {
   name: string
+  title: string | null
   specialty: string | null
   clinic: string | null
   address: string | null
@@ -34,6 +35,21 @@ interface ExtractionSuggestions {
   auto_tags: string[]
   contact_suggestions: ContactSuggestion[]
   clinic_suggestions: ClinicSuggestion[]
+  activity_date: string | null
+}
+
+function buildTimelineDescription(
+  activityDate: string | null,
+  contact: ContactSuggestion | null,
+): string {
+  const date = activityDate?.slice(0, 10) ?? ''
+  const specialty = contact?.specialty?.toUpperCase() ?? null
+  const titlePart = contact?.title ? `${contact.title} ` : ''
+  const providerName = contact ? `${titlePart}${contact.name}` : null
+  if (specialty && providerName) return `${date} ${specialty} with ${providerName}`.trim()
+  if (specialty) return `${date} ${specialty}`.trim()
+  if (providerName) return `${date} DOCUMENT with ${providerName}`.trim()
+  return date
 }
 
 interface DuplicateCandidate {
@@ -79,6 +95,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [contactPhases, setContactPhases] = useState<Map<string, ContactPhase>>(new Map())
   const [clinicSuggestions, setClinicSuggestions] = useState<ClinicSuggestion[]>([])
   const [clinicPhase, setClinicPhase] = useState<ClinicPhase>({ kind: 'idle' })
+  const [timelineDescription, setTimelineDescription] = useState('')
+  const [activityDate, setActivityDate] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null)
@@ -146,6 +164,11 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           setCategorySuggestion(suggestions.category_suggestion)
           setContactSuggestions(suggestions.contact_suggestions)
           setClinicSuggestions(suggestions.clinic_suggestions ?? [])
+          const actDate = suggestions.activity_date ?? null
+          setActivityDate(actDate)
+          setTimelineDescription(
+            buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null),
+          )
 
           for (const tag of [
             ...suggestions.auto_tags,
@@ -631,6 +654,26 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       </div>
                     )
                   })}
+                </div>
+              )}
+
+              {/* Timeline entry description */}
+              {(timelineDescription || activityDate) && (
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="upload-timeline-description"
+                    className="text-[var(--text-sm)] font-medium text-[var(--color-text)]"
+                  >
+                    Timeline entry{' '}
+                    <span className="font-normal text-[var(--color-text-secondary)]">(editable)</span>
+                  </label>
+                  <textarea
+                    id="upload-timeline-description"
+                    rows={2}
+                    value={timelineDescription}
+                    onChange={(e) => setTimelineDescription(e.target.value)}
+                    className="resize-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  />
                 </div>
               )}
 

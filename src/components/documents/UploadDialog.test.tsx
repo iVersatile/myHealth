@@ -603,4 +603,79 @@ describe('UploadDialog', () => {
     // Component should now be in review step
     await waitFor(() => expect(screen.getByText('report.pdf')).toBeTruthy())
   })
+
+  it('pre-fills timeline entry from physio extraction with title prefix', async () => {
+    const contactSugg = { name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [],
+        category_suggestion: null,
+        document_tags: [],
+        auto_tags: [],
+        contact_suggestions: [contactSugg],
+        activity_date: '2023-03-09',
+      })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    const textarea = screen.getByLabelText(/timeline entry/i) as HTMLTextAreaElement
+    expect(textarea.value).toBe('2023-03-09 PHYSIOTHERAPY with Mr John Green')
+  })
+
+  it('timeline entry field is editable after pre-fill', async () => {
+    const contactSugg = { name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [],
+        category_suggestion: null,
+        document_tags: [],
+        auto_tags: [],
+        contact_suggestions: [contactSugg],
+        activity_date: '2023-03-09',
+      })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    const textarea = screen.getByLabelText(/timeline entry/i) as HTMLTextAreaElement
+    await userEvent.clear(textarea)
+    await userEvent.type(textarea, 'Edited description')
+    expect(textarea.value).toBe('Edited description')
+  })
+
+  it('does not show timeline entry field when no activity_date extracted', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [],
+        category_suggestion: null,
+        document_tags: [],
+        auto_tags: [],
+        contact_suggestions: [],
+        activity_date: null,
+      })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    expect(screen.queryByLabelText(/timeline entry/i)).toBeNull()
+  })
 })
