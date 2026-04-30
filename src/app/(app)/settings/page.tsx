@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '../../../hooks/useAuth'
 
 type Theme = 'light' | 'dark' | 'system'
@@ -119,6 +120,7 @@ function Field({ label, id, children }: { label: string; id?: string; children: 
 
 export default function SettingsPage() {
   const { lock } = useAuth()
+  const router = useRouter()
 
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
@@ -132,6 +134,9 @@ export default function SettingsPage() {
 
   const [wipeConfirm, setWipeConfirm] = useState(false)
   const [wipeBusy, setWipeBusy] = useState(false)
+
+  const [resetConfirm, setResetConfirm] = useState(false)
+  const [resetBusy, setResetBusy] = useState(false)
 
   const [calendars, setCalendars] = useState<CalendarSourceRow[]>([])
   const [calendarsLoading, setCalendarsLoading] = useState(true)
@@ -239,6 +244,22 @@ export default function SettingsPage() {
       console.error('Wipe failed', err)
       setWipeBusy(false)
       setWipeConfirm(false)
+    }
+  }
+
+  async function handleReset() {
+    if (!resetConfirm) {
+      setResetConfirm(true)
+      return
+    }
+    setResetBusy(true)
+    try {
+      await invoke('app_reset_data', { confirm: true })
+      router.push('/')
+    } catch (err) {
+      console.error('Reset failed', err)
+      setResetBusy(false)
+      setResetConfirm(false)
     }
   }
 
@@ -465,6 +486,33 @@ export default function SettingsPage() {
         ) : (
           <button onClick={() => { void handleWipe() }} style={btnDanger}>
             Wipe all data
+          </button>
+        )}
+
+        <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: 'var(--space-4) 0' }} />
+
+        <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-danger)', marginBottom: 'var(--space-2)' }}>
+          Reset app
+        </p>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+          Resets the app to its initial state — clears all data, documents, and settings, then returns to the setup screen.
+        </p>
+
+        {resetConfirm ? (
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', padding: 'var(--space-3)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', background: 'color-mix(in srgb, var(--color-danger) 8%, transparent)' }}>
+            <span style={{ flex: 1, fontSize: 'var(--text-sm)', color: 'var(--color-danger)', fontWeight: 500 }}>
+              All data will be permanently deleted. This cannot be undone.
+            </span>
+            <button onClick={() => { void handleReset() }} style={btnDanger} disabled={resetBusy}>
+              {resetBusy ? 'Resetting…' : 'Yes, reset app'}
+            </button>
+            <button onClick={() => setResetConfirm(false)} style={btnSecondary} disabled={resetBusy}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => { void handleReset() }} style={{ ...btnDanger, background: 'transparent', color: 'var(--color-danger)', border: '1px solid var(--color-danger)' }}>
+            Reset app
           </button>
         )}
       </div>

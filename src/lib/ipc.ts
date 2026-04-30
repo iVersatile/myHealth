@@ -89,6 +89,7 @@ export const IPC = {
   settingsSet: 'settings_set',
   settingsGetDataDir: 'settings_get_data_dir',
   settingsWipeAllData: 'settings_wipe_all_data',
+  appResetData: 'app_reset_data',
 
   // Stats
   statsSummary: 'stats_summary',

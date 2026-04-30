@@ -14,8 +14,8 @@ use commands::appointments::{
     appointments_list, appointments_list_upcoming, appointments_update,
 };
 use commands::auth::{
-    auth_change_password, auth_has_password, auth_is_locked, auth_lock, auth_set_password,
-    auth_unlock,
+    app_reset_data, auth_change_password, auth_has_password, auth_is_locked, auth_lock,
+    auth_set_password, auth_unlock,
 };
 use commands::calendar::{
     calendar_detect_conflicts, calendar_event_delete, calendar_import_events,
@@ -78,6 +78,7 @@ pub fn run() {
             auth_change_password,
             auth_is_locked,
             auth_has_password,
+            app_reset_data,
             documents_list,
             documents_get,
             documents_upload,
