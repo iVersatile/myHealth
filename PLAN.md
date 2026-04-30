@@ -8,7 +8,7 @@
 
 ```
 Phase 10 — v1.4 Upload Intelligence (PRD_V3)
-Current task: 10.3 — V3-F2 Phone regex expansion + contact save command
+Current task: 10.4 — V3-F1 Category auto-creation from specialty keyword
 ```
 
 ---
@@ -533,7 +533,7 @@ Current task: 10.3 — V3-F2 Phone regex expansion + contact save command
      - Timeline `event_date` must use `activity_date`; never `created_at`
    - Done when: `cargo test` verifies (a) labelled body date → `activity_date` = body date; (b) no body date + filename date → `activity_date` = filename date; (c) no body or filename date → `activity_date` = upload timestamp; (d) timeline entry for physio invoice → description `"2023-03-09 PHYSIOTHERAPY with Mr John Green"`; (e) `event_date` = `2023-03-09`, not upload date
 
-▶ **10.3 — V3-F2 Phone regex expansion + contact save command**
+[x] **10.3 — V3-F2 Phone regex expansion + contact save command**
    - File: `src-tauri/src/services/extraction/contact.rs`
    - Extend phone regex to match:
      - UK mobile: `07\d{3}\s?\d{6}` (e.g. `07544 370440`)
@@ -544,7 +544,7 @@ Current task: 10.3 — V3-F2 Phone regex expansion + contact save command
    - `document_contacts` junction: ensure a record is created linking the new contact to the document when "Save as Contact" is invoked (V3-F2.6)
    - Done when: `cargo test` verifies (a) `07544 370440` matched; (b) `01234 567890` matched; (c) `+44 20 7946 0958` matched; (d) `ContactSuggestionDto` contains name + phone + email + title for physio invoice fixture; (e) `contacts_create` persists all four fields
 
-[ ] **10.4 — V3-F1 Category auto-creation from specialty keyword**
+▶ **10.4 — V3-F1 Category auto-creation from specialty keyword**
    - File: `src-tauri/src/commands/categories.rs`
    - Add `categories_create_if_not_exists(user_id: String, name: String)` command:
      - Case-insensitive lookup: if a category with the same name (normalised to title-case) already exists, return its `id`
