@@ -8,7 +8,7 @@
 
 ```
 Phase 9 — v1.3 Intelligence features
-Current task: 9.7 — Bump version & tag v1.3.0
+Current task: 9.8 — Verify GitHub Release
 ```
 
 ---
@@ -483,12 +483,12 @@ Current task: 9.7 — Bump version & tag v1.3.0
    - Manual walkthrough of all new v1.3 flows on each platform
    - Confirm no regressions in v1.1 / v1.2 flows
 
-▶ **9.7 — Bump version & tag v1.3.0**
+[x] **9.7 — Bump version & tag v1.3.0**
    - Update `package.json` version to `1.3.0`
    - Update `src-tauri/tauri.conf.json` version to `1.3.0`
    - **Requires explicit user approval before running `git tag`**
 
-[ ] **9.8 — Verify GitHub Release**
+▶ **9.8 — Verify GitHub Release**
    - Confirm 4 platform artifacts published; update README if needed
 
 ---
