@@ -13,6 +13,10 @@ vi.mock('../../../../hooks/useAuth', () => ({
   useAuth: () => ({ lock: mockLock }),
 }))
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}))
+
 async function renderPage() {
   const { default: SettingsPage } = await import('../page')
   return render(<SettingsPage />)
