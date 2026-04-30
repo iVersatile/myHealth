@@ -557,6 +557,19 @@ pub fn documents_search_filtered(
     Ok(FilteredDocumentsResult { items, total })
 }
 
+/// Resolves the activity date using the priority chain:
+/// (1) body-extracted date → (2) filename date → (3) created_at date
+pub(crate) fn resolve_activity_date(
+    body_date: Option<&str>,
+    filename_date: Option<&str>,
+    created_at: &str,
+) -> String {
+    body_date
+        .or(filename_date)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| created_at.get(..10).unwrap_or(created_at).to_string())
+}
+
 // ── Unit tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -986,6 +999,36 @@ mod tests {
         assert_eq!(ids.len(), 3);
         assert!(!ids.contains(&"e-deleted".to_string()));
     }
+
+    // ── resolve_activity_date priority chain ──────────────────────────────────
+
+    #[test]
+    fn activity_date_uses_body_date_first() {
+        let result = resolve_activity_date(
+            Some("2023-03-09"),
+            Some("2022-01-01"),
+            "2021-06-15T10:00:00Z",
+        );
+        assert_eq!(result, "2023-03-09");
+    }
+
+    #[test]
+    fn activity_date_falls_back_to_filename_date() {
+        let result = resolve_activity_date(None, Some("2023-03-09"), "2021-06-15T10:00:00Z");
+        assert_eq!(result, "2023-03-09");
+    }
+
+    #[test]
+    fn activity_date_falls_back_to_created_at_when_no_dates() {
+        let result = resolve_activity_date(None, None, "2024-07-22T14:30:00Z");
+        assert_eq!(result, "2024-07-22");
+    }
+
+    #[test]
+    fn activity_date_truncates_rfc3339_to_date_only() {
+        let result = resolve_activity_date(None, None, "2025-12-01T23:59:59+01:00");
+        assert_eq!(result, "2025-12-01");
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1156,14 +1199,11 @@ pub async fn documents_run_extraction(
     };
 
     // Priority chain: (1) body text → (2) document_date from filename → (3) created_at
-    let resolved_activity_date: String = result
-        .activity_date
-        .clone()
-        .or(document_date)
-        .unwrap_or_else(|| {
-            // Truncate RFC-3339 timestamp to date-only
-            created_at.get(..10).unwrap_or(&created_at).to_string()
-        });
+    let resolved_activity_date = resolve_activity_date(
+        result.activity_date.as_deref(),
+        document_date.as_deref(),
+        &created_at,
+    );
 
     let auto_tags = crate::extraction::auto_extract_tags(
         &result.text,

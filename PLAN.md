@@ -8,7 +8,7 @@
 
 ```
 Phase 10 — v1.4 Upload Intelligence (PRD_V3)
-Current task: 10.6 — Upload dialog: tags pre-populated + editable (V3-F4)
+Current task: 10.12 — v1.4 smoke test
 ```
 
 ---
@@ -568,21 +568,21 @@ Current task: 10.6 — Upload dialog: tags pre-populated + editable (V3-F4)
 
 ### Sprint 19: Frontend — upload dialog integration
 
-▶ **10.6 — Upload dialog: tags pre-populated + editable (V3-F4)**
+[x] **10.6 — Upload dialog: tags pre-populated + editable (V3-F4)**
    - File: `src/components/UploadDialog.tsx` (or equivalent upload dialog component)
    - On reaching the review step, call extraction result's `auto_tags` and pre-populate the tags input field
    - Tags field must remain editable: user can add/remove before saving
    - De-duplicate tags display (case-insensitive)
    - Done when: uploading physio invoice fixture → tags field shows `invoice`, `John Green`, `PHYSIOTHERAPY`, `2023-03-09`; user can delete or add a tag before saving; saved document has the final edited tags
 
-[ ] **10.7 — Upload dialog: category suggestion banner + auto-create (V3-F1)**
+[x] **10.7 — Upload dialog: category suggestion banner + auto-create (V3-F1)**
    - Add dismissible suggestion banner below the tags field in the review step
    - Banner shows: category name (title-cased specialty), source label `"Detected from document content"`, **Accept** and **Dismiss** buttons
    - Accept → calls `categories_create_if_not_exists` → assigns returned category id to document → dismisses banner
    - Dismiss → banner hidden for this session; no category created or assigned
    - Done when: uploading physio invoice fixture → banner shows `"Physiotherapy — Detected from document content"`; Accept creates/reuses category and assigns; Dismiss shows nothing; banner not shown again on re-review within same session
 
-[ ] **10.8 — Upload dialog: contact card save flow + duplicate detection (V3-F2)**
+[x] **10.8 — Upload dialog: contact card save flow + duplicate detection (V3-F2)**
    - Contact suggestion card (already rendered from prior work) must now show all fields: name, phone, email, title
    - "Save as Contact" button:
      1. Calls `find_duplicate_contacts` with candidate name + email
@@ -591,7 +591,7 @@ Current task: 10.6 — Upload dialog: tags pre-populated + editable (V3-F4)
    - Closing dialog without saving must NOT auto-save the contact
    - Done when: uploading physio fixture → card shows `John Green / 07544 370440 / jg@johngreenphysio.com`; Save persists all fields; existing contact with same name shows merge prompt; close without save → no contact created
 
-[ ] **10.9 — Upload dialog: clinic suggestion card + save (V3-F3)**
+[x] **10.9 — Upload dialog: clinic suggestion card + save (V3-F3)**
    - Add clinic suggestion card to upload dialog review step (below contact card)
    - Card shows: clinic name, company registration number (if found), detected address count
    - "Save as Clinic" button:
@@ -600,7 +600,7 @@ Current task: 10.6 — Upload dialog: tags pre-populated + editable (V3-F4)
      3. Duplicate name → inline merge prompt
    - Done when: uploading physio fixture → card shows `"John Green Physiotherapy Ltd / Reg: 6780032 / 3 addresses"`; Save creates clinic with addresses; contact link created automatically; duplicate name → merge prompt
 
-[ ] **10.10 — Upload dialog: timeline description pre-fill + editable (V3-F5)**
+[x] **10.10 — Upload dialog: timeline description pre-fill + editable (V3-F5)**
    - In the review step, pre-populate the timeline description field with the formatted string from 10.2
    - Format: `{YYYY-MM-DD} {SPECIALTY} with {Title} {Provider Name}` (falling back per V3-F5.6/F5.7)
    - Field must be editable before the user clicks Save
@@ -609,12 +609,12 @@ Current task: 10.6 — Upload dialog: tags pre-populated + editable (V3-F4)
 
 ### Sprint 20: Tests + Release
 
-[ ] **10.11 — V3 acceptance tests**
+[x] **10.11 — V3 acceptance tests**
    - Run Playwright test cases from `docs/ACCEPTANCE_TESTS_V3.md` (20 cases, suites V3-F1 through V3-F5)
    - Add Rust unit tests for all new/modified extraction functions: `categories_create_if_not_exists`, `clinics_create_if_not_exists`, phone regex patterns, activity date priority resolution, tag de-duplication
    - Done when: ≥ 80% coverage on all Phase 10 new code; `cargo test` + `npx tsc --noEmit` both pass; all V3 TC IDs manually verified
 
-[ ] **10.12 — v1.4 smoke test**
+▶ **10.12 — v1.4 smoke test**
    - Manual walkthrough using `sample-Upload (09Mar2023-16_31_26).pdf` fixture:
      - Upload → verify tags: `invoice`, `John Green`, `PHYSIOTHERAPY`, `2023-03-09`
      - Verify category suggestion banner shows `Physiotherapy` → Accept → category assigned
