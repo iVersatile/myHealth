@@ -28,6 +28,10 @@ const TEST_TYPE_MAP: &[(&str, &str)] = &[
     ("biopsy", "Biopsy"),
     ("urine", "Urinalysis"),
     ("stool", "Stool Test"),
+    ("pet", "PET Scan"),
+    ("spirometry", "Spirometry"),
+    ("audiogram", "Audiogram"),
+    ("vision", "Vision Test"),
 ];
 
 fn normalise_test_type(token: &str) -> Option<&'static str> {
@@ -388,6 +392,47 @@ mod tests {
     fn mri_normalised() {
         let r = parse_filename("Brain_MRI_20241201");
         assert!(r.tags.contains(&"MRI".to_string()), "tags: {:?}", r.tags);
+    }
+
+    #[test]
+    fn mri_spine_normalised() {
+        let r = parse_filename("MRI_Spine_2023-06-01");
+        assert!(r.tags.contains(&"MRI".to_string()), "tags: {:?}", r.tags);
+    }
+
+    #[test]
+    fn appointment_no_spurious_test_type_tag() {
+        let r = parse_filename("Appointment_2024");
+        let test_type_labels: &[&str] = &[
+            "Blood Work",
+            "CBC",
+            "Lipid Panel",
+            "MRI",
+            "CT Scan",
+            "X-Ray",
+            "Ultrasound",
+            "ECG",
+            "Echocardiogram",
+            "DEXA Scan",
+            "Mammogram",
+            "Colonoscopy",
+            "Endoscopy",
+            "Biopsy",
+            "Urinalysis",
+            "Stool Test",
+            "PET Scan",
+            "Spirometry",
+            "Audiogram",
+            "Vision Test",
+        ];
+        for label in test_type_labels {
+            assert!(
+                !r.tags.contains(&label.to_string()),
+                "spurious tag {:?} found in {:?}",
+                label,
+                r.tags
+            );
+        }
     }
 
     #[test]
