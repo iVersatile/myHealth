@@ -8,7 +8,7 @@
 
 ```
 Phase 10 — v1.4 Upload Intelligence (PRD_V3)
-Current task: 10.13 — Bump version & tag v1.4.0
+All tasks complete ✅ — v1.4.0 shipped
 ```
 
 ---
@@ -623,13 +623,13 @@ Current task: 10.13 — Bump version & tag v1.4.0
      - Verify timeline entry: date `2023-03-09`, description `"2023-03-09 PHYSIOTHERAPY with Mr John Green"`
    - Verify no regressions in v1.1 / v1.2 / v1.3 flows
 
-▶ **10.13 — Bump version & tag v1.4.0**
+[x] **10.13 — Bump version & tag v1.4.0**
    - Update `package.json` version to `1.4.0`
    - Update `src-tauri/tauri.conf.json` version to `1.4.0`
    - **Requires explicit user approval before running `git tag`**
 
-[ ] **10.14 — Verify GitHub Release**
-   - Confirm 4 platform artifacts published; update README if needed
+[x] **10.14 — Verify GitHub Release**
+   - Confirmed 4 platform artifacts published: macOS aarch64/x64 .dmg, Linux .AppImage, Windows .msi
 
 ---
 
