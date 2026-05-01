@@ -93,6 +93,42 @@ Do not substitute `pnpm build` for this — they verify different layers.
 
 ---
 
+## L-009 — `invoke<T>` generic annotation not verified against actual Rust return type
+
+**What happened (recurring — appeared ≥3 times in the same session):**
+`handleAcceptCategorySuggestion` in `UploadDialog.tsx` called:
+```typescript
+const result = await invoke<{ id: string }>('categories_create_if_not_exists', { name: suggestion })
+const id = result.id  // ← result IS the string; .id === undefined
+```
+The Rust command returns `Result<String, CommandError>` — a plain UUID string, not a struct.
+`result.id` silently resolved to `undefined`, which was pushed into `selectedCategoryIds`.
+`JSON.stringify({ documentId: ..., categoryId: undefined })` drops the `undefined` key entirely, so the downstream `categories_assign_document` IPC call arrived without `categoryId` and Tauri threw:
+`invalid args 'categoryId' for command 'categories_assign_document': missing required key categoryId`.
+
+**Why it keeps recurring:**
+TypeScript's `invoke<T>` generic is a **trust annotation**, not a verified type. The compiler accepts `invoke<{ id: string }>` even when Rust returns `String`. There is no compile-time or test-time signal that the annotation is wrong — the mismatch only surfaces at runtime when the mistyped value is consumed downstream.
+
+**Root cause:** The annotation was written (or copy-pasted) without checking the Rust function signature. The silent `undefined` propagated across multiple function calls before causing an observable error, making it hard to trace back to the source.
+
+**Rules:**
+1. **Always open the Rust file and read the return type before writing `invoke<T>`.**
+   - Rust `-> Result<String, _>` → TypeScript `invoke<string>`
+   - Rust `-> Result<Vec<Row>, _>` → TypeScript `invoke<Row[]>`
+   - Rust `-> Result<SomeStruct, _>` → TypeScript `invoke<SomeStruct>` (matching the serialised shape)
+   - Never wrap a primitive return in `{}` — `invoke<{ id: string }>` implies an object.
+2. **Test mocks must match the real Rust return shape.** If the mock returns `{ id: 'x' }` but the command returns a plain string, the mock is lying and will hide the type mismatch.
+3. **Add a defensive assertion after `invoke` for primitive returns:** `if (typeof id !== 'string') throw new Error('categories_create_if_not_exists: expected string, got ' + typeof id)`.
+
+**Prevention — grep audit before every release:**
+```bash
+# Flag invoke calls that return a primitive but wrap it in {}
+grep -rn "invoke<{" src/ --include="*.ts" --include="*.tsx"
+```
+Review every hit: confirm the Rust return type is actually an object, not `String`, `bool`, `i64`, etc.
+
+---
+
 ## Review Checklist (start of each task)
 
 Before writing any code for a new task:
@@ -102,3 +138,4 @@ Before writing any code for a new task:
 - [ ] Check CI is green: `gh run list --branch develop --limit 1`
 - [ ] If touching Rust: plan to run `cargo fmt --check && cargo clippy` before pushing
 - [ ] If touching TypeScript: plan to run `pnpm typecheck && pnpm lint && pnpm test run` before pushing
+- [ ] If writing any `invoke<T>` call: open the Rust command file and verify the return type matches `T` (primitive vs struct — see L-009)
