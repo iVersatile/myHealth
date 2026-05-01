@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 12 — Upload Gap Closure (v1.5)
-Phase 12 complete — all tasks done
+Phase 13 — Contacts ↔ Appointments Link (v1.6)
+▶ Task 13.1
 ```
 
 ---
@@ -769,6 +769,107 @@ Phase 12 complete — all tasks done
    - Upload a PDF fixture containing `+1 (555) 123-4567` in its body text.
    - Assert contact suggestion card in upload dialog shows `+1 (555) 123-4567`.
    - Done when: Playwright test passes.
+
+---
+
+## Phase 13 — Contacts ↔ Appointments Link (v1.6)
+
+> **Problem:** The "by-doctor" timeline view shows "No doctor assigned" even when contacts exist.
+> Root cause: `doctor_name` / `clinic_name` on appointments are plain-text fields — they are never
+> linked to the Contacts table. The `appointment_contacts` junction table exists in the schema but
+> has no Rust commands and is invisible to the frontend.
+>
+> **Fix:** Wire the existing `appointment_contacts` table end-to-end so that when a user creates or
+> edits an appointment they can pick a doctor/clinic from their Contacts. The timeline then groups
+> by contact name instead of free-text string.
+
+### Layer map
+
+| Layer | Files touched |
+|-------|---------------|
+| Rust commands | `src-tauri/src/commands/appointments.rs` |
+| TypeScript type | `src/store/appointmentsStore.ts` |
+| Data hook | `src/hooks/useAppointments.ts` |
+| Appointment form | `src/components/appointments/AppointmentForm.tsx` |
+| Timeline page | `src/app/(app)/timeline/page.tsx` |
+| E2E tests | `e2e/timeline-by-doctor.spec.ts` (new) |
+| Unit tests | `src/hooks/__tests__/useAppointments.test.ts` (update) |
+
+---
+
+▶ [ ] **13.1 — Rust: expose appointment_contacts commands**
+   - File: `src-tauri/src/commands/appointments.rs`
+   - Add three Tauri commands:
+     - `appointment_link_contact(appointment_id: String, contact_id: String)` — `INSERT OR IGNORE INTO appointment_contacts`
+     - `appointment_unlink_contact(appointment_id: String, contact_id: String)` — `DELETE FROM appointment_contacts`
+     - `contacts_for_appointment(appointment_id: String) -> Vec<ContactRow>` — `SELECT contacts.* FROM contacts JOIN appointment_contacts ON …`
+   - Register all three in `lib.rs` invoke handler.
+   - Unit tests in `appointments.rs` (in-memory DB):
+     - link → contacts_for_appointment returns the linked contact
+     - unlink → contacts_for_appointment returns empty
+     - duplicate link is a no-op (no error)
+   - Done when: `cargo test` passes; all three commands registered in `lib.rs`.
+
+[ ] **13.2 — TypeScript: hydrate contact_ids on Appointment**
+   - File: `src/store/appointmentsStore.ts`
+     - Add `contact_ids: string[]` field to `Appointment` interface (default `[]`).
+   - File: `src/hooks/useAppointments.ts`
+     - After fetching the appointments list, call `contacts_for_appointment` for each appointment (parallel `Promise.all`).
+     - Merge results into each `Appointment` as `contact_ids`.
+   - Done when: `npx tsc --noEmit` clean; existing appointment hook tests pass.
+
+[ ] **13.3 — AppointmentForm: add contact picker for Doctor / Clinic**
+   - File: `src/components/appointments/AppointmentForm.tsx`
+   - Import `useContacts` hook.
+   - Below the free-text "Doctor" input, add a contact picker:
+     - Shows contacts with `role === 'doctor'` or `role === 'specialist'`.
+     - Single-select; displays name + specialty.
+     - Selecting a contact writes `doctor_name` from `contact.name` AND calls `appointment_link_contact`.
+     - Clearing the selection calls `appointment_unlink_contact`.
+   - Similarly for "Clinic / Hospital": picker shows `role === 'clinic'`.
+   - Keep free-text inputs as fallback when no matching contacts exist.
+   - Done when: `npx tsc --noEmit` clean; can pick a contact in the form and save.
+
+[ ] **13.4 — Timeline: group by contact name in by-doctor view**
+   - File: `src/app/(app)/timeline/page.tsx`
+   - Import `useContacts`.
+   - In the `doctorGroups` memo:
+     - For each appointment, look up `contact_ids` on the appointment.
+     - If any contact with `role === 'doctor'` or `role === 'specialist'` is linked, use `contact.name` as the group key.
+     - Fall back to `appt.doctor_name` text if no contact is linked (backward compat).
+   - Done when: appointments linked to a contact appear under that contact's name; unlinked appointments still appear under their free-text doctor name or "No doctor assigned".
+
+[ ] **13.5 — Unit tests: useAppointments contact hydration**
+   - File: `src/hooks/__tests__/useAppointments.test.ts`
+   - Mock `contacts_for_appointment` Tauri command.
+   - Assert `contact_ids` is populated on loaded appointments.
+   - Assert empty array when command returns no contacts.
+   - Done when: tests pass; coverage ≥ 80 % on changed hook lines.
+
+[ ] **13.6 — E2E: timeline by-doctor shows contact name**
+   - File: `e2e/timeline-by-doctor.spec.ts` (new)
+   - Scenario A — linked contact:
+     1. Create a contact: name "Dr. Alice Brown", role "doctor".
+     2. Create an appointment: title "Annual check-up".
+     3. Edit appointment → pick "Dr. Alice Brown" from contact picker.
+     4. Open Timeline → By Doctor tab.
+     5. Assert group header "Dr. Alice Brown" is visible.
+     6. Assert "Annual check-up" appears under that header.
+   - Scenario B — unlinked appointment:
+     1. Create an appointment with free-text doctor_name "Dr. Unknown".
+     2. Open Timeline → By Doctor tab.
+     3. Assert group header "Dr. Unknown" is visible (fallback path).
+   - Scenario C — no doctor:
+     1. Create an appointment with no doctor name and no linked contact.
+     2. Open Timeline → By Doctor tab.
+     3. Assert group header "No doctor assigned" is visible.
+   - Done when: all three Playwright scenarios pass.
+
+[ ] **13.7 — Commit & push**
+   - Run pre-commit checklist: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`.
+   - Commit message: `feat: link appointments to contacts; timeline by-doctor uses contact names`
+   - Push to `origin/develop`; verify CI green.
+   - Done when: CI passes on develop.
 
 ---
 
