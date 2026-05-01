@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.4 — E2E: progress bar updates at each OCR page
+Task ▶ 12.5 — Add `TEST_TYPE_MAP` to filename parser
 ```
 
 ---
@@ -699,7 +699,7 @@ Task ▶ 12.4 — E2E: progress bar updates at each OCR page
    - Integration test: upload a 2-page scanned PDF fixture → assert extracted text contains both pages' content (no `[OCR_TIMEOUT]` for normal PDFs).
    - Done when: integration test passes; existing extraction tests still pass (375+).
 
-▶ [ ] **12.4 — E2E: progress bar updates at each OCR page**
+[x] **12.4 — E2E: progress bar updates at each OCR page**
    - File: `e2e/upload-ocr-progress.spec.ts` (new)
    - Use Playwright to upload the 2-page scanned PDF fixture.
    - Assert the progress bar label shows `"1 / 2"` then `"2 / 2"` before disappearing.
@@ -710,7 +710,7 @@ Task ▶ 12.4 — E2E: progress bar updates at each OCR page
 
 ### Sprint 23: Test-Type Keyword Normalisation (Medium — Gap 1 / F1.3)
 
-[ ] **12.5 — Add `TEST_TYPE_MAP` to filename parser**
+▶ [ ] **12.5 — Add `TEST_TYPE_MAP` to filename parser**
    - File: `src-tauri/src/parsing/filename.rs`
    - Add `TEST_TYPE_MAP: &[(&str, &str)]` covering ≥ 20 canonical test types (Blood Work, CBC, Lipid Panel, MRI, CT Scan, X-Ray, Ultrasound, ECG, Echocardiogram, DEXA Scan, Mammogram, Colonoscopy, Endoscopy, Biopsy, Urinalysis, Stool Test, PET Scan, Spirometry, Audiogram, Vision Test).
    - After token loop: scan each token case-insensitively; replace first matching token with canonical label.
