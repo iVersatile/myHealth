@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.6 — E2E: test-type tag shown in upload dialog
+Task ▶ 12.9 — Extend phone regex to UK mobile, landline, and international E.164
 ```
 
 ---
@@ -720,7 +720,7 @@ Task ▶ 12.6 — E2E: test-type tag shown in upload dialog
      - `parse_filename("Appointment_2024")` → no spurious test-type tag added.
    - Done when: 3 unit tests pass; no existing filename tests regress.
 
-▶ [ ] **12.6 — E2E: test-type tag shown in upload dialog**
+[x] **12.6 — E2E: test-type tag shown in upload dialog**
    - File: `e2e/upload-filename-tags.spec.ts` (new)
    - Upload a file named `BloodTest_2024-01-15.pdf`.
    - Assert the upload dialog tag chip reads `"Blood Work"` (not `"bloodtest"`).
@@ -730,7 +730,7 @@ Task ▶ 12.6 — E2E: test-type tag shown in upload dialog
 
 ### Sprint 24: Clinic Name Extraction from Filename (Medium — Gap 2 / F1.4)
 
-[ ] **12.7 — Add `INSTITUTION_SUFFIXES` detector to filename parser**
+[x] **12.7 — Add `INSTITUTION_SUFFIXES` detector to filename parser**
    - File: `src-tauri/src/parsing/filename.rs`
    - Add `INSTITUTION_SUFFIXES: &[&str]` = `["hospital", "clinic", "surgery", "medical", "centre", "center", "nhs", "trust", "infirmary", "practice", "health"]`.
    - After date-removal pass: if a token (or adjacent token pair) contains an institution suffix, emit `clinic:<TitleCasedName>` tag and remove matched tokens from the generic pool.
@@ -740,7 +740,7 @@ Task ▶ 12.6 — E2E: test-type tag shown in upload dialog
      - `parse_filename("Report_2024")` → no spurious `clinic:` tag emitted.
    - Done when: 3 unit tests pass; no existing filename tests regress.
 
-[ ] **12.8 — E2E: clinic tag shown in upload dialog**
+[x] **12.8 — E2E: clinic tag shown in upload dialog**
    - File: `e2e/upload-filename-tags.spec.ts` (extend existing spec)
    - Upload a file named `StMarysHospital_2024-06-15.pdf`.
    - Assert upload dialog tag chip reads `"clinic:St Marys Hospital"`.
@@ -750,7 +750,7 @@ Task ▶ 12.6 — E2E: test-type tag shown in upload dialog
 
 ### Sprint 25: International Phone Regex (Low — Gap 4 / V3-F2.1 + V3-F2.2)
 
-[ ] **12.9 — Extend phone regex to UK mobile, landline, and international E.164**
+▶ [ ] **12.9 — Extend phone regex to UK mobile, landline, and international E.164**
    - File: `src-tauri/src/extraction/contact.rs`
    - Replace single UK regex with a two-tier match function `extract_phone(text: &str) -> Option<String>`:
      1. **UK landline/mobile** (existing patterns, kept): `(?:\+44\s?|0)[12378]\d[\d\s\-]{7,11}\d`
