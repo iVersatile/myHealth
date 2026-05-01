@@ -225,9 +225,9 @@ describe('UploadDialog', () => {
     expect(screen.getByText(/92%/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: /^merge$/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('merge_contacts', {
-      userId: '',
-      primaryId: 'existing-c1',
-      duplicateIds: ['new-c1'],
+      user_id: '',
+      primary_id: 'existing-c1',
+      duplicate_ids: ['new-c1'],
     }))
     await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
   })
@@ -303,8 +303,8 @@ describe('UploadDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /confirm upload/i }))
     await waitFor(() =>
       expect(mockInvoke).toHaveBeenCalledWith('categories_assign_document', {
-        documentId: 'new-doc',
-        categoryId: 'cat-physio',
+        document_id: 'new-doc',
+        category_id: 'cat-physio',
       })
     )
   })
@@ -356,8 +356,8 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_contact', {
-      documentId: 'new-doc',
-      contactId: 'new-c1',
+      document_id: 'new-doc',
+      contact_id: 'new-c1',
     }))
     await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
   })
@@ -387,8 +387,8 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
     await userEvent.click(screen.getByRole('button', { name: /^merge$/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_contact', {
-      documentId: 'new-doc',
-      contactId: 'existing-c1',
+      document_id: 'new-doc',
+      contact_id: 'existing-c1',
     }))
     await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
   })
@@ -494,8 +494,8 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy())
     await userEvent.click(screen.getByRole('button', { name: /save as clinic/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('clinics_link_contact', {
-      clinicId: 'clinic-1',
-      contactId: 'contact-1',
+      clinic_id: 'clinic-1',
+      contact_id: 'contact-1',
     }))
   })
 
