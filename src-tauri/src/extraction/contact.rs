@@ -59,7 +59,7 @@ fn email_re() -> &'static Regex {
 fn clinic_re() -> &'static Regex {
     CLINIC_PATTERN.get_or_init(|| {
         Regex::new(
-            r"(?m)^(?:The[ \t]+)?([A-Z][A-Za-z0-9'\-]+(?:(?:[ \t]+&[ \t]+|[ \t]+)[A-Z][A-Za-z0-9'\-]+)*)[ \t]+(?:Medical(?:[ \t]+Centre|[ \t]+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:[ \t]+Centre)?|Physiotherapy|Dental(?:[ \t]+Practice)?|Osteopath(?:ic)?|Chiropractic|Therapy|Wellness)",
+            r"(?m)^(?:The[ \t]+)?([A-Z][A-Za-z0-9'\-]+(?:(?:[ \t]+&[ \t]+|[ \t]+)[A-Z][A-Za-z0-9'\-]+)*)[ \t]+(?i:Medical(?:[ \t]+Centre|[ \t]+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:[ \t]+Centre)?|Physiotherapy|Dental(?:[ \t]+Practice)?|Osteopath(?:ic)?|Chiropractic|Therapy|Wellness|Ltd\.?|Limited|PLC|LLP|LLC)",
         )
         .expect("clinic regex valid")
     })
@@ -405,6 +405,16 @@ mod tests {
         println!("PDF TEXT REPR:\n{text:?}");
         let suggestions = extract_contact_suggestions(&text);
         println!("CONTACTS:\n{suggestions:#?}");
+    }
+
+    #[test]
+    fn debug_physio_pdf_extraction() {
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/no-date-physio.pdf");
+        let text = crate::extraction::pdf::extract_pdf_text(&path).unwrap_or_default();
+        println!("PHYSIO PDF TEXT REPR:\n{text:?}");
+        let suggestions = extract_contact_suggestions(&text);
+        println!("PHYSIO CONTACTS:\n{suggestions:#?}");
     }
 
     #[test]
