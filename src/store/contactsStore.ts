@@ -12,6 +12,7 @@ export interface Contact {
   notes: string | null
   created_at: string
   updated_at: string
+  contact_clinic_id: string | null
 }
 
 export const CONTACT_ROLES = [

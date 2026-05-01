@@ -16,6 +16,7 @@ const fakeContact: Contact = {
   notes: 'Referred by GP',
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  contact_clinic_id: null,
 }
 
 describe('ContactForm', () => {
@@ -54,6 +55,7 @@ describe('ContactForm', () => {
       notes: null,
       created_at: '',
       updated_at: '',
+      contact_clinic_id: null,
     }
     render(<ContactForm initial={partial} onSave={vi.fn()} onCancel={vi.fn()} />)
     const nameInput = screen.getAllByRole('textbox').find(

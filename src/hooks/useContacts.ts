@@ -30,6 +30,7 @@ export interface ContactUpdateInput {
   clinic?: string | null
   address?: string | null
   notes?: string | null
+  contact_clinic_id?: string | null
 }
 
 export function useContacts(roleFilter?: string) {

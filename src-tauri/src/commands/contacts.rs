@@ -20,6 +20,7 @@ pub struct Contact {
     pub notes: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub contact_clinic_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +48,7 @@ pub struct ContactUpdateInput {
     pub clinic: Option<String>,
     pub address: Option<String>,
     pub notes: Option<String>,
+    pub contact_clinic_id: Option<String>,
 }
 
 fn row_to_contact(row: &rusqlite::Row) -> rusqlite::Result<Contact> {
@@ -63,6 +65,7 @@ fn row_to_contact(row: &rusqlite::Row) -> rusqlite::Result<Contact> {
         created_at: row.get(9)?,
         updated_at: row.get(10)?,
         title: row.get(11)?,
+        contact_clinic_id: row.get(12)?,
     })
 }
 
@@ -77,7 +80,7 @@ pub fn contacts_list(
     let contacts: Vec<Contact> = if let Some(r) = role {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title FROM contacts WHERE role = ? ORDER BY name",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE role = ? ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([r], row_to_contact)?
@@ -87,7 +90,7 @@ pub fn contacts_list(
     } else {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title FROM contacts ORDER BY name",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([], row_to_contact)?
@@ -106,7 +109,7 @@ pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, C
 
     conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-         created_at, updated_at, title FROM contacts WHERE id = ?",
+         created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
         [&id],
         row_to_contact,
     )
@@ -145,7 +148,7 @@ pub fn contacts_create(
 
     let c = conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title FROM contacts WHERE id = ?",
+             created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
         [&id],
         row_to_contact,
     )?;
@@ -224,10 +227,16 @@ pub fn contacts_update(
             rusqlite::params![title, now, input.id],
         )?;
     }
+    if let Some(contact_clinic_id) = input.contact_clinic_id {
+        conn.execute(
+            "UPDATE contacts SET contact_clinic_id = ?, updated_at = ? WHERE id = ?",
+            rusqlite::params![contact_clinic_id, now, input.id],
+        )?;
+    }
 
     let c = conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title FROM contacts WHERE id = ?",
+             created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
         [&input.id],
         row_to_contact,
     )?;
@@ -389,7 +398,7 @@ pub fn find_duplicate_contacts(
 
     let mut stmt = conn.prepare(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title FROM contacts ORDER BY name",
+             created_at, updated_at, title, contact_clinic_id FROM contacts ORDER BY name",
     )?;
     let contacts: Vec<Contact> = stmt
         .query_map([], row_to_contact)?
@@ -444,7 +453,7 @@ pub fn merge_contacts(
         let primary = tx
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title FROM contacts WHERE id = ?",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
                 [&primary_id],
                 row_to_contact,
             )
@@ -461,7 +470,7 @@ pub fn merge_contacts(
             let dup = tx
                 .query_row(
                     "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                     created_at, updated_at, title FROM contacts WHERE id = ?",
+                     created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
                     [dup_id],
                     row_to_contact,
                 )
@@ -512,7 +521,7 @@ pub fn merge_contacts(
         // Return updated primary.
         tx.query_row(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title FROM contacts WHERE id = ?",
+             created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
             [&primary_id],
             row_to_contact,
         )
@@ -565,7 +574,7 @@ pub fn find_similar_contact(name: &str, conn: &rusqlite::Connection) -> Option<C
     let mut stmt = conn
         .prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title FROM contacts ORDER BY name",
+             created_at, updated_at, title, contact_clinic_id FROM contacts ORDER BY name",
         )
         .ok()?;
 
@@ -617,7 +626,7 @@ mod tests {
         let c = conn
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title FROM contacts WHERE id = ?",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
                 [&id],
                 row_to_contact,
             )
@@ -641,7 +650,7 @@ mod tests {
         let mut stmt = conn
             .prepare(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title FROM contacts WHERE role = ? ORDER BY name",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE role = ? ORDER BY name",
             )
             .unwrap();
         let gps: Vec<Contact> = stmt
@@ -744,6 +753,7 @@ mod tests {
             notes: None,
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
+            contact_clinic_id: None,
         }
     }
 
@@ -1090,7 +1100,7 @@ mod tests {
         let c = conn
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title FROM contacts WHERE id = ?",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
                 [&id],
                 row_to_contact,
             )

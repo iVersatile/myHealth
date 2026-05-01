@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/appointments', label: 'Appointments' },
   { href: '/notes', label: 'Notes' },
   { href: '/contacts', label: 'Contacts' },
+  { href: '/clinics', label: 'Clinics' },
   { href: '/timeline', label: 'Timeline' },
   { href: '/categories', label: 'Categories' },
 ] as const

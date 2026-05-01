@@ -31,7 +31,7 @@ export default function DocumentsPage() {
   const documents = useDocumentsStore(s => s.documents)
   const total = useDocumentsStore(s => s.total)
   const setDocuments = useDocumentsStore(s => s.setDocuments)
-  const { createContact } = useContacts()
+  const { createContact, updateContact } = useContacts()
 
   async function handleUploaded(doc: Document) {
     setDocuments([doc, ...documents], total + 1)
@@ -88,14 +88,14 @@ export default function DocumentsPage() {
   }
 
   async function handleContactSave(data: ContactCreateInput) {
-    await createContact(data)
+    const personContact = await createContact(data)
 
     // Auto-create the clinic as a separate contact when the accepted suggestion
     // carries a clinic name — the invoice's phone/email/address belong to the
-    // clinic, so we copy them across.
+    // clinic, so we copy them across. Then link the person contact to the clinic.
     if (pendingContactSuggestion?.clinic) {
       const s = pendingContactSuggestion
-      await createContact({
+      const clinicContact = await createContact({
         name: s.clinic!,
         role: 'clinic',
         specialty: null,
@@ -105,6 +105,7 @@ export default function DocumentsPage() {
         address: s.address ?? null,
         notes: null,
       })
+      await updateContact({ id: personContact.id, contact_clinic_id: clinicContact.id })
     }
 
     setShowContactForm(false)
@@ -181,7 +182,7 @@ export default function DocumentsPage() {
       )}
       {showContactForm && (
         <ContactForm
-          initial={pendingContactSuggestion ? { id: '', name: pendingContactSuggestion.name, role: 'gp', specialty: pendingContactSuggestion.specialty, phone: pendingContactSuggestion.phone, email: pendingContactSuggestion.email, clinic: pendingContactSuggestion.clinic, address: pendingContactSuggestion.address, notes: null, created_at: '', updated_at: '' } : null}
+          initial={pendingContactSuggestion ? { id: '', name: pendingContactSuggestion.name, role: 'gp', specialty: pendingContactSuggestion.specialty, phone: pendingContactSuggestion.phone, email: pendingContactSuggestion.email, clinic: pendingContactSuggestion.clinic, address: pendingContactSuggestion.address, notes: null, created_at: '', updated_at: '', contact_clinic_id: null } : null}
           onSave={(data) => handleContactSave(data as ContactCreateInput)}
           onCancel={() => {
             setShowContactForm(false)
