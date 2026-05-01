@@ -689,4 +689,54 @@ mod tests {
             contacts[0].name
         );
     }
+
+    // ── Per-page OCR pipeline integration test ───────────────────────────────
+
+    fn tesseract_available() -> bool {
+        std::process::Command::new("tesseract")
+            .arg("--version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
+    fn pdftoppm_available() -> bool {
+        std::process::Command::new("pdftoppm")
+            .arg("-v")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn two_page_scanned_pdf_extracts_both_pages() {
+        if !tesseract_available() || !pdftoppm_available() {
+            return;
+        }
+        let path = fixture("two-page-scanned.pdf");
+        if !path.exists() {
+            return;
+        }
+        let result = extract(&path);
+        let text_lower = result.text.to_lowercase();
+        assert!(
+            text_lower.contains("alpha") || text_lower.contains("page one"),
+            "page 1 content missing from OCR output; text: {:?}",
+            result.text
+        );
+        assert!(
+            text_lower.contains("beta") || text_lower.contains("page two"),
+            "page 2 content missing from OCR output; text: {:?}",
+            result.text
+        );
+        assert!(
+            !result.text.contains("[OCR_TIMEOUT]"),
+            "unexpected OCR_TIMEOUT in output; text: {:?}",
+            result.text
+        );
+    }
 }

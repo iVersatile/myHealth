@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.3 — Wire per-page loop into extraction pipeline
+Task ▶ 12.4 — E2E: progress bar updates at each OCR page
 ```
 
 ---
@@ -693,13 +693,13 @@ Task ▶ 12.3 — Wire per-page loop into extraction pipeline
    - Unit tests: (a) single-page returns text; (b) simulated timeout page emits marker and loop continues.
    - Done when: 2 unit tests pass; `emit_ocr_progress` no longer hardcodes `page=1, total=1`.
 
-▶ [ ] **12.3 — Wire per-page loop into extraction pipeline**
+[x] **12.3 — Wire per-page loop into extraction pipeline**
    - File: `src-tauri/src/extraction/mod.rs`
    - Replace single `extract_image_text_async` call with `extract_pages_async` using page list from `split_pdf_pages`.
    - Integration test: upload a 2-page scanned PDF fixture → assert extracted text contains both pages' content (no `[OCR_TIMEOUT]` for normal PDFs).
    - Done when: integration test passes; existing extraction tests still pass (375+).
 
-[ ] **12.4 — E2E: progress bar updates at each OCR page**
+▶ [ ] **12.4 — E2E: progress bar updates at each OCR page**
    - File: `e2e/upload-ocr-progress.spec.ts` (new)
    - Use Playwright to upload the 2-page scanned PDF fixture.
    - Assert the progress bar label shows `"1 / 2"` then `"2 / 2"` before disappearing.
