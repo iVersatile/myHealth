@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.5 — Add `TEST_TYPE_MAP` to filename parser
+Task ▶ 12.6 — E2E: test-type tag shown in upload dialog
 ```
 
 ---
@@ -710,7 +710,7 @@ Task ▶ 12.5 — Add `TEST_TYPE_MAP` to filename parser
 
 ### Sprint 23: Test-Type Keyword Normalisation (Medium — Gap 1 / F1.3)
 
-▶ [ ] **12.5 — Add `TEST_TYPE_MAP` to filename parser**
+[x] **12.5 — Add `TEST_TYPE_MAP` to filename parser**
    - File: `src-tauri/src/parsing/filename.rs`
    - Add `TEST_TYPE_MAP: &[(&str, &str)]` covering ≥ 20 canonical test types (Blood Work, CBC, Lipid Panel, MRI, CT Scan, X-Ray, Ultrasound, ECG, Echocardiogram, DEXA Scan, Mammogram, Colonoscopy, Endoscopy, Biopsy, Urinalysis, Stool Test, PET Scan, Spirometry, Audiogram, Vision Test).
    - After token loop: scan each token case-insensitively; replace first matching token with canonical label.
@@ -720,7 +720,7 @@ Task ▶ 12.5 — Add `TEST_TYPE_MAP` to filename parser
      - `parse_filename("Appointment_2024")` → no spurious test-type tag added.
    - Done when: 3 unit tests pass; no existing filename tests regress.
 
-[ ] **12.6 — E2E: test-type tag shown in upload dialog**
+▶ [ ] **12.6 — E2E: test-type tag shown in upload dialog**
    - File: `e2e/upload-filename-tags.spec.ts` (new)
    - Upload a file named `BloodTest_2024-01-15.pdf`.
    - Assert the upload dialog tag chip reads `"Blood Work"` (not `"bloodtest"`).
