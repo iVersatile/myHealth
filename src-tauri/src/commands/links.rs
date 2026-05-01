@@ -308,6 +308,7 @@ pub fn links_score_candidates(
                 created_at: row.get(11)?,
                 updated_at: row.get(12)?,
                 document_ids: vec![],
+                contact_ids: vec![],
             })
         })?
         .collect::<Result<_, _>>()

@@ -23,6 +23,7 @@ pub struct Appointment {
     pub created_at: String,
     pub updated_at: String,
     pub document_ids: Vec<String>,
+    pub contact_ids: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,6 +65,19 @@ fn fetch_document_ids(conn: &rusqlite::Connection, appt_id: &str) -> Vec<String>
     .unwrap_or_default()
 }
 
+fn fetch_contact_ids(conn: &rusqlite::Connection, appt_id: &str) -> Vec<String> {
+    conn.prepare(
+        "SELECT contact_id FROM appointment_contacts WHERE appointment_id = ? ORDER BY contact_id",
+    )
+    .ok()
+    .and_then(|mut stmt| {
+        stmt.query_map([appt_id], |row| row.get::<_, String>(0))
+            .ok()
+            .map(|rows| rows.filter_map(|r| r.ok()).collect())
+    })
+    .unwrap_or_default()
+}
+
 fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment, CommandError> {
     conn.query_row(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
@@ -86,6 +100,7 @@ fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment
                 created_at: row.get(11)?,
                 updated_at: row.get(12)?,
                 document_ids: vec![],
+                contact_ids: vec![],
             })
         },
     )
@@ -98,6 +113,7 @@ fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment
     })
     .map(|mut appt| {
         appt.document_ids = fetch_document_ids(conn, &appt.id);
+        appt.contact_ids = fetch_contact_ids(conn, &appt.id);
         appt
     })
 }
@@ -145,6 +161,7 @@ pub fn appointments_list(
         .filter_map(|r| r.ok())
         .map(|mut a| {
             a.document_ids = fetch_document_ids(conn, &a.id);
+            a.contact_ids = fetch_contact_ids(conn, &a.id);
             a
         })
         .collect();
@@ -189,6 +206,7 @@ pub fn appointments_list_upcoming(
         .filter_map(|r| r.ok())
         .map(|mut a| {
             a.document_ids = fetch_document_ids(conn, &a.id);
+            a.contact_ids = fetch_contact_ids(conn, &a.id);
             a
         })
         .collect();
@@ -212,6 +230,7 @@ fn load_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Appointment> {
         created_at: row.get(11)?,
         updated_at: row.get(12)?,
         document_ids: vec![],
+        contact_ids: vec![],
     })
 }
 

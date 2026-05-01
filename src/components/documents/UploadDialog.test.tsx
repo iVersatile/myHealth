@@ -190,7 +190,7 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByText('Dr. House')).toBeTruthy())
+    await waitFor(() => expect(screen.getAllByText('Dr. House').length).toBeGreaterThan(0))
     expect(screen.getByText('Diagnostics')).toBeTruthy()
     expect(screen.getByText('PPTH')).toBeTruthy()
     const saveBtn = screen.getByRole('button', { name: /save as contact/i })

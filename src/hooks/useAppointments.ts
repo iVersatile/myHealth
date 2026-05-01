@@ -69,6 +69,18 @@ export function useAppointments() {
     removeAppointment(id)
   }
 
+  async function linkContact(appointmentId: string, contactId: string): Promise<void> {
+    await invoke('appointment_link_contact', { appointmentId, contactId })
+    const appt = await invoke<Appointment>('appointments_get', { id: appointmentId })
+    upsertAppointment(appt)
+  }
+
+  async function unlinkContact(appointmentId: string, contactId: string): Promise<void> {
+    await invoke('appointment_unlink_contact', { appointmentId, contactId })
+    const appt = await invoke<Appointment>('appointments_get', { id: appointmentId })
+    upsertAppointment(appt)
+  }
+
   function filterByStatus(status: AppointmentStatus | 'all'): void {
     setStatusFilter(status)
   }
@@ -81,6 +93,8 @@ export function useAppointments() {
     createAppointment,
     updateAppointment,
     deleteAppointment,
+    linkContact,
+    unlinkContact,
     filterByStatus,
     refresh: fetchAppointments,
   }

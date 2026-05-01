@@ -24,6 +24,7 @@ const makeAppt = (overrides: Partial<Appointment> = {}): Appointment => ({
   created_at: '2026-04-01T00:00:00',
   updated_at: '2026-04-01T00:00:00',
   document_ids: [],
+  contact_ids: [],
   ...overrides,
 })
 

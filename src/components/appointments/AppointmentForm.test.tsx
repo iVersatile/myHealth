@@ -114,6 +114,7 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
+        contact_ids: [],
       }
 
       mockInvoke.mockImplementation((command: string) => {
@@ -161,6 +162,7 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
+        contact_ids: [],
       }
 
       render(
@@ -418,6 +420,7 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
+        contact_ids: [],
       }
 
       render(
@@ -450,6 +453,7 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
+        contact_ids: [],
       }
 
       mockInvoke.mockImplementation((command: string, args?: unknown) => {
@@ -499,6 +503,7 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
+        contact_ids: [],
       }
 
       mockInvoke.mockImplementation((command: string) => {
@@ -572,6 +577,7 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
+        contact_ids: [],
       }
 
       render(
@@ -684,6 +690,7 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
+        contact_ids: [],
       }
 
       render(

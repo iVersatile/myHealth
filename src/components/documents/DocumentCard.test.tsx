@@ -91,7 +91,7 @@ describe('DocumentCard', () => {
 
   it('View link points to /documents/:id', () => {
     render(<DocumentCard document={makeDoc()} onDelete={vi.fn()} />)
-    const viewLink = screen.getByRole('link', { name: 'View' })
+    const viewLink = screen.getByRole('link', { name: /view/i })
     expect((viewLink as HTMLAnchorElement).href).toContain('/documents/view?id=doc1')
   })
 })

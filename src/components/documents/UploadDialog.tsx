@@ -154,7 +154,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           setActivityDate(actDate)
           setTimelineDescription(buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null))
 
-          for (const tag of [...suggestions.auto_tags, ...suggestions.doctor_candidates, ...suggestions.document_tags]) {
+          for (const tag of [...(suggestions.auto_tags ?? []), ...(suggestions.doctor_candidates ?? []), ...(suggestions.document_tags ?? [])]) {
             const lower = tag.toLowerCase()
             if (!extractedTags.some((t) => t.toLowerCase() === lower)) extractedTags.push(tag)
           }
@@ -213,7 +213,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
   async function handleAcceptCategorySuggestion(suggestion: string) {
     try {
-      const id = await invoke<string>('categories_create_if_not_exists', { name: suggestion })
+      const result = await invoke<{ id: string }>('categories_create_if_not_exists', { name: suggestion })
+      const id = result.id
       setSelectedCategoryIds((prev) => prev.includes(id) ? prev : [...prev, id])
     } catch { /* non-fatal */ }
     setCategorySuggestionDismissed(true)
@@ -431,6 +432,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
                     async function autoSaveClinic(personContactId: string) {
                       if (!cs.clinic) return
+                      if (clinicSuggestions.some((c) => c.name === cs.clinic)) return
                       setClinicPhase({ kind: 'saving' })
                       try {
                         const matchingClinic = clinicSuggestions.find((c) => c.name === cs.clinic)
