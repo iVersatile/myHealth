@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.10 — E2E: international phone appears in contact suggestion card
+Phase 12 complete — all tasks done
 ```
 
 ---
@@ -764,7 +764,7 @@ Task ▶ 12.10 — E2E: international phone appears in contact suggestion card
      - No phone in text → `None`.
    - Done when: 5 unit tests pass; PRD_V3 V3-F2.1 and V3-F2.2 marked ✅.
 
-▶ [ ] **12.10 — E2E: international phone appears in contact suggestion card**
+[x] **12.10 — E2E: international phone appears in contact suggestion card**
    - File: `e2e/upload-contact-suggestion.spec.ts` (new)
    - Upload a PDF fixture containing `+1 (555) 123-4567` in its body text.
    - Assert contact suggestion card in upload dialog shows `+1 (555) 123-4567`.
