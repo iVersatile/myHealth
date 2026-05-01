@@ -429,6 +429,36 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       setContactPhases((prev) => new Map([...prev, [cs.name, p]]))
                     }
 
+                    async function autoSaveClinic(personContactId: string) {
+                      if (!cs.clinic) return
+                      setClinicPhase({ kind: 'saving' })
+                      try {
+                        const matchingClinic = clinicSuggestions.find((c) => c.name === cs.clinic)
+                        const clinicContact = await invoke<{ id: string }>('contacts_create', {
+                          input: {
+                            name: cs.clinic,
+                            role: 'clinic',
+                            specialty: null,
+                            phone: matchingClinic ? null : null,
+                            email: null,
+                            clinic: null,
+                            address: matchingClinic?.addresses[0] ?? null,
+                            notes: null,
+                          },
+                        })
+                        await invoke('contacts_update', {
+                          input: { id: personContactId, contact_clinic_id: clinicContact.id },
+                        })
+                        setClinicPhase({ kind: 'saved' })
+                        setDismissedClinics((prev) => {
+                          if (matchingClinic) return new Set([...prev, matchingClinic.name])
+                          return prev
+                        })
+                      } catch {
+                        setClinicPhase({ kind: 'idle' })
+                      }
+                    }
+
                     async function handleSave() {
                       setPhase({ kind: 'saving' })
                       try {
@@ -446,6 +476,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                             await invoke('documents_link_contact', { documentId: uploadedDoc.id, contactId: newContact.id })
                           }
                           setPhase({ kind: 'saved', contactId: newContact.id })
+                          void autoSaveClinic(newContact.id)
                         }
                       } catch {
                         setPhase({ kind: 'idle' })
@@ -460,6 +491,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                         }
                       } catch { /* non-fatal */ }
                       setPhase({ kind: 'saved', contactId: existingId })
+                      void autoSaveClinic(existingId)
                     }
 
                     async function handleCancelDuplicate(newId: string) {
