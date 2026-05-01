@@ -22,8 +22,12 @@ static TITLE_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 fn dr_re() -> &'static Regex {
     DR_PATTERN.get_or_init(|| {
-        Regex::new(r"\b(?:Dr\.?|Prof\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)")
-            .expect("doctor regex valid")
+        // Matches Dr/Prof/Mr/Mrs/Ms/Miss/Sir followed by first name, optional middle
+        // initials, and last name; full match preserved as contact name
+        Regex::new(
+            r"\b(?:Dr\.?|Prof\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Sir)\s+[A-Z][a-z]+(?:\s+[A-Z]\.)*(?:\s+[A-Z][a-z]+)+",
+        )
+        .expect("doctor regex valid")
     })
 }
 
@@ -327,5 +331,24 @@ mod tests {
         let suggestions = extract_contact_suggestions(text);
         assert_eq!(suggestions.len(), 1);
         assert_eq!(suggestions[0].title.as_deref(), Some("Prof."));
+    }
+
+    #[test]
+    fn extracts_mr_with_middle_initial_as_contact() {
+        let text = "with Mr John A. Green BSc,MCSP,HCPC – Chartered Physiotherapist.";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].name, "Mr John A. Green");
+        assert_eq!(suggestions[0].title.as_deref(), Some("Mr"));
+    }
+
+    #[test]
+    fn extracts_mr_contact_with_phone_and_email() {
+        let text =
+            "with Mr John A. Green BSc – Chartered Physiotherapist.\nTEL: 07544 370440\nEmail: jg@example.com";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].phone.as_deref(), Some("07544 370440"));
+        assert_eq!(suggestions[0].email.as_deref(), Some("jg@example.com"));
     }
 }

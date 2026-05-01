@@ -5,25 +5,28 @@ static DR_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 fn dr_regex() -> &'static Regex {
     DR_PATTERN.get_or_init(|| {
-        Regex::new(r"\bDr\.?\s+([A-Z][a-z]+\s+[A-Z][a-z]+)").expect("doctor regex is valid")
+        // Groups: 1=title, 2=first name, 3=last name; middle initials consumed but not captured
+        Regex::new(
+            r"\b(Dr\.?|Prof\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Sir)\s+([A-Z][a-z]+)(?:\s+[A-Z]\.)*\s+([A-Z][a-z]+)",
+        )
+        .expect("doctor regex is valid")
     })
 }
 
-/// Extracts candidate doctor names from free text.
+/// Extracts candidate provider names from free text.
 ///
-/// Matches patterns like "Dr. John Smith" or "Dr Jane Doe".
-/// Returns deduplicated names in the order they first appear.
+/// Matches titles Dr/Prof/Mr/Mrs/Ms/Miss/Sir followed by a first and last name,
+/// ignoring middle initials. Returns normalised "Title First Last" strings,
+/// deduplicated in the order they first appear.
 pub fn extract_doctor_candidates(text: &str) -> Vec<String> {
     let re = dr_regex();
     let mut seen = std::collections::HashSet::new();
     let mut results = Vec::new();
 
     for cap in re.captures_iter(text) {
-        if let Some(full) = cap.get(0) {
-            let name = full.as_str().trim().to_string();
-            if seen.insert(name.clone()) {
-                results.push(name);
-            }
+        let name = format!("{} {} {}", &cap[1], &cap[2], &cap[3]);
+        if seen.insert(name.clone()) {
+            results.push(name);
         }
     }
     results
@@ -76,5 +79,26 @@ mod tests {
         let text = "The Dr. Smith result was normal.";
         let candidates = extract_doctor_candidates(text);
         assert!(candidates.is_empty());
+    }
+
+    #[test]
+    fn extracts_mr_with_middle_initial() {
+        let text = "with Mr John A. Green BSc,MCSP,HCPC – Chartered Physiotherapist.";
+        let candidates = extract_doctor_candidates(text);
+        assert_eq!(candidates, vec!["Mr John Green"]);
+    }
+
+    #[test]
+    fn extracts_mrs_prefix() {
+        let text = "Referred to Mrs Alice Brown for follow-up.";
+        let candidates = extract_doctor_candidates(text);
+        assert_eq!(candidates, vec!["Mrs Alice Brown"]);
+    }
+
+    #[test]
+    fn extracts_prof_prefix() {
+        let text = "Prof. Sarah Jones led the research.";
+        let candidates = extract_doctor_candidates(text);
+        assert_eq!(candidates, vec!["Prof. Sarah Jones"]);
     }
 }

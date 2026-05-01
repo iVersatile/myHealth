@@ -622,4 +622,69 @@ mod tests {
         assert!(!candidates.iter().any(|c| c.contains('[')));
         assert!(!tags.iter().any(|t| t.contains('[')));
     }
+
+    // ── fixture-based integration tests ──────────────────────────────────────
+
+    #[test]
+    fn fixture_physio_invoice_produces_all_four_expected_tags() {
+        // Proves: "sample-Upload (09Mar2023-16_31_26).pdf" → tags include
+        //   invoice, Mr John Green, PHYSIOTHERAPY, 2023-03-09
+        let path = fixture("sample-Upload (09Mar2023-16_31_26).pdf");
+        let result = extract(&path);
+
+        let doctor_candidates = doctor::extract_doctor_candidates(&result.text);
+        assert!(
+            doctor_candidates.iter().any(|c| c == "Mr John Green"),
+            "expected 'Mr John Green' in doctor_candidates; got {doctor_candidates:?}"
+        );
+
+        // activity_date comes from filename fallback in the command layer; simulate it here
+        let tags = auto_extract_tags(&result.text, &doctor_candidates, Some("2023-03-09"));
+
+        assert!(
+            tags.contains(&"invoice".to_string()),
+            "missing 'invoice' tag; tags: {tags:?}"
+        );
+        assert!(
+            tags.contains(&"Mr John Green".to_string()),
+            "missing 'Mr John Green' tag; tags: {tags:?}"
+        );
+        assert!(
+            tags.contains(&"PHYSIOTHERAPY".to_string()),
+            "missing 'PHYSIOTHERAPY' tag; tags: {tags:?}"
+        );
+        assert!(
+            tags.contains(&"2023-03-09".to_string()),
+            "missing '2023-03-09' tag; tags: {tags:?}"
+        );
+    }
+
+    #[test]
+    fn fixture_physio_invoice_timeline_description() {
+        // Proves: timeline entry reads "2023-03-09 PHYSIOTHERAPY with Mr John Green"
+        let path = fixture("sample-Upload (09Mar2023-16_31_26).pdf");
+        let result = extract(&path);
+        let doctor_candidates = doctor::extract_doctor_candidates(&result.text);
+        let tags = auto_extract_tags(&result.text, &doctor_candidates, Some("2023-03-09"));
+        let desc = format_timeline_description("2023-03-09", &tags);
+        assert_eq!(desc, "2023-03-09 PHYSIOTHERAPY with Mr John Green");
+    }
+
+    #[test]
+    fn fixture_physio_invoice_contact_suggestion() {
+        // Proves: contact extraction detects "Mr John A. Green" from the fixture
+        use crate::extraction::contact::extract_contact_suggestions;
+        let path = fixture("sample-Upload (09Mar2023-16_31_26).pdf");
+        let result = extract(&path);
+        let contacts = extract_contact_suggestions(&result.text);
+        assert!(
+            !contacts.is_empty(),
+            "expected at least one contact suggestion; got none"
+        );
+        assert!(
+            contacts[0].name.contains("John") && contacts[0].name.contains("Green"),
+            "expected contact name to contain 'John Green'; got '{}'",
+            contacts[0].name
+        );
+    }
 }
