@@ -59,7 +59,7 @@ fn email_re() -> &'static Regex {
 fn clinic_re() -> &'static Regex {
     CLINIC_PATTERN.get_or_init(|| {
         Regex::new(
-            r"(?m)^([A-Z][A-Za-z0-9'\-]+(?:(?: & | )[A-Z][A-Za-z0-9'\-]+)*)\s+(?:Medical(?:\s+Centre|\s+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:\s+Centre)?|Physiotherapy)",
+            r"(?m)^(?:The[ \t]+)?([A-Z][A-Za-z0-9'\-]+(?:(?:[ \t]+&[ \t]+|[ \t]+)[A-Z][A-Za-z0-9'\-]+)*)[ \t]+(?:Medical(?:[ \t]+Centre|[ \t]+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:[ \t]+Centre)?|Physiotherapy|Dental(?:[ \t]+Practice)?|Osteopath(?:ic)?|Chiropractic|Therapy|Wellness)",
         )
         .expect("clinic regex valid")
     })
@@ -411,6 +411,18 @@ mod tests {
     fn extracts_clinic_with_ampersand_separator() {
         let text =
             "Mr John A. Smith\nSpringfield Physiotherapy & Sports Medicine Clinic\n123 Main St";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].clinic.as_deref(),
+            Some("Springfield Physiotherapy & Sports Medicine Clinic")
+        );
+    }
+
+    #[test]
+    fn clinic_name_does_not_span_newlines_across_header() {
+        // "INVOICE" must not be merged with the clinic name on the next line
+        let text = "INVOICE\n\nSpringfield Physiotherapy & Sports Medicine Clinic\n14 Elm Street\nMr John A. Smith";
         let suggestions = extract_contact_suggestions(text);
         assert_eq!(suggestions.len(), 1);
         assert_eq!(
