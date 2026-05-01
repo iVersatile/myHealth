@@ -306,7 +306,6 @@ fn ocr_pdf_with_progress(path: &Path, app_handle: Option<&tauri::AppHandle>) -> 
         }
         text
     } else {
-        let total = pages.len() as u32;
         let t0 = Instant::now();
 
         let Ok(rt) = tokio::runtime::Runtime::new() else {
@@ -314,19 +313,16 @@ fn ocr_pdf_with_progress(path: &Path, app_handle: Option<&tauri::AppHandle>) -> 
             return ocr::extract_image_text(path).unwrap_or_default();
         };
 
-        let mut page_texts = Vec::with_capacity(pages.len());
-        for (i, page_path) in pages.iter().enumerate() {
-            let page_num = (i + 1) as u32;
-            let text = rt
-                .block_on(ocr::extract_image_text_async(page_path))
-                .unwrap_or_default();
+        rt.block_on(ocr::extract_pages_async(&pages, |page_num, total| {
             if let Some(app) = app_handle {
-                emit_ocr_progress(app, page_num, total, t0.elapsed().as_millis() as u64);
+                emit_ocr_progress(
+                    app,
+                    page_num as u32,
+                    total as u32,
+                    t0.elapsed().as_millis() as u64,
+                );
             }
-            page_texts.push(text);
-        }
-
-        page_texts.join("\n")
+        }))
     };
 
     let _ = std::fs::remove_dir_all(&temp_dir);

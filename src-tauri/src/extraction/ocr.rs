@@ -92,6 +92,27 @@ pub fn split_pdf_to_pages(
     Ok(pages)
 }
 
+/// Runs per-page OCR over `pages`, applying `PER_CALL_TIMEOUT` per page.
+///
+/// Pages that time out contribute `"[OCR_TIMEOUT]"` to the joined output.
+/// Pages whose tesseract process fails to spawn contribute an empty string.
+/// `on_progress(page_1_indexed, total)` is called after each page completes.
+pub async fn extract_pages_async<F>(pages: &[std::path::PathBuf], mut on_progress: F) -> String
+where
+    F: FnMut(usize, usize),
+{
+    let total = pages.len();
+    let mut texts = Vec::with_capacity(total);
+    for (i, page_path) in pages.iter().enumerate() {
+        let text = extract_image_text_async(page_path)
+            .await
+            .unwrap_or_default();
+        on_progress(i + 1, total);
+        texts.push(text);
+    }
+    texts.join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,6 +225,47 @@ mod tests {
         pages.sort();
         assert_eq!(pages[0].file_name().unwrap(), "page-001.png");
         assert_eq!(pages[2].file_name().unwrap(), "page-003.png");
+    }
+
+    #[tokio::test]
+    async fn extract_pages_returns_text_for_single_page() {
+        if !tesseract_available() {
+            return;
+        }
+        let path = write_blank_png("ocr_pages_single.png");
+        let mut progress_calls: Vec<(usize, usize)> = Vec::new();
+        let text = extract_pages_async(&[path], |page, total| {
+            progress_calls.push((page, total));
+        })
+        .await;
+        assert!(
+            text.is_empty() || text.chars().all(|c| c.is_whitespace() || c == '\n'),
+            "blank image should produce empty/whitespace text, got: {text:?}"
+        );
+        assert_eq!(
+            progress_calls,
+            vec![(1, 1)],
+            "progress callback must fire once"
+        );
+    }
+
+    #[tokio::test]
+    async fn extract_pages_continues_after_failed_page() {
+        // Non-existent images → tesseract fails to process them (Err → "")
+        // Verifies the loop does not abort early and progress fires for every page.
+        let pages = vec![
+            PathBuf::from("/tmp/nonexistent_ocr_page_a.png"),
+            PathBuf::from("/tmp/nonexistent_ocr_page_b.png"),
+        ];
+        let mut progress_count = 0usize;
+        let _text = extract_pages_async(&pages, |_, _| {
+            progress_count += 1;
+        })
+        .await;
+        assert_eq!(
+            progress_count, 2,
+            "progress callback must fire once per page even when OCR fails"
+        );
     }
 
     #[test]
