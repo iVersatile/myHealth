@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 10 — v1.4 Upload Intelligence (PRD_V3)
-All tasks complete ✅ — v1.4.0 shipped
+Phase 11 — V3 Integration Test Gap Closure
+All tasks complete ✅ — 375 tests passing
 ```
 
 ---
@@ -630,6 +630,45 @@ All tasks complete ✅ — v1.4.0 shipped
 
 [x] **10.14 — Verify GitHub Release**
    - Confirmed 4 platform artifacts published: macOS aarch64/x64 .dmg, Linux .AppImage, Windows .msi
+
+---
+
+## Phase 11 — V3 Integration Test Gap Closure
+
+> Goal: Close all AC coverage gaps identified in the PRD_V3 audit. All tests use `open_test_db()` → `rusqlite::Connection::open_in_memory()` + `db::migrations::run(&conn)`, bypassing Tauri `State` entirely.
+
+### Sprint 21: V3 Integration Tests
+
+[x] **11.1 — V3-F1 integration test: `categories_create_if_not_exists` idempotency**
+   - Test 1: specialty name `"physiotherapy"` → stored as `"Physiotherapy"` (title-case normalisation)
+   - Test 2: second call with `"PHYSIOTHERAPY"` (case variant) → returns same `id`, no duplicate row
+   - Done when: both tests green with `cargo test v3_integration`
+
+[x] **11.2 — V3-F2 integration test: contact persisted + `document_contacts` junction created**
+   - Insert a contact row directly via SQL using `open_test_db()`
+   - Call `documents_link_contact` SQL logic to insert into `document_contacts`
+   - Assert row exists in `document_contacts` with correct `(document_id, contact_id)`
+   - Test idempotency: second INSERT OR IGNORE must not produce an error or duplicate
+   - Done when: 2 tests green
+
+[x] **11.3 — V3-F2.5 integration test: duplicate contact detection**
+   - Call `duplicates_of()` with a primary contact `"John Green"` and near-duplicate `"Jon Green"`
+   - Assert near-duplicate flagged above the 0.85 threshold
+   - Assert a clearly different name `"Dr Sarah White"` is NOT flagged
+   - Done when: 1 test green, no false positives
+
+[x] **11.4 — V3-F3 integration test: clinic creation + addresses + `clinic_contacts` junction**
+   - Insert clinic via direct SQL (mirrors `clinics_create_if_not_exists` logic)
+   - Insert row into `clinic_addresses`; assert `is_primary = 1`
+   - Insert row into `clinic_contacts`; assert `(clinic_id, contact_id)` pair exists
+   - Test INSERT OR IGNORE idempotency on `clinic_contacts`
+   - Done when: 3 tests green
+
+[x] **11.5 — V3-F5 integration test: `format_timeline_description` edge cases**
+   - Test with clinic name as provider token (mixed-case): `"2023-03-09 PHYSIOTHERAPY with City Physio Clinic"`
+   - Test with no specialty tag present: falls back to `"DOCUMENT"` → `"2023-03-09 DOCUMENT"`
+   - (Note: 3-level `resolve_activity_date` fallback already covered in `documents.rs` — do not duplicate)
+   - Done when: 2 tests green
 
 ---
 
