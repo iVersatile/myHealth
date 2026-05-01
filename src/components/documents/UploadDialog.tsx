@@ -213,8 +213,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
   async function handleAcceptCategorySuggestion(suggestion: string) {
     try {
-      const result = await invoke<{ id: string }>('categories_create_if_not_exists', { name: suggestion })
-      const id = result.id
+      const id = await invoke<string>('categories_create_if_not_exists', { name: suggestion })
       setSelectedCategoryIds((prev) => prev.includes(id) ? prev : [...prev, id])
     } catch { /* non-fatal */ }
     setCategorySuggestionDismissed(true)

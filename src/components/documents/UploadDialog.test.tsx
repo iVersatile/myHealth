@@ -282,7 +282,7 @@ describe('UploadDialog', () => {
       if (cmd === 'categories_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: 'physiotherapy', document_tags: [], auto_tags: [], contact_suggestions: [] })
-      if (cmd === 'categories_create_if_not_exists') return Promise.resolve({ id: 'cat-physio' })
+      if (cmd === 'categories_create_if_not_exists') return Promise.resolve('cat-physio')
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
       if (cmd === 'categories_assign_document') return Promise.resolve(undefined)
