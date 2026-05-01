@@ -1124,6 +1124,36 @@ mod tests {
     }
 
     #[test]
+    fn to_title_case_normalises_lowercase_specialty() {
+        // V3-F1: lowercase input must be stored as title-case
+        assert_eq!(to_title_case("physiotherapy"), "Physiotherapy");
+        assert_eq!(to_title_case("blood work"), "Blood Work");
+        assert_eq!(to_title_case("CARDIOLOGY"), "CARDIOLOGY");
+    }
+
+    #[test]
+    fn create_if_not_exists_stores_title_cased_name() {
+        // V3-F1: "physiotherapy" (lowercase) → persisted as "Physiotherapy"
+        let conn = open_test_db();
+        let normalised = to_title_case("physiotherapy");
+        assert_eq!(normalised, "Physiotherapy");
+        let id = Uuid::new_v4().to_string();
+        let created_at = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, ?2, NULL, '#6B7280', 0, 100, ?3)",
+            rusqlite::params![id, normalised, created_at],
+        )
+        .unwrap();
+        let stored: String = conn
+            .query_row("SELECT name FROM categories WHERE id = ?1", [&id], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(stored, "Physiotherapy");
+    }
+
+    #[test]
     fn create_if_not_exists_new_name_creates_and_returns_id() {
         let conn = open_test_db();
         let before: i64 = conn

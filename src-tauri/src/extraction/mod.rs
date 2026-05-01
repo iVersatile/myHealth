@@ -610,6 +610,14 @@ mod tests {
     }
 
     #[test]
+    fn timeline_description_no_specialty_no_provider_uses_document() {
+        // V3-F5: tags with no specialty tag AND no provider tag → "{date} DOCUMENT"
+        let tags = vec!["invoice".to_string(), "2024-01-15".to_string()];
+        let desc = format_timeline_description("2024-01-15", &tags);
+        assert_eq!(desc, "2024-01-15 DOCUMENT");
+    }
+
+    #[test]
     fn ocr_timeout_marker_passes_through_extraction() {
         // If OCR returns [OCR_TIMEOUT], extract_inner must propagate it unchanged
         // (doctor/category/tag extraction gracefully handles it).

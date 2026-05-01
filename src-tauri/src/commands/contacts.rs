@@ -998,6 +998,76 @@ mod tests {
     }
 
     #[test]
+    fn document_contacts_junction_created_and_idempotent() {
+        // V3-F2: linking a contact to a document must create a document_contacts row;
+        // a second INSERT OR IGNORE must not create a duplicate.
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+        let doc_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, \
+             category, created_at, updated_at) \
+             VALUES (?, 'invoice.pdf', '/tmp/invoice.pdf', 'application/pdf', 0, 'other', ?, ?)",
+            rusqlite::params![doc_id, now, now],
+        )
+        .unwrap();
+        let contact_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES (?, 'Mr John Green', 'specialist', ?, ?)",
+            rusqlite::params![contact_id, now, now],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT OR IGNORE INTO document_contacts (document_id, contact_id) VALUES (?, ?)",
+            rusqlite::params![doc_id, contact_id],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_contacts WHERE document_id = ? AND contact_id = ?",
+                rusqlite::params![doc_id, contact_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "junction row must exist after first insert");
+
+        conn.execute(
+            "INSERT OR IGNORE INTO document_contacts (document_id, contact_id) VALUES (?, ?)",
+            rusqlite::params![doc_id, contact_id],
+        )
+        .unwrap();
+        let count2: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_contacts WHERE document_id = ? AND contact_id = ?",
+                rusqlite::params![doc_id, contact_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count2, 1, "idempotent: no duplicate row on second insert");
+    }
+
+    #[test]
+    fn duplicates_of_detects_physio_near_duplicate_names() {
+        // V3-F2.5: near-duplicate physio provider names must score >= 0.85;
+        // unrelated names must not appear as duplicates.
+        let primary = make_contact("p1", "John Green", None, None);
+        let near_dup = make_contact("p2", "Jon Green", None, None);
+        let unrelated = make_contact("p3", "Dr Sarah White", None, None);
+        let contacts = vec![primary.clone(), near_dup, unrelated];
+        let results = duplicates_of(&primary, &contacts, 0.85);
+        assert!(
+            !results.is_empty(),
+            "John Green vs Jon Green should score >= 0.85"
+        );
+        assert!(
+            results.iter().all(|d| d.contact.name != "Dr Sarah White"),
+            "unrelated contact must not appear as duplicate"
+        );
+    }
+
+    #[test]
     fn contacts_create_persists_name_phone_email_title() {
         let conn = open_test_db();
         let id = Uuid::new_v4().to_string();

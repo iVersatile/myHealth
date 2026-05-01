@@ -431,6 +431,77 @@ mod tests {
     }
 
     #[test]
+    fn clinic_addresses_primary_row_created() {
+        // V3-F3: creating a clinic with an address must persist a clinic_addresses row
+        // with is_primary = 1.
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+        let clinic_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinics (id, name, address, created_at) \
+             VALUES (?, 'City Physio', '10 High St', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 1)",
+            rusqlite::params![clinic_id, "10 High St"],
+        )
+        .unwrap();
+
+        let (addr, is_primary): (String, i64) = conn
+            .query_row(
+                "SELECT address, is_primary FROM clinic_addresses WHERE clinic_id = ?",
+                [&clinic_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(addr, "10 High St");
+        assert_eq!(is_primary, 1);
+    }
+
+    #[test]
+    fn clinic_addresses_second_address_not_primary() {
+        // V3-F3: additional addresses must be stored with is_primary = 0
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+        let clinic_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'Multi Physio', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 1)",
+            rusqlite::params![clinic_id, "10 High St"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 0)",
+            rusqlite::params![clinic_id, "20 Low St"],
+        )
+        .unwrap();
+
+        let primary_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = ? AND is_primary = 1",
+                [&clinic_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(primary_count, 1, "only one primary address allowed");
+
+        let total: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = ?",
+                [&clinic_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(total, 2);
+    }
+
+    #[test]
     fn link_contact_inserts_junction_row() {
         let conn = open_test_db();
         let now = Utc::now().to_rfc3339();
