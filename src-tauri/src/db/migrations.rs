@@ -70,6 +70,38 @@ const SCHEMA_V10: &str = "
     );
 ";
 
+const SCHEMA_V11: &str = "
+    CREATE TABLE contacts_v11 (
+        id                TEXT PRIMARY KEY,
+        name              TEXT NOT NULL,
+        role              TEXT NOT NULL CHECK(role IN (
+                            'gp','specialist','dentist','physio','pharmacist','hospital','clinic','other')),
+        specialty         TEXT,
+        phone             TEXT,
+        email             TEXT,
+        clinic            TEXT,
+        address           TEXT,
+        notes             TEXT,
+        created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+        clinic_id         TEXT REFERENCES clinics(id),
+        is_deduped_with   TEXT,
+        dedup_score       REAL,
+        user_id           TEXT REFERENCES users(id) ON DELETE CASCADE,
+        title             TEXT,
+        contact_clinic_id TEXT REFERENCES contacts_v11(id)
+    );
+    INSERT INTO contacts_v11 (id, name, role, specialty, phone, email, clinic, address, notes,
+                               created_at, updated_at, clinic_id, is_deduped_with, dedup_score,
+                               user_id, title)
+    SELECT id, name, role, specialty, phone, email, clinic, address, notes,
+           created_at, updated_at, clinic_id, is_deduped_with, dedup_score, user_id, title
+    FROM contacts;
+    DROP TABLE contacts;
+    ALTER TABLE contacts_v11 RENAME TO contacts;
+    CREATE INDEX IF NOT EXISTS idx_contacts_is_deduped_with ON contacts(is_deduped_with);
+";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -154,6 +186,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 11 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V11)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [11])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -180,7 +219,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 10);
+        assert_eq!(version, 11);
     }
 
     #[test]
@@ -194,7 +233,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 10);
+        assert_eq!(version, 11);
     }
 
     #[test]

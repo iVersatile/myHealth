@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useContacts, ContactCreateInput, ContactUpdateInput, DuplicateCandidate } from '../../../hooks/useContacts'
 import { Contact, CONTACT_ROLES, ROLE_LABELS, ContactRole } from '../../../store/contactsStore'
 import { ContactForm } from '../../../components/contacts/ContactForm'
@@ -34,11 +34,17 @@ function ContactCard({
   allContacts,
   onEdit,
   onDelete,
+  onScrollTo,
+  highlighted,
+  cardRef,
 }: {
   contact: Contact
   allContacts: Contact[]
   onEdit: (c: Contact) => void
   onDelete: (id: string) => void
+  onScrollTo: (id: string) => void
+  highlighted?: boolean
+  cardRef?: (el: HTMLDivElement | null) => void
 }) {
   const roleLabel = ROLE_LABELS[contact.role as ContactRole] ?? contact.role
   const linkedClinic = contact.contact_clinic_id
@@ -46,7 +52,10 @@ function ContactCard({
     : null
 
   return (
-    <div className="p-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div
+      ref={cardRef}
+      className={`p-4 rounded-[var(--radius-md)] border bg-[var(--color-surface)] transition-colors duration-700 ${highlighted ? 'border-[var(--color-accent)]' : 'border-[var(--color-border)]'}`}
+    >
       <div className="flex items-start justify-between gap-2 mb-1">
         <div>
           <span className="font-medium text-[var(--color-text)]">{contact.name}</span>
@@ -60,10 +69,16 @@ function ContactCard({
       </div>
 
       {linkedClinic && (
-        <p className="flex items-center gap-1 text-xs text-[var(--color-tag-text)] bg-[var(--color-tag-bg)] rounded px-2 py-0.5 w-fit mb-2">
+        <button
+          type="button"
+          onClick={() => onScrollTo(linkedClinic.id)}
+          className="flex items-center gap-1 text-xs text-[var(--color-tag-text)] bg-[var(--color-tag-bg)] rounded px-2 py-0.5 w-fit mb-2 hover:opacity-80 transition-opacity cursor-pointer"
+          title={`Go to ${linkedClinic.name}`}
+        >
           <span>🏥</span>
           <span>{linkedClinic.name}</span>
-        </p>
+          <span className="opacity-60">↗</span>
+        </button>
       )}
 
       {!linkedClinic && contact.clinic && (
@@ -177,6 +192,8 @@ export default function ContactsPage() {
   const [scanning, setScanning] = useState(false)
   const [showDuplicates, setShowDuplicates] = useState(false)
   const [dupError, setDupError] = useState<string | null>(null)
+  const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const { contacts, loading, error, createContact, updateContact, deleteContact, findDuplicateContacts, mergeContacts } =
     useContacts(roleFilter === 'all' ? undefined : roleFilter)
@@ -214,6 +231,16 @@ export default function ContactsPage() {
   async function handleDelete(id: string) {
     if (!confirm('Delete this contact?')) return
     await deleteContact(id)
+  }
+
+  function scrollToContact(id: string) {
+    setRoleFilter('all')
+    setSearch('')
+    setHighlightedId(id)
+    setTimeout(() => {
+      cardRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => setHighlightedId(null), 1500)
+    }, 50)
   }
 
   async function handleFindDuplicates() {
@@ -357,6 +384,12 @@ export default function ContactsPage() {
                 allContacts={contacts}
                 onEdit={openEdit}
                 onDelete={(id) => void handleDelete(id)}
+                onScrollTo={scrollToContact}
+                highlighted={highlightedId === c.id}
+                cardRef={(el) => {
+                  if (el) cardRefs.current.set(c.id, el)
+                  else cardRefs.current.delete(c.id)
+                }}
               />
             ))}
           </div>

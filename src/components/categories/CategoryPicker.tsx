@@ -71,7 +71,8 @@ export function CategoryPicker({
     return (
       <div
         key={category.id}
-        className={`${indent} flex items-center gap-2 py-2 px-3 rounded-sm cursor-pointer transition-colors hover:bg-slate-100 dark:hover:bg-slate-800`}
+        className={`${indent} flex items-center gap-2 py-2 px-3 rounded-sm cursor-pointer transition-colors hover:bg-[var(--color-surface-sunken)]`}
+        style={isSelected ? { backgroundColor: `${category.colorHex}18` } : undefined}
         onClick={() => toggleCategory(category.id)}
         onKeyDown={e => handleKeyDown(e, category.id)}
         role="checkbox"
@@ -84,11 +85,7 @@ export function CategoryPicker({
           checked={isSelected}
           onChange={() => {}}
           className="w-4 h-4 rounded"
-          style={{
-            backgroundColor: isSelected ? category.colorHex : 'var(--color-surface)',
-            borderColor: category.colorHex,
-            borderWidth: '1px',
-          }}
+          style={{ accentColor: category.colorHex }}
           aria-hidden="true"
         />
         <span className="flex-1 text-sm" style={{ color: 'var(--color-text)' }}>
@@ -100,10 +97,11 @@ export function CategoryPicker({
           </span>
         ) : (
           <button
-            className="text-xs hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            type="button"
+            className="text-xs transition-colors hover:text-[var(--color-danger)]"
             onClick={e => handleDeleteCategory(e, category.id)}
             aria-label={`delete category ${category.name}`}
-            style={{ color: 'var(--color-text)' }}
+            style={{ color: 'var(--color-text-muted)' }}
           >
             ×
           </button>
@@ -122,20 +120,22 @@ export function CategoryPicker({
               key={item.id}
               className="flex items-center gap-2 px-3 py-1 rounded-full text-sm"
               style={{
-                backgroundColor: item.colorHex + '20',
-                borderLeft: `3px solid ${item.colorHex}`,
+                backgroundColor: `${item.colorHex}22`,
+                border: `1px solid ${item.colorHex}`,
                 color: 'var(--color-text)',
               }}
             >
               <span
-                className="w-2 h-2 rounded-full"
+                className="w-2 h-2 rounded-full shrink-0"
                 style={{ backgroundColor: item.colorHex }}
               />
               {item.name}
               <button
+                type="button"
                 className="ml-1 font-bold hover:opacity-70 transition-opacity"
                 onClick={() => toggleCategory(item.id)}
                 aria-label={`remove ${item.name}`}
+                style={{ color: 'inherit' }}
               >
                 ×
               </button>
