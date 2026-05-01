@@ -236,7 +236,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
         invoke<Document>('documents_update', { id: uploadedDoc.id, category, notes: notes.trim() || null, activityDate: activityDate ?? null }),
         invoke('documents_tags_set', { id: uploadedDoc.id, tags: finalTags }),
         ...selectedCategoryIds.map((categoryId) =>
-          invoke('categories_assign_document', { document_id: uploadedDoc.id, category_id: categoryId })
+          invoke('categories_assign_document', { documentId: uploadedDoc.id, categoryId })
         ),
       ])
 
@@ -475,7 +475,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                           setPhase({ kind: 'duplicate', newId: newContact.id, match: topDupe })
                         } else {
                           if (uploadedDoc) {
-                            await invoke('documents_link_contact', { document_id: uploadedDoc.id, contact_id: newContact.id })
+                            await invoke('documents_link_contact', { documentId: uploadedDoc.id, contactId: newContact.id })
                           }
                           setPhase({ kind: 'saved', contactId: newContact.id })
                           void autoSaveClinic(newContact.id)
@@ -487,9 +487,9 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
                     async function handleMerge(newId: string, existingId: string) {
                       try {
-                        await invoke('merge_contacts', { user_id: '', primary_id: existingId, duplicate_ids: [newId] })
+                        await invoke('merge_contacts', { userId: '', primaryId: existingId, duplicateIds: [newId] })
                         if (uploadedDoc) {
-                          await invoke('documents_link_contact', { document_id: uploadedDoc.id, contact_id: existingId })
+                          await invoke('documents_link_contact', { documentId: uploadedDoc.id, contactId: existingId })
                         }
                       } catch { /* non-fatal */ }
                       setPhase({ kind: 'saved', contactId: existingId })
@@ -605,7 +605,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                         ) as { kind: 'saved'; contactId: string } | undefined
                         if (savedContactId) {
                           try {
-                            await invoke('clinics_link_contact', { clinic_id: result.id, contact_id: savedContactId.contactId })
+                            await invoke('clinics_link_contact', { clinicId: result.id, contactId: savedContactId.contactId })
                           } catch { /* link failure is non-fatal */ }
                         }
                         setClinicPhase({ kind: 'saved' })
