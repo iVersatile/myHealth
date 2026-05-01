@@ -381,6 +381,69 @@ pub fn appointments_delete(id: String, state: State<'_, AppState>) -> Result<(),
 }
 
 #[tauri::command]
+pub fn appointment_link_contact(
+    appointment_id: String,
+    contact_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    conn.execute(
+        "INSERT OR IGNORE INTO appointment_contacts (appointment_id, contact_id) VALUES (?1, ?2)",
+        rusqlite::params![appointment_id, contact_id],
+    )?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn appointment_unlink_contact(
+    appointment_id: String,
+    contact_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    conn.execute(
+        "DELETE FROM appointment_contacts WHERE appointment_id = ?1 AND contact_id = ?2",
+        rusqlite::params![appointment_id, contact_id],
+    )?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn contacts_for_appointment(
+    appointment_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT contact_id FROM appointment_contacts WHERE appointment_id = ? ORDER BY contact_id",
+    )?;
+
+    let ids = stmt
+        .query_map([&appointment_id], |row| row.get::<_, String>(0))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(ids)
+}
+
+#[tauri::command]
 pub fn appointments_link_document(
     appointment_id: String,
     document_id: String,
@@ -442,10 +505,42 @@ mod tests {
                 appointment_id TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
                 document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
                 PRIMARY KEY (appointment_id, document_id)
+            );
+            CREATE TABLE contacts (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'doctor',
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
+            );
+            CREATE TABLE appointment_contacts (
+                appointment_id TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+                contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+                PRIMARY KEY (appointment_id, contact_id)
             );",
         )
         .unwrap();
         conn
+    }
+
+    fn insert_contact(conn: &Connection, id: &str, name: &str) {
+        conn.execute(
+            "INSERT INTO contacts (id,name,created_at,updated_at)
+             VALUES (?1,?2,'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z')",
+            rusqlite::params![id, name],
+        )
+        .unwrap();
+    }
+
+    fn fetch_contact_ids(conn: &Connection, appt_id: &str) -> Vec<String> {
+        conn.prepare(
+            "SELECT contact_id FROM appointment_contacts WHERE appointment_id = ? ORDER BY contact_id",
+        )
+        .unwrap()
+        .query_map([appt_id], |row| row.get::<_, String>(0))
+        .unwrap()
+        .filter_map(|r| r.ok())
+        .collect()
     }
 
     fn insert_appt(conn: &Connection, id: &str, title: &str, date: &str, status: &str) {
@@ -599,5 +694,65 @@ mod tests {
         .unwrap();
         let ids = fetch_document_ids(&conn, "a1");
         assert_eq!(ids.len(), 1);
+    }
+
+    #[test]
+    fn link_contact_inserts_row() {
+        let conn = test_conn();
+        insert_appt(&conn, "a1", "X", "2026-05-01T10:00:00Z", "scheduled");
+        insert_contact(&conn, "c1", "Dr. Smith");
+        conn.execute(
+            "INSERT OR IGNORE INTO appointment_contacts VALUES ('a1','c1')",
+            [],
+        )
+        .unwrap();
+        let ids = fetch_contact_ids(&conn, "a1");
+        assert_eq!(ids, vec!["c1"]);
+    }
+
+    #[test]
+    fn link_contact_is_idempotent() {
+        let conn = test_conn();
+        insert_appt(&conn, "a1", "X", "2026-05-01T10:00:00Z", "scheduled");
+        insert_contact(&conn, "c1", "Dr. Smith");
+        conn.execute(
+            "INSERT OR IGNORE INTO appointment_contacts VALUES ('a1','c1')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO appointment_contacts VALUES ('a1','c1')",
+            [],
+        )
+        .unwrap();
+        let ids = fetch_contact_ids(&conn, "a1");
+        assert_eq!(ids.len(), 1);
+    }
+
+    #[test]
+    fn unlink_contact_removes_row() {
+        let conn = test_conn();
+        insert_appt(&conn, "a1", "X", "2026-05-01T10:00:00Z", "scheduled");
+        insert_contact(&conn, "c1", "Dr. Smith");
+        conn.execute(
+            "INSERT OR IGNORE INTO appointment_contacts VALUES ('a1','c1')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "DELETE FROM appointment_contacts WHERE appointment_id='a1' AND contact_id='c1'",
+            [],
+        )
+        .unwrap();
+        let ids = fetch_contact_ids(&conn, "a1");
+        assert!(ids.is_empty());
+    }
+
+    #[test]
+    fn contacts_for_appointment_returns_empty_when_none() {
+        let conn = test_conn();
+        insert_appt(&conn, "a1", "X", "2026-05-01T10:00:00Z", "scheduled");
+        let ids = fetch_contact_ids(&conn, "a1");
+        assert!(ids.is_empty());
     }
 }
