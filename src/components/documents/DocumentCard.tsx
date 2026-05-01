@@ -85,13 +85,7 @@ export function DocumentCard({ document: doc, onDelete }: DocumentCardProps) {
           href={`/documents/view?id=${doc.id}`}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
         >
-          View
-        </Link>
-        <Link
-          href={`/documents/view?id=${doc.id}&edit=1`}
-          className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
-        >
-          Edit
+          View / Edit
         </Link>
         <button
           type="button"

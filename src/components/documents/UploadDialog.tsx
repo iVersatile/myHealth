@@ -158,10 +158,21 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
             const lower = tag.toLowerCase()
             if (!extractedTags.some((t) => t.toLowerCase() === lower)) extractedTags.push(tag)
           }
-        } catch {
+        } catch (extractionErr: unknown) {
           unlistenRef.current?.()
           unlistenRef.current = null
           setOcrProgress(null)
+          const msg =
+            extractionErr instanceof Error
+              ? extractionErr.message
+              : typeof extractionErr === 'string'
+                ? extractionErr
+                : (extractionErr as Record<string, unknown>)?.message
+                    ? String((extractionErr as Record<string, unknown>).message)
+                    : JSON.stringify(extractionErr)
+          setAnalyzeError(msg)
+          setStep('pick')
+          return
         }
       }
 
@@ -202,8 +213,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
   async function handleAcceptCategorySuggestion(suggestion: string) {
     try {
-      const created = await invoke<{ id: string }>('categories_create_if_not_exists', { name: suggestion })
-      setSelectedCategoryIds((prev) => prev.includes(created.id) ? prev : [...prev, created.id])
+      const id = await invoke<string>('categories_create_if_not_exists', { name: suggestion })
+      setSelectedCategoryIds((prev) => prev.includes(id) ? prev : [...prev, id])
     } catch { /* non-fatal */ }
     setCategorySuggestionDismissed(true)
   }

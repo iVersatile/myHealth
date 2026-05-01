@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DoctorSuggestionBanner } from './DoctorSuggestionBanner'
+import type { ContactSuggestion } from './DoctorSuggestionBanner'
+
+function makeSuggestion(name: string): ContactSuggestion {
+  return { name, title: null, specialty: null, clinic: null, address: null, phone: null, email: null }
+}
 
 const mockInvoke = vi.fn()
 vi.mock('@tauri-apps/api/core', () => ({ invoke: (...args: unknown[]) => mockInvoke(...args) }))
@@ -14,7 +19,7 @@ describe('DoctorSuggestionBanner', () => {
   it('renders nothing while checking for existing contacts', () => {
     mockInvoke.mockReturnValue(new Promise(() => {})) // never resolves
     const { container } = render(
-      <DoctorSuggestionBanner candidates={['Dr. Jane Smith']} onAccept={vi.fn()} onDismiss={vi.fn()} />,
+      <DoctorSuggestionBanner candidates={[makeSuggestion('Dr. Jane Smith')]} onAccept={vi.fn()} onDismiss={vi.fn()} />,
     )
     expect(container.firstChild).toBeNull()
   })
@@ -22,7 +27,7 @@ describe('DoctorSuggestionBanner', () => {
   it('renders nothing when all candidates already exist as contacts', async () => {
     mockInvoke.mockResolvedValue({ id: 'c1', name: 'Dr. Jane Smith' })
     const { container } = render(
-      <DoctorSuggestionBanner candidates={['Dr. Jane Smith']} onAccept={vi.fn()} onDismiss={vi.fn()} />,
+      <DoctorSuggestionBanner candidates={[makeSuggestion('Dr. Jane Smith')]} onAccept={vi.fn()} onDismiss={vi.fn()} />,
     )
     await waitFor(() => expect(mockInvoke).toHaveBeenCalled())
     expect(container.firstChild).toBeNull()
@@ -39,7 +44,7 @@ describe('DoctorSuggestionBanner', () => {
   it('shows banner with doctor name when no existing contact found', async () => {
     mockInvoke.mockResolvedValue(null)
     render(
-      <DoctorSuggestionBanner candidates={['Dr. John Doe']} onAccept={vi.fn()} onDismiss={vi.fn()} />,
+      <DoctorSuggestionBanner candidates={[makeSuggestion('Dr. John Doe')]} onAccept={vi.fn()} onDismiss={vi.fn()} />,
     )
     await waitFor(() => expect(screen.getByText(/Dr\. John Doe/)).toBeTruthy())
     expect(screen.getByRole('button', { name: /create/i })).toBeTruthy()
@@ -50,7 +55,7 @@ describe('DoctorSuggestionBanner', () => {
     mockInvoke.mockResolvedValue(null)
     render(
       <DoctorSuggestionBanner
-        candidates={['Dr. Alice Brown', 'Dr. Bob Green']}
+        candidates={[makeSuggestion('Dr. Alice Brown'), makeSuggestion('Dr. Bob Green')]}
         onAccept={vi.fn()}
         onDismiss={vi.fn()}
       />,
@@ -66,7 +71,7 @@ describe('DoctorSuggestionBanner', () => {
       .mockResolvedValueOnce(null)
     render(
       <DoctorSuggestionBanner
-        candidates={['Dr. Alice Brown', 'Dr. Bob Green']}
+        candidates={[makeSuggestion('Dr. Alice Brown'), makeSuggestion('Dr. Bob Green')]}
         onAccept={vi.fn()}
         onDismiss={vi.fn()}
       />,
@@ -75,22 +80,23 @@ describe('DoctorSuggestionBanner', () => {
     expect(screen.queryByText(/Dr\. Bob Green/)).toBeNull()
   })
 
-  it('calls onAccept with the candidate name when Create clicked', async () => {
+  it('calls onAccept with the full suggestion when Create clicked', async () => {
     mockInvoke.mockResolvedValue(null)
     const onAccept = vi.fn()
+    const suggestion = makeSuggestion('Dr. John Doe')
     render(
-      <DoctorSuggestionBanner candidates={['Dr. John Doe']} onAccept={onAccept} onDismiss={vi.fn()} />,
+      <DoctorSuggestionBanner candidates={[suggestion]} onAccept={onAccept} onDismiss={vi.fn()} />,
     )
     await waitFor(() => screen.getByRole('button', { name: /create/i }))
     await userEvent.click(screen.getByRole('button', { name: /create/i }))
-    expect(onAccept).toHaveBeenCalledWith('Dr. John Doe')
+    expect(onAccept).toHaveBeenCalledWith(suggestion)
   })
 
   it('calls onDismiss when Dismiss clicked', async () => {
     mockInvoke.mockResolvedValue(null)
     const onDismiss = vi.fn()
     render(
-      <DoctorSuggestionBanner candidates={['Dr. John Doe']} onAccept={vi.fn()} onDismiss={onDismiss} />,
+      <DoctorSuggestionBanner candidates={[makeSuggestion('Dr. John Doe')]} onAccept={vi.fn()} onDismiss={onDismiss} />,
     )
     await waitFor(() => screen.getByRole('button', { name: /dismiss/i }))
     await userEvent.click(screen.getByRole('button', { name: /dismiss/i }))
@@ -103,7 +109,7 @@ describe('DoctorSuggestionBanner', () => {
       .mockResolvedValueOnce(null)                                    // unmatched
     render(
       <DoctorSuggestionBanner
-        candidates={['Dr. Alice Brown', 'Dr. Bob Green']}
+        candidates={[makeSuggestion('Dr. Alice Brown'), makeSuggestion('Dr. Bob Green')]}
         onAccept={vi.fn()}
         onDismiss={vi.fn()}
       />,

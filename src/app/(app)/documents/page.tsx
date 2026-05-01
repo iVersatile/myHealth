@@ -7,6 +7,7 @@ import { UploadDialog } from '../../../components/documents/UploadDialog'
 import { ExportDialog } from '../../../components/export/ExportDialog'
 import { SummaryExportDialog } from '../../../components/export/SummaryExportDialog'
 import { DoctorSuggestionBanner } from '../../../components/documents/DoctorSuggestionBanner'
+import type { ContactSuggestion } from '../../../components/documents/DoctorSuggestionBanner'
 import { LinkSuggestionBanner } from '../../../components/documents/LinkSuggestionBanner'
 import { ContactForm } from '../../../components/contacts/ContactForm'
 import { useDocumentsStore } from '../../../store/documentsStore'
@@ -19,8 +20,9 @@ export default function DocumentsPage() {
   const [exportOpen, setExportOpen] = useState(false)
   const [summaryExportOpen, setSummaryExportOpen] = useState(false)
   const [doctorCandidates, setDoctorCandidates] = useState<string[]>([])
+  const [extractedContactSuggestions, setExtractedContactSuggestions] = useState<ContactSuggestion[]>([])
   const [showContactForm, setShowContactForm] = useState(false)
-  const [pendingDoctorName, setPendingDoctorName] = useState<string | null>(null)
+  const [pendingContactSuggestion, setPendingContactSuggestion] = useState<ContactSuggestion | null>(null)
   const [linkSuggestion, setLinkSuggestion] = useState<{
     appointmentId: string
     appointmentTitle: string
@@ -34,11 +36,12 @@ export default function DocumentsPage() {
   async function handleUploaded(doc: Document) {
     setDocuments([doc, ...documents], total + 1)
     try {
-      const metadata = await invoke<{ doctor_candidates?: string[] }>(
+      const metadata = await invoke<{ doctor_candidates?: string[]; contact_suggestions?: ContactSuggestion[] }>(
         'documents_run_extraction',
         { id: doc.id },
       )
       setDoctorCandidates(metadata.doctor_candidates ?? [])
+      setExtractedContactSuggestions(metadata.contact_suggestions ?? [])
     } catch {
       // extraction is best-effort; ignore failures
     }
@@ -77,16 +80,17 @@ export default function DocumentsPage() {
     setLinkSuggestion(null)
   }
 
-  function handleBannerAccept(name: string) {
-    setPendingDoctorName(name)
+  function handleBannerAccept(suggestion: ContactSuggestion) {
+    setPendingContactSuggestion(suggestion)
     setDoctorCandidates([])
+    setExtractedContactSuggestions([])
     setShowContactForm(true)
   }
 
   async function handleContactSave(data: ContactCreateInput) {
     await createContact(data)
     setShowContactForm(false)
-    setPendingDoctorName(null)
+    setPendingContactSuggestion(null)
   }
 
   return (
@@ -120,12 +124,14 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {doctorCandidates.length > 0 && (
+      {(extractedContactSuggestions.length > 0 || doctorCandidates.length > 0) && (
         <div className="mb-4">
           <DoctorSuggestionBanner
-            candidates={doctorCandidates}
+            candidates={extractedContactSuggestions.length > 0
+              ? extractedContactSuggestions
+              : doctorCandidates.map(name => ({ name, title: null, specialty: null, clinic: null, address: null, phone: null, email: null }))}
             onAccept={handleBannerAccept}
-            onDismiss={() => setDoctorCandidates([])}
+            onDismiss={() => { setDoctorCandidates([]); setExtractedContactSuggestions([]) }}
           />
         </div>
       )}
@@ -157,11 +163,11 @@ export default function DocumentsPage() {
       )}
       {showContactForm && (
         <ContactForm
-          initial={pendingDoctorName ? { id: '', name: pendingDoctorName, role: 'gp', specialty: null, phone: null, email: null, clinic: null, address: null, notes: null, created_at: '', updated_at: '' } : null}
+          initial={pendingContactSuggestion ? { id: '', name: pendingContactSuggestion.name, role: 'gp', specialty: pendingContactSuggestion.specialty, phone: pendingContactSuggestion.phone, email: pendingContactSuggestion.email, clinic: pendingContactSuggestion.clinic, address: pendingContactSuggestion.address, notes: null, created_at: '', updated_at: '' } : null}
           onSave={(data) => handleContactSave(data as ContactCreateInput)}
           onCancel={() => {
             setShowContactForm(false)
-            setPendingDoctorName(null)
+            setPendingContactSuggestion(null)
           }}
         />
       )}

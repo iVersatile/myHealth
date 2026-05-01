@@ -33,8 +33,10 @@ fn dr_re() -> &'static Regex {
 
 fn phone_re() -> &'static Regex {
     PHONE_PATTERN.get_or_init(|| {
+        // Covers common UK formats including parenthesised area codes, freephone,
+        // non-geographic (03xx), mobiles and +44 international prefixes.
         Regex::new(
-            r"(?:\+44[\s\-]?20[\s\-]?\d{4}[\s\-]?\d{4}|\+44[\s\-]?\d{3,4}[\s\-]?\d{6}|07\d{3}[\s\-]?\d{6}|01\d{3}[\s\-]?\d{6}|02\d[\s\-]?\d{4}[\s\-]?\d{4})",
+            r"(?:\+44[\s\-]?(?:\(0\)[\s\-]?)?(?:20[\s\-]?\d{4}[\s\-]?\d{4}|\d{2,4}[\s\-]?\d{3,8})|\(?02\d\)?[\s\-]?\d{4}[\s\-]?\d{4}|\(?01[1-9]\d\)?[\s\-]?\d{3}[\s\-]?\d{4}|\(?01\d{3}\)?[\s\-]?\d{6}|07\d{3}[\s\-]?\d{6}|0(?:800|808|300|330|345|370|845|870)[\s\-]?\d{3}[\s\-]?\d{3,4})",
         )
         .expect("phone regex valid")
     })
@@ -57,7 +59,7 @@ fn email_re() -> &'static Regex {
 fn clinic_re() -> &'static Regex {
     CLINIC_PATTERN.get_or_init(|| {
         Regex::new(
-            r"(?m)^([A-Z][A-Za-z0-9&'\-]+(?: [A-Z][A-Za-z0-9&'\-]+)*)\s+(?:Medical(?:\s+Centre|\s+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:\s+Centre)?)",
+            r"(?m)^([A-Z][A-Za-z0-9'\-]+(?:(?: & | )[A-Z][A-Za-z0-9'\-]+)*)\s+(?:Medical(?:\s+Centre|\s+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:\s+Centre)?|Physiotherapy)",
         )
         .expect("clinic regex valid")
     })
@@ -167,9 +169,13 @@ fn specialty_near(text: &str, name_end: usize) -> Option<String> {
 
 /// Extracts contact suggestions from free text.
 ///
-/// Each detected doctor becomes one ContactSuggestion.  Shared fields
-/// (clinic, phone, email, address) are attached to the first suggestion only —
-/// we cannot reliably assign them per-doctor in multi-doctor documents.
+/// Each detected doctor/titleholder becomes one ContactSuggestion.  Shared
+/// fields (clinic, phone, email, address) are attached to the first suggestion
+/// only — we cannot reliably assign them per-doctor in multi-doctor documents.
+///
+/// If no named contact is found but at least one of phone/email is present, a
+/// fallback suggestion is returned using the clinic name (if detected) so the
+/// extracted contact details are not lost.
 pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
     let re = dr_re();
     let mut seen = std::collections::HashSet::new();
@@ -211,6 +217,25 @@ pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
             email: e,
             address: a,
         });
+    }
+
+    // If no named contact was found, fall back to a clinic-level suggestion so
+    // that extracted phone/email/address are still surfaced to the user.
+    if suggestions.is_empty() {
+        let has_contact = phone.is_some() || email.is_some();
+        if has_contact {
+            if let Some(clinic_name) = clinic.clone() {
+                suggestions.push(ContactSuggestion {
+                    name: clinic_name,
+                    title: None,
+                    specialty: None,
+                    clinic: None,
+                    phone,
+                    email,
+                    address,
+                });
+            }
+        }
     }
 
     suggestions
@@ -370,5 +395,27 @@ mod tests {
     fn returns_none_when_no_phone_in_text() {
         let text = "No contact details available in this document.";
         assert_eq!(first_phone(text), None);
+    }
+
+    #[test]
+    fn debug_sample_pdf_extraction() {
+        let path =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sample.pdf");
+        let text = crate::extraction::pdf::extract_pdf_text(&path).unwrap_or_default();
+        println!("PDF TEXT REPR:\n{text:?}");
+        let suggestions = extract_contact_suggestions(&text);
+        println!("CONTACTS:\n{suggestions:#?}");
+    }
+
+    #[test]
+    fn extracts_clinic_with_ampersand_separator() {
+        let text =
+            "Mr John A. Smith\nSpringfield Physiotherapy & Sports Medicine Clinic\n123 Main St";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].clinic.as_deref(),
+            Some("Springfield Physiotherapy & Sports Medicine Clinic")
+        );
     }
 }

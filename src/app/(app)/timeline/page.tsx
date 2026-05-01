@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { useDocuments } from '../../../hooks/useDocuments'
 import { useAppointments } from '../../../hooks/useAppointments'
@@ -139,7 +140,7 @@ function TimelineItem({
     : { backgroundColor: 'var(--color-tag-bg)', color: 'var(--color-tag-text)' }
 
   return (
-    <a href={event.href} data-testid="timeline-entry" className="flex gap-4 no-underline group">
+    <Link href={event.href} data-testid="timeline-entry" className="flex gap-4 no-underline group">
       <div className="flex flex-col items-center">
         <div
           className="w-2 h-2 rounded-full mt-1.5 shrink-0"
@@ -176,7 +177,7 @@ function TimelineItem({
           )}
         </div>
       </div>
-    </a>
+    </Link>
   )
 }
 

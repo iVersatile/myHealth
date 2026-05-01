@@ -793,7 +793,7 @@ mod tests {
         let now = Utc::now().to_rfc3339();
         conn.execute(
             "UPDATE documents \
-             SET extracted_text = ?1, extraction_status = 'EXTRACTED', updated_at = ?2 \
+             SET extracted_text = ?1, extraction_status = 'done', updated_at = ?2 \
              WHERE id = 'doc-cache-1'",
             rusqlite::params!["blood glucose 5.4", now],
         )
@@ -808,7 +808,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(text, "blood glucose 5.4");
-        assert_eq!(status, "EXTRACTED");
+        assert_eq!(status, "done");
     }
 
     #[test]
@@ -818,7 +818,7 @@ mod tests {
         let now = Utc::now().to_rfc3339();
         conn.execute(
             "UPDATE documents \
-             SET extracted_text = ?1, extraction_status = 'EXTRACTED', updated_at = ?2 \
+             SET extracted_text = ?1, extraction_status = 'done', updated_at = ?2 \
              WHERE id = 'doc-cache-2'",
             rusqlite::params!["hemoglobin A1c 5.7%", now],
         )
@@ -828,7 +828,7 @@ mod tests {
             .query_row(
                 "SELECT extracted_text FROM documents \
                  WHERE id = ?1 AND is_deleted = 0 \
-                   AND extraction_status = 'EXTRACTED' \
+                   AND extraction_status = 'done' \
                    AND extracted_text IS NOT NULL",
                 rusqlite::params!["doc-cache-2"],
                 |r| r.get(0),
@@ -849,7 +849,7 @@ mod tests {
             .query_row(
                 "SELECT extracted_text FROM documents \
                  WHERE id = ?1 AND is_deleted = 0 \
-                   AND extraction_status = 'EXTRACTED' \
+                   AND extraction_status = 'done' \
                    AND extracted_text IS NOT NULL",
                 rusqlite::params!["doc-cache-3"],
                 |r| r.get(0),
@@ -1080,7 +1080,7 @@ pub async fn documents_run_extraction(
             .query_row(
                 "SELECT extracted_text, activity_date FROM documents \
                  WHERE id = ?1 AND is_deleted = 0 \
-                   AND extraction_status = 'EXTRACTED' \
+                   AND extraction_status = 'done' \
                    AND extracted_text IS NOT NULL",
                 rusqlite::params![id],
                 |row| Ok((row.get(0)?, row.get(1)?)),
@@ -1232,7 +1232,7 @@ pub async fn documents_run_extraction(
             "UPDATE documents \
              SET extracted_metadata = ?1, \
                  extracted_text = ?2, \
-                 extraction_status = 'EXTRACTED', \
+                 extraction_status = 'done', \
                  activity_date = ?3, \
                  updated_at = ?4 \
              WHERE id = ?5",
