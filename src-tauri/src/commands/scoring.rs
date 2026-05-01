@@ -159,6 +159,7 @@ mod tests {
             created_at: "2024-01-01T00:00:00Z".to_string(),
             updated_at: "2024-01-01T00:00:00Z".to_string(),
             document_ids: vec![],
+            contact_ids: vec![],
         }
     }
 
