@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 11 — V3 Integration Test Gap Closure
-All tasks complete ✅ — 375 tests passing
+Phase 12 — Upload Gap Closure (v1.5)
+Task ▶ 12.1 — Per-page OCR progress + timeout
 ```
 
 ---
@@ -669,6 +669,106 @@ All tasks complete ✅ — 375 tests passing
    - Test with no specialty tag present: falls back to `"DOCUMENT"` → `"2023-03-09 DOCUMENT"`
    - (Note: 3-level `resolve_activity_date` fallback already covered in `documents.rs` — do not duplicate)
    - Done when: 2 tests green
+
+---
+
+## Phase 12 — Upload Gap Closure (v1.5)
+
+> Goal: Close the 4 open gaps from `docs/UPLOAD_ANALYSIS_GAPS.md` and the 2 open PRD_V3 phone-regex requirements. Each task ships implementation + unit tests + Playwright e2e coverage.
+> Order: Gap 3 first (user-visible high-priority), then Gap 1, Gap 2, Gap 4.
+
+### Sprint 22: Per-Page OCR (High — Gap 3 / F2.3 + F2.4)
+
+▶ [ ] **12.1 — Split scanned PDF into per-page images via `pdftoppm`**
+   - File: `src-tauri/src/extraction/ocr.rs`
+   - Add `split_pdf_pages(path: &Path, out_dir: &Path) -> Result<Vec<PathBuf>>` that shells out to `pdftoppm -r 150 -png` and returns sorted PNG paths.
+   - Unit test: supply `tests/fixtures/sample.pdf`; assert at least 1 PNG produced in temp dir.
+   - Done when: unit test passes; `pdftoppm` listed as bundle prerequisite in `docs/ARCHITECTURE_V2.md`.
+
+[ ] **12.2 — Per-page OCR loop with individual 10 s timeout**
+   - File: `src-tauri/src/extraction/ocr.rs`
+   - Refactor `extract_image_text_async` → `extract_pages_async(pages: &[PathBuf], app: &AppHandle, total: usize) -> String`.
+   - For each page: `tokio::time::timeout(PER_CALL_TIMEOUT, tesseract(page))` → on timeout append `"[OCR_TIMEOUT]"` and continue.
+   - Emit `ocr_progress(page_i, total)` after each page.
+   - Unit tests: (a) single-page returns text; (b) simulated timeout page emits marker and loop continues.
+   - Done when: 2 unit tests pass; `emit_ocr_progress` no longer hardcodes `page=1, total=1`.
+
+[ ] **12.3 — Wire per-page loop into extraction pipeline**
+   - File: `src-tauri/src/extraction/mod.rs`
+   - Replace single `extract_image_text_async` call with `extract_pages_async` using page list from `split_pdf_pages`.
+   - Integration test: upload a 2-page scanned PDF fixture → assert extracted text contains both pages' content (no `[OCR_TIMEOUT]` for normal PDFs).
+   - Done when: integration test passes; existing extraction tests still pass (375+).
+
+[ ] **12.4 — E2E: progress bar updates at each OCR page**
+   - File: `e2e/upload-ocr-progress.spec.ts` (new)
+   - Use Playwright to upload the 2-page scanned PDF fixture.
+   - Assert the progress bar label shows `"1 / 2"` then `"2 / 2"` before disappearing.
+   - Assert extracted text is non-empty in the document detail view.
+   - Done when: Playwright test passes on local dev server (`pnpm tauri dev`).
+
+---
+
+### Sprint 23: Test-Type Keyword Normalisation (Medium — Gap 1 / F1.3)
+
+[ ] **12.5 — Add `TEST_TYPE_MAP` to filename parser**
+   - File: `src-tauri/src/parsing/filename.rs`
+   - Add `TEST_TYPE_MAP: &[(&str, &str)]` covering ≥ 20 canonical test types (Blood Work, CBC, Lipid Panel, MRI, CT Scan, X-Ray, Ultrasound, ECG, Echocardiogram, DEXA Scan, Mammogram, Colonoscopy, Endoscopy, Biopsy, Urinalysis, Stool Test, PET Scan, Spirometry, Audiogram, Vision Test).
+   - After token loop: scan each token case-insensitively; replace first matching token with canonical label.
+   - Unit tests:
+     - `parse_filename("BloodTest_2024_NHS")` → tags contain `"Blood Work"`, not `"bloodtest"`.
+     - `parse_filename("MRI_Spine_2023-06-01")` → tags contain `"MRI"`.
+     - `parse_filename("Appointment_2024")` → no spurious test-type tag added.
+   - Done when: 3 unit tests pass; no existing filename tests regress.
+
+[ ] **12.6 — E2E: test-type tag shown in upload dialog**
+   - File: `e2e/upload-filename-tags.spec.ts` (new)
+   - Upload a file named `BloodTest_2024-01-15.pdf`.
+   - Assert the upload dialog tag chip reads `"Blood Work"` (not `"bloodtest"`).
+   - Done when: Playwright test passes.
+
+---
+
+### Sprint 24: Clinic Name Extraction from Filename (Medium — Gap 2 / F1.4)
+
+[ ] **12.7 — Add `INSTITUTION_SUFFIXES` detector to filename parser**
+   - File: `src-tauri/src/parsing/filename.rs`
+   - Add `INSTITUTION_SUFFIXES: &[&str]` = `["hospital", "clinic", "surgery", "medical", "centre", "center", "nhs", "trust", "infirmary", "practice", "health"]`.
+   - After date-removal pass: if a token (or adjacent token pair) contains an institution suffix, emit `clinic:<TitleCasedName>` tag and remove matched tokens from the generic pool.
+   - Unit tests:
+     - `parse_filename("StMarysHospital_2024_BloodTest")` → tags contain `"clinic:St Marys Hospital"`.
+     - `parse_filename("CityClinic_Invoice_2023-03-09")` → tags contain `"clinic:City Clinic"`.
+     - `parse_filename("Report_2024")` → no spurious `clinic:` tag emitted.
+   - Done when: 3 unit tests pass; no existing filename tests regress.
+
+[ ] **12.8 — E2E: clinic tag shown in upload dialog**
+   - File: `e2e/upload-filename-tags.spec.ts` (extend existing spec)
+   - Upload a file named `StMarysHospital_2024-06-15.pdf`.
+   - Assert upload dialog tag chip reads `"clinic:St Marys Hospital"`.
+   - Done when: Playwright test passes.
+
+---
+
+### Sprint 25: International Phone Regex (Low — Gap 4 / V3-F2.1 + V3-F2.2)
+
+[ ] **12.9 — Extend phone regex to UK mobile, landline, and international E.164**
+   - File: `src-tauri/src/extraction/contact.rs`
+   - Replace single UK regex with a two-tier match function `extract_phone(text: &str) -> Option<String>`:
+     1. **UK landline/mobile** (existing patterns, kept): `(?:\+44\s?|0)[12378]\d[\d\s\-]{7,11}\d`
+     2. **Generic E.164 fallback**: `\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\d\s\-]{6,14}\d`
+   - Return first UK match if present; else first E.164 match.
+   - Unit tests (all in `extraction/contact.rs`):
+     - UK mobile `07544 370440` → returned.
+     - UK landline `020 7946 0958` → returned.
+     - US number `+1 (555) 123-4567` → returned.
+     - EU number `+33 1 23 45 67 89` → returned.
+     - No phone in text → `None`.
+   - Done when: 5 unit tests pass; PRD_V3 V3-F2.1 and V3-F2.2 marked ✅.
+
+[ ] **12.10 — E2E: international phone appears in contact suggestion card**
+   - File: `e2e/upload-contact-suggestion.spec.ts` (new)
+   - Upload a PDF fixture containing `+1 (555) 123-4567` in its body text.
+   - Assert contact suggestion card in upload dialog shows `+1 (555) 123-4567`.
+   - Done when: Playwright test passes.
 
 ---
 
