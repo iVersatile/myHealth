@@ -89,6 +89,24 @@ export default function DocumentsPage() {
 
   async function handleContactSave(data: ContactCreateInput) {
     await createContact(data)
+
+    // Auto-create the clinic as a separate contact when the accepted suggestion
+    // carries a clinic name — the invoice's phone/email/address belong to the
+    // clinic, so we copy them across.
+    if (pendingContactSuggestion?.clinic) {
+      const s = pendingContactSuggestion
+      await createContact({
+        name: s.clinic!,
+        role: 'clinic',
+        specialty: null,
+        phone: s.phone ?? null,
+        email: s.email ?? null,
+        clinic: null,
+        address: s.address ?? null,
+        notes: null,
+      })
+    }
+
     setShowContactForm(false)
     setPendingContactSuggestion(null)
   }
