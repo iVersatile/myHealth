@@ -8,7 +8,7 @@
 
 ```
 Phase 10 — v1.4 Upload Intelligence (PRD_V3)
-Current task: 10.12 — v1.4 smoke test
+Current task: 10.13 — Bump version & tag v1.4.0
 ```
 
 ---
@@ -614,7 +614,7 @@ Current task: 10.12 — v1.4 smoke test
    - Add Rust unit tests for all new/modified extraction functions: `categories_create_if_not_exists`, `clinics_create_if_not_exists`, phone regex patterns, activity date priority resolution, tag de-duplication
    - Done when: ≥ 80% coverage on all Phase 10 new code; `cargo test` + `npx tsc --noEmit` both pass; all V3 TC IDs manually verified
 
-▶ **10.12 — v1.4 smoke test**
+[x] **10.12 — v1.4 smoke test**
    - Manual walkthrough using `sample-Upload (09Mar2023-16_31_26).pdf` fixture:
      - Upload → verify tags: `invoice`, `John Green`, `PHYSIOTHERAPY`, `2023-03-09`
      - Verify category suggestion banner shows `Physiotherapy` → Accept → category assigned
@@ -623,7 +623,7 @@ Current task: 10.12 — v1.4 smoke test
      - Verify timeline entry: date `2023-03-09`, description `"2023-03-09 PHYSIOTHERAPY with Mr John Green"`
    - Verify no regressions in v1.1 / v1.2 / v1.3 flows
 
-[ ] **10.13 — Bump version & tag v1.4.0**
+▶ **10.13 — Bump version & tag v1.4.0**
    - Update `package.json` version to `1.4.0`
    - Update `src-tauri/tauri.conf.json` version to `1.4.0`
    - **Requires explicit user approval before running `git tag`**
