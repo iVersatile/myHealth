@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.9 — Extend phone regex to UK mobile, landline, and international E.164
+Task ▶ 12.10 — E2E: international phone appears in contact suggestion card
 ```
 
 ---
@@ -750,7 +750,7 @@ Task ▶ 12.9 — Extend phone regex to UK mobile, landline, and international E
 
 ### Sprint 25: International Phone Regex (Low — Gap 4 / V3-F2.1 + V3-F2.2)
 
-▶ [ ] **12.9 — Extend phone regex to UK mobile, landline, and international E.164**
+[x] **12.9 — Extend phone regex to UK mobile, landline, and international E.164**
    - File: `src-tauri/src/extraction/contact.rs`
    - Replace single UK regex with a two-tier match function `extract_phone(text: &str) -> Option<String>`:
      1. **UK landline/mobile** (existing patterns, kept): `(?:\+44\s?|0)[12378]\d[\d\s\-]{7,11}\d`
@@ -764,7 +764,7 @@ Task ▶ 12.9 — Extend phone regex to UK mobile, landline, and international E
      - No phone in text → `None`.
    - Done when: 5 unit tests pass; PRD_V3 V3-F2.1 and V3-F2.2 marked ✅.
 
-[ ] **12.10 — E2E: international phone appears in contact suggestion card**
+▶ [ ] **12.10 — E2E: international phone appears in contact suggestion card**
    - File: `e2e/upload-contact-suggestion.spec.ts` (new)
    - Upload a PDF fixture containing `+1 (555) 123-4567` in its body text.
    - Assert contact suggestion card in upload dialog shows `+1 (555) 123-4567`.

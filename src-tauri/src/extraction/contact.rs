@@ -351,4 +351,24 @@ mod tests {
         assert_eq!(suggestions[0].phone.as_deref(), Some("07544 370440"));
         assert_eq!(suggestions[0].email.as_deref(), Some("jg@example.com"));
     }
+
+    #[test]
+    fn extracts_uk_london_number() {
+        let text = "Appointments: 020 7946 0958";
+        assert_eq!(first_phone(text), Some("020 7946 0958".to_string()));
+    }
+
+    #[test]
+    fn extracts_eu_phone_number() {
+        let text = "Contact: +33 1 23 45 67 89 for details.";
+        let phone = first_phone(text);
+        assert!(phone.is_some(), "expected EU phone, got None");
+        assert!(phone.unwrap().starts_with("+33"));
+    }
+
+    #[test]
+    fn returns_none_when_no_phone_in_text() {
+        let text = "No contact details available in this document.";
+        assert_eq!(first_phone(text), None);
+    }
 }
