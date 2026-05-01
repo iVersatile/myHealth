@@ -207,6 +207,21 @@ mod tests {
     }
 
     #[test]
+    fn split_pdf_produces_pages_from_fixture() {
+        if !pdftoppm_available() {
+            return;
+        }
+        let fixture =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sample.pdf");
+        let temp = std::path::PathBuf::from("/tmp/myhealth_split_fixture_test");
+        let _ = std::fs::create_dir_all(&temp);
+        let result = split_pdf_to_pages(&fixture, &temp);
+        let _ = std::fs::remove_dir_all(&temp);
+        assert!(result.is_ok(), "split_pdf_to_pages failed: {:?}", result);
+        assert!(!result.unwrap().is_empty(), "expected at least 1 PNG page");
+    }
+
+    #[test]
     fn returns_error_when_tesseract_not_found() {
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result: Result<String, String> = rt.block_on(async {

@@ -18,6 +18,7 @@
 | **Async Runtime** | Tokio | 1.35+ | Multi-threaded async executor for background tasks |
 | **PDF Extraction** | pdf-extract | Latest | PDF text and metadata extraction |
 | **OCR Engine** | Tesseract / leptess | Latest | Optical character recognition (async via subprocess) |
+| **PDF Renderer** | Poppler (`pdftoppm`) | 21.0+ | Converts PDF pages to PNG for per-page OCR; install: `brew install poppler` |
 | **String Similarity** | strsim | Latest | Levenshtein distance for duplicate detection |
 | **Calendar Integration** | EventKit (via FFI) | N/A | macOS Calendar sync (native Cocoa framework) |
 | **HTTP Client** | reqwest | 0.11+ | Async HTTP client (for future cloud APIs) |
