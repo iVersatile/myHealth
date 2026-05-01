@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.1 — Per-page OCR progress + timeout
+Task ▶ 12.2 — Per-page OCR loop with individual 10 s timeout
 ```
 
 ---
@@ -679,13 +679,13 @@ Task ▶ 12.1 — Per-page OCR progress + timeout
 
 ### Sprint 22: Per-Page OCR (High — Gap 3 / F2.3 + F2.4)
 
-▶ [ ] **12.1 — Split scanned PDF into per-page images via `pdftoppm`**
+[x] **12.1 — Split scanned PDF into per-page images via `pdftoppm`**
    - File: `src-tauri/src/extraction/ocr.rs`
    - Add `split_pdf_pages(path: &Path, out_dir: &Path) -> Result<Vec<PathBuf>>` that shells out to `pdftoppm -r 150 -png` and returns sorted PNG paths.
    - Unit test: supply `tests/fixtures/sample.pdf`; assert at least 1 PNG produced in temp dir.
    - Done when: unit test passes; `pdftoppm` listed as bundle prerequisite in `docs/ARCHITECTURE_V2.md`.
 
-[ ] **12.2 — Per-page OCR loop with individual 10 s timeout**
+▶ [ ] **12.2 — Per-page OCR loop with individual 10 s timeout**
    - File: `src-tauri/src/extraction/ocr.rs`
    - Refactor `extract_image_text_async` → `extract_pages_async(pages: &[PathBuf], app: &AppHandle, total: usize) -> String`.
    - For each page: `tokio::time::timeout(PER_CALL_TIMEOUT, tesseract(page))` → on timeout append `"[OCR_TIMEOUT]"` and continue.
