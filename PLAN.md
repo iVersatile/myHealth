@@ -8,7 +8,7 @@
 
 ```
 Phase 12 — Upload Gap Closure (v1.5)
-Task ▶ 12.2 — Per-page OCR loop with individual 10 s timeout
+Task ▶ 12.3 — Wire per-page loop into extraction pipeline
 ```
 
 ---
@@ -685,7 +685,7 @@ Task ▶ 12.2 — Per-page OCR loop with individual 10 s timeout
    - Unit test: supply `tests/fixtures/sample.pdf`; assert at least 1 PNG produced in temp dir.
    - Done when: unit test passes; `pdftoppm` listed as bundle prerequisite in `docs/ARCHITECTURE_V2.md`.
 
-▶ [ ] **12.2 — Per-page OCR loop with individual 10 s timeout**
+[x] **12.2 — Per-page OCR loop with individual 10 s timeout**
    - File: `src-tauri/src/extraction/ocr.rs`
    - Refactor `extract_image_text_async` → `extract_pages_async(pages: &[PathBuf], app: &AppHandle, total: usize) -> String`.
    - For each page: `tokio::time::timeout(PER_CALL_TIMEOUT, tesseract(page))` → on timeout append `"[OCR_TIMEOUT]"` and continue.
@@ -693,7 +693,7 @@ Task ▶ 12.2 — Per-page OCR loop with individual 10 s timeout
    - Unit tests: (a) single-page returns text; (b) simulated timeout page emits marker and loop continues.
    - Done when: 2 unit tests pass; `emit_ocr_progress` no longer hardcodes `page=1, total=1`.
 
-[ ] **12.3 — Wire per-page loop into extraction pipeline**
+▶ [ ] **12.3 — Wire per-page loop into extraction pipeline**
    - File: `src-tauri/src/extraction/mod.rs`
    - Replace single `extract_image_text_async` call with `extract_pages_async` using page list from `split_pdf_pages`.
    - Integration test: upload a 2-page scanned PDF fixture → assert extracted text contains both pages' content (no `[OCR_TIMEOUT]` for normal PDFs).
