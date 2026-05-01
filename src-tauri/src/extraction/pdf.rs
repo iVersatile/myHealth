@@ -26,9 +26,20 @@ mod tests {
         assert!(result.is_ok(), "expected Ok, got {:?}", result);
         let text = result.unwrap();
         assert!(
-            text.contains("Hello") || text.contains("PDF") || text.contains("world"),
-            "expected extracted text to contain PDF content, got: {:?}",
-            text
+            text.contains("INVOICE"),
+            "expected 'INVOICE'; got: {text:?}"
+        );
+        assert!(
+            text.contains("Physiotherapy"),
+            "expected 'Physiotherapy'; got: {text:?}"
+        );
+        assert!(
+            text.contains("Mr John A. Smith"),
+            "expected doctor name; got: {text:?}"
+        );
+        assert!(
+            text.contains("09/03/2023"),
+            "expected service date; got: {text:?}"
         );
     }
 
