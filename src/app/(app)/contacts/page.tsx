@@ -31,14 +31,19 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 
 function ContactCard({
   contact,
+  allContacts,
   onEdit,
   onDelete,
 }: {
   contact: Contact
+  allContacts: Contact[]
   onEdit: (c: Contact) => void
   onDelete: (id: string) => void
 }) {
   const roleLabel = ROLE_LABELS[contact.role as ContactRole] ?? contact.role
+  const linkedClinic = contact.contact_clinic_id
+    ? allContacts.find((c) => c.id === contact.contact_clinic_id)
+    : null
 
   return (
     <div className="p-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
@@ -54,7 +59,14 @@ function ContactCard({
         </span>
       </div>
 
-      {contact.clinic && (
+      {linkedClinic && (
+        <p className="flex items-center gap-1 text-xs text-[var(--color-tag-text)] bg-[var(--color-tag-bg)] rounded px-2 py-0.5 w-fit mb-2">
+          <span>🏥</span>
+          <span>{linkedClinic.name}</span>
+        </p>
+      )}
+
+      {!linkedClinic && contact.clinic && (
         <p className="text-sm text-[var(--color-text-muted)] mb-2">{contact.clinic}</p>
       )}
 
@@ -342,6 +354,7 @@ export default function ContactsPage() {
               <ContactCard
                 key={c.id}
                 contact={c}
+                allContacts={contacts}
                 onEdit={openEdit}
                 onDelete={(id) => void handleDelete(id)}
               />

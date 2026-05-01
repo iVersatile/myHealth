@@ -15,8 +15,12 @@
 
   --color-text:           oklch(18% 0 0);
   --color-text-secondary: oklch(45% 0 0);
+  --color-text-muted:     oklch(52% 0 0);
   --color-text-disabled:  oklch(65% 0 0);
   --color-text-inverse:   oklch(99% 0 0);
+
+  --color-tag-bg:   oklch(93% 0.04 175);
+  --color-tag-text: oklch(30% 0.10 175);
 
   /* Typography */
   --font-sans:   ui-sans-serif, system-ui, sans-serif;
