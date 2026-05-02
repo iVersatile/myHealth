@@ -194,6 +194,30 @@ describe('ExportDialog', () => {
     })
   })
 
+  it('updates bundle title when user types in title input', async () => {
+    const { ExportDialog } = await import('./ExportDialog')
+    render(<ExportDialog onClose={vi.fn()} />)
+    const titleInput = screen.getByRole('textbox', { name: /bundle title/i }) as HTMLInputElement
+    await userEvent.clear(titleInput)
+    await userEvent.type(titleInput, 'My Custom Report')
+    expect(titleInput.value).toBe('My Custom Report')
+  })
+
+  it('falls back to raw category when category is not in CATEGORY_LABELS', async () => {
+    const { ExportDialog } = await import('./ExportDialog')
+    useDocumentsStore.setState({
+      documents: [makeDoc({ id: 'd1', filename: 'scan.pdf', category: 'unknown_type' as never })],
+      total: 1,
+      page: 1,
+      limit: 20,
+      category: 'all',
+      loading: false,
+      error: null,
+    })
+    render(<ExportDialog onClose={vi.fn()} />)
+    expect(screen.getByText(/unknown_type/)).toBeTruthy()
+  })
+
   it('shows success state after export completes', async () => {
     const { ExportDialog } = await import('./ExportDialog')
     mockPickOutputPath.mockResolvedValueOnce('/home/user/bundle.pdf')

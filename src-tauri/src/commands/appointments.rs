@@ -511,7 +511,8 @@ mod tests {
                     CHECK(status IN ('scheduled','completed','cancelled','missed')),
                 reminder_min INTEGER NOT NULL DEFAULT 60,
                 created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL
+                updated_at DATETIME NOT NULL,
+                recurrence_series_id TEXT
             );
             CREATE TABLE documents (
                 id TEXT PRIMARY KEY,

@@ -8,7 +8,7 @@
 
 ```
 Phase 16 — Recurring Appointments (v1.9)
-▶ Task 16.5
+▶ Task 16.7
 ```
 
 ---
@@ -1018,7 +1018,7 @@ Phase 16 — Recurring Appointments (v1.9)
    - Calls `recurrence_delete_series` with appropriate `from_occurrence`
    - Done when: "this and following" deletes correct subset; "all" deletes entire series
 
-[ ] **16.6 — F2.7 tests**
+[x] **16.6 — F2.7 tests**
    - `cargo test` covers expansion, until_date, max cap, delete variants
    - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
 

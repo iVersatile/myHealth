@@ -187,6 +187,7 @@ mod tests {
             updated_at: "2024-01-01T00:00:00Z".to_string(),
             document_ids: vec![],
             contact_ids: vec![],
+            recurrence_series_id: None,
         }
     }
 

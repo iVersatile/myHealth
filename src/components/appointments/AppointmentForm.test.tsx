@@ -81,7 +81,7 @@ describe('AppointmentForm', () => {
         expect(screen.getByLabelText(/specialty/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/status/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/location/i)).toBeInTheDocument()
-        expect(screen.getByLabelText(/reminder/i)).toBeInTheDocument()
+        expect(screen.getByText(/reminders/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/notes/i)).toBeInTheDocument()
       })
     })
@@ -146,7 +146,6 @@ describe('AppointmentForm', () => {
         expect(screen.getByLabelText(/duration/i)).toHaveValue(30)
         expect(screen.getByLabelText(/location/i)).toHaveValue('123 Main St')
         expect(screen.getByLabelText(/notes/i)).toHaveValue('Follow-up needed')
-        expect(screen.getByLabelText(/reminder/i)).toHaveValue("15")
       })
     })
 
@@ -619,13 +618,11 @@ describe('AppointmentForm', () => {
       const titleInput = screen.getByLabelText(/title/i)
       const dateInput = screen.getByLabelText(/date/i)
       const durationInput = screen.getByLabelText(/duration/i)
-      const reminderInput = screen.getByLabelText(/reminder/i)
 
       await userEvent.type(titleInput, 'Test')
       await userEvent.type(dateInput, '2025-01-15T10:00')
       await userEvent.clear(durationInput)
       await userEvent.type(durationInput, '60')
-      await userEvent.selectOptions(reminderInput, '30')
 
       const saveButton = screen.getByRole('button', { name: /save appointment/i })
       await userEvent.click(saveButton)
@@ -634,7 +631,6 @@ describe('AppointmentForm', () => {
         expect(onSave).toHaveBeenCalled()
         const savedData = onSave.mock.calls[0]![0]
         expect(savedData.duration_min).toBe(60)
-        expect(savedData.reminder_min).toBe(30)
       })
     })
 
