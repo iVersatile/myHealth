@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { confirm } from '@tauri-apps/plugin-dialog'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { invoke } from '@tauri-apps/api/core'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -209,7 +210,7 @@ export default function NoteEditorClient() {
   }
 
   async function handleDelete() {
-    if (!confirm('Delete this note? This cannot be undone.')) return
+    if (!await confirm('Delete this note? This cannot be undone.')) return
     await deleteNote(id)
     router.push('/notes')
   }

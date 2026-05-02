@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { confirm } from '@tauri-apps/plugin-dialog'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { invoke, convertFileSrc } from '@tauri-apps/api/core'
@@ -226,7 +227,7 @@ export default function DocumentDetailClient() {
 
   async function handleDelete() {
     if (!doc) return
-    if (!window.confirm(`Delete "${doc.filename}"? This can be undone from the trash.`)) return
+    if (!await confirm(`Delete "${doc.filename}"? This can be undone from the trash.`)) return
     await invoke('documents_delete', { id: doc.id })
     router.push('/documents')
   }

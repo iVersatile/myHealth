@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { confirm } from '@tauri-apps/plugin-dialog'
 import { useContacts, ContactCreateInput, ContactUpdateInput, DuplicateCandidate } from '../../../hooks/useContacts'
 import { Contact, CONTACT_ROLES, ROLE_LABELS, ContactRole } from '../../../store/contactsStore'
 import { ContactForm } from '../../../components/contacts/ContactForm'
@@ -229,7 +230,7 @@ export default function ContactsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this contact?')) return
+    if (!await confirm('Delete this contact?')) return
     await deleteContact(id)
   }
 
