@@ -14,9 +14,10 @@ const DOC = {
   notes: null,
   created_at: '2024-03-15T10:00:00Z',
   updated_at: '2024-03-15T10:00:00Z',
-  activity_date: '2024-03-15T10:00:00Z',
+  activity_date: '2024-03-15T10:00:00Z' as string | null,
   is_deleted: false,
-  tags: [],
+  tags: [] as string[],
+  document_date: null as string | null,
 }
 
 const APPT = {
@@ -281,5 +282,44 @@ describe('TimelinePage', () => {
     fireEvent.click(screen.getByText('By Category'))
     await waitFor(() => expect(screen.getByText('Uncategorized')).toBeDefined())
     expect(screen.queryByTitle('Click to change category color')).toBeNull()
+  })
+
+  it('buildDocTitle: titleTag with provider shows both in entry', async () => {
+    mockDocuments = [{ ...DOC, tags: ['Registration Form', 'Dr. Vaibhav Sharma'] }]
+    await renderPage()
+    await waitFor(() =>
+      expect(screen.getByText('2024-03-15 Registration Form Dr. Vaibhav Sharma')).toBeDefined()
+    )
+  })
+
+  it('buildDocTitle: specialty + provider shows "SPECIALTY with provider"', async () => {
+    mockDocuments = [{ ...DOC, tags: ['CARDIOLOGY', 'Dr. Smith'] }]
+    await renderPage()
+    await waitFor(() =>
+      expect(screen.getByText('2024-03-15 CARDIOLOGY with Dr. Smith')).toBeDefined()
+    )
+  })
+
+  it('buildDocTitle: provider-only (no title/specialty) shows "DOCUMENT with provider"', async () => {
+    mockDocuments = [{ ...DOC, tags: ['Dr. Patel'] }]
+    await renderPage()
+    await waitFor(() =>
+      expect(screen.getByText('2024-03-15 DOCUMENT with Dr. Patel')).toBeDefined()
+    )
+  })
+
+  it('switches to By Uploaded Date view and shows uploaded filename', async () => {
+    await renderPage()
+    fireEvent.click(screen.getByText('By Uploaded Date'))
+    await waitFor(() => expect(screen.getByText('Uploaded: bloodwork.pdf')).toBeDefined())
+  })
+
+  it('shows IMG badge for image documents in By Uploaded Date view', async () => {
+    mockDocuments = [{ ...DOC, id: 'd3', filename: 'xray.jpg', activity_date: null }]
+    mockAppointments = []
+    mockNotes = []
+    await renderPage()
+    fireEvent.click(screen.getByText('By Uploaded Date'))
+    await waitFor(() => expect(screen.getByText('Uploaded: xray.jpg')).toBeDefined())
   })
 })
