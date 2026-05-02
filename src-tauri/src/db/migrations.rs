@@ -70,6 +70,17 @@ const SCHEMA_V10: &str = "
     );
 ";
 
+const SCHEMA_V13: &str = "
+    CREATE TABLE IF NOT EXISTS recurrence_series (
+        id          TEXT PRIMARY KEY,
+        rule        TEXT NOT NULL CHECK(rule IN ('weekly','monthly')),
+        interval_n  INTEGER NOT NULL DEFAULT 1,
+        until_date  TEXT,
+        created_at  TEXT NOT NULL
+    );
+    ALTER TABLE appointments ADD COLUMN recurrence_series_id TEXT REFERENCES recurrence_series(id);
+";
+
 const SCHEMA_V12: &str = "
     CREATE TABLE IF NOT EXISTS appointment_reminders (
         id              TEXT PRIMARY KEY,
@@ -213,6 +224,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 13 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V13)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [13])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -239,7 +257,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]
@@ -253,7 +271,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 12);
+        assert_eq!(version, 13);
     }
 
     #[test]

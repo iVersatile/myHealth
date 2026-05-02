@@ -44,12 +44,16 @@ export default function AppointmentsPage() {
     updateAppointment,
     deleteAppointment,
     filterByStatus,
+    refresh,
   } = useAppointments()
 
   const [showForm, setShowForm] = useState(false)
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [icsMessage, setIcsMessage] = useState<string | null>(null)
+
+  type RecurrenceDeleteModal = { apptId: string; apptDate: string; seriesId: string } | null
+  const [recurDeleteModal, setRecurDeleteModal] = useState<RecurrenceDeleteModal>(null)
 
   const groups = groupByMonth(appointments)
 
@@ -70,6 +74,15 @@ export default function AppointmentsPage() {
     } else {
       await invoke(IPC.remindersCancel, { appointmentId: saved.id }).catch(() => {})
     }
+    if (!editingAppt && input.recurrence) {
+      await invoke(IPC.recurrenceCreate, {
+        baseAppointmentId: saved.id,
+        rule: input.recurrence.rule,
+        intervalN: input.recurrence.intervalN,
+        untilDate: input.recurrence.untilDate ?? null,
+        occurrences: input.recurrence.occurrences,
+      }).catch(() => {})
+    }
     setShowForm(false)
     setEditingAppt(null)
   }
@@ -80,11 +93,31 @@ export default function AppointmentsPage() {
   }
 
   async function handleDelete(id: string) {
+    const appt = appointments.find((a) => a.id === id)
+    if (appt?.recurrence_series_id) {
+      setRecurDeleteModal({ apptId: id, apptDate: appt.appt_date, seriesId: appt.recurrence_series_id })
+      return
+    }
     if (deleteConfirm === id) {
       await deleteAppointment(id)
       setDeleteConfirm(null)
     } else {
       setDeleteConfirm(id)
+    }
+  }
+
+  async function handleSeriesDelete(mode: 'one' | 'following' | 'all') {
+    if (!recurDeleteModal) return
+    const { apptId, apptDate, seriesId } = recurDeleteModal
+    setRecurDeleteModal(null)
+    if (mode === 'one') {
+      await deleteAppointment(apptId)
+    } else {
+      await invoke(IPC.recurrenceDeleteSeries, {
+        seriesId,
+        fromOccurrence: mode === 'following' ? apptDate : null,
+      })
+      await refresh()
     }
   }
 
@@ -237,6 +270,50 @@ export default function AppointmentsPage() {
         <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
           No appointments yet. Click &quot;+ New&quot; to add one.
         </p>
+      )}
+
+      {/* Recurrence delete modal */}
+      {recurDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-lg)]">
+            <h3 className="mb-2 text-[var(--text-base)] font-semibold text-[var(--color-text)]">
+              Delete recurring appointment
+            </h3>
+            <p className="mb-5 text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+              This appointment is part of a series. What would you like to delete?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => handleSeriesDelete('one')}
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-2 text-left text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
+              >
+                Delete this occurrence only
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSeriesDelete('following')}
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-4 py-2 text-left text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
+              >
+                Delete this and all following
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSeriesDelete('all')}
+                className="rounded-[var(--radius-md)] border border-[var(--color-danger)] bg-[var(--color-danger-muted)] px-4 py-2 text-left text-[var(--text-sm)] text-[var(--color-danger)] transition-colors duration-[var(--duration-fast)] hover:opacity-80"
+              >
+                Delete all in series
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecurDeleteModal(null)}
+                className="mt-1 text-center text-[var(--text-sm)] text-[var(--color-text-secondary)] underline"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Grouped list */}

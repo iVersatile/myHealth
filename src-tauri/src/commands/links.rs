@@ -287,7 +287,8 @@ pub fn links_score_candidates(
     // Fetch all appointments
     let mut stmt = conn.prepare(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
-                    duration_min, location, notes, status, reminder_min, created_at, updated_at
+                    duration_min, location, notes, status, reminder_min, created_at, updated_at,
+                    recurrence_series_id
              FROM appointments ORDER BY appt_date DESC",
     )?;
 
@@ -309,6 +310,7 @@ pub fn links_score_candidates(
                 updated_at: row.get(12)?,
                 document_ids: vec![],
                 contact_ids: vec![],
+                recurrence_series_id: row.get(13)?,
             })
         })?
         .collect::<Result<_, _>>()

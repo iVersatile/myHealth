@@ -16,6 +16,7 @@ export interface Appointment {
   updated_at: string
   document_ids: string[]
   contact_ids: string[]
+  recurrence_series_id: string | null
 }
 
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'missed'

@@ -118,6 +118,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       mockInvoke.mockImplementation((command: string) => {
@@ -169,6 +170,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       render(
@@ -427,6 +429,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       render(
@@ -460,6 +463,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       mockInvoke.mockImplementation((command: string, args?: unknown) => {
@@ -513,6 +517,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       mockInvoke.mockImplementation((command: string) => {
@@ -590,6 +595,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       render(
@@ -811,6 +817,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: ['con-1', 'con-2'],
+        recurrence_series_id: null,
       }
 
       mockInvoke.mockImplementation((command: string) => {
@@ -847,6 +854,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       mockInvoke.mockImplementation((command: string) => {
@@ -887,6 +895,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: ['con-1'],
+        recurrence_series_id: null,
       }
 
       mockInvoke.mockImplementation((command: string) => {
@@ -960,6 +969,7 @@ describe('AppointmentForm', () => {
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
         contact_ids: [],
+        recurrence_series_id: null,
       }
 
       render(

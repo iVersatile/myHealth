@@ -50,6 +50,10 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
   const [remMin15, setRemMin15] = useState(isFutureAppt)
   const [remHr1, setRemHr1] = useState(isFutureAppt)
   const [remDay1, setRemDay1] = useState(isFutureAppt)
+  const [repeatRule, setRepeatRule] = useState<'none' | 'weekly' | 'monthly'>('none')
+  const [repeatInterval, setRepeatInterval] = useState(1)
+  const [repeatOccurrences, setRepeatOccurrences] = useState(4)
+  const [repeatUntil, setRepeatUntil] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [allCategories, setAllCategories] = useState<Category[]>([])
@@ -191,6 +195,12 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
         status,
         reminder_min: parseInt(reminderMin, 10) || null,
         reminder_offsets: { min15: remMin15, hr1: remHr1, day1: remDay1 },
+        recurrence: repeatRule !== 'none' ? {
+          rule: repeatRule,
+          intervalN: repeatInterval,
+          untilDate: repeatUntil ? `${repeatUntil}T00:00:00` : undefined,
+          occurrences: repeatOccurrences,
+        } : undefined,
       })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
@@ -409,6 +419,72 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
           </div>
         </fieldset>
       </div>
+
+      <div>
+        <label htmlFor="appt-repeat" className={labelClass}>Repeat</label>
+        <select
+          id="appt-repeat"
+          value={repeatRule}
+          onChange={(e) => setRepeatRule(e.target.value as 'none' | 'weekly' | 'monthly')}
+          className={inputClass}
+        >
+          <option value="none">Does not repeat</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+
+      {repeatRule !== 'none' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="appt-repeat-interval" className={labelClass}>
+              Every
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="appt-repeat-interval"
+                type="number"
+                min="1"
+                max="52"
+                value={repeatInterval}
+                onChange={(e) => setRepeatInterval(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className={`${inputClass} w-20`}
+              />
+              <span className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+                {repeatRule === 'weekly' ? 'week(s)' : 'month(s)'}
+              </span>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="appt-repeat-occurrences" className={labelClass}>
+              Occurrences (max 104)
+            </label>
+            <input
+              id="appt-repeat-occurrences"
+              type="number"
+              min="1"
+              max="104"
+              value={repeatOccurrences}
+              onChange={(e) =>
+                setRepeatOccurrences(Math.min(104, Math.max(1, parseInt(e.target.value, 10) || 1)))
+              }
+              className={inputClass}
+            />
+          </div>
+          <div className="col-span-2">
+            <label htmlFor="appt-repeat-until" className={labelClass}>
+              End date <span className="text-[var(--color-text-secondary)]">(optional)</span>
+            </label>
+            <input
+              id="appt-repeat-until"
+              type="date"
+              value={repeatUntil}
+              onChange={(e) => setRepeatUntil(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+        </div>
+      )}
 
       <div>
         <label htmlFor="appt-notes" className={labelClass}>Notes</label>

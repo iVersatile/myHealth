@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 15 — System Notification Reminders (v1.8)
-▶ Task 15.2
+Phase 16 — Recurring Appointments (v1.9)
+▶ Task 16.5
 ```
 
 ---
@@ -939,7 +939,7 @@ Phase 15 — System Notification Reminders (v1.8)
      - Index on `(remind_at, is_fired)` for efficient polling
    - Done when: `cargo test` confirms table created; existing appointments unaffected
 
-▶ [ ] **15.2 — Reminder scheduler command**
+[x] **15.2 — Reminder scheduler command**
    - File: `src-tauri/src/commands/reminders.rs` (new)
    - `reminders_schedule(appointment_id: String, appointment_datetime: String)`:
      - Compute 3 `remind_at` timestamps (−1d, −1h, −15min) from `appointment_datetime`
@@ -947,30 +947,30 @@ Phase 15 — System Notification Reminders (v1.8)
    - `reminders_cancel(appointment_id: String)`: delete all reminder rows for the appointment
    - Done when: `cargo test` verifies (a) 3 rows created for a future appointment; (b) past offsets skipped (no row created for already-passed times); (c) cancel deletes all rows
 
-[ ] **15.3 — Background polling + OS notification**
+[x] **15.3 — Background polling + OS notification**
    - In `src-tauri/src/lib.rs` setup: spawn a `tokio` task that polls `appointment_reminders WHERE remind_at <= now AND is_fired = 0` every 60 seconds
    - For each due row: send OS notification via `tauri-plugin-notification` (title = appointment title, body = "Appointment in X"); set `is_fired = 1`
    - Add `tauri-plugin-notification` to `src-tauri/Cargo.toml` and `tauri.conf.json` permissions
    - Done when: `cargo test` (mocked clock) verifies due reminder triggers notification payload; `is_fired` set to 1 after firing; no duplicate fires
 
-[ ] **15.4 — Register in lib.rs + IPC keys**
+[x] **15.4 — Register in lib.rs + IPC keys**
    - Add `remindersSchedule: 'reminders_schedule'`, `remindersCancel: 'reminders_cancel'` to `src/lib/ipc.ts`
    - Register in `lib.rs`
 
 ### Sprint 29: Frontend
 
-[ ] **15.5 — Reminder UI in AppointmentForm**
+[x] **15.5 — Reminder UI in AppointmentForm**
    - File: `src/components/appointments/AppointmentForm.tsx`
    - Add "Reminders" section below date/time:
      - Three checkboxes: "15 minutes before", "1 hour before", "1 day before" (all checked by default for future appointments)
      - On save: call `reminders_schedule` if any box checked and appointment is in the future; call `reminders_cancel` if all unchecked
    - Done when: creating an appointment → 3 reminder rows in DB; unchecking all → rows deleted; past appointment → checkboxes disabled
 
-[ ] **15.6 — F2.6 tests**
+[x] **15.6 — F2.6 tests**
    - `cargo test` covers scheduler, polling (mocked), cancel
    - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
 
-[ ] **15.7 — Commit & push**
+[x] **15.7 — Commit & push**
    - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
    - Commit: `feat: system notification reminders for appointments (F2.6)`
    - Push to `origin/develop`; verify CI green
@@ -984,13 +984,13 @@ Phase 15 — System Notification Reminders (v1.8)
 
 ### Sprint 30: Rust + schema
 
-[ ] **16.1 — Recurrence schema migration**
+[x] **16.1 — Recurrence schema migration**
    - Migration v8 in `src-tauri/src/db/migrations.rs`:
      - `CREATE TABLE recurrence_series (id TEXT PRIMARY KEY, rule TEXT NOT NULL CHECK(rule IN ('weekly','monthly')), interval_n INTEGER NOT NULL DEFAULT 1, until_date TEXT, created_at TEXT NOT NULL)`
      - `ALTER TABLE appointments ADD COLUMN recurrence_series_id TEXT REFERENCES recurrence_series(id)`
    - Done when: `cargo test` passes migration; existing appointment rows unaffected (`recurrence_series_id` NULL)
 
-[ ] **16.2 — Recurrence expansion command**
+[x] **16.2 — Recurrence expansion command**
    - File: `src-tauri/src/commands/recurrence.rs` (new)
    - `recurrence_create(base_appointment_id: String, rule: String, interval_n: u32, until_date: Option<String>, occurrences: u32)`:
      - Creates a `recurrence_series` row
@@ -1000,7 +1000,7 @@ Phase 15 — System Notification Reminders (v1.8)
      - Delete all occurrences from `from_occurrence` onwards (or all if None)
    - Done when: `cargo test` verifies (a) weekly rule → dates spaced 7 days; (b) monthly rule → same day-of-month next month; (c) `until_date` respected; (d) max 104 enforced; (e) delete-from removes correct subset
 
-[ ] **16.3 — Register in lib.rs + IPC keys**
+[x] **16.3 — Register in lib.rs + IPC keys**
    - Add `recurrenceCreate: 'recurrence_create'`, `recurrenceDeleteSeries: 'recurrence_delete_series'` to `src/lib/ipc.ts`
    - Register in `lib.rs`
 

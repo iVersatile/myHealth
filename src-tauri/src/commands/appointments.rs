@@ -24,6 +24,7 @@ pub struct Appointment {
     pub updated_at: String,
     pub document_ids: Vec<String>,
     pub contact_ids: Vec<String>,
+    pub recurrence_series_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,7 +82,8 @@ fn fetch_contact_ids(conn: &rusqlite::Connection, appt_id: &str) -> Vec<String> 
 fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment, CommandError> {
     conn.query_row(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
-                duration_min, location, notes, status, reminder_min, created_at, updated_at
+                duration_min, location, notes, status, reminder_min, created_at, updated_at,
+                recurrence_series_id
          FROM appointments WHERE id = ?",
         [id],
         |row| {
@@ -101,6 +103,7 @@ fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment
                 updated_at: row.get(12)?,
                 document_ids: vec![],
                 contact_ids: vec![],
+                recurrence_series_id: row.get(13)?,
             })
         },
     )
@@ -136,7 +139,8 @@ pub fn appointments_list(
 
     let mut sql = String::from(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
-                duration_min, location, notes, status, reminder_min, created_at, updated_at
+                duration_min, location, notes, status, reminder_min, created_at, updated_at,
+                recurrence_series_id
          FROM appointments WHERE 1=1",
     );
     if month.is_some() {
@@ -192,7 +196,8 @@ pub fn appointments_list_upcoming(
 
     let mut stmt = conn.prepare(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
-                    duration_min, location, notes, status, reminder_min, created_at, updated_at
+                    duration_min, location, notes, status, reminder_min, created_at, updated_at,
+                    recurrence_series_id
              FROM appointments
              WHERE status = 'scheduled'
                AND appt_date >= ?1
@@ -231,6 +236,7 @@ fn load_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Appointment> {
         updated_at: row.get(12)?,
         document_ids: vec![],
         contact_ids: vec![],
+        recurrence_series_id: row.get(13)?,
     })
 }
 

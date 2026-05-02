@@ -6,6 +6,13 @@ import {
   useAppointmentsStore,
 } from '../store/appointmentsStore'
 
+export interface RecurrenceInput {
+  rule: 'weekly' | 'monthly'
+  intervalN: number
+  untilDate?: string
+  occurrences: number
+}
+
 export interface AppointmentInput {
   title: string
   doctor_name: string | null
@@ -18,6 +25,7 @@ export interface AppointmentInput {
   status: string | null
   reminder_min: number | null
   reminder_offsets?: { min15: boolean; hr1: boolean; day1: boolean }
+  recurrence?: RecurrenceInput
 }
 
 export function useAppointments() {
