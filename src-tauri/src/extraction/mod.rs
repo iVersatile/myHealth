@@ -618,7 +618,7 @@ mod tests {
         // If OCR returns [OCR_TIMEOUT], extract_inner must propagate it unchanged
         // (doctor/category/tag extraction gracefully handles it).
         // Simulate by checking a string that starts with [OCR_TIMEOUT].
-        let marker = "[OCR_TIMEOUT]";
+        let marker = crate::extraction::ocr::OCR_TIMEOUT_MARKER;
         let candidates = doctor::extract_doctor_candidates(marker);
         let _ = category::suggest_category(marker);
         let tags = category::extract_document_tags(marker);

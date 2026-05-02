@@ -298,7 +298,7 @@ pub async fn outlook_exchange_code(
         .db
         .lock()
         .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbNotOpen)?;
+    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
 
     let key = format!("outlook_refresh_token_{user_id}");
     conn.execute(
@@ -322,7 +322,7 @@ pub async fn outlook_sync(
             .db
             .lock()
             .map_err(|e| CommandError::Internal(e.to_string()))?;
-        let conn = db.as_ref().ok_or(CommandError::DbNotOpen)?;
+        let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
         let key = format!("outlook_refresh_token_{user_id}");
         conn.query_row(
             "SELECT value FROM settings WHERE key = ?1",
@@ -339,7 +339,7 @@ pub async fn outlook_sync(
             .db
             .lock()
             .map_err(|e| CommandError::Internal(e.to_string()))?;
-        let conn = db.as_ref().ok_or(CommandError::DbNotOpen)?;
+        let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
         let key = format!("outlook_refresh_token_{user_id}");
         conn.execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2) \
@@ -363,7 +363,7 @@ pub async fn outlook_sync(
         .db
         .lock()
         .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbNotOpen)?;
+    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
     upsert_graph_events(conn, events, &user_id)
 }
 
@@ -376,7 +376,7 @@ pub fn outlook_is_connected(
         .db
         .lock()
         .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbNotOpen)?;
+    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
     let key = format!("outlook_refresh_token_{user_id}");
     let exists: bool = conn
         .query_row(
@@ -395,7 +395,7 @@ pub fn outlook_disconnect(user_id: String, state: State<'_, AppState>) -> Result
         .db
         .lock()
         .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbNotOpen)?;
+    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
     let key = format!("outlook_refresh_token_{user_id}");
     conn.execute(
         "DELETE FROM settings WHERE key = ?1",

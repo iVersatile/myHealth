@@ -30,7 +30,7 @@ pub fn backup_export(
     {
         let guard = state.db.lock()?;
         if guard.is_none() {
-            return Err(CommandError::DbNotOpen);
+            return Err(CommandError::DbLocked);
         }
     }
 

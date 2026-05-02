@@ -3,19 +3,19 @@ use rusqlite::Connection;
 #[derive(Debug, serde::Serialize)]
 #[serde(tag = "code", content = "message")]
 pub enum CommandError {
-    DbNotOpen,
+    DbLocked,
     NotFound(String),
     #[allow(dead_code)]
-    Constraint(String),
+    InvalidInput(String),
     Internal(String),
 }
 
 impl std::fmt::Display for CommandError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CommandError::DbNotOpen => write!(f, "database not open"),
+            CommandError::DbLocked => write!(f, "database locked"),
             CommandError::NotFound(msg) => write!(f, "not found: {msg}"),
-            CommandError::Constraint(msg) => write!(f, "constraint: {msg}"),
+            CommandError::InvalidInput(msg) => write!(f, "invalid input: {msg}"),
             CommandError::Internal(msg) => write!(f, "{msg}"),
         }
     }
@@ -104,7 +104,7 @@ impl<'a> CommandContext<'a> {
     pub fn new(
         guard: &'a std::sync::MutexGuard<'a, Option<Connection>>,
     ) -> Result<Self, CommandError> {
-        let conn = guard.as_ref().ok_or(CommandError::DbNotOpen)?;
+        let conn = guard.as_ref().ok_or(CommandError::DbLocked)?;
         Ok(Self { conn })
     }
 }

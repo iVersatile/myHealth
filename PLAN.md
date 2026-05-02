@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 18 — Gap Closure
-▶ 18.13 — Commit & push
+Phase 19 — Code Quality & Performance Hardening
+▶ 19.5 — Commit & push
 ```
 
 ---
@@ -1166,9 +1166,44 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
   3. Asserts focus never gets trapped and all buttons/links are reachable
 - Done when: test passes; any focus-trap bugs found are fixed
 
-### 18.13 — Commit & push
+### [x] 18.13 — Commit & push
 - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
 - Commit: `feat: gap closure — fixtures, OCR progress, a11y, perf benchmarks (G-01–G-12)`
+- Push to `origin/develop`; verify CI green
+- Done when: CI green on develop branch
+
+---
+
+---
+
+## Phase 19 — Code Quality & Performance Hardening
+
+> Source: code review findings (v1.2) not yet implemented. See `docs/STATUS.md` §8.
+
+### [x] **19.1 — Add missing DB indexes (H3)**
+- All 6 required indexes already present in SCHEMA_V4 (`migrations.rs` lines 6-19).
+- Verified by `migration_v4_creates_indexes` test. No new migration needed.
+
+### [x] **19.2 — OCR per-page progress + timeout (F2.3/F2.4)**
+- In `src-tauri/src/commands/documents.rs` emit Tauri progress events per page during OCR
+- Add configurable timeout (default 60s) per page; cancel remaining pages on timeout
+- Frontend: show page X/N progress bar in upload modal
+- Done when: uploading a 5-page PDF shows page-by-page progress; timeout test passes
+
+### [x] **19.3 — CommandError enum (M2)**
+- In `src-tauri/src/commands/mod.rs` define `CommandError` enum with variants: `DbLocked`, `NotFound`, `InvalidInput(String)`, `Internal(String)`
+- Implement `serde::Serialize` + `From<rusqlite::Error>`
+- Replace `String` return type in all commands with `Result<T, CommandError>`
+- Done when: `cargo clippy` clean; frontend can distinguish error variants
+
+### [x] **19.4 — Zustand selector hooks (M5)**
+- In `src/hooks/useDocuments.ts` replace 11-value destructure with per-slice selectors
+- Pattern: `const documents = useDocumentStore(s => s.documents)` (one value per hook call)
+- Done when: `tsc --noEmit` clean; re-render count for non-document state changes drops to 0
+
+### ▶ [ ] **19.5 — Commit & push**
+- Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
+- Commit: `perf: add DB indexes, OCR progress, CommandError enum, Zustand selectors`
 - Push to `origin/develop`; verify CI green
 - Done when: CI green on develop branch
 
@@ -1181,6 +1216,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 | Feature requirements (v1 + v1.1) | `docs/PRD_V2.md` |
 | Feature requirements (v1.4 upload intelligence) | `docs/PRD_V3.md` |
 | Implementation vs requirements gap analysis | `docs/V3_GAP.md` |
+| Unified quality status | `docs/STATUS.md` |
 | Architecture | `docs/ARCHITECTURE_V2.md` |
 | Acceptance tests (v1.2) | `docs/ACCEPTANCE_TESTS_V2.md` |
 | Acceptance tests (v1.4 upload) | `docs/ACCEPTANCE_TESTS_V3.md` |

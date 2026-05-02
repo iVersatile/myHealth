@@ -330,7 +330,7 @@ pub fn auth_change_password(
     // Rekey the database.
     {
         let db_guard = state.db.lock().unwrap();
-        let conn = db_guard.as_ref().ok_or(CommandError::DbNotOpen)?;
+        let conn = db_guard.as_ref().ok_or(CommandError::DbLocked)?;
         if new_hex.len() != 64 || !new_hex.chars().all(|c| c.is_ascii_hexdigit()) {
             return Err(CommandError::Internal(
                 "rekey value must be exactly 64 hex characters".into(),
@@ -416,10 +416,10 @@ pub fn auth_add_user(
         .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
     let vault_key_hex = {
         let guard = state.key_hex.lock().unwrap();
-        guard.as_ref().ok_or(CommandError::DbNotOpen)?.to_string()
+        guard.as_ref().ok_or(CommandError::DbLocked)?.to_string()
     };
     let db_guard = state.db.lock().unwrap();
-    let conn = db_guard.as_ref().ok_or(CommandError::DbNotOpen)?;
+    let conn = db_guard.as_ref().ok_or(CommandError::DbLocked)?;
     let user_id = uuid::Uuid::new_v4().to_string();
     add_user_internal(
         &data_dir,
