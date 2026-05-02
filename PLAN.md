@@ -8,7 +8,7 @@
 
 ```
 Phase 17 — Note Links + Note Version History (v1.10)
-▶ Task 17.3
+▶ Task 17.4
 ```
 
 ---
@@ -1051,7 +1051,7 @@ Phase 17 — Note Links + Note Version History (v1.10)
    - `notes_for_entity(entity_type: String, entity_id: String)` → `Vec<NoteDto>`
    - Done when: `cargo test` verifies link/unlink/list round-trip; duplicate link is no-op
 
-▶ **17.3 — Note version commands**
+[x] **17.3 — Note version commands**
    - File: `src-tauri/src/commands/notes.rs`
    - On every `notes_update` call: `INSERT INTO note_versions(id, note_id, content, saved_at)` before updating the note body
    - After insert, delete oldest rows if count > 10: `DELETE FROM note_versions WHERE note_id = ? AND id NOT IN (SELECT id FROM note_versions WHERE note_id = ? ORDER BY saved_at DESC LIMIT 10)`
@@ -1059,7 +1059,7 @@ Phase 17 — Note Links + Note Version History (v1.10)
    - `note_version_restore(note_id: String, version_id: String)` → restores content from that version (saves a new version of the current content first)
    - Done when: `cargo test` verifies (a) 11 saves → only 10 versions kept; (b) restore updates note content; (c) restore creates version of previous content
 
-[ ] **17.4 — Register in lib.rs + IPC keys**
+▶ **17.4 — Register in lib.rs + IPC keys**
    - Add `noteLink`, `noteUnlink`, `linksForNote`, `notesForEntity`, `noteVersionsList`, `noteVersionRestore` to `src/lib/ipc.ts`
    - Register all in `lib.rs`
 
