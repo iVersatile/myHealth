@@ -7,8 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 16 — Recurring Appointments (v1.9)
-▶ Task 16.4
+All tasks complete ✓
 ```
 
 ---
@@ -1006,14 +1005,14 @@ Phase 16 — Recurring Appointments (v1.9)
 
 ### Sprint 31: Frontend
 
-▶ **16.4 — Recurrence UI in AppointmentForm**
+[x] **16.4 — Recurrence UI in AppointmentForm**
    - File: `src/components/appointments/AppointmentForm.tsx`
    - Add "Repeat" dropdown: None / Weekly / Monthly
    - When Weekly or Monthly: show "Repeat every N [weeks/months]" stepper + "Until" date picker
    - On save: call `recurrence_create` if repeat ≠ None
    - Done when: creating a weekly appointment for 4 weeks creates 4 appointment rows; all appear in calendar view
 
-[ ] **16.5 — Delete series confirmation**
+[x] **16.5 — Delete series confirmation**
    - On deleting a recurring appointment, show modal: "Delete this occurrence only" / "Delete this and all following" / "Delete all in series"
    - Calls `recurrence_delete_series` with appropriate `from_occurrence`
    - Done when: "this and following" deletes correct subset; "all" deletes entire series
