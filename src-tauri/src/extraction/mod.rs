@@ -167,6 +167,38 @@ fn tags_contains_ci(tags: &[String], candidate: &str) -> bool {
     tags.iter().any(|t| t.to_lowercase() == lower)
 }
 
+/// Scans the first three non-empty lines for a document title candidate.
+/// A line qualifies when all of: ≤5 words, 2–60 chars, every word starts
+/// uppercase (title-case), fewer than 1/3 of characters are digits, and
+/// it does not end with ':' (label lines like "Date:").
+/// Returns the trimmed line on first match, or `None`.
+pub fn extract_doc_title(text: &str) -> Option<String> {
+    for line in text.lines().filter(|l| !l.trim().is_empty()).take(3) {
+        let trimmed = line.trim();
+        if trimmed.len() < 2 || trimmed.len() > 60 {
+            continue;
+        }
+        if trimmed.ends_with(':') {
+            continue;
+        }
+        let words: Vec<&str> = trimmed.split_whitespace().collect();
+        if words.is_empty() || words.len() > 5 {
+            continue;
+        }
+        let digit_count = trimmed.chars().filter(|c| c.is_ascii_digit()).count();
+        if digit_count * 3 > trimmed.len() {
+            continue;
+        }
+        let is_title_case = words
+            .iter()
+            .all(|w| w.chars().next().map(|c| c.is_uppercase()).unwrap_or(false));
+        if is_title_case {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
+
 /// Returns true if `word` appears as a complete word (bounded by non-alphabetic
 /// characters) inside `lower_text` (which must already be lowercased).
 fn text_has_word(lower_text: &str, word: &str) -> bool {
@@ -249,6 +281,14 @@ pub fn auto_extract_tags(
         let date = date.trim();
         if !date.is_empty() && !tags_contains_ci(&tags, date) {
             tags.push(date.to_string());
+        }
+    }
+
+    // 5. Document title tag — scan first 3 OCR lines for a title-case heading
+    if let Some(title) = extract_doc_title(text) {
+        let tag = format!("title:{title}");
+        if !tags_contains_ci(&tags, &tag) {
+            tags.push(tag);
         }
     }
 
@@ -539,6 +579,56 @@ mod tests {
         assert!(
             !tags.contains(&"bill".to_string()),
             "false positive; tags: {tags:?}"
+        );
+    }
+
+    // ── extract_doc_title tests ───────────────────────────────────────────────
+
+    #[test]
+    fn doc_title_extracts_registration_form() {
+        let text = "Registration Form\nPatient Name: John Doe\nDate: 09/03/2023";
+        assert_eq!(
+            extract_doc_title(text).as_deref(),
+            Some("Registration Form")
+        );
+    }
+
+    #[test]
+    fn doc_title_skips_label_lines() {
+        // "Date:" is a label — should be skipped
+        let text = "Date:\nSome Long Text That Does Not Qualify As Title At All Whatsoever";
+        assert_eq!(extract_doc_title(text), None);
+    }
+
+    #[test]
+    fn doc_title_skips_digit_heavy_lines() {
+        // "09/03/2023" is mostly digits
+        let text = "09/03/2023\nRegistration Form";
+        assert_eq!(
+            extract_doc_title(text).as_deref(),
+            Some("Registration Form")
+        );
+    }
+
+    #[test]
+    fn doc_title_skips_lines_over_five_words() {
+        let text = "This Is A Very Long Title With Too Many Words Here\nShort Title";
+        assert_eq!(extract_doc_title(text).as_deref(), Some("Short Title"));
+    }
+
+    #[test]
+    fn doc_title_none_when_no_title_case_line() {
+        let text = "no uppercase here\nstill lowercase";
+        assert_eq!(extract_doc_title(text), None);
+    }
+
+    #[test]
+    fn auto_tags_includes_title_tag() {
+        let text = "Registration Form\nDate: 09/03/2023\nPatient details follow";
+        let tags = auto_extract_tags(text, &[], Some("2023-03-09"));
+        assert!(
+            tags.iter().any(|t| t == "title:Registration Form"),
+            "expected title:Registration Form tag; got {tags:?}"
         );
     }
 

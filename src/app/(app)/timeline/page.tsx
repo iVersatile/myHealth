@@ -45,6 +45,9 @@ function buildDocTitle(d: Document): string {
   const eventDate = (d.activity_date ?? d.created_at).slice(0, 10)
   const tags: string[] = d.tags ?? []
 
+  const titleTag = tags.find((t) => t.startsWith('title:'))
+  if (titleTag) return `${eventDate} ${titleTag.slice(6)}`
+
   const specialty = tags.find(
     (t) => t === t.toUpperCase() && t.length > 2 && /^[A-Z]/.test(t),
   )
@@ -63,8 +66,23 @@ function docToEvent(d: Document): TimelineEvent {
     id: `doc-${d.id}`,
     rawId: d.id,
     type: 'document',
-    date: new Date(d.activity_date ?? d.created_at),
+    date: new Date(d.activity_date!),
     title: buildDocTitle(d),
+    subtitle: d.category.charAt(0).toUpperCase() + d.category.slice(1),
+    badge,
+    href: `/documents/view?id=${d.id}`,
+  }
+}
+
+function docToUploadEvent(d: Document): TimelineEvent {
+  const ext = d.filename.split('.').pop()?.toUpperCase() ?? 'FILE'
+  const badge = ext === 'PDF' ? 'PDF' : ['JPG', 'JPEG', 'PNG', 'WEBP'].includes(ext) ? 'IMG' : ext
+  return {
+    id: `doc-upload-${d.id}`,
+    rawId: d.id,
+    type: 'document',
+    date: new Date(d.created_at),
+    title: `Uploaded: ${d.filename}`,
     subtitle: d.category.charAt(0).toUpperCase() + d.category.slice(1),
     badge,
     href: `/documents/view?id=${d.id}`,
@@ -349,7 +367,11 @@ export default function TimelinePage() {
 
   const allEvents = useMemo<TimelineEvent[]>(() => {
     const events: TimelineEvent[] = [
-      ...activeDocs.map(docToEvent),
+      ...activeDocs.flatMap((d) => {
+        const result: TimelineEvent[] = [docToUploadEvent(d)]
+        if (d.activity_date) result.push(docToEvent(d))
+        return result
+      }),
       ...appointments.map(apptToEvent),
       ...notes.map(noteToEvent),
     ]
