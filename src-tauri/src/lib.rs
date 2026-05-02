@@ -58,6 +58,7 @@ use commands::outlook::{
     outlook_disconnect, outlook_exchange_code, outlook_get_auth_url, outlook_is_connected,
     outlook_sync,
 };
+use commands::reminders::{reminders_cancel, reminders_schedule};
 use commands::search::search_query;
 use commands::settings::{
     settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data,
@@ -192,6 +193,8 @@ pub fn run() {
             appointment_tags_set,
             backup_export,
             backup_import,
+            reminders_schedule,
+            reminders_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,7 +8,7 @@
 
 ```
 Phase 15 — System Notification Reminders (v1.8)
-▶ Task 15.1
+▶ Task 15.2
 ```
 
 ---
@@ -933,13 +933,13 @@ Phase 15 — System Notification Reminders (v1.8)
 
 ### Sprint 28: Rust + Tauri
 
-▶ [ ] **15.1 — Reminders schema migration**
+[x] **15.1 — Reminders schema migration**
    - Migration v7 in `src-tauri/src/db/migrations.rs`:
      - `CREATE TABLE appointment_reminders (id TEXT PRIMARY KEY, appointment_id TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE, remind_at TEXT NOT NULL, offset_label TEXT NOT NULL, is_fired INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)`
      - Index on `(remind_at, is_fired)` for efficient polling
    - Done when: `cargo test` confirms table created; existing appointments unaffected
 
-[ ] **15.2 — Reminder scheduler command**
+▶ [ ] **15.2 — Reminder scheduler command**
    - File: `src-tauri/src/commands/reminders.rs` (new)
    - `reminders_schedule(appointment_id: String, appointment_datetime: String)`:
      - Compute 3 `remind_at` timestamps (−1d, −1h, −15min) from `appointment_datetime`
