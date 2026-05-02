@@ -8,7 +8,7 @@
 
 ```
 Phase 17 — Note Links + Note Version History (v1.10)
-▶ Task 17.1
+▶ Task 17.3
 ```
 
 ---
@@ -1036,14 +1036,14 @@ Phase 17 — Note Links + Note Version History (v1.10)
 
 ### Sprint 32: Schema + Rust
 
-[ ] **17.1 — Note links + versions schema migration**
+[x] **17.1 — Note links + versions schema migration**
    - Migration v9 in `src-tauri/src/db/migrations.rs`:
      - `CREATE TABLE note_links (id TEXT PRIMARY KEY, note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE, entity_type TEXT NOT NULL CHECK(entity_type IN ('appointment','document')), entity_id TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(note_id, entity_type, entity_id))`
      - `CREATE TABLE note_versions (id TEXT PRIMARY KEY, note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE, content TEXT NOT NULL, saved_at TEXT NOT NULL)`
      - Index on `note_versions(note_id, saved_at DESC)` for efficient version fetch
    - Done when: `cargo test` confirms both tables created
 
-[ ] **17.2 — Note links CRUD commands**
+[x] **17.2 — Note links CRUD commands**
    - File: `src-tauri/src/commands/notes.rs`
    - `note_link(note_id: String, entity_type: String, entity_id: String)` — `INSERT OR IGNORE INTO note_links`
    - `note_unlink(note_id: String, entity_type: String, entity_id: String)` — `DELETE FROM note_links`
@@ -1051,7 +1051,7 @@ Phase 17 — Note Links + Note Version History (v1.10)
    - `notes_for_entity(entity_type: String, entity_id: String)` → `Vec<NoteDto>`
    - Done when: `cargo test` verifies link/unlink/list round-trip; duplicate link is no-op
 
-[ ] **17.3 — Note version commands**
+▶ **17.3 — Note version commands**
    - File: `src-tauri/src/commands/notes.rs`
    - On every `notes_update` call: `INSERT INTO note_versions(id, note_id, content, saved_at)` before updating the note body
    - After insert, delete oldest rows if count > 10: `DELETE FROM note_versions WHERE note_id = ? AND id NOT IN (SELECT id FROM note_versions WHERE note_id = ? ORDER BY saved_at DESC LIMIT 10)`
