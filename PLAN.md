@@ -7,8 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 19 — Code Quality & Performance Hardening
-▶ 19.5 — Commit & push
+All phases complete — no pending tasks
 ```
 
 ---
@@ -1201,11 +1200,37 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 - Pattern: `const documents = useDocumentStore(s => s.documents)` (one value per hook call)
 - Done when: `tsc --noEmit` clean; re-render count for non-document state changes drops to 0
 
-### ▶ [ ] **19.5 — Commit & push**
+### [x] **19.5 — Commit & push**
 - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
 - Commit: `perf: add DB indexes, OCR progress, CommandError enum, Zustand selectors`
 - Push to `origin/develop`; verify CI green
 - Done when: CI green on develop branch
+
+---
+
+## Phase 20 — Upload Gap Closure: Doc Title Tag + Dual Timeline Events (v1.6 patch)
+
+> Source: manual test feedback 2026-05-02 — "Registration Form" tag missing; Timeline showing upload date instead of medical event date.
+
+### [x] **20.1 — Gap 1 (Option C): Document title extraction via `extract_doc_title()`**
+- Added `extract_doc_title(text: &str) -> Option<String>` in `src-tauri/src/extraction/mod.rs`
+  - Scans first 3 non-empty OCR lines; accepts title-case heading ≤5 words, 2–60 chars, not ending in `:`, fewer than 1/3 digits
+- Added step 5 in `auto_extract_tags()` calling `extract_doc_title()`; emits `title:<heading>` tag
+- Added 6 unit tests covering: Registration Form extraction, label-line skip, digit-heavy skip, >5 word skip, no-title-case fallback, full pipeline tag output
+- **PRD_V4.md** created with LLM-assisted extraction (Option D) as a future Enhancement with 8 acceptance criteria
+- Done when: `cargo test` passes; uploading "Registration Form" PDF shows `title:Registration Form` tag ✅ (manual test confirmed)
+
+### [x] **20.2 — Gap 2 (Option B+C): Dual timeline events per document**
+- `docToEvent()` in `src/app/(app)/timeline/page.tsx` now uses `activity_date` only (medical event date)
+- `docToUploadEvent()` new function — emits "Uploaded: \<filename\>" event at `created_at` (upload timestamp)
+- `buildDocTitle()` checks `title:` prefixed tag first, stripping prefix for display
+- `allEvents` useMemo changed from `map(docToEvent)` to `flatMap` — always emits upload event; emits activity event only when `activity_date` is non-null
+- Done when: `npx tsc --noEmit` passes; Timeline shows two entries per document when `activity_date` is set ✅ (manual test confirmed)
+
+### [x] **20.3 — Commit & push**
+- Pre-commit: `npx tsc --noEmit` ✅ + `cargo fmt` ✅ + `cargo clippy` ✅
+- Commit: `feat: add doc title extraction and dual timeline events` (32b581c)
+- Push to `origin/develop`; CI green ✅
 
 ---
 
@@ -1215,6 +1240,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 |---------|------|
 | Feature requirements (v1 + v1.1) | `docs/PRD_V2.md` |
 | Feature requirements (v1.4 upload intelligence) | `docs/PRD_V3.md` |
+| LLM-assisted extraction enhancement (future) | `docs/PRD_V4.md` |
 | Implementation vs requirements gap analysis | `docs/V3_GAP.md` |
 | Unified quality status | `docs/STATUS.md` |
 | Architecture | `docs/ARCHITECTURE_V2.md` |
