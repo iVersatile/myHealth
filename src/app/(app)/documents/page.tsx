@@ -9,6 +9,8 @@ import { SummaryExportDialog } from '../../../components/export/SummaryExportDia
 import { DoctorSuggestionBanner } from '../../../components/documents/DoctorSuggestionBanner'
 import type { ContactSuggestion } from '../../../components/documents/DoctorSuggestionBanner'
 import { LinkSuggestionBanner } from '../../../components/documents/LinkSuggestionBanner'
+import { ApptSuggestionBanner } from '../../../components/documents/ApptSuggestionBanner'
+import type { AppointmentSuggestion } from '../../../components/documents/ApptSuggestionBanner'
 import { ContactForm } from '../../../components/contacts/ContactForm'
 import { useDocumentsStore } from '../../../store/documentsStore'
 import { useContacts } from '../../../hooks/useContacts'
@@ -28,6 +30,11 @@ export default function DocumentsPage() {
     appointmentTitle: string
     documentId: string
   } | null>(null)
+  const [apptSuggestion, setApptSuggestion] = useState<{
+    suggestion: AppointmentSuggestion
+    documentId: string
+  } | null>(null)
+  const [apptSuggestionLoading, setApptSuggestionLoading] = useState(false)
   const documents = useDocumentsStore(s => s.documents)
   const total = useDocumentsStore(s => s.total)
   const setDocuments = useDocumentsStore(s => s.setDocuments)
@@ -57,9 +64,48 @@ export default function DocumentsPage() {
           appointmentTitle: suggestion.appointment_title,
           documentId: doc.id,
         })
+      } else {
+        try {
+          const appt = await invoke<AppointmentSuggestion | null>(
+            'appointments_suggest_from_document',
+            { id: doc.id },
+          )
+          if (appt) {
+            setApptSuggestion({ suggestion: appt, documentId: doc.id })
+          }
+        } catch {
+          // best-effort
+        }
       }
     } catch {
       // scoring is best-effort; ignore failures
+    }
+  }
+
+  async function handleApptSuggestionConfirm() {
+    if (!apptSuggestion) return
+    setApptSuggestionLoading(true)
+    try {
+      const { suggestion, documentId } = apptSuggestion
+      const appt = await invoke<{ id: string }>('appointments_create', {
+        input: {
+          title: suggestion.title,
+          date: suggestion.apptDate,
+          doctor_name: suggestion.doctorName ?? null,
+          specialty: suggestion.specialty ?? null,
+          notes: null,
+          clinic_id: null,
+        },
+      })
+      await invoke('link_document_to_appointment', {
+        documentId,
+        appointmentId: appt.id,
+      })
+    } catch {
+      // best-effort
+    } finally {
+      setApptSuggestionLoading(false)
+      setApptSuggestion(null)
     }
   }
 
@@ -162,6 +208,17 @@ export default function DocumentsPage() {
             appointmentTitle={linkSuggestion.appointmentTitle}
             onConfirm={(id) => void handleLinkConfirm(id)}
             onDismiss={() => setLinkSuggestion(null)}
+          />
+        </div>
+      )}
+
+      {apptSuggestion && (
+        <div className="mb-4">
+          <ApptSuggestionBanner
+            suggestion={apptSuggestion.suggestion}
+            onConfirm={() => void handleApptSuggestionConfirm()}
+            onDismiss={() => setApptSuggestion(null)}
+            isLoading={apptSuggestionLoading}
           />
         </div>
       )}

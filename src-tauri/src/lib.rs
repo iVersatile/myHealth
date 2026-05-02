@@ -41,9 +41,10 @@ use commands::contacts::{
     contacts_update, documents_link_contact, find_duplicate_contacts, merge_contacts,
 };
 use commands::documents::{
-    documents_delete, documents_get, documents_get_extraction_status, documents_get_file_url,
-    documents_list, documents_restore, documents_run_extraction, documents_search_filtered,
-    documents_tags_set, documents_update, documents_upload,
+    appointments_suggest_from_document, documents_delete, documents_get,
+    documents_get_extraction_status, documents_get_file_url, documents_list, documents_restore,
+    documents_run_extraction, documents_search_filtered, documents_tags_set, documents_update,
+    documents_upload,
 };
 use commands::export::{export_pdf_bundle, export_pdf_summary_bytes, export_save_bytes};
 use commands::links::{
@@ -137,6 +138,7 @@ pub fn run() {
             documents_get_extraction_status,
             documents_run_extraction,
             documents_tags_set,
+            appointments_suggest_from_document,
             documents_search_filtered,
             appointments_list,
             appointments_list_upcoming,

@@ -218,7 +218,7 @@ CREATE TABLE clinic_addresses (
 
 ### V3-F4: Tag Auto-Extraction from Document Analysis
 
-**Context:** After uploading the physiotherapy invoice, expected tags were: `invoice`, `John Green`, `PHYSIOTHERAPY`, `2023-03-09`. None were present in the tags field.
+**Context:** After uploading the physiotherapy invoice, expected tags were: `invoice`, `John Green`, `PHYSIOTHERAPY`, `2023-03-09`. None were present in the tags field. A second upload of a registration form revealed that the document title tag was stored as `"title:Registration Form"` instead of the clean value `"Registration Form"`.
 
 **Gap in PRD_V2:** UTFv1-01 fixed tag merging from extraction, but the extraction pipeline was not producing all required tags.
 
@@ -230,6 +230,7 @@ CREATE TABLE clinic_addresses (
 | `John Green` | Provider/doctor name | Doctor candidate extracted from PDF body |
 | `PHYSIOTHERAPY` | Specialty keyword | Category keyword extracted from PDF body (same source as V3-F1) |
 | `2023-03-09` | Medical activity date | Date of service in PDF body (not the upload date, not the filename timestamp) |
+| `Registration Form` | Document title | Short title-case heading found in first 3 OCR lines of PDF body |
 
 #### Requirements
 
@@ -241,6 +242,8 @@ CREATE TABLE clinic_addresses (
 | V3-F4.4 | The medical activity date (date of service, appointment date, or invoice date found in PDF body) MUST be emitted as a tag in `YYYY-MM-DD` format | MUST |
 | V3-F4.5 | All auto-extracted tags MUST be pre-populated in the upload dialog's tags field, editable by the user before saving | MUST |
 | V3-F4.6 | Duplicate tags (case-insensitive) MUST be de-duplicated before display | MUST |
+| V3-F4.7 | When a document title is detected (a short title-case heading in the first 3 OCR lines), it MUST be stored as a plain tag with NO prefix — e.g. `"Registration Form"`, NOT `"title:Registration Form"` | MUST |
+| V3-F4.8 | A document title tag candidate MUST satisfy: ≤5 words, 2–60 characters, does not end in `:`, fewer than 1/3 digits, and is not identical to any already-emitted type/specialty/provider/date tag | MUST |
 
 **Acceptance Criteria (Gherkin):**
 
@@ -277,6 +280,18 @@ Feature: Tag Auto-Extraction from Document Analysis
     Given extraction produces tag "PHYSIOTHERAPY" from both filename and body
     When tags are merged for display
     Then "PHYSIOTHERAPY" appears only once in the tags field
+
+  Scenario: Document title tag is stored without prefix (V3-F4.7)
+    Given a PDF whose first OCR line is "Registration Form"
+    When text extraction runs
+    Then the tags list includes "Registration Form"
+    And the tags list does NOT contain any tag starting with "title:"
+
+  Scenario: Document title tag is displayed without prefix in UI
+    Given a document with tag "Registration Form" (no prefix)
+    When the user views the document in the Documents list or detail page
+    Then the tag chip displays "Registration Form"
+    And no "title:" prefix is visible anywhere in the UI
 ```
 
 ---
@@ -287,27 +302,38 @@ Feature: Tag Auto-Extraction from Document Analysis
 
 > **2023-03-09 PHYSIOTHERAPY with Mr John Green**
 
-**Gap in PRD_V2:** Timeline entries are linked to documents but no requirement specified which date to use (document date, upload date, or medical activity date). The format of the timeline description was also not specified.
+Additional manual testing feedback (2026-05-02) clarified:
+- The **Chronological** view must show only events keyed to `activity_date` — upload events must NOT appear there.
+- A new **"By Uploaded Date"** view must show ALL documents sorted by `created_at` (upload timestamp), including those without an `activity_date`.
+- Documents that have no extracted `activity_date` must show an editable field in their detail page so the user can set it manually after upload.
+
+**Gap in PRD_V2:** Timeline entries are linked to documents but no requirement specified which date to use (document date, upload date, or medical activity date). The format of the timeline description was also not specified. The separation of "when was this medical event" vs "when was this file uploaded" was not modelled as distinct views.
 
 #### Requirements
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| V3-F5.1 | The timeline entry for a document MUST use the medical activity date (date of service extracted from PDF body) as its event date | MUST |
+| V3-F5.1 | The timeline entry for a document MUST use the medical activity date (`activity_date`) as its event date in the Chronological view | MUST |
 | V3-F5.2 | If no activity date is found in the PDF body, the document date from the filename parse MUST be used as a fallback | MUST |
-| V3-F5.3 | If neither is available, the upload date MUST be used as a last-resort fallback | MUST |
+| V3-F5.3 | If neither is available, the document is NOT shown in the Chronological view (it appears only in "By Uploaded Date") | MUST |
 | V3-F5.4 | The timeline entry description MUST follow the format: `{YYYY-MM-DD} {SPECIALTY} with {Title} {Provider Name}` when a specialty and provider are detected | MUST |
 | V3-F5.5 | The title/salutation (e.g. "Mr", "Mrs", "Dr", "Prof") MUST be extracted from the PDF body when present and included in the description | SHOULD |
 | V3-F5.6 | If no specialty is detected, the document type (e.g. "Invoice", "Report") MUST be used in its place in the description | SHOULD |
 | V3-F5.7 | If no provider name is detected, the clinic name MUST be used in its place | SHOULD |
 | V3-F5.8 | The timeline entry description MUST be editable by the user before the upload is finalised | MUST |
+| V3-F5.9 | The Timeline page MUST offer a **"By Uploaded Date"** view tab that shows ALL documents sorted by `created_at` descending, regardless of whether they have an `activity_date` | MUST |
+| V3-F5.10 | In the "By Uploaded Date" view, each row MUST display: upload date (`created_at`), document title (from tags or filename), and document type tag if present | MUST |
+| V3-F5.11 | Upload events (keyed to `created_at`) MUST NOT appear in the Chronological, By Category, or By Doctor views — they are exclusive to the "By Uploaded Date" view | MUST |
+| V3-F5.12 | On the document detail page, if a document has no `activity_date`, an editable date field labelled "Activity Date" MUST be displayed, allowing the user to set or correct it | MUST |
+| V3-F5.13 | Saving an `activity_date` from the document detail page MUST persist it to the `documents.activity_date` column via a Tauri IPC command | MUST |
+| V3-F5.14 | After the user saves an `activity_date` from the detail page, the Chronological timeline view MUST reflect the new entry on the next render | MUST |
 
 **Accepted Activity Date Sources (priority order):**
 
 1. Invoice date / Service date explicitly labelled in PDF body (e.g. "Date of Service: 09/03/2023", "Invoice Date: 09 March 2023")
 2. Appointment date found in PDF body
 3. Date extracted from filename
-4. Upload timestamp (last resort)
+4. Not shown in Chronological view (user must enter manually via detail page)
 
 **Acceptance Criteria (Gherkin):**
 
@@ -318,8 +344,8 @@ Feature: Timeline Entry Uses Medical Activity Date
     Given a PDF with service date 2023-03-09 in the document body
     And upload date is 2026-04-30
     When the document is uploaded and saved
-    Then the timeline entry date is 2023-03-09
-    And NOT 2026-04-30
+    Then the Chronological timeline shows an entry dated 2023-03-09
+    And no entry dated 2026-04-30 appears in the Chronological view
 
   Scenario: Timeline description follows prescribed format
     Given a PDF with:
@@ -334,13 +360,49 @@ Feature: Timeline Entry Uses Medical Activity Date
     Given a PDF with no labelled date in the body
     And the filename contains date 2023-03-09
     When the document is uploaded
-    Then the timeline entry date is 2023-03-09
+    Then the Chronological timeline entry date is 2023-03-09
 
-  Scenario: Upload date used as last resort
+  Scenario: Document without activity_date does NOT appear in Chronological view (V3-F5.3)
     Given a PDF with no date in body or filename
-    And the upload date is 2026-04-30
     When the document is uploaded
-    Then the timeline entry date is 2026-04-30
+    Then no entry for this document appears in the Chronological timeline view
+
+  Scenario: Document without activity_date DOES appear in By Uploaded Date view (V3-F5.9)
+    Given a PDF with no date in body or filename
+    And upload date is 2026-04-30
+    When the document is uploaded
+    And the user switches to the "By Uploaded Date" tab on the Timeline page
+    Then an entry for this document appears with date 2026-04-30
+
+  Scenario: By Uploaded Date view shows ALL documents sorted by upload date (V3-F5.9)
+    Given 3 documents uploaded on 2026-04-28, 2026-04-29, and 2026-04-30 respectively
+    When the user views the "By Uploaded Date" tab
+    Then all 3 documents are listed
+    And they are ordered: 2026-04-30, 2026-04-29, 2026-04-28
+
+  Scenario: Upload events absent from Chronological view (V3-F5.11)
+    Given a document with activity_date 2023-03-09 and upload date 2026-04-30
+    When the user views the Chronological timeline tab
+    Then only the entry dated 2023-03-09 is shown for this document
+    And no entry dated 2026-04-30 appears for this document
+
+  Scenario: Document detail shows editable activity_date field when absent (V3-F5.12)
+    Given a document that has no activity_date
+    When the user opens the document detail page
+    Then an "Activity Date" input field is visible and empty
+
+  Scenario: User can set activity_date from document detail (V3-F5.13)
+    Given a document with no activity_date
+    When the user opens the document detail page
+    And enters "2023-01-10" in the Activity Date field
+    And clicks Save
+    Then the document's activity_date is persisted as 2023-01-10
+
+  Scenario: Chronological view reflects newly set activity_date (V3-F5.14)
+    Given a document that previously had no activity_date
+    And the user has just set activity_date to 2023-01-10 from the detail page
+    When the user navigates to the Timeline page and views the Chronological tab
+    Then an entry dated 2023-01-10 is now visible for that document
 
   Scenario: Timeline description is editable before save
     Given a suggested timeline description "2023-03-09 PHYSIOTHERAPY with Mr John Green"
@@ -360,6 +422,79 @@ Feature: Timeline Entry Uses Medical Activity Date
 | `documents.activity_date DATE` | documents table | Medical activity date; separate from `document_date` (filename-parsed) and `created_at` (upload) |
 | `timeline_entries.event_date` | timeline_entries table | Confirm it uses `activity_date` not `created_at` |
 
+### V3-F6: Auto-Create Appointment from Invoice/Receipt Upload
+
+**Context:** Uploading "Upload (21Jan2022-13_34_32).pdf" (an invoice for "09-Dec-21 Initial out-patient consultation") produced no appointment. The document contains a medical activity date (09 Dec 2021) and is typed as an invoice, yet no appointment was created or suggested. `links_score_candidates` returned null because the appointments table was empty — there was no fallback path to suggest appointment creation.
+
+**Gap in PRD_V2:** UTFv1-03 specified document-to-appointment linking when appointments exist. It did not specify the case where no matching appointment exists and the document signals an appointment event.
+
+#### Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| V3-F6.1 | When a document is uploaded and extraction detects `activity_date` AND a type tag of `invoice`, `receipt`, or `bill`, the system MUST check whether `links_score_candidates` returns a match. | MUST |
+| V3-F6.2 | If `links_score_candidates` returns null (no matching appointment), the system MUST call `appointments_suggest_from_document` to assemble a pre-filled appointment suggestion from extracted data. | MUST |
+| V3-F6.3 | If `appointments_suggest_from_document` returns a non-null suggestion, the Upload screen MUST display an "Appointment Suggestion" banner with the pre-filled fields: date, title (doctor + specialty), and doctor name. | MUST |
+| V3-F6.4 | The banner MUST offer two actions: **"Create Appointment"** and **"Dismiss"**. | MUST |
+| V3-F6.5 | On "Create Appointment", the system MUST call `appointments_create` with the pre-filled data and link the document to the newly created appointment via `link_document_to_appointment`. | MUST |
+| V3-F6.6 | On "Dismiss", the banner disappears; no appointment is created. | MUST |
+| V3-F6.7 | Documents without `activity_date` OR without an invoice/receipt/bill type tag MUST NOT trigger the appointment suggestion banner. | MUST |
+| V3-F6.8 | If `links_score_candidates` already returns a match, the appointment suggestion banner MUST NOT be shown (the existing `LinkSuggestionBanner` handles this case). | MUST |
+
+#### Appointment Suggestion Assembly Rules
+
+The new `appointments_suggest_from_document` Rust command reads extracted data from the document and returns:
+
+| Field | Source |
+|-------|--------|
+| `appt_date` | `activity_date` from the `documents` table |
+| `doctor_name` | First entry in `doctor_candidates` (extracted from PDF body); null if none |
+| `specialty` | First UPPERCASE auto-tag (specialty tag); null if none |
+| `title` | If doctor_name present: `"{specialty} with {doctor_name}"` else `"{specialty} appointment"` |
+
+The command returns `null` when the document has no `activity_date` or has no invoice/receipt/bill type tag among its `auto_tags`.
+
+#### Acceptance Criteria
+
+```gherkin
+Scenario: Invoice upload with date triggers appointment suggestion (V3-F6.1)
+  Given a PDF invoice with body date "09 Dec 2021" and doctor "Dr. Smith"
+  And no appointments exist in the database
+  When the document is uploaded
+  Then links_score_candidates returns null
+  And appointments_suggest_from_document returns a suggestion with date 2021-12-09
+
+Scenario: Appointment suggestion banner displayed (V3-F6.3)
+  Given appointments_suggest_from_document returns a non-null suggestion
+  When the upload completes
+  Then the "Appointment Suggestion" banner is visible
+  And it shows the suggested date and doctor name
+
+Scenario: Create Appointment from banner (V3-F6.5)
+  Given the Appointment Suggestion banner is visible
+  When the user clicks "Create Appointment"
+  Then an appointment is created with the pre-filled data
+  And the document is linked to the new appointment
+  And the banner disappears
+
+Scenario: Dismiss banner (V3-F6.6)
+  Given the Appointment Suggestion banner is visible
+  When the user clicks "Dismiss"
+  Then no appointment is created
+  And the banner disappears
+
+Scenario: Non-invoice document does NOT trigger banner (V3-F6.7)
+  Given a PDF lab report with activity_date but no invoice/receipt/bill tag
+  When the document is uploaded
+  Then the Appointment Suggestion banner is NOT shown
+
+Scenario: Existing appointment match suppresses suggestion (V3-F6.8)
+  Given a matching appointment exists and links_score_candidates returns a match
+  When the document is uploaded
+  Then only the LinkSuggestionBanner is shown
+  And the Appointment Suggestion banner is NOT shown
+```
+
 ---
 
 ## Implementation Priority
@@ -371,8 +506,9 @@ Feature: Timeline Entry Uses Medical Activity Date
 | 3 | V3-F2: Contact auto-creation (phone regex + save flow) | MUST | M (3–4h) |
 | 4 | V3-F1: Category auto-creation when accepted | MUST | S (1–2h) |
 | 5 | V3-F3: Clinic with company reg + multi-address + linking | MUST | L (5–7h) |
+| 6 | V3-F6: Auto-create appointment from invoice upload | MUST | S (2–3h) |
 
-**Total estimated effort: 15–21 hours**
+**Total estimated effort: 17–24 hours**
 
 ---
 

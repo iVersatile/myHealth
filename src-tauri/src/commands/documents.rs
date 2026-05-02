@@ -1342,3 +1342,99 @@ pub fn documents_get_extraction_status(
         }
     }
 }
+
+// ── V3-F6: Appointment suggestion from extracted document data ────────────────
+
+#[derive(Debug, Serialize)]
+pub struct AppointmentSuggestion {
+    pub appt_date: String,
+    pub title: String,
+    pub doctor_name: Option<String>,
+    pub specialty: Option<String>,
+}
+
+const INVOICE_TYPE_TAGS: &[&str] = &["invoice", "receipt", "bill"];
+
+/// Returns a pre-filled appointment suggestion when the document has an
+/// `activity_date` AND one of the invoice/receipt/bill type tags in its
+/// auto-extracted tags. Returns `None` otherwise.
+#[tauri::command]
+pub fn appointments_suggest_from_document(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<Option<AppointmentSuggestion>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let row: Option<(Option<String>, Option<String>, Option<String>)> = conn
+        .query_row(
+            "SELECT activity_date, extracted_text, extracted_metadata \
+             FROM documents WHERE id = ?1 AND is_deleted = 0",
+            rusqlite::params![id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+
+    let (activity_date, extracted_text, extracted_metadata) = match row {
+        None => return Err(CommandError::NotFound(format!("document {id} not found"))),
+        Some(r) => r,
+    };
+
+    let appt_date = match activity_date {
+        None => return Ok(None),
+        Some(d) => d,
+    };
+
+    let text = extracted_text.unwrap_or_default();
+
+    // Derive doctor_candidates from stored metadata or re-extract.
+    let doctor_candidates: Vec<String> = extracted_metadata
+        .as_deref()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+        .and_then(|v| {
+            v["doctor_candidates"].as_array().map(|arr| {
+                arr.iter()
+                    .filter_map(|x| x.as_str().map(String::from))
+                    .collect()
+            })
+        })
+        .unwrap_or_else(|| crate::extraction::doctor::extract_doctor_candidates(&text));
+
+    let auto_tags =
+        crate::extraction::auto_extract_tags(&text, &doctor_candidates, Some(&appt_date));
+
+    // Require at least one invoice/receipt/bill type tag.
+    let has_invoice_tag = auto_tags
+        .iter()
+        .any(|t| INVOICE_TYPE_TAGS.contains(&t.as_str()));
+    if !has_invoice_tag {
+        return Ok(None);
+    }
+
+    // First UPPERCASE-only tag (no lowercase letters) that is not a date.
+    let specialty: Option<String> = auto_tags
+        .iter()
+        .find(|t| {
+            let s = t.as_str();
+            !s.chars().any(|c| c.is_lowercase()) // all uppercase or non-alpha
+            && !s.chars().next().is_some_and(|c| c.is_ascii_digit()) // not a date
+            && s.len() > 2
+        })
+        .cloned();
+
+    let doctor_name: Option<String> = doctor_candidates.into_iter().next();
+
+    let title = match (&specialty, &doctor_name) {
+        (Some(sp), Some(dr)) => format!("{sp} with {dr}"),
+        (Some(sp), None) => format!("{sp} appointment"),
+        (None, Some(dr)) => format!("Appointment with {dr}"),
+        (None, None) => "Medical appointment".to_string(),
+    };
+
+    Ok(Some(AppointmentSuggestion {
+        appt_date,
+        title,
+        doctor_name,
+        specialty,
+    }))
+}
