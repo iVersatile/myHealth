@@ -51,6 +51,9 @@ export default function DocumentDetailClient() {
   const [savingNotes, setSavingNotes] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
   const [savingTags, setSavingTags] = useState(false)
+  const [activityDate, setActivityDate] = useState('')
+  const [savingActivityDate, setSavingActivityDate] = useState(false)
+  const [activityDateSaved, setActivityDateSaved] = useState(false)
 
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
@@ -91,6 +94,7 @@ export default function DocumentDetailClient() {
         setDoc(fetched)
         setTags(fetched.tags)
         setNotes(fetched.notes ?? '')
+        setActivityDate(fetched.activity_date?.slice(0, 10) ?? '')
         setAllCategories(
           catRows.map((r) => ({
             id: r.id,
@@ -114,6 +118,22 @@ export default function DocumentDetailClient() {
     }
     void load()
   }, [id])
+
+  async function handleSaveActivityDate() {
+    if (!doc) return
+    setSavingActivityDate(true)
+    try {
+      await invoke('documents_update', {
+        id: doc.id,
+        activityDate: activityDate || null,
+      })
+      setDoc({ ...doc, activity_date: activityDate || null })
+      setActivityDateSaved(true)
+      setTimeout(() => setActivityDateSaved(false), 2000)
+    } finally {
+      setSavingActivityDate(false)
+    }
+  }
 
   async function handleSaveNotes() {
     if (!doc) return
@@ -313,6 +333,27 @@ export default function DocumentDetailClient() {
             <div>
               <dt className="text-[var(--color-text-secondary)]">Uploaded</dt>
               <dd className="font-medium text-[var(--color-text)]">{formatDate(doc.created_at)}</dd>
+            </div>
+            <div>
+              <dt className="mb-1 text-[var(--color-text-secondary)]">Activity Date</dt>
+              <dd className="flex gap-1">
+                <input
+                  type="date"
+                  data-testid="detail-activity-date-input"
+                  value={activityDate}
+                  onChange={(e) => setActivityDate(e.target.value)}
+                  className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                />
+                <button
+                  type="button"
+                  data-testid="detail-activity-date-save"
+                  disabled={savingActivityDate}
+                  onClick={() => void handleSaveActivityDate()}
+                  className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-sunken)]"
+                >
+                  {activityDateSaved ? '✓' : 'Set'}
+                </button>
+              </dd>
             </div>
             <div>
               <dt className="text-[var(--color-text-secondary)]">Size</dt>
