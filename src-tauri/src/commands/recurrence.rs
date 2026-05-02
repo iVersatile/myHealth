@@ -380,7 +380,18 @@ mod tests {
 
     #[test]
     fn max_104_occurrences_enforced() {
-        assert_eq!(200u32.min(104), 104);
+        let base = dt("2026-01-01T10:00:00");
+        let mut count = 0u32;
+        let mut current = base;
+        while count < 200 {
+            let next = advance_date(current, "weekly", 1).unwrap();
+            count += 1;
+            current = next;
+            if count == 104 {
+                break;
+            }
+        }
+        assert_eq!(count, 104);
     }
 
     #[test]
