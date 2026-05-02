@@ -264,6 +264,34 @@ mod tests {
     }
 
     #[test]
+    fn import_fails_on_corrupt_archive_and_leaves_existing_files_intact() {
+        let restore_dir = TempDir::new().unwrap();
+        let archive_dir = TempDir::new().unwrap();
+
+        // Write sentinel files to the restore dir so we can verify they survive.
+        let sentinel_db = restore_dir.path().join(DB_FILE);
+        fs::write(&sentinel_db, b"original-db").unwrap();
+
+        // Write a corrupt (non-ZIP) archive.
+        let archive_path = archive_dir.path().join("corrupt.myhealth");
+        fs::write(&archive_path, b"this is not a zip file").unwrap();
+
+        let archive_file = fs::File::open(&archive_path).unwrap();
+        let result = zip::ZipArchive::new(archive_file);
+        assert!(
+            result.is_err(),
+            "corrupt archive should fail to open as zip"
+        );
+
+        // Existing file must be untouched because the import never started.
+        assert_eq!(
+            fs::read(&sentinel_db).unwrap(),
+            b"original-db",
+            "existing DB should be unchanged after failed import"
+        );
+    }
+
+    #[test]
     fn import_fails_when_archive_missing_required_file() {
         let out_dir = TempDir::new().unwrap();
         let archive_path = out_dir.path().join("incomplete.myhealth");
