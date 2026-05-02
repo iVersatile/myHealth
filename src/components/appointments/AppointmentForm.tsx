@@ -46,6 +46,10 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [status, setStatus] = useState<AppointmentStatus>(initial?.status ?? 'scheduled')
   const [reminderMin, setReminderMin] = useState(String(initial?.reminder_min ?? 60))
+  const isFutureAppt = apptDate ? new Date(datetimeLocalToIso(apptDate)) > new Date() : false
+  const [remMin15, setRemMin15] = useState(isFutureAppt)
+  const [remHr1, setRemHr1] = useState(isFutureAppt)
+  const [remDay1, setRemDay1] = useState(isFutureAppt)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [allCategories, setAllCategories] = useState<Category[]>([])
@@ -186,6 +190,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
         notes: notes.trim() || null,
         status,
         reminder_min: parseInt(reminderMin, 10) || null,
+        reminder_offsets: { min15: remMin15, hr1: remHr1, day1: remDay1 },
       })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
@@ -382,17 +387,27 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
       </div>
 
       <div>
-        <label htmlFor="appt-reminder" className={labelClass}>Reminder</label>
-        <select
-          id="appt-reminder"
-          value={reminderMin}
-          onChange={(e) => setReminderMin(e.target.value)}
-          className={inputClass}
-        >
-          {REMINDER_OPTIONS.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
+        <fieldset>
+          <legend className={labelClass}>Reminders</legend>
+          <div className="flex flex-wrap gap-4 mt-1">
+            {([
+              { id: 'rem-day1', label: '1 day before', checked: remDay1, set: setRemDay1 },
+              { id: 'rem-hr1', label: '1 hour before', checked: remHr1, set: setRemHr1 },
+              { id: 'rem-min15', label: '15 min before', checked: remMin15, set: setRemMin15 },
+            ] as const).map(({ id, label, checked, set }) => (
+              <label key={id} htmlFor={id} className="flex items-center gap-2 cursor-pointer text-[var(--text-sm)] text-[var(--color-text)]">
+                <input
+                  id={id}
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => set(e.target.checked)}
+                  className="rounded border-[var(--color-border)] accent-[var(--color-accent)]"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </div>
 
       <div>

@@ -54,10 +54,21 @@ export default function AppointmentsPage() {
   const groups = groupByMonth(appointments)
 
   async function handleSave(input: AppointmentInput) {
+    let saved: Appointment
     if (editingAppt) {
-      await updateAppointment(editingAppt.id, input)
+      saved = await updateAppointment(editingAppt.id, input)
     } else {
-      await createAppointment(input)
+      saved = await createAppointment(input)
+    }
+    const offsets = input.reminder_offsets
+    const anyEnabled = offsets && (offsets.min15 || offsets.hr1 || offsets.day1)
+    if (anyEnabled) {
+      await invoke(IPC.remindersSchedule, {
+        appointmentId: saved.id,
+        appointmentDatetime: saved.appt_date,
+      }).catch(() => {})
+    } else {
+      await invoke(IPC.remindersCancel, { appointmentId: saved.id }).catch(() => {})
     }
     setShowForm(false)
     setEditingAppt(null)

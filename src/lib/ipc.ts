@@ -122,6 +122,10 @@ export const IPC = {
   backupExport: 'backup_export',
   backupImport: 'backup_import',
 
+  // Reminders
+  remindersSchedule: 'reminders_schedule',
+  remindersCancel: 'reminders_cancel',
+
   // Links
   linksCreate: 'links_create',
   linksDelete: 'links_delete',

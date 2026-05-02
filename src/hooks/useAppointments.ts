@@ -17,6 +17,7 @@ export interface AppointmentInput {
   notes: string | null
   status: string | null
   reminder_min: number | null
+  reminder_offsets?: { min15: boolean; hr1: boolean; day1: boolean }
 }
 
 export function useAppointments() {
