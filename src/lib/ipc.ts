@@ -43,6 +43,12 @@ export const IPC = {
   notesDelete: 'notes_delete',
   notesPin: 'notes_pin',
   notesTagsSet: 'notes_tags_set',
+  noteLink: 'note_link',
+  noteUnlink: 'note_unlink',
+  linksForNote: 'links_for_note',
+  notesForEntity: 'notes_for_entity',
+  noteVersionsList: 'note_versions_list',
+  noteVersionRestore: 'note_version_restore',
 
   // Categories
   categoriesList: 'categories_list',

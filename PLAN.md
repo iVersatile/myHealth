@@ -8,7 +8,7 @@
 
 ```
 Phase 17 — Note Links + Note Version History (v1.10)
-▶ Task 17.4
+▶ Task 17.5
 ```
 
 ---
@@ -1059,13 +1059,13 @@ Phase 17 — Note Links + Note Version History (v1.10)
    - `note_version_restore(note_id: String, version_id: String)` → restores content from that version (saves a new version of the current content first)
    - Done when: `cargo test` verifies (a) 11 saves → only 10 versions kept; (b) restore updates note content; (c) restore creates version of previous content
 
-▶ **17.4 — Register in lib.rs + IPC keys**
+[x] **17.4 — Register in lib.rs + IPC keys**
    - Add `noteLink`, `noteUnlink`, `linksForNote`, `notesForEntity`, `noteVersionsList`, `noteVersionRestore` to `src/lib/ipc.ts`
    - Register all in `lib.rs`
 
 ### Sprint 33: Frontend
 
-[ ] **17.5 — Note links UI**
+▶ **17.5 — Note links UI**
    - File: `src/app/(app)/notes/[id]/page.tsx`
    - Add "Linked To" panel in note detail sidebar:
      - "Link to Appointment" dropdown (searchable, shows upcoming/recent appointments)
