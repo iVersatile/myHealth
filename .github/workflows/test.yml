@@ -58,8 +58,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('src-tauri/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-v2-${{ hashFiles('src-tauri/Cargo.lock') }}
 
       - name: cargo test
         working-directory: src-tauri
