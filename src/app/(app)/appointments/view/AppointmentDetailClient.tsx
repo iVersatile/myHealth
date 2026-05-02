@@ -46,6 +46,8 @@ export default function AppointmentDetailClient() {
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
 
+  const [linkedNotes, setLinkedNotes] = useState<Array<{ id: string; title: string }>>([])
+
   const [summary, setSummary] = useState<string[] | null>(null)
   const [summarizing, setSummarizing] = useState(false)
   const [summaryError, setSummaryError] = useState<string | null>(null)
@@ -69,16 +71,18 @@ export default function AppointmentDetailClient() {
       setLoading(true)
       setError(null)
       try {
-        const [fetchedAppt, fetchedLinks, catRows, assignedIds, fetchedTags] = await Promise.all([
+        const [fetchedAppt, fetchedLinks, catRows, assignedIds, fetchedTags, fetchedNotes] = await Promise.all([
           invoke<Appointment>('appointments_get', { id }),
           invoke<LinkedDocument[]>('get_appointment_links', { userId: '', appointmentId: id }),
           invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list'),
           invoke<string[]>('categories_for_appointment', { appointmentId: id }),
           invoke<string[]>('appointment_tags_get', { appointmentId: id }),
+          invoke<Array<{ id: string; title: string }>>('notes_for_entity', { entityType: 'appointment', entityId: id }),
         ])
         setAppt(fetchedAppt)
         setLinkedDocs(fetchedLinks)
         setSavedTags(fetchedTags)
+        setLinkedNotes(fetchedNotes)
         setAllCategories(catRows.map(r => ({
           id: r.id,
           name: r.name,
@@ -443,6 +447,36 @@ export default function AppointmentDetailClient() {
           <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
             No ICD-10 codes added yet. Click &quot;Suggest ICD-10 Codes&quot; to get suggestions from the appointment notes.
           </p>
+        )}
+      </section>
+
+      {/* Linked notes */}
+      <section aria-label="Linked notes">
+        <h2 className="mb-3 text-[var(--text-lg)] font-semibold text-[var(--color-text)]">
+          Linked Notes
+          {linkedNotes.length > 0 && (
+            <span className="ml-2 text-[var(--text-sm)] font-normal text-[var(--color-text-secondary)]">
+              ({linkedNotes.length})
+            </span>
+          )}
+        </h2>
+        {linkedNotes.length === 0 ? (
+          <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+            No notes linked yet. Open a note and link it to this appointment.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {linkedNotes.map((note) => (
+              <li key={note.id}>
+                <Link
+                  href={`/notes/view?id=${note.id}`}
+                  className="block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-[var(--text-sm)] font-medium text-[var(--color-accent)] hover:underline"
+                >
+                  {note.title || 'Untitled'}
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

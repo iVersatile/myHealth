@@ -61,13 +61,15 @@ export default function DocumentDetailClient() {
 
   const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([])
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+  const [linkedNotes, setLinkedNotes] = useState<Array<{ id: string; title: string }>>([])
+
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetched, catRows, assignedIds, existingLinks, appts, scored] = await Promise.all([
+        const [fetched, catRows, assignedIds, existingLinks, appts, scored, fetchedNotes] = await Promise.all([
           invoke<Document>('documents_get', { id }),
           invoke<
             Array<{
@@ -83,6 +85,7 @@ export default function DocumentDetailClient() {
           invoke<DocumentLink[]>('links_list_for_document', { documentId: id }),
           invoke<Appointment[]>('appointments_list', { month: null, status: null }),
           invoke<LinkSuggestion[]>('links_score_candidates', { documentId: id }),
+          invoke<Array<{ id: string; title: string }>>('notes_for_entity', { entityType: 'document', entityId: id }),
         ])
         setDoc(fetched)
         setTags(fetched.tags)
@@ -101,6 +104,7 @@ export default function DocumentDetailClient() {
         setLinks(existingLinks)
         setAllAppointments(appts)
         setSuggestions(scored)
+        setLinkedNotes(fetchedNotes)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -517,6 +521,32 @@ export default function DocumentDetailClient() {
             >
               {notesSaved ? '✓ Saved' : savingNotes ? 'Saving…' : 'Save Notes'}
             </button>
+          </div>
+
+          <hr className="my-4 border-[var(--color-border)]" />
+
+          <div className="mb-4">
+            <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+              Linked Notes
+            </p>
+            {linkedNotes.length === 0 ? (
+              <p className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                No notes linked yet.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {linkedNotes.map((note) => (
+                  <li key={note.id}>
+                    <Link
+                      href={`/notes/view?id=${note.id}`}
+                      className="truncate text-[var(--text-xs)] text-[var(--color-accent)] hover:underline"
+                    >
+                      {note.title || 'Untitled'}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <hr className="my-4 border-[var(--color-border)]" />

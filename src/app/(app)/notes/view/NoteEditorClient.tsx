@@ -22,6 +22,13 @@ interface NoteLinkDto {
   created_at: string
 }
 
+interface NoteVersionDto {
+  id: string
+  note_id: string
+  content: string
+  created_at: string
+}
+
 // Tiptap v3 does not ship Document/Paragraph/Text as separate packages
 const Document = Node.create({ name: 'doc', topNode: true, content: 'block+' })
 const Paragraph = Node.create({
@@ -67,6 +74,9 @@ export default function NoteEditorClient() {
   const [selectedAppt, setSelectedAppt] = useState('')
   const [selectedDoc, setSelectedDoc] = useState('')
 
+  const [versions, setVersions] = useState<NoteVersionDto[]>([])
+  const [historyOpen, setHistoryOpen] = useState(false)
+
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const titleRef = useRef(title)
   // eslint-disable-next-line react-hooks/refs
@@ -111,14 +121,16 @@ export default function NoteEditorClient() {
         setTags(n.tags)
         setLastSaved(n.updated_at)
         editor?.commands.setContent(n.content || '')
-        const [appts, docs, lnks] = await Promise.all([
+        const [appts, docs, lnks, vers] = await Promise.all([
           invoke<Appointment[]>('appointments_list', {}),
           invoke<Document[]>('documents_list', {}),
           invoke<NoteLinkDto[]>('links_for_note', { noteId: id }),
+          invoke<NoteVersionDto[]>('note_versions_list', { noteId: id }),
         ])
         setAppointments(appts)
         setDocuments(docs.filter((d) => !d.is_deleted))
         setLinks(lnks)
+        setVersions(vers)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       }
@@ -200,6 +212,20 @@ export default function NoteEditorClient() {
     if (!confirm('Delete this note? This cannot be undone.')) return
     await deleteNote(id)
     router.push('/notes')
+  }
+
+  async function handleRestore(versionId: string) {
+    try {
+      const restored = await invoke<Note>('note_version_restore', { noteId: id, versionId })
+      editor?.commands.setContent(restored.content || '')
+      setNote(restored)
+      setLastSaved(restored.updated_at)
+      setHistoryOpen(false)
+      const vers = await invoke<NoteVersionDto[]>('note_versions_list', { noteId: id })
+      setVersions(vers)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
   }
 
   if (error) {
@@ -306,6 +332,15 @@ export default function NoteEditorClient() {
             {label}
           </button>
         ))}
+        <div className="ml-auto">
+          <button
+            onClick={() => setHistoryOpen(true)}
+            title="Version History"
+            className="px-2 py-1 text-xs rounded transition-colors text-[var(--color-text-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)]"
+          >
+            History {versions.length > 0 && `(${versions.length})`}
+          </button>
+        </div>
       </div>
 
       {/* Rich-text editor */}
@@ -451,6 +486,56 @@ export default function NoteEditorClient() {
           </button>
         </div>
       </div>
+
+      {/* Version history drawer */}
+      {historyOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/30"
+            onClick={() => setHistoryOpen(false)}
+            aria-hidden="true"
+          />
+          {/* Drawer */}
+          <aside
+            role="dialog"
+            aria-label="Version History"
+            className="fixed right-0 top-0 z-50 h-full w-80 flex flex-col bg-[var(--color-surface)] border-l border-[var(--color-border)] shadow-xl"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+              <h2 className="text-sm font-semibold text-[var(--color-text)]">Version History</h2>
+              <button
+                onClick={() => setHistoryOpen(false)}
+                aria-label="Close history"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className="flex-1 overflow-y-auto divide-y divide-[var(--color-border)]">
+              {versions.length === 0 ? (
+                <li className="px-4 py-6 text-xs text-[var(--color-text-muted)]">
+                  No saved versions yet. Save the note to create a version.
+                </li>
+              ) : (
+                versions.map((v, i) => (
+                  <li key={v.id} className="flex items-center justify-between px-4 py-3 gap-2">
+                    <span className="text-xs text-[var(--color-text)]">
+                      v{versions.length - i} &mdash; {relativeTime(v.created_at)}
+                    </span>
+                    <button
+                      onClick={() => void handleRestore(v.id)}
+                      className="shrink-0 px-3 py-1 text-xs rounded-[var(--radius-sm)] border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors"
+                    >
+                      Restore
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </aside>
+        </>
+      )}
     </div>
   )
 }

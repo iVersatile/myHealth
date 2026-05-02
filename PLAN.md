@@ -8,7 +8,7 @@
 
 ```
 Phase 17 — Note Links + Note Version History (v1.10)
-▶ Task 17.6
+▶ Task 17.9
 ```
 
 ---
@@ -1074,24 +1074,24 @@ Phase 17 — Note Links + Note Version History (v1.10)
    - Calls `note_link` on add; `note_unlink` on remove
    - Done when: linking a note to an appointment shows it in the appointment detail page under "Linked Notes"
 
-▶ **17.6 — Linked notes in Appointment and Document detail**
+[x] **17.6 — Linked notes in Appointment and Document detail**
    - File: `src/app/(app)/appointments/[id]/page.tsx` — add "Notes" panel calling `notes_for_entity('appointment', id)`
    - File: `src/app/(app)/documents/[id]/page.tsx` — add "Notes" panel calling `notes_for_entity('document', id)`
    - Each panel lists linked note titles; click navigates to note detail
    - Done when: notes linked from the note side appear here without page reload
 
-[ ] **17.7 — Note version history UI**
+[x] **17.7 — Note version history UI**
    - File: `src/app/(app)/notes/[id]/page.tsx`
    - Add "Version History" button in note toolbar; opens side drawer
    - Drawer lists up to 10 versions with timestamp; "Restore" button on each
    - Restore calls `note_version_restore`; editor updates with restored content
    - Done when: saving a note 3 times shows 3 versions; restoring v1 sets editor content to v1 text
 
-[ ] **17.8 — F3.4/F3.5 tests**
+[x] **17.8 — F3.4/F3.5 tests**
    - `cargo test` covers link CRUD, version capping at 10, restore sequence
    - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
 
-[ ] **17.9 — Commit & push**
+▶ **17.9 — Commit & push**
    - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
    - Commit: `feat: note links to appointments/documents + note version history (F3.4, F3.5)`
    - Push to `origin/develop`; verify CI green
