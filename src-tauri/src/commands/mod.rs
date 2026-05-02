@@ -45,6 +45,7 @@ pub mod export;
 pub mod links;
 pub mod notes;
 pub mod outlook;
+pub mod recurrence;
 pub mod reminders;
 pub mod scoring;
 pub mod search;

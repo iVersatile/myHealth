@@ -58,6 +58,7 @@ use commands::outlook::{
     outlook_disconnect, outlook_exchange_code, outlook_get_auth_url, outlook_is_connected,
     outlook_sync,
 };
+use commands::recurrence::{recurrence_create, recurrence_delete_series};
 use commands::reminders::{conn_fire_due, reminders_cancel, reminders_schedule};
 use commands::search::search_query;
 use commands::settings::{
@@ -226,6 +227,8 @@ pub fn run() {
             backup_import,
             reminders_schedule,
             reminders_cancel,
+            recurrence_create,
+            recurrence_delete_series,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

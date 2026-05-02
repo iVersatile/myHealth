@@ -126,6 +126,10 @@ export const IPC = {
   remindersSchedule: 'reminders_schedule',
   remindersCancel: 'reminders_cancel',
 
+  // Recurrence
+  recurrenceCreate: 'recurrence_create',
+  recurrenceDeleteSeries: 'recurrence_delete_series',
+
   // Links
   linksCreate: 'links_create',
   linksDelete: 'links_delete',
