@@ -7,8 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 22 — V3-F6 Auto-Appointment from Invoice
-▶ 22.1 — New Rust command appointments_suggest_from_document
+Phase 22 — V3-F6 Auto-Appointment from Invoice — COMPLETE ✓
 ```
 
 ---
@@ -1287,7 +1286,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 **PRD reference:** `docs/PRD_V3.md` → V3-F6
 
-### ▶ **22.1 — New Rust command `appointments_suggest_from_document`**
+### [x] **22.1 — New Rust command `appointments_suggest_from_document`**
 - Add to `src-tauri/src/commands/documents.rs`:
   - `AppointmentSuggestion` struct: `{ appt_date: String, title: String, doctor_name: Option<String>, specialty: Option<String> }`
   - `appointments_suggest_from_document(id: String, state) -> Result<Option<AppointmentSuggestion>, CommandError>`
@@ -1297,13 +1296,13 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 - Register command in `src-tauri/src/lib.rs` (import + invoke_handler entry)
 - Done when: `cargo clippy -- -D warnings` passes
 
-### [ ] **22.2 — Frontend `ApptSuggestionBanner` component**
+### [x] **22.2 — Frontend `ApptSuggestionBanner` component**
 - Create `src/components/documents/ApptSuggestionBanner.tsx`
 - Props: `suggestion: { apptDate: string; title: string; doctorName?: string; specialty?: string }`, `onConfirm: () => void`, `onDismiss: () => void`
 - UI: dismissible banner showing the pre-filled appointment details with "Create Appointment" and "Dismiss" buttons
 - Done when: `npx tsc --noEmit` passes
 
-### [ ] **22.3 — Wire into `documents/page.tsx` `handleUploaded()`**
+### [x] **22.3 — Wire into `documents/page.tsx` `handleUploaded()`**
 - After `links_score_candidates` returns null (no `suggestion`), call `appointments_suggest_from_document({ id: doc.id })`
 - If non-null, store in `apptSuggestion` state and show `ApptSuggestionBanner`
 - On confirm: call `appointments_create` with pre-filled data, then `link_document_to_appointment`, then dismiss banner
@@ -1311,7 +1310,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 - V3-F6.8: if `links_score_candidates` returned non-null, skip the `appointments_suggest_from_document` call
 - Done when: `npx tsc --noEmit` passes
 
-### [ ] **22.4 — Unit tests**
+### [x] **22.4 — Unit tests**
 - Add tests to `src/app/(app)/documents/__tests__/` (or create file):
   - Banner renders with correct date and doctor name
   - "Create Appointment" calls `appointments_create` then `link_document_to_appointment`
@@ -1320,7 +1319,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
   - Document without invoice tag → no appt suggestion banner
 - Done when: `pnpm test` passes with ≥80% branch coverage on the new code
 
-### [ ] **22.5 — Commit & push**
+### [x] **22.5 — Commit & push**
 - Pre-commit: `npx tsc --noEmit` + `cargo fmt --all` + `cargo clippy -- -D warnings`
 - Commit: `feat: auto-create appointment from invoice upload (V3-F6)`
 - Push to `origin/develop`; CI green
