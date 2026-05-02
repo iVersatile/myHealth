@@ -58,7 +58,7 @@ use commands::outlook::{
     outlook_disconnect, outlook_exchange_code, outlook_get_auth_url, outlook_is_connected,
     outlook_sync,
 };
-use commands::reminders::{reminders_cancel, reminders_schedule};
+use commands::reminders::{conn_fire_due, reminders_cancel, reminders_schedule};
 use commands::search::search_query;
 use commands::settings::{
     settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data,
@@ -67,12 +67,14 @@ use commands::stats::stats_summary;
 use commands::summarizer::summarize_appointment_notes;
 use commands::tags::{appointment_tags_get, appointment_tags_set, icd10_suggest};
 use commands::AppState;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState::new())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -81,6 +83,35 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                    // Collect due notifications while holding the DB lock, then
+                    // release the lock before sending OS notifications.
+                    let pending: Vec<(String, String)> = {
+                        let state = handle.state::<AppState>();
+                        let mut notifications = Vec::new();
+                        if let Ok(guard) = state.db.lock() {
+                            if let Some(conn) = guard.as_ref() {
+                                let _ = conn_fire_due(conn, chrono::Utc::now(), |title, label| {
+                                    notifications.push((title.to_string(), label.to_string()));
+                                });
+                            }
+                        }
+                        notifications
+                    };
+                    for (title, body) in pending {
+                        use tauri_plugin_notification::NotificationExt;
+                        let _ = handle
+                            .notification()
+                            .builder()
+                            .title(&title)
+                            .body(&body)
+                            .show();
+                    }
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

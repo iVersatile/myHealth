@@ -74,9 +74,37 @@ pub(crate) fn conn_cancel(
     Ok(())
 }
 
+pub(crate) fn conn_fire_due(
+    conn: &rusqlite::Connection,
+    now: DateTime<Utc>,
+    mut notify: impl FnMut(&str, &str),
+) -> Result<(), CommandError> {
+    let now_str = now.format("%Y-%m-%dT%H:%M:%S").to_string();
+    let mut stmt = conn.prepare(
+        "SELECT ar.id, a.title, ar.offset_label \
+         FROM appointment_reminders ar \
+         JOIN appointments a ON a.id = ar.appointment_id \
+         WHERE ar.remind_at <= ?1 AND ar.is_fired = 0",
+    )?;
+    let rows: Vec<(String, String, String)> = stmt
+        .query_map(rusqlite::params![now_str], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?
+        .collect::<Result<_, _>>()?;
+
+    for (id, title, label) in rows {
+        notify(&title, &label);
+        conn.execute(
+            "UPDATE appointment_reminders SET is_fired = 1 WHERE id = ?1",
+            rusqlite::params![id],
+        )?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use chrono::{Duration, Utc};
+    use chrono::{DateTime, Duration, Utc};
     use rusqlite::Connection;
 
     use crate::db::migrations;
@@ -145,5 +173,61 @@ mod tests {
         let conn = setup();
         super::conn_cancel(&conn, "appt-1").unwrap();
         assert_eq!(count_reminders(&conn, "appt-1"), 0);
+    }
+
+    fn insert_reminder(conn: &Connection, id: &str, remind_at: &str, is_fired: i32) {
+        conn.execute(
+            "INSERT INTO appointment_reminders \
+             (id, appointment_id, remind_at, offset_label, is_fired, created_at) \
+             VALUES (?1, 'appt-1', ?2, '15 minutes before', ?3, '2090-01-01T00:00:00')",
+            rusqlite::params![id, remind_at, is_fired],
+        )
+        .unwrap();
+    }
+
+    fn is_fired(conn: &Connection, id: &str) -> i32 {
+        conn.query_row(
+            "SELECT is_fired FROM appointment_reminders WHERE id = ?1",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn due_reminder_fires_and_marks_fired() {
+        let conn = setup();
+        insert_reminder(&conn, "rem-1", "2026-01-01T09:00:00", 0);
+        let now: DateTime<Utc> = "2026-01-01T10:00:00Z".parse().unwrap();
+        let mut fired: Vec<(String, String)> = vec![];
+        super::conn_fire_due(&conn, now, |title, label| {
+            fired.push((title.to_string(), label.to_string()));
+        })
+        .unwrap();
+        assert_eq!(fired.len(), 1);
+        assert_eq!(fired[0].0, "Check-up");
+        assert_eq!(fired[0].1, "15 minutes before");
+        assert_eq!(is_fired(&conn, "rem-1"), 1);
+    }
+
+    #[test]
+    fn future_reminder_not_fired() {
+        let conn = setup();
+        insert_reminder(&conn, "rem-2", "2090-06-01T10:00:00", 0);
+        let now: DateTime<Utc> = "2026-01-01T10:00:00Z".parse().unwrap();
+        let mut count = 0usize;
+        super::conn_fire_due(&conn, now, |_, _| count += 1).unwrap();
+        assert_eq!(count, 0);
+        assert_eq!(is_fired(&conn, "rem-2"), 0);
+    }
+
+    #[test]
+    fn already_fired_reminder_not_refired() {
+        let conn = setup();
+        insert_reminder(&conn, "rem-3", "2026-01-01T09:00:00", 1);
+        let now: DateTime<Utc> = "2026-01-01T10:00:00Z".parse().unwrap();
+        let mut count = 0usize;
+        super::conn_fire_due(&conn, now, |_, _| count += 1).unwrap();
+        assert_eq!(count, 0, "already-fired reminder must not fire again");
     }
 }
