@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-All phases complete — no pending tasks
+Phase 21 COMPLETE — all tasks done, CI pending
 ```
 
 ---
@@ -1231,6 +1231,54 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 - Pre-commit: `npx tsc --noEmit` ✅ + `cargo fmt` ✅ + `cargo clippy` ✅
 - Commit: `feat: add doc title extraction and dual timeline events` (32b581c)
 - Push to `origin/develop`; CI green ✅
+
+---
+
+## Phase 21 — Tag & Timeline Feedback Fixes (PRD_V3.md v3.1 changes)
+
+**Scope:** Manual testing of the "Registration Form" upload revealed two bugs and one missing feature:
+1. Document title tag stored with `title:` prefix — must be stored clean.
+2. Upload events appear in Chronological view — they must be exclusive to a new "By Uploaded Date" view.
+3. No way to set `activity_date` after upload for documents where it was not extracted.
+
+### [x] **21.1 — Remove `title:` prefix from Rust extraction + update tests**
+- In `src-tauri/src/extraction/mod.rs`, `auto_extract_tags()` step 5 (line ~289): change `format!("title:{title}")` → store `title` directly
+- Update test `auto_tags_includes_title_tag()` (line ~626) to assert `"Registration Form"` (no prefix)
+- Done when: `cargo test` passes and the assertion is on the plain string `"Registration Form"`
+
+### [x] **21.2 — Fix TypeScript `buildDocTitle()` to identify title tags without prefix**
+- In `src/app/(app)/timeline/page.tsx`, rewrite `buildDocTitle()` (lines ~44–60):
+  - Remove `tags.find((t) => t.startsWith('title:'))` logic
+  - New heuristic: a title tag is a mixed-case tag that is NOT all-lowercase (type), NOT all-uppercase (specialty), NOT `YYYY-MM-DD` (date), and does NOT start with a professional title prefix ("Mr", "Dr", "Mrs", "Ms", "Prof", "Sr")
+- Done when: `npx tsc --noEmit` passes and timeline displays `"Registration Form"` as doc title (no prefix visible)
+
+### [x] **21.3 — Add "By Uploaded Date" view and move upload events there**
+- In `src/app/(app)/timeline/page.tsx`:
+  - Add `'by-uploaded-date'` to `type ViewMode`
+  - Restructure `allEvents` useMemo: in `chronological`/`by-category`/`by-doctor` modes, only emit `docToEvent(d)` (when `activity_date` exists) — do NOT include `docToUploadEvent(d)`
+  - Add rendering branch for `by-uploaded-date`: show all docs sorted by `created_at` descending using `docToUploadEvent(d)`; include documents without `activity_date`
+  - Add "By Uploaded Date" tab to `viewTabs`
+- Done when: `npx tsc --noEmit` passes; Chronological shows no upload events; "By Uploaded Date" tab shows all documents including ones without activity_date
+
+### [x] **21.4 — Add `activity_date` editing to document detail page**
+- Locate `DocumentDetailClient.tsx` (or equivalent document detail component)
+- Add an "Activity Date" date input field; show it always, pre-populate with `activity_date` if set
+- Wire a save button that calls Tauri IPC `update_document_activity_date(documentId, activityDate)`
+- Add the Rust IPC command `update_document_activity_date` in `src-tauri/src/commands/` if not already present (UPDATE `documents SET activity_date = ?1 WHERE id = ?2`)
+- Done when: `npx tsc --noEmit` + `cargo clippy` pass; opening a document without activity_date shows empty editable field; entering a date and saving persists it; Timeline Chronological view reflects it
+
+### [x] **21.5 — E2E tests for Phase 21 changes**
+- Add Playwright tests to `e2e/` covering:
+  - Tag chip for "Registration Form" shows no "title:" prefix
+  - Chronological view has no rows with label containing "Uploaded:"
+  - "By Uploaded Date" tab exists and shows all documents
+  - Document detail activity_date field saves and Timeline updates
+- Done when: `pnpm e2e` passes for all four scenarios
+
+### [x] **21.6 — Commit & push**
+- Pre-commit: `npx tsc --noEmit` + `cargo fmt --all` + `cargo clippy -- -D warnings`
+- Commit: `fix: clean tag prefix, By Uploaded Date view, activity_date editing`
+- Push to `origin/develop`; CI green
 
 ---
 
