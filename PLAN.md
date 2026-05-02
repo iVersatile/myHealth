@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 16 — Recurring Appointments (v1.9)
-▶ Task 16.7
+Phase 17 — Note Links + Note Version History (v1.10)
+▶ Task 17.1
 ```
 
 ---
@@ -1022,7 +1022,7 @@ Phase 16 — Recurring Appointments (v1.9)
    - `cargo test` covers expansion, until_date, max cap, delete variants
    - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
 
-[ ] **16.7 — Commit & push**
+[x] **16.7 — Commit & push**
    - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
    - Commit: `feat: recurring appointments weekly/monthly (F2.7)`
    - Push to `origin/develop`; verify CI green
