@@ -70,6 +70,25 @@ const SCHEMA_V10: &str = "
     );
 ";
 
+const SCHEMA_V14: &str = "
+    CREATE TABLE IF NOT EXISTS note_links (
+        id           TEXT PRIMARY KEY,
+        note_id      TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+        entity_type  TEXT NOT NULL CHECK(entity_type IN ('appointment','document')),
+        entity_id    TEXT NOT NULL,
+        created_at   TEXT NOT NULL,
+        UNIQUE(note_id, entity_type, entity_id)
+    );
+    CREATE TABLE IF NOT EXISTS note_versions (
+        id       TEXT PRIMARY KEY,
+        note_id  TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+        content  TEXT NOT NULL,
+        saved_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_note_versions_note_id_saved_at
+        ON note_versions (note_id, saved_at DESC);
+";
+
 const SCHEMA_V13: &str = "
     CREATE TABLE IF NOT EXISTS recurrence_series (
         id          TEXT PRIMARY KEY,
@@ -231,6 +250,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 14 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V14)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [14])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -257,7 +283,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 13);
+        assert_eq!(version, 14);
     }
 
     #[test]
@@ -271,7 +297,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 13);
+        assert_eq!(version, 14);
     }
 
     #[test]
@@ -1177,5 +1203,100 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 0, "reminder must cascade-delete with appointment");
+    }
+
+    // ── v14: note_links + note_versions ─────────────────────────────────────
+
+    #[test]
+    fn migration_v14_note_links_table_exists() {
+        let conn = migrated_conn();
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='note_links'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "note_links table must exist");
+    }
+
+    #[test]
+    fn migration_v14_note_versions_table_exists() {
+        let conn = migrated_conn();
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='note_versions'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "note_versions table must exist");
+    }
+
+    #[test]
+    fn migration_v14_note_links_cascade_delete() {
+        let conn = migrated_conn();
+
+        conn.execute(
+            "INSERT INTO users (id, display_name) VALUES ('u1', 'Test')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO notes (id, title, content, created_at, updated_at, user_id) \
+             VALUES ('n1', 'Note', 'body', '2026-01-01T00:00:00', '2026-01-01T00:00:00', 'u1')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO note_links (id, note_id, entity_type, entity_id, created_at) \
+             VALUES ('nl1', 'n1', 'document', 'doc-1', '2026-01-01T00:00:00')",
+            [],
+        )
+        .unwrap();
+
+        conn.execute("DELETE FROM notes WHERE id='n1'", []).unwrap();
+
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM note_links WHERE id='nl1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "note_links must cascade-delete with note");
+    }
+
+    #[test]
+    fn migration_v14_note_links_unique_constraint() {
+        let conn = migrated_conn();
+
+        conn.execute(
+            "INSERT INTO users (id, display_name) VALUES ('u1', 'Test')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO notes (id, title, content, created_at, updated_at, user_id) \
+             VALUES ('n1', 'Note', 'body', '2026-01-01T00:00:00', '2026-01-01T00:00:00', 'u1')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO note_links (id, note_id, entity_type, entity_id, created_at) \
+             VALUES ('nl1', 'n1', 'appointment', 'appt-1', '2026-01-01T00:00:00')",
+            [],
+        )
+        .unwrap();
+
+        let result = conn.execute(
+            "INSERT INTO note_links (id, note_id, entity_type, entity_id, created_at) \
+             VALUES ('nl2', 'n1', 'appointment', 'appt-1', '2026-01-01T00:00:00')",
+            [],
+        );
+        assert!(
+            result.is_err(),
+            "duplicate (note_id, entity_type, entity_id) must be rejected"
+        );
     }
 }
