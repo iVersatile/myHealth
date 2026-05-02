@@ -658,6 +658,263 @@ describe('AppointmentForm', () => {
     })
   })
 
+  describe('Contact Picker', () => {
+    const mockDoctorContact = {
+      id: 'con-1',
+      name: 'Dr. Alice',
+      role: 'gp',
+      specialty: 'General Practice',
+      phone: null,
+      email: null,
+      clinic: null,
+      address: null,
+      notes: null,
+      created_at: '2025-01-01T00:00:00',
+      updated_at: '2025-01-01T00:00:00',
+      contact_clinic_id: null,
+    }
+    const mockClinicContact = {
+      id: 'con-2',
+      name: 'City Hospital',
+      role: 'hospital',
+      specialty: null,
+      phone: null,
+      email: null,
+      clinic: null,
+      address: null,
+      notes: null,
+      created_at: '2025-01-01T00:00:00',
+      updated_at: '2025-01-01T00:00:00',
+      contact_clinic_id: null,
+    }
+
+    it('renders doctor picker select when doctor contacts exist', async () => {
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: /select doctor from contacts/i })).toBeInTheDocument()
+      })
+    })
+
+    it('renders clinic picker select when clinic contacts exist', async () => {
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockClinicContact])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: /select clinic from contacts/i })).toBeInTheDocument()
+      })
+    })
+
+    it('selecting a doctor contact populates doctor name field', async () => {
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+
+      const doctorSelect = await screen.findByRole('combobox', { name: /select doctor from contacts/i })
+      await userEvent.selectOptions(doctorSelect, 'con-1')
+
+      await waitFor(() => {
+        const doctorInput = screen.getByRole('textbox', { name: /doctor name \(free text\)/i }) as HTMLInputElement
+        expect(doctorInput.value).toBe('Dr. Alice')
+      })
+    })
+
+    it('clearing doctor picker resets linked contact id', async () => {
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+
+      const doctorSelect = await screen.findByRole('combobox', { name: /select doctor from contacts/i })
+      await userEvent.selectOptions(doctorSelect, 'con-1')
+      await userEvent.selectOptions(doctorSelect, '')
+
+      await waitFor(() => {
+        expect((doctorSelect as HTMLSelectElement).value).toBe('')
+      })
+    })
+
+    it('selecting a clinic contact populates clinic name field', async () => {
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockClinicContact])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+
+      const clinicSelect = await screen.findByRole('combobox', { name: /select clinic from contacts/i })
+      await userEvent.selectOptions(clinicSelect, 'con-2')
+
+      await waitFor(() => {
+        const clinicInput = screen.getByRole('textbox', { name: /clinic name \(free text\)/i }) as HTMLInputElement
+        expect(clinicInput.value).toBe('City Hospital')
+      })
+    })
+
+    it('clearing clinic picker resets linked contact id', async () => {
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockClinicContact])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+
+      const clinicSelect = await screen.findByRole('combobox', { name: /select clinic from contacts/i })
+      await userEvent.selectOptions(clinicSelect, 'con-2')
+      await userEvent.selectOptions(clinicSelect, '')
+
+      await waitFor(() => {
+        expect((clinicSelect as HTMLSelectElement).value).toBe('')
+      })
+    })
+
+    it('pre-fills doctor and clinic contact selectors from initial contact_ids', async () => {
+      const initial = {
+        id: 'apt-99',
+        title: 'Check-up',
+        doctor_name: 'Dr. Alice',
+        clinic_name: 'City Hospital',
+        specialty: null,
+        appt_date: '2025-06-01T09:00:00',
+        duration_min: 30,
+        location: null,
+        notes: null,
+        status: 'scheduled' as AppointmentStatus,
+        reminder_min: 60,
+        created_at: '2025-01-01T00:00:00',
+        updated_at: '2025-01-01T00:00:00',
+        document_ids: [],
+        contact_ids: ['con-1', 'con-2'],
+      }
+
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact, mockClinicContact])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} initial={initial} />)
+
+      await waitFor(() => {
+        const doctorSelect = screen.getByRole('combobox', { name: /select doctor from contacts/i }) as HTMLSelectElement
+        expect(doctorSelect.value).toBe('con-1')
+        const clinicSelect = screen.getByRole('combobox', { name: /select clinic from contacts/i }) as HTMLSelectElement
+        expect(clinicSelect.value).toBe('con-2')
+      })
+    })
+
+    it('calls appointment_link_contact when doctor selected in edit mode', async () => {
+      const initial = {
+        id: 'apt-10',
+        title: 'Check-up',
+        doctor_name: '',
+        clinic_name: '',
+        specialty: null,
+        appt_date: '2025-06-01T09:00:00',
+        duration_min: 30,
+        location: null,
+        notes: null,
+        status: 'scheduled' as AppointmentStatus,
+        reminder_min: 60,
+        created_at: '2025-01-01T00:00:00',
+        updated_at: '2025-01-01T00:00:00',
+        document_ids: [],
+        contact_ids: [],
+      }
+
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'appointment_link_contact') return Promise.resolve(null)
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} initial={initial} />)
+
+      const doctorSelect = await screen.findByRole('combobox', { name: /select doctor from contacts/i })
+      await userEvent.selectOptions(doctorSelect, 'con-1')
+
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('appointment_link_contact', {
+          appointmentId: 'apt-10',
+          contactId: 'con-1',
+        })
+      })
+    })
+
+    it('calls appointment_unlink_contact when doctor cleared in edit mode', async () => {
+      const initial = {
+        id: 'apt-11',
+        title: 'Check-up',
+        doctor_name: 'Dr. Alice',
+        clinic_name: '',
+        specialty: null,
+        appt_date: '2025-06-01T09:00:00',
+        duration_min: 30,
+        location: null,
+        notes: null,
+        status: 'scheduled' as AppointmentStatus,
+        reminder_min: 60,
+        created_at: '2025-01-01T00:00:00',
+        updated_at: '2025-01-01T00:00:00',
+        document_ids: [],
+        contact_ids: ['con-1'],
+      }
+
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'appointment_unlink_contact') return Promise.resolve(null)
+        if (command === 'appointment_link_contact') return Promise.resolve(null)
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} initial={initial} />)
+
+      const doctorSelect = await screen.findByRole('combobox', { name: /select doctor from contacts/i })
+      await waitFor(() => {
+        expect((doctorSelect as HTMLSelectElement).value).toBe('con-1')
+      })
+      await userEvent.selectOptions(doctorSelect, '')
+
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('appointment_unlink_contact', {
+          appointmentId: 'apt-11',
+          contactId: 'con-1',
+        })
+      })
+    })
+  })
+
   describe('Specialty and Status Selection', () => {
     it('allows selecting specialty from available options', async () => {
       const onCancel = vi.fn()
