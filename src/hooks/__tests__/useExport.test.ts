@@ -40,6 +40,14 @@ const makeBundle = (overrides = {}) => ({
   ...overrides,
 })
 
+const makeDoc = (overrides: Record<string, unknown> = {}) => ({
+  id: 'd1',
+  filename: 'test.pdf',
+  mime_type: 'application/pdf',
+  file_bytes_b64: btoa('fake-pdf-bytes'),
+  ...overrides,
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -134,5 +142,89 @@ describe('useExport', () => {
     })
 
     expect(result.current.error).toBe('something went wrong')
+  })
+
+  it('skips document with null file_bytes_b64', async () => {
+    const { useExport } = await import('../useExport')
+    const bundle = makeBundle({ documents: [makeDoc({ file_bytes_b64: null })] })
+    mockInvoke.mockResolvedValueOnce(bundle)
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() => useExport())
+    let success: boolean | undefined
+    await act(async () => {
+      success = await result.current.exportBundle(['d1'], 'My Records', '/tmp/out.pdf')
+    })
+    expect(success).toBe(true)
+  })
+
+  it('embeds PDF document into output', async () => {
+    const { useExport } = await import('../useExport')
+    const { PDFDocument } = await import('pdf-lib')
+    const bundle = makeBundle({ documents: [makeDoc({ mime_type: 'application/pdf' })] })
+    mockInvoke.mockResolvedValueOnce(bundle)
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() => useExport())
+    await act(async () => {
+      await result.current.exportBundle(['d1'], 'My Records', '/tmp/out.pdf')
+    })
+    expect(PDFDocument.load).toHaveBeenCalled()
+  })
+
+  it('embeds JPEG image document into output', async () => {
+    const { useExport } = await import('../useExport')
+    const bundle = makeBundle({ documents: [makeDoc({ mime_type: 'image/jpeg', filename: 'photo.jpg' })] })
+    mockInvoke.mockResolvedValueOnce(bundle)
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() => useExport())
+    let success: boolean | undefined
+    await act(async () => {
+      success = await result.current.exportBundle(['d1'], 'My Records', '/tmp/out.pdf')
+    })
+    expect(success).toBe(true)
+  })
+
+  it('also covers image/jpg mime type alias', async () => {
+    const { useExport } = await import('../useExport')
+    const bundle = makeBundle({ documents: [makeDoc({ mime_type: 'image/jpg', filename: 'photo.jpg' })] })
+    mockInvoke.mockResolvedValueOnce(bundle)
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() => useExport())
+    let success: boolean | undefined
+    await act(async () => {
+      success = await result.current.exportBundle(['d1'], 'My Records', '/tmp/out.pdf')
+    })
+    expect(success).toBe(true)
+  })
+
+  it('embeds PNG image document into output', async () => {
+    const { useExport } = await import('../useExport')
+    const bundle = makeBundle({ documents: [makeDoc({ mime_type: 'image/png', filename: 'photo.png' })] })
+    mockInvoke.mockResolvedValueOnce(bundle)
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() => useExport())
+    let success: boolean | undefined
+    await act(async () => {
+      success = await result.current.exportBundle(['d1'], 'My Records', '/tmp/out.pdf')
+    })
+    expect(success).toBe(true)
+  })
+
+  it('adds placeholder page for unsupported mime type', async () => {
+    const { useExport } = await import('../useExport')
+    const bundle = makeBundle({ documents: [makeDoc({ mime_type: 'text/csv', filename: 'data.csv' })] })
+    mockInvoke.mockResolvedValueOnce(bundle)
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() => useExport())
+    let success: boolean | undefined
+    await act(async () => {
+      success = await result.current.exportBundle(['d1'], 'My Records', '/tmp/out.pdf')
+    })
+    expect(success).toBe(true)
   })
 })
