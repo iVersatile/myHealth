@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 14 — Encrypted Backup Export / Import (v1.7)
-▶ Task 14.6
+Phase 15 — System Notification Reminders (v1.8)
+▶ Task 15.1
 ```
 
 ---
@@ -919,7 +919,7 @@ Phase 14 — Encrypted Backup Export / Import (v1.7)
    - TypeScript: `npx tsc --noEmit` clean
    - Done when: coverage ≥ 80% on new backup code; manual smoke: export → wipe → import → data intact
 
-▶ [ ] **14.6 — Commit & push**
+[x] **14.6 — Commit & push**
    - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
    - Commit: `feat: encrypted backup export and import (F8.6, F8.7)`
    - Push to `origin/develop`; verify CI green
@@ -933,7 +933,7 @@ Phase 14 — Encrypted Backup Export / Import (v1.7)
 
 ### Sprint 28: Rust + Tauri
 
-[ ] **15.1 — Reminders schema migration**
+▶ [ ] **15.1 — Reminders schema migration**
    - Migration v7 in `src-tauri/src/db/migrations.rs`:
      - `CREATE TABLE appointment_reminders (id TEXT PRIMARY KEY, appointment_id TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE, remind_at TEXT NOT NULL, offset_label TEXT NOT NULL, is_fired INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)`
      - Index on `(remind_at, is_fired)` for efficient polling
