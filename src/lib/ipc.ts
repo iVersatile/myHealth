@@ -118,6 +118,10 @@ export const IPC = {
   exportSaveBytes: 'export_save_bytes',
   exportPdfSummaryBytes: 'export_pdf_summary_bytes',
 
+  // Backup
+  backupExport: 'backup_export',
+  backupImport: 'backup_import',
+
   // Links
   linksCreate: 'links_create',
   linksDelete: 'links_delete',

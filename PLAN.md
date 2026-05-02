@@ -8,7 +8,7 @@
 
 ```
 Phase 14 — Encrypted Backup Export / Import (v1.7)
-▶ Task 14.2
+▶ Task 14.3
 ```
 
 ---
@@ -892,7 +892,7 @@ Phase 14 — Encrypted Backup Export / Import (v1.7)
    - The archive itself is not re-encrypted — the DB is already AES-256 encrypted via SQLCipher; the archive is a container only
    - Done when: `cargo test` verifies (a) exported archive contains all 3 files; (b) archive file size > 0; (c) writing to a read-only path returns a descriptive error
 
-▶ [ ] **14.2 — Backup import command**
+[x] **14.2 — Backup import command**
    - File: `src-tauri/src/commands/backup.rs`
    - Implement `backup_import(src_path: String)` Tauri command:
      - Validate the archive contains all 3 expected files
@@ -901,7 +901,7 @@ Phase 14 — Encrypted Backup Export / Import (v1.7)
      - Return error if archive is invalid or missing files
    - Done when: `cargo test` verifies (a) valid archive → files restored; (b) invalid archive → error returned, existing files untouched; (c) missing file in archive → error
 
-[ ] **14.3 — Register in lib.rs + IPC keys**
+▶ [ ] **14.3 — Register in lib.rs + IPC keys**
    - Add `backupExport: 'backup_export'`, `backupImport: 'backup_import'` to `src/lib/ipc.ts`
    - Register both commands in `lib.rs` invoke handler
 
