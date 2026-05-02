@@ -4,9 +4,16 @@ import userEvent from '@testing-library/user-event'
 
 const mockInvoke = vi.fn()
 const mockLock = vi.fn()
+const mockSave = vi.fn()
+const mockOpen = vi.fn()
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
+}))
+
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  save: (...args: unknown[]) => mockSave(...args),
+  open: (...args: unknown[]) => mockOpen(...args),
 }))
 
 vi.mock('../../../../hooks/useAuth', () => ({
@@ -25,6 +32,8 @@ async function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.resetModules()
+  mockSave.mockResolvedValue(null)
+  mockOpen.mockResolvedValue(null)
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === 'settings_get') return Promise.resolve(null)
     if (cmd === 'settings_get_data_dir') return Promise.resolve('/home/user/.myhealth')
@@ -510,6 +519,146 @@ describe('SettingsPage', () => {
 
     const syncBtn = screen.getByText('Sync Now') as HTMLButtonElement
     expect(syncBtn.disabled).toBe(true)
+  })
+
+  it('renders Backup & Restore section', async () => {
+    await renderPage()
+    expect(screen.getByText('Backup & Restore')).toBeDefined()
+    expect(screen.getByText('Export Backup')).toBeDefined()
+    expect(screen.getByText('Import Backup')).toBeDefined()
+  })
+
+  it('export backup — dialog cancelled does nothing', async () => {
+    mockSave.mockResolvedValue(null)
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Export Backup'))
+
+    await waitFor(() => expect(mockSave).toHaveBeenCalledOnce())
+    expect(mockInvoke).not.toHaveBeenCalledWith('backup_export', expect.anything())
+  })
+
+  it('export backup — success calls backup_export and shows message', async () => {
+    mockSave.mockResolvedValue('/tmp/myhealth-backup.myhealth')
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'backup_export') return Promise.resolve()
+      return Promise.resolve()
+    })
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Export Backup'))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('backup_export', {
+        destPath: '/tmp/myhealth-backup.myhealth',
+      })
+    )
+    await waitFor(() =>
+      expect(screen.getByText('Backup exported successfully.')).toBeDefined()
+    )
+  })
+
+  it('export backup — backend error shows error message', async () => {
+    mockSave.mockResolvedValue('/tmp/backup.myhealth')
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'backup_export') return Promise.reject(new Error('Disk full'))
+      return Promise.resolve()
+    })
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Export Backup'))
+
+    await waitFor(() =>
+      expect(screen.getByText('Error: Disk full')).toBeDefined()
+    )
+  })
+
+  it('import backup — dialog cancelled does nothing', async () => {
+    mockOpen.mockResolvedValue(null)
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Import Backup'))
+
+    await waitFor(() => expect(mockOpen).toHaveBeenCalledOnce())
+    expect(screen.queryByText('Replace all data?')).toBeNull()
+  })
+
+  it('import backup — shows confirmation after file selected', async () => {
+    mockOpen.mockResolvedValue('/tmp/backup.myhealth')
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Import Backup'))
+
+    await waitFor(() =>
+      expect(screen.getByText('Yes, replace my data')).toBeDefined()
+    )
+    expect(screen.getByText('Replace all data?', { exact: false })).toBeDefined()
+  })
+
+  it('import backup — cancel confirmation dismisses dialog', async () => {
+    mockOpen.mockResolvedValue('/tmp/backup.myhealth')
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Import Backup'))
+    await waitFor(() => expect(screen.getByText('Yes, replace my data')).toBeDefined())
+
+    fireEvent.click(screen.getByText('Cancel'))
+
+    expect(screen.queryByText('Yes, replace my data')).toBeNull()
+  })
+
+  it('import backup — confirm calls backup_import then lock and redirect', async () => {
+    mockOpen.mockResolvedValue('/tmp/backup.myhealth')
+    const mockPush = vi.fn()
+    vi.doMock('next/navigation', () => ({
+      useRouter: () => ({ push: mockPush }),
+    }))
+    mockLock.mockResolvedValue(undefined)
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'backup_import') return Promise.resolve()
+      return Promise.resolve()
+    })
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Import Backup'))
+    await waitFor(() => expect(screen.getByText('Yes, replace my data')).toBeDefined())
+    fireEvent.click(screen.getByText('Yes, replace my data'))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('backup_import', {
+        srcPath: '/tmp/backup.myhealth',
+      })
+    )
+    await waitFor(() => expect(mockLock).toHaveBeenCalledOnce())
+  })
+
+  it('import backup — backend error shows error message', async () => {
+    mockOpen.mockResolvedValue('/tmp/backup.myhealth')
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'settings_get') return Promise.resolve(null)
+      if (cmd === 'settings_get_data_dir') return Promise.resolve('/data')
+      if (cmd === 'calendar_list_sources') return Promise.resolve([])
+      if (cmd === 'backup_import') return Promise.reject(new Error('Corrupt file'))
+      return Promise.resolve()
+    })
+    await renderPage()
+
+    fireEvent.click(screen.getByText('Import Backup'))
+    await waitFor(() => expect(screen.getByText('Yes, replace my data')).toBeDefined())
+    fireEvent.click(screen.getByText('Yes, replace my data'))
+
+    await waitFor(() =>
+      expect(screen.getByText('Error: Corrupt file')).toBeDefined()
+    )
   })
 })
 
