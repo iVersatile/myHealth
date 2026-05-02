@@ -58,6 +58,9 @@ describe('AppointmentForm', () => {
       if (command === 'categories_for_appointment') {
         return Promise.resolve([])
       }
+      if (command === 'contacts_list') {
+        return Promise.resolve([])
+      }
       return Promise.resolve(null)
     })
   })
@@ -123,6 +126,9 @@ describe('AppointmentForm', () => {
         }
         if (command === 'categories_for_appointment') {
           return Promise.resolve(['cat-1'])
+        }
+        if (command === 'contacts_list') {
+          return Promise.resolve([])
         }
         return Promise.resolve(null)
       })
@@ -463,6 +469,9 @@ describe('AppointmentForm', () => {
         if (command === 'categories_for_appointment') {
           return Promise.resolve([])
         }
+        if (command === 'contacts_list') {
+          return Promise.resolve([])
+        }
         return Promise.resolve(null)
       })
 
@@ -512,6 +521,9 @@ describe('AppointmentForm', () => {
         }
         if (command === 'categories_for_appointment') {
           return Promise.resolve(['cat-1'])
+        }
+        if (command === 'contacts_list') {
+          return Promise.resolve([])
         }
         return Promise.resolve(null)
       })

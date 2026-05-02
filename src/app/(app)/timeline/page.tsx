@@ -438,7 +438,7 @@ export default function TimelinePage() {
     for (const e of filtered) {
       if (e.type !== 'appointment') continue
       const appt = appointments.find((a) => a.id === e.rawId)
-      const linkedContactName = appt?.contact_ids
+      const linkedContactName = (appt?.contact_ids ?? [])
         .map((id) => contactNameMap.get(id))
         .find((name) => name != null)
       const doctorKey = linkedContactName ?? (appt?.doctor_name?.trim() || 'No doctor assigned')
