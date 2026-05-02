@@ -159,6 +159,30 @@ pub fn notes_update(
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
+    if input.content.is_some() {
+        let current_content: Option<String> = conn
+            .query_row("SELECT content FROM notes WHERE id = ?1", [&id], |row| {
+                row.get(0)
+            })
+            .ok();
+
+        if let Some(content) = current_content {
+            let version_id = Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO note_versions (id, note_id, content, saved_at) VALUES (?1, ?2, ?3, ?4)",
+                rusqlite::params![version_id, id, content, now],
+            )?;
+            conn.execute(
+                "DELETE FROM note_versions WHERE note_id = ?1
+                 AND id NOT IN (
+                     SELECT id FROM note_versions WHERE note_id = ?1
+                     ORDER BY saved_at DESC LIMIT 10
+                 )",
+                rusqlite::params![id],
+            )?;
+        }
+    }
+
     let rows = conn.execute(
         "UPDATE notes SET
              title      = COALESCE(?2, title),
@@ -266,6 +290,14 @@ pub fn notes_tags_set(
     }
 
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NoteVersionDto {
+    pub id: String,
+    pub note_id: String,
+    pub content: String,
+    pub saved_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -385,6 +417,83 @@ pub fn notes_for_entity(
     Ok(notes)
 }
 
+#[tauri::command]
+pub fn note_versions_list(
+    note_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<NoteVersionDto>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, note_id, content, saved_at
+         FROM note_versions WHERE note_id = ?1 ORDER BY saved_at DESC",
+    )?;
+
+    let versions: Vec<NoteVersionDto> = stmt
+        .query_map([&note_id], |row| {
+            Ok(NoteVersionDto {
+                id: row.get(0)?,
+                note_id: row.get(1)?,
+                content: row.get(2)?,
+                saved_at: row.get(3)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(versions)
+}
+
+#[tauri::command]
+pub fn note_version_restore(
+    note_id: String,
+    version_id: String,
+    state: State<'_, AppState>,
+) -> Result<Note, CommandError> {
+    let now = Utc::now().to_rfc3339();
+
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let target_content: String = conn
+        .query_row(
+            "SELECT content FROM note_versions WHERE id = ?1 AND note_id = ?2",
+            rusqlite::params![version_id, note_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| CommandError::NotFound(format!("version '{version_id}' not found")))?;
+
+    let current_content: String = conn
+        .query_row(
+            "SELECT content FROM notes WHERE id = ?1",
+            [&note_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| CommandError::NotFound(format!("note '{note_id}' not found")))?;
+
+    let snapshot_id = Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO note_versions (id, note_id, content, saved_at) VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![snapshot_id, note_id, current_content, now],
+    )?;
+    conn.execute(
+        "DELETE FROM note_versions WHERE note_id = ?1
+         AND id NOT IN (
+             SELECT id FROM note_versions WHERE note_id = ?1
+             ORDER BY saved_at DESC LIMIT 10
+         )",
+        rusqlite::params![note_id],
+    )?;
+
+    conn.execute(
+        "UPDATE notes SET content = ?2, updated_at = ?3 WHERE id = ?1",
+        rusqlite::params![note_id, target_content, now],
+    )?;
+
+    load_note(conn, &note_id)
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
@@ -415,7 +524,15 @@ mod tests {
                 entity_id   TEXT NOT NULL,
                 created_at  TEXT NOT NULL,
                 UNIQUE(note_id, entity_type, entity_id)
-            );",
+            );
+            CREATE TABLE note_versions (
+                id       TEXT PRIMARY KEY,
+                note_id  TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+                content  TEXT NOT NULL,
+                saved_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_note_versions_note_id_saved_at
+                ON note_versions (note_id, saved_at DESC);",
         )
         .unwrap();
         conn
@@ -690,5 +807,120 @@ mod tests {
         assert_eq!(ids.len(), 2);
         assert!(ids.contains(&"n1".to_string()));
         assert!(ids.contains(&"n2".to_string()));
+    }
+
+    fn insert_version(conn: &Connection, note_id: &str, content: &str, saved_at: &str) {
+        conn.execute(
+            "INSERT INTO note_versions (id, note_id, content, saved_at) VALUES (?, ?, ?, ?)",
+            rusqlite::params![Uuid::new_v4().to_string(), note_id, content, saved_at],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn note_versions_capped_at_ten() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "Note", false);
+        for i in 1..=11 {
+            insert_version(
+                &conn,
+                "n1",
+                &format!("v{i}"),
+                &format!("2024-01-{:02}T00:00:00Z", i),
+            );
+            conn.execute(
+                "DELETE FROM note_versions WHERE note_id = ?1
+                 AND id NOT IN (
+                     SELECT id FROM note_versions WHERE note_id = ?1
+                     ORDER BY saved_at DESC LIMIT 10
+                 )",
+                rusqlite::params!["n1"],
+            )
+            .unwrap();
+        }
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM note_versions WHERE note_id='n1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 10);
+    }
+
+    #[test]
+    fn note_version_restore_updates_note_content() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "original", false);
+        insert_version(&conn, "n1", "snapshot", "2024-01-01T00:00:00Z");
+        let version_id: String = conn
+            .query_row("SELECT id FROM note_versions WHERE note_id='n1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        let now = "2024-02-01T00:00:00Z";
+        let target_content: String = conn
+            .query_row(
+                "SELECT content FROM note_versions WHERE id = ?1 AND note_id = ?2",
+                rusqlite::params![version_id, "n1"],
+                |r| r.get(0),
+            )
+            .unwrap();
+        conn.execute(
+            "UPDATE notes SET content = ?2, updated_at = ?3 WHERE id = ?1",
+            rusqlite::params!["n1", target_content, now],
+        )
+        .unwrap();
+        let content: String = conn
+            .query_row("SELECT content FROM notes WHERE id='n1'", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(content, "snapshot");
+    }
+
+    #[test]
+    fn note_version_restore_snapshots_current_before_restore() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "current-content", false);
+        insert_version(&conn, "n1", "old-version", "2024-01-01T00:00:00Z");
+        let version_id: String = conn
+            .query_row("SELECT id FROM note_versions WHERE note_id='n1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        let now = "2024-02-01T00:00:00Z";
+        // Simulate restore: snapshot current first
+        let current: String = conn
+            .query_row("SELECT content FROM notes WHERE id='n1'", [], |r| r.get(0))
+            .unwrap();
+        conn.execute(
+            "INSERT INTO note_versions (id, note_id, content, saved_at) VALUES (?, ?, ?, ?)",
+            rusqlite::params![Uuid::new_v4().to_string(), "n1", current, now],
+        )
+        .unwrap();
+        // Then restore target
+        let target: String = conn
+            .query_row(
+                "SELECT content FROM note_versions WHERE id = ?1",
+                rusqlite::params![version_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        conn.execute(
+            "UPDATE notes SET content = ?2, updated_at = ?3 WHERE id = ?1",
+            rusqlite::params!["n1", target, now],
+        )
+        .unwrap();
+        let version_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM note_versions WHERE note_id='n1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(version_count, 2);
+        let note_content: String = conn
+            .query_row("SELECT content FROM notes WHERE id='n1'", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(note_content, "old-version");
     }
 }

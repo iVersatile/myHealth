@@ -52,8 +52,8 @@ use commands::links::{
     unlink_document_from_appointment,
 };
 use commands::notes::{
-    links_for_note, note_link, note_unlink, notes_create, notes_delete, notes_for_entity,
-    notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
+    links_for_note, note_link, note_unlink, note_version_restore, note_versions_list, notes_create,
+    notes_delete, notes_for_entity, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
 };
 use commands::outlook::{
     outlook_disconnect, outlook_exchange_code, outlook_get_auth_url, outlook_is_connected,
@@ -159,6 +159,8 @@ pub fn run() {
             note_unlink,
             links_for_note,
             notes_for_entity,
+            note_versions_list,
+            note_version_restore,
             categories_list,
             categories_create,
             categories_create_if_not_exists,
