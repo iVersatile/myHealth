@@ -268,6 +268,123 @@ pub fn notes_tags_set(
     Ok(())
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NoteLinkDto {
+    pub id: String,
+    pub note_id: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub created_at: String,
+}
+
+#[tauri::command]
+pub fn note_link(
+    note_id: String,
+    entity_type: String,
+    entity_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    conn.execute(
+        "INSERT OR IGNORE INTO note_links (id, note_id, entity_type, entity_id, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![id, note_id, entity_type, entity_id, now],
+    )?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn note_unlink(
+    note_id: String,
+    entity_type: String,
+    entity_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    conn.execute(
+        "DELETE FROM note_links WHERE note_id = ?1 AND entity_type = ?2 AND entity_id = ?3",
+        rusqlite::params![note_id, entity_type, entity_id],
+    )?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn links_for_note(
+    note_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<NoteLinkDto>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, note_id, entity_type, entity_id, created_at
+         FROM note_links WHERE note_id = ?1 ORDER BY created_at",
+    )?;
+
+    let links: Vec<NoteLinkDto> = stmt
+        .query_map([&note_id], |row| {
+            Ok(NoteLinkDto {
+                id: row.get(0)?,
+                note_id: row.get(1)?,
+                entity_type: row.get(2)?,
+                entity_id: row.get(3)?,
+                created_at: row.get(4)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(links)
+}
+
+#[tauri::command]
+pub fn notes_for_entity(
+    entity_type: String,
+    entity_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<Note>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT n.id, n.title, n.content, n.is_pinned, n.created_at, n.updated_at
+         FROM notes n
+         INNER JOIN note_links nl ON nl.note_id = n.id
+         WHERE nl.entity_type = ?1 AND nl.entity_id = ?2
+         ORDER BY n.updated_at DESC",
+    )?;
+
+    let notes: Vec<Note> = stmt
+        .query_map(rusqlite::params![entity_type, entity_id], |row| {
+            Ok(Note {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                content: row.get(2)?,
+                is_pinned: row.get::<_, i64>(3)? != 0,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
+                tags: vec![],
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .map(|mut n| {
+            n.tags = fetch_tags(conn, &n.id);
+            n
+        })
+        .collect();
+
+    Ok(notes)
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
@@ -277,7 +394,8 @@ mod tests {
     fn test_conn() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            "CREATE TABLE notes (
+            "PRAGMA foreign_keys = ON;
+            CREATE TABLE notes (
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL DEFAULT '',
@@ -289,6 +407,14 @@ mod tests {
                 note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
                 tag TEXT NOT NULL,
                 PRIMARY KEY (note_id, tag)
+            );
+            CREATE TABLE note_links (
+                id          TEXT PRIMARY KEY,
+                note_id     TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+                entity_type TEXT NOT NULL CHECK(entity_type IN ('appointment','document')),
+                entity_id   TEXT NOT NULL,
+                created_at  TEXT NOT NULL,
+                UNIQUE(note_id, entity_type, entity_id)
             );",
         )
         .unwrap();
@@ -458,5 +584,111 @@ mod tests {
             .filter_map(|r| r.ok())
             .collect();
         assert_eq!(ids[0], "n2");
+    }
+
+    fn insert_link(conn: &Connection, note_id: &str, entity_type: &str, entity_id: &str) {
+        let id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT OR IGNORE INTO note_links (id, note_id, entity_type, entity_id, created_at)
+             VALUES (?1, ?2, ?3, ?4, '2026-01-01T00:00:00Z')",
+            rusqlite::params![id, note_id, entity_type, entity_id],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn note_link_inserts_and_lists() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "Note", false);
+        insert_link(&conn, "n1", "appointment", "a1");
+
+        let mut stmt = conn
+            .prepare("SELECT note_id, entity_type, entity_id FROM note_links WHERE note_id='n1'")
+            .unwrap();
+        let rows: Vec<(String, String, String)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0], ("n1".into(), "appointment".into(), "a1".into()));
+    }
+
+    #[test]
+    fn note_link_duplicate_is_noop() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "Note", false);
+        insert_link(&conn, "n1", "document", "d1");
+        insert_link(&conn, "n1", "document", "d1");
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM note_links WHERE note_id='n1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn note_unlink_removes_link() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "Note", false);
+        insert_link(&conn, "n1", "appointment", "a1");
+        conn.execute(
+            "DELETE FROM note_links WHERE note_id='n1' AND entity_type='appointment' AND entity_id='a1'",
+            [],
+        )
+        .unwrap();
+
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM note_links", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn links_for_note_returns_linked_entities() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "Note", false);
+        insert_link(&conn, "n1", "appointment", "a1");
+        insert_link(&conn, "n1", "document", "d1");
+
+        let mut stmt = conn
+            .prepare("SELECT entity_type, entity_id FROM note_links WHERE note_id='n1' ORDER BY created_at")
+            .unwrap();
+        let rows: Vec<(String, String)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
+        assert_eq!(rows.len(), 2);
+    }
+
+    #[test]
+    fn notes_for_entity_returns_linked_notes() {
+        let conn = test_conn();
+        insert_note(&conn, "n1", "Alpha", false);
+        insert_note(&conn, "n2", "Beta", false);
+        insert_link(&conn, "n1", "appointment", "appt-1");
+        insert_link(&conn, "n2", "appointment", "appt-1");
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT n.id FROM notes n
+                 INNER JOIN note_links nl ON nl.note_id = n.id
+                 WHERE nl.entity_type='appointment' AND nl.entity_id='appt-1'
+                 ORDER BY n.updated_at DESC",
+            )
+            .unwrap();
+        let ids: Vec<String> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&"n1".to_string()));
+        assert!(ids.contains(&"n2".to_string()));
     }
 }
