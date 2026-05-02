@@ -70,6 +70,19 @@ const SCHEMA_V10: &str = "
     );
 ";
 
+const SCHEMA_V12: &str = "
+    CREATE TABLE IF NOT EXISTS appointment_reminders (
+        id              TEXT PRIMARY KEY,
+        appointment_id  TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+        remind_at       TEXT NOT NULL,
+        offset_label    TEXT NOT NULL,
+        is_fired        INTEGER NOT NULL DEFAULT 0,
+        created_at      TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_appointment_reminders_remind_at_is_fired
+        ON appointment_reminders (remind_at, is_fired);
+";
+
 const SCHEMA_V11: &str = "
     CREATE TABLE contacts_v11 (
         id                TEXT PRIMARY KEY,
@@ -193,6 +206,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 12 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V12)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [12])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -219,7 +239,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 11);
+        assert_eq!(version, 12);
     }
 
     #[test]
@@ -233,7 +253,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 11);
+        assert_eq!(version, 12);
     }
 
     #[test]
@@ -1064,5 +1084,80 @@ mod tests {
                 indexes
             );
         }
+    }
+
+    #[test]
+    fn migration_v12_creates_appointment_reminders_table() {
+        let conn = migrated_conn();
+
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' \
+                 AND name='appointment_reminders'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "appointment_reminders table must exist");
+    }
+
+    #[test]
+    fn migration_v12_creates_remind_at_is_fired_index() {
+        let conn = migrated_conn();
+
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' \
+                 AND name='idx_appointment_reminders_remind_at_is_fired'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            count, 1,
+            "idx_appointment_reminders_remind_at_is_fired must exist"
+        );
+    }
+
+    #[test]
+    fn migration_v12_reminders_cascade_delete_with_appointment() {
+        let conn = migrated_conn();
+
+        // Insert a user (required FK in appointments)
+        conn.execute(
+            "INSERT INTO users (id, display_name) VALUES ('u1', 'Test User')",
+            [],
+        )
+        .unwrap();
+
+        // Insert a minimal appointment
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, created_at, user_id) \
+             VALUES ('appt-1', 'Check-up', '2026-06-01', '2026-05-01', 'u1')",
+            [],
+        )
+        .unwrap();
+
+        // Insert a reminder for that appointment
+        conn.execute(
+            "INSERT INTO appointment_reminders \
+             (id, appointment_id, remind_at, offset_label, is_fired, created_at) \
+             VALUES ('rem-1', 'appt-1', '2026-05-31T09:00:00', '1 day before', 0, '2026-05-01')",
+            [],
+        )
+        .unwrap();
+
+        // Delete the appointment — reminder should cascade
+        conn.execute("DELETE FROM appointments WHERE id='appt-1'", [])
+            .unwrap();
+
+        let count: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointment_reminders WHERE id='rem-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0, "reminder must cascade-delete with appointment");
     }
 }
