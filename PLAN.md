@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 13 — Contacts ↔ Appointments Link (v1.6)
-▶ Task 13.7
+Phase 14 — Encrypted Backup Export / Import (v1.7)
+▶ Task 14.2
 ```
 
 ---
@@ -866,7 +866,7 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
      3. Assert group header "No doctor assigned" is visible.
    - Done when: all three Playwright scenarios pass.
 
-▶ [ ] **13.7 — Commit & push**
+[x] **13.7 — Commit & push**
    - Run pre-commit checklist: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`.
    - Commit message: `feat: link appointments to contacts; timeline by-doctor uses contact names`
    - Push to `origin/develop`; verify CI green.
@@ -883,7 +883,7 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
 
 ### Sprint 26: Rust backend
 
-[ ] **14.1 — Backup export command**
+[x] **14.1 — Backup export command**
    - File: `src-tauri/src/commands/backup.rs` (new)
    - Implement `backup_export(dest_path: String)` Tauri command:
      - Copy `myhealth.db`, `myhealth.salt`, `myhealth.kdf` into a temp dir
@@ -892,7 +892,7 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
    - The archive itself is not re-encrypted — the DB is already AES-256 encrypted via SQLCipher; the archive is a container only
    - Done when: `cargo test` verifies (a) exported archive contains all 3 files; (b) archive file size > 0; (c) writing to a read-only path returns a descriptive error
 
-[ ] **14.2 — Backup import command**
+▶ [ ] **14.2 — Backup import command**
    - File: `src-tauri/src/commands/backup.rs`
    - Implement `backup_import(src_path: String)` Tauri command:
      - Validate the archive contains all 3 expected files

@@ -35,6 +35,7 @@ impl<T> From<std::sync::PoisonError<T>> for CommandError {
 
 pub mod appointments;
 pub mod auth;
+pub mod backup;
 pub mod calendar;
 pub mod categories;
 pub mod clinics;

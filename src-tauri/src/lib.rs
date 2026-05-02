@@ -18,6 +18,7 @@ use commands::auth::{
     app_reset_data, auth_add_user, auth_change_password, auth_has_password, auth_is_locked,
     auth_list_users, auth_lock, auth_set_password, auth_switch_user, auth_unlock,
 };
+use commands::backup::{backup_export, backup_import};
 use commands::calendar::{
     calendar_detect_conflicts, calendar_event_delete, calendar_import_events,
     calendar_list_sources, calendar_request_permission, calendar_sync, calendar_toggle_source,
@@ -189,6 +190,8 @@ pub fn run() {
             icd10_suggest,
             appointment_tags_get,
             appointment_tags_set,
+            backup_export,
+            backup_import,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
