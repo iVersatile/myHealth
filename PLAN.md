@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 17 — Note Links + Note Version History (v1.10)
-▶ Task 17.9
+Phase 16 — Recurring Appointments (v1.9)
+▶ Task 16.4
 ```
 
 ---
@@ -1006,7 +1006,7 @@ Phase 17 — Note Links + Note Version History (v1.10)
 
 ### Sprint 31: Frontend
 
-[ ] **16.4 — Recurrence UI in AppointmentForm**
+▶ **16.4 — Recurrence UI in AppointmentForm**
    - File: `src/components/appointments/AppointmentForm.tsx`
    - Add "Repeat" dropdown: None / Weekly / Monthly
    - When Weekly or Monthly: show "Repeat every N [weeks/months]" stepper + "Until" date picker
@@ -1091,7 +1091,7 @@ Phase 17 — Note Links + Note Version History (v1.10)
    - `cargo test` covers link CRUD, version capping at 10, restore sequence
    - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
 
-▶ **17.9 — Commit & push**
+[x] **17.9 — Commit & push**
    - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
    - Commit: `feat: note links to appointments/documents + note version history (F3.4, F3.5)`
    - Push to `origin/develop`; verify CI green

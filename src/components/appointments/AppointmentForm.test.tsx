@@ -920,6 +920,71 @@ describe('AppointmentForm', () => {
     })
   })
 
+  describe('Repeat / Recurrence UI', () => {
+    it('shows "Does not repeat" by default and hides interval fields', () => {
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+      const repeatSelect = screen.getByLabelText(/repeat/i) as HTMLSelectElement
+      expect(repeatSelect.value).toBe('none')
+      expect(screen.queryByLabelText(/every/i)).toBeNull()
+    })
+
+    it('shows interval and occurrences inputs when Weekly selected', async () => {
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+      await userEvent.selectOptions(screen.getByLabelText(/repeat/i), 'weekly')
+      expect(screen.getByLabelText(/every/i)).toBeDefined()
+      expect(screen.getByLabelText(/occurrences/i)).toBeDefined()
+    })
+
+    it('shows interval and occurrences inputs when Monthly selected', async () => {
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+      await userEvent.selectOptions(screen.getByLabelText(/repeat/i), 'monthly')
+      expect(screen.getByLabelText(/every/i)).toBeDefined()
+      expect(screen.getByLabelText(/occurrences/i)).toBeDefined()
+    })
+
+    it('hides interval fields when switching back to none', async () => {
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+      await userEvent.selectOptions(screen.getByLabelText(/repeat/i), 'weekly')
+      await userEvent.selectOptions(screen.getByLabelText(/repeat/i), 'none')
+      expect(screen.queryByLabelText(/every/i)).toBeNull()
+    })
+
+    it('passes recurrence to onSave when weekly repeat configured', async () => {
+      const onSave = vi.fn().mockResolvedValueOnce(undefined)
+      render(<AppointmentForm onCancel={vi.fn()} onSave={onSave} />)
+
+      await userEvent.type(screen.getByLabelText(/title/i), 'Weekly Physio')
+      await userEvent.type(screen.getByLabelText(/date.*time/i), '2026-06-01T10:00')
+      await userEvent.selectOptions(screen.getByLabelText(/repeat/i), 'weekly')
+
+      fireEvent.change(screen.getByLabelText(/occurrences/i), { target: { value: '4' } })
+
+      await userEvent.click(screen.getByRole('button', { name: /save appointment/i }))
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalled()
+        const input = onSave.mock.calls[0]![0]
+        expect(input.recurrence).toMatchObject({ rule: 'weekly', occurrences: 4 })
+      })
+    })
+
+    it('passes no recurrence to onSave when repeat is none', async () => {
+      const onSave = vi.fn().mockResolvedValueOnce(undefined)
+      render(<AppointmentForm onCancel={vi.fn()} onSave={onSave} />)
+
+      await userEvent.type(screen.getByLabelText(/title/i), 'One-off visit')
+      await userEvent.type(screen.getByLabelText(/date.*time/i), '2026-06-01T10:00')
+
+      await userEvent.click(screen.getByRole('button', { name: /save appointment/i }))
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalled()
+        const input = onSave.mock.calls[0]![0]
+        expect(input.recurrence).toBeUndefined()
+      })
+    })
+  })
+
   describe('Specialty and Status Selection', () => {
     it('allows selecting specialty from available options', async () => {
       const onCancel = vi.fn()
