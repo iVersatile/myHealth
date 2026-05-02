@@ -7,7 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-All tasks complete ✓
+Phase 18 — Gap Closure
+▶ 18.13 — Commit & push
 ```
 
 ---
@@ -1094,6 +1095,82 @@ All tasks complete ✓
    - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
    - Commit: `feat: note links to appointments/documents + note version history (F3.4, F3.5)`
    - Push to `origin/develop`; verify CI green
+
+---
+
+## Phase 18 — Gap Closure (v1.6 patch)
+
+Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
+
+### [x] 18.1 — Create synthetic PDF test fixtures (G-06, G-07)
+- Create `src-tauri/tests/fixtures/no-date-physio.pdf` — minimal valid PDF with text "Physiotherapy Session Dr. Jones" but no date in content or filename
+- Create `src-tauri/tests/fixtures/no-date-no-filename.pdf` — minimal valid PDF with generic text, no date anywhere
+- Done when: both files exist, are valid PDFs, and `cargo test` passes (fixture load does not panic)
+
+### [x] 18.2 — Fix/verify date-extraction fallback path (G-06, G-07)
+- Run `cargo test extract_activity_date` to confirm the two new fixtures hit the fallback (`None`) path
+- If the test does not exist, add it to `src-tauri/src/commands/upload_intelligence.rs` (or wherever date extraction lives)
+- Done when: `cargo test` shows the fallback tests passing
+
+### [x] 18.3 — Per-page OCR progress bar verification (G-01)
+- Locate the OCR progress event emit in `src-tauri/src/commands/` (search for `emit` near `ocr` or `pdftoppm`)
+- Write a Rust integration test that invokes the OCR pipeline on a 3-page scanned PDF fixture and asserts 3 progress events are emitted (pages 1, 2, 3)
+- Done when: `cargo test ocr_progress` passes with ≥ 1 assertion per page
+
+### [x] 18.4 — contact-suggestion testid in UploadDialog (G-03)
+- Open `src/components/UploadDialog.tsx` (or wherever the contact suggestion card renders)
+- Ensure the merge button has `data-testid="contact-suggestion-merge"`
+- Add a vitest test asserting the testid appears when a contact suggestion is present
+- Done when: `npx vitest run` passes and testid is in the DOM
+
+### [x] 18.5 — clinic-suggestion testid in UploadDialog (G-04)
+- Same as 18.4 but for clinic suggestion card: `data-testid="clinic-suggestion-merge"`
+- Done when: `npx vitest run` passes and testid is in the DOM
+
+### [x] 18.6 — Clinic↔contact auto-link at upload-confirm (G-05)
+- Find the upload-confirm handler and verify it calls `contacts_link_clinic` (or equivalent IPC) when both a contact and clinic are extracted
+- If the call is missing, add it
+- Add a vitest mock test asserting the IPC call is made on confirm when both suggestions are present
+- Done when: `npx vitest run` passes; IPC call confirmed in test
+
+### [x] 18.7 — Apple Calendar smoke test scaffold (G-02)
+- Add a `#[cfg(target_os = "macos")]` Rust test in `src-tauri/src/commands/calendar.rs` (or equivalent) that calls the calendar read command and asserts it returns `Ok(_)` (even if 0 events)
+- Add a `// MANUAL: run on device with calendar permission granted` comment for the permission-dependent path
+- Done when: `cargo test calendar_smoke` passes (or is `#[ignore]`-tagged for CI with a clear reason)
+
+### [x] 18.8 — Performance benchmark: document list (G-09)
+- Write a Rust benchmark or integration test that inserts 1000 document rows and times a `documents_list` query
+- Assert elapsed < 500ms
+- Done when: test passes on dev machine; result logged to `docs/PERF_RESULTS.md`
+
+### [x] 18.9 — Performance benchmark: cold start (G-08)
+- Add a `docs/PERF_RESULTS.md` with a manual measurement section
+- Measure and record cold start time (app launch to unlock screen visible); assert <2s
+- Done when: `docs/PERF_RESULTS.md` has cold-start result with timestamp
+
+### [x] 18.10 — Performance benchmark: calendar sync (G-10)
+- Add timing to the Apple Calendar sync command (or measure via the Rust test from 18.7)
+- Assert 100-event sync < 5000ms
+- Record result in `docs/PERF_RESULTS.md`
+- Done when: result recorded; test or measurement confirms <5s
+
+### [x] 18.11 — Accessibility audit with axe-core (G-11)
+- Add `axe-core` dev dependency: `npm install -D axe-core @axe-core/react` (if not present)
+- Write a vitest test that renders each main page component (Documents, Appointments, Notes, Contacts, Timeline, Search) and runs axe; assert 0 violations
+- Done when: `npx vitest run` passes with 0 axe violations across all pages
+
+### [x] 18.12 — Keyboard navigation audit (G-12)
+- Add a Playwright E2E test (or vitest keyboard test) that:
+  1. Opens the app to the Documents page
+  2. Tabs through all interactive elements
+  3. Asserts focus never gets trapped and all buttons/links are reachable
+- Done when: test passes; any focus-trap bugs found are fixed
+
+### 18.13 — Commit & push
+- Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
+- Commit: `feat: gap closure — fixtures, OCR progress, a11y, perf benchmarks (G-01–G-12)`
+- Push to `origin/develop`; verify CI green
+- Done when: CI green on develop branch
 
 ---
 

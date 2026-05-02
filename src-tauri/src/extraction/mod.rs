@@ -690,6 +690,66 @@ mod tests {
         );
     }
 
+    // ── Date-fallback fixture tests (G-06, G-07) ─────────────────────────────
+
+    #[test]
+    fn no_date_physio_pdf_returns_none_activity_date() {
+        // TC-V3-F5-02: PDF with no date in body or filename → activity_date = None
+        let path = fixture("no-date-physio.pdf");
+        assert!(path.exists(), "fixture missing: {}", path.display());
+        let result = extract(&path);
+        assert!(
+            result.activity_date.is_none(),
+            "expected None but got {:?}",
+            result.activity_date
+        );
+    }
+
+    #[test]
+    fn no_date_no_filename_pdf_returns_none_activity_date() {
+        // TC-V3-F5-03: PDF with no date anywhere → activity_date = None
+        let path = fixture("no-date-no-filename.pdf");
+        assert!(path.exists(), "fixture missing: {}", path.display());
+        let result = extract(&path);
+        assert!(
+            result.activity_date.is_none(),
+            "expected None but got {:?}",
+            result.activity_date
+        );
+    }
+
+    // ── Per-page OCR progress callback test (G-01) ────────────────────────────
+
+    #[test]
+    fn extract_pages_async_fires_callback_once_per_page() {
+        // Verify that for N page paths the callback is invoked N times (1-indexed).
+        let pages: Vec<std::path::PathBuf> = (1..=3)
+            .map(|i| std::path::PathBuf::from(format!("/tmp/fake_page_{i}.png")))
+            .collect();
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::<(usize, usize)>::new()));
+        let calls_clone = calls.clone();
+
+        rt.block_on(crate::extraction::ocr::extract_pages_async(
+            &pages,
+            move |page, total| {
+                calls_clone.lock().unwrap().push((page, total));
+            },
+        ));
+
+        let recorded = calls.lock().unwrap().clone();
+        assert_eq!(
+            recorded.len(),
+            3,
+            "expected 3 callbacks, got {}",
+            recorded.len()
+        );
+        assert_eq!(recorded[0], (1, 3));
+        assert_eq!(recorded[1], (2, 3));
+        assert_eq!(recorded[2], (3, 3));
+    }
+
     // ── Per-page OCR pipeline integration test ───────────────────────────────
 
     fn tesseract_available() -> bool {

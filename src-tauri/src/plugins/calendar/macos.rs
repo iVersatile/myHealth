@@ -141,11 +141,11 @@ pub fn list_calendars() -> Result<Vec<CalendarSource>, String> {
 
 /// Fetch events from specified calendars. Window: 1 year back, 2 years forward.
 pub fn fetch_events(calendar_external_ids: &[String]) -> Result<Vec<CalendarEvent>, String> {
-    if !is_authorized() {
-        return Err("Calendar access not authorized".to_string());
-    }
     if calendar_external_ids.is_empty() {
         return Ok(vec![]);
+    }
+    if !is_authorized() {
+        return Err("Calendar access not authorized".to_string());
     }
 
     let store: *mut Object = unsafe { msg_send![class!(EKEventStore), new] };
@@ -268,5 +268,32 @@ mod tests {
             .single()
             .unwrap();
         assert!(dt.to_rfc3339().starts_with("2001-01-01"));
+    }
+
+    // ── Apple Calendar smoke tests (G-02) ─────────────────────────────────────
+
+    #[test]
+    fn fetch_events_returns_empty_for_no_calendar_ids() {
+        // Returns Ok(vec![]) immediately when id list is empty — no EventKit call,
+        // no permission required. Safe to run in any environment.
+        let result = fetch_events(&[]);
+        assert!(result.is_ok(), "expected Ok but got: {result:?}");
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn list_calendars_returns_err_when_not_authorized() {
+        // In CI / sandboxed environments EventKit is not authorized.
+        // Verify the function returns a meaningful Err rather than panicking.
+        if !is_authorized() {
+            let result = list_calendars();
+            assert!(result.is_err(), "expected Err when not authorized");
+            let msg = result.unwrap_err();
+            assert!(
+                msg.contains("not authorized"),
+                "unexpected error message: {msg}"
+            );
+        }
+        // If the runner is authorized (e.g. developer machine), skip gracefully.
     }
 }

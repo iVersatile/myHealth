@@ -1031,6 +1031,47 @@ mod tests {
         let result = resolve_activity_date(None, None, "2025-12-01T23:59:59+01:00");
         assert_eq!(result, "2025-12-01");
     }
+
+    // ── Performance benchmark: document list (G-09) ───────────────────────────
+    // Inserts 1 000 documents and queries all of them; asserts elapsed < 500 ms.
+    // Run with: cargo test perf_document_list_1000 -- --nocapture
+    #[test]
+    fn perf_document_list_1000() {
+        let conn = test_conn();
+        let now = chrono::Utc::now().to_rfc3339();
+        for i in 0..1000usize {
+            conn.execute(
+                "INSERT INTO documents \
+                 (id, filename, file_path, mime_type, file_size_bytes, category, \
+                  created_at, updated_at, is_deleted) \
+                 VALUES (?1, 'doc.pdf', '/tmp/doc.pdf', 'application/pdf', 1024, 'lab', ?2, ?2, 0)",
+                rusqlite::params![format!("perf-doc-{i}"), now],
+            )
+            .unwrap();
+        }
+
+        let start = std::time::Instant::now();
+        let ids: Vec<String> = {
+            let mut stmt = conn
+                .prepare(
+                    "SELECT id FROM documents WHERE is_deleted = 0 \
+                     ORDER BY created_at DESC LIMIT 1000 OFFSET 0",
+                )
+                .unwrap();
+            stmt.query_map([], |row| row.get(0))
+                .unwrap()
+                .filter_map(|r| r.ok())
+                .collect()
+        };
+        let elapsed = start.elapsed();
+        assert_eq!(ids.len(), 1000);
+        assert!(
+            elapsed.as_millis() < 500,
+            "document list query took {}ms (limit 500ms)",
+            elapsed.as_millis()
+        );
+        eprintln!("[PERF] document list 1000 rows: {}ms", elapsed.as_millis());
+    }
 }
 
 #[derive(Debug, Serialize)]
