@@ -8,7 +8,7 @@
 
 ```
 Phase 14 — Encrypted Backup Export / Import (v1.7)
-▶ Task 14.3
+▶ Task 14.6
 ```
 
 ---
@@ -901,25 +901,25 @@ Phase 14 — Encrypted Backup Export / Import (v1.7)
      - Return error if archive is invalid or missing files
    - Done when: `cargo test` verifies (a) valid archive → files restored; (b) invalid archive → error returned, existing files untouched; (c) missing file in archive → error
 
-▶ [ ] **14.3 — Register in lib.rs + IPC keys**
+[x] **14.3 — Register in lib.rs + IPC keys**
    - Add `backupExport: 'backup_export'`, `backupImport: 'backup_import'` to `src/lib/ipc.ts`
    - Register both commands in `lib.rs` invoke handler
 
 ### Sprint 27: Frontend
 
-[ ] **14.4 — Backup UI in Settings**
+[x] **14.4 — Backup UI in Settings**
    - File: `src/app/(app)/settings/page.tsx`
    - Add "Backup & Restore" section (above "Danger Zone"):
      - "Export Backup" button → `@tauri-apps/plugin-dialog` `save()` dialog → calls `backup_export`
      - "Import Backup" button → `open()` dialog (filter `.myhealth`) → calls `backup_import` → confirmation dialog warning data will be replaced → on confirm execute; navigate to unlock screen after success
    - Done when: export writes a `.myhealth` file to the chosen path; import replaces data and redirects to unlock
 
-[ ] **14.5 — F8.6/F8.7 tests**
+[x] **14.5 — F8.6/F8.7 tests**
    - `cargo test` covers export + import round-trip
    - TypeScript: `npx tsc --noEmit` clean
    - Done when: coverage ≥ 80% on new backup code; manual smoke: export → wipe → import → data intact
 
-[ ] **14.6 — Commit & push**
+▶ [ ] **14.6 — Commit & push**
    - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
    - Commit: `feat: encrypted backup export and import (F8.6, F8.7)`
    - Push to `origin/develop`; verify CI green
