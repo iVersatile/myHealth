@@ -8,7 +8,7 @@
 
 ```
 Phase 17 — Note Links + Note Version History (v1.10)
-▶ Task 17.5
+▶ Task 17.6
 ```
 
 ---
@@ -1065,7 +1065,7 @@ Phase 17 — Note Links + Note Version History (v1.10)
 
 ### Sprint 33: Frontend
 
-▶ **17.5 — Note links UI**
+[x] **17.5 — Note links UI**
    - File: `src/app/(app)/notes/[id]/page.tsx`
    - Add "Linked To" panel in note detail sidebar:
      - "Link to Appointment" dropdown (searchable, shows upcoming/recent appointments)
@@ -1074,7 +1074,7 @@ Phase 17 — Note Links + Note Version History (v1.10)
    - Calls `note_link` on add; `note_unlink` on remove
    - Done when: linking a note to an appointment shows it in the appointment detail page under "Linked Notes"
 
-[ ] **17.6 — Linked notes in Appointment and Document detail**
+▶ **17.6 — Linked notes in Appointment and Document detail**
    - File: `src/app/(app)/appointments/[id]/page.tsx` — add "Notes" panel calling `notes_for_entity('appointment', id)`
    - File: `src/app/(app)/documents/[id]/page.tsx` — add "Notes" panel calling `notes_for_entity('document', id)`
    - Each panel lists linked note titles; click navigates to note detail

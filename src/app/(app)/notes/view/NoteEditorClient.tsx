@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { invoke } from '@tauri-apps/api/core'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { Node } from '@tiptap/core'
 import Bold from '@tiptap/extension-bold'
@@ -10,6 +11,16 @@ import Heading from '@tiptap/extension-heading'
 import { BulletList, OrderedList, ListItem, ListKeymap } from '@tiptap/extension-list'
 import { useNotes } from '../../../../hooks/useNotes'
 import { Note } from '../../../../store/notesStore'
+import type { Appointment } from '../../../../store/appointmentsStore'
+import type { Document } from '../../../../store/documentsStore'
+
+interface NoteLinkDto {
+  id: string
+  note_id: string
+  entity_type: string
+  entity_id: string
+  created_at: string
+}
 
 // Tiptap v3 does not ship Document/Paragraph/Text as separate packages
 const Document = Node.create({ name: 'doc', topNode: true, content: 'block+' })
@@ -50,6 +61,12 @@ export default function NoteEditorClient() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [links, setLinks] = useState<NoteLinkDto[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [selectedAppt, setSelectedAppt] = useState('')
+  const [selectedDoc, setSelectedDoc] = useState('')
+
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const titleRef = useRef(title)
   // eslint-disable-next-line react-hooks/refs
@@ -78,6 +95,12 @@ export default function NoteEditorClient() {
     },
   })
 
+  const loadLinks = useCallback(async () => {
+    if (!id) return
+    const result = await invoke<NoteLinkDto[]>('links_for_note', { noteId: id })
+    setLinks(result)
+  }, [id])
+
   useEffect(() => {
     async function load() {
       try {
@@ -88,6 +111,14 @@ export default function NoteEditorClient() {
         setTags(n.tags)
         setLastSaved(n.updated_at)
         editor?.commands.setContent(n.content || '')
+        const [appts, docs, lnks] = await Promise.all([
+          invoke<Appointment[]>('appointments_list', {}),
+          invoke<Document[]>('documents_list', {}),
+          invoke<NoteLinkDto[]>('links_for_note', { noteId: id }),
+        ])
+        setAppointments(appts)
+        setDocuments(docs.filter((d) => !d.is_deleted))
+        setLinks(lnks)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       }
@@ -144,6 +175,25 @@ export default function NoteEditorClient() {
     const next = tags.filter((t) => t !== tag)
     setTags(next)
     await setNoteTags(id, next)
+  }
+
+  async function handleLinkAppointment() {
+    if (!selectedAppt) return
+    await invoke('note_link', { noteId: id, entityType: 'appointment', entityId: selectedAppt })
+    setSelectedAppt('')
+    await loadLinks()
+  }
+
+  async function handleLinkDocument() {
+    if (!selectedDoc) return
+    await invoke('note_link', { noteId: id, entityType: 'document', entityId: selectedDoc })
+    setSelectedDoc('')
+    await loadLinks()
+  }
+
+  async function handleUnlink(entityType: string, entityId: string) {
+    await invoke('note_unlink', { noteId: id, entityType, entityId })
+    await loadLinks()
   }
 
   async function handleDelete() {
@@ -293,6 +343,91 @@ export default function NoteEditorClient() {
           />
         </div>
         <p className="text-xs text-[var(--color-text-muted)]">Press Enter or comma to add a tag</p>
+      </div>
+
+      {/* Linked To */}
+      <div className="mb-6">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+          Linked To
+        </label>
+
+        {/* Existing links as chips */}
+        {links.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {links.map((lnk) => {
+              const label =
+                lnk.entity_type === 'appointment'
+                  ? (appointments.find((a) => a.id === lnk.entity_id)?.title ?? lnk.entity_id)
+                  : (documents.find((d) => d.id === lnk.entity_id)?.filename ?? lnk.entity_id)
+              const prefix = lnk.entity_type === 'appointment' ? '📅' : '📄'
+              return (
+                <span
+                  key={lnk.id}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-[var(--color-tag-bg)] text-[var(--color-tag-text)]"
+                >
+                  {prefix} {label}
+                  <button
+                    onClick={() => void handleUnlink(lnk.entity_type, lnk.entity_id)}
+                    className="ml-1 hover:text-[var(--color-danger)] transition-colors"
+                    aria-label={`Unlink ${label}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Link to appointment */}
+        <div className="flex items-center gap-2 mb-2">
+          <select
+            value={selectedAppt}
+            onChange={(e) => setSelectedAppt(e.target.value)}
+            className="flex-1 text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
+          >
+            <option value="">Link to appointment…</option>
+            {appointments
+              .filter((a) => !links.some((l) => l.entity_type === 'appointment' && l.entity_id === a.id))
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.title} — {new Date(a.appt_date).toLocaleDateString()}
+                </option>
+              ))}
+          </select>
+          <button
+            onClick={() => void handleLinkAppointment()}
+            disabled={!selectedAppt}
+            className="px-3 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-white disabled:opacity-40 hover:opacity-90 transition-opacity"
+          >
+            Link
+          </button>
+        </div>
+
+        {/* Link to document */}
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedDoc}
+            onChange={(e) => setSelectedDoc(e.target.value)}
+            className="flex-1 text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
+          >
+            <option value="">Link to document…</option>
+            {documents
+              .filter((d) => !links.some((l) => l.entity_type === 'document' && l.entity_id === d.id))
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.filename}
+                </option>
+              ))}
+          </select>
+          <button
+            onClick={() => void handleLinkDocument()}
+            disabled={!selectedDoc}
+            className="px-3 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-white disabled:opacity-40 hover:opacity-90 transition-opacity"
+          >
+            Link
+          </button>
+        </div>
       </div>
 
       {/* Footer: last saved + actions */}
