@@ -8,7 +8,7 @@
 
 ```
 Phase 13 — Contacts ↔ Appointments Link (v1.6)
-▶ Task 13.3
+▶ Task 13.7
 ```
 
 ---
@@ -819,7 +819,7 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
    - Done when: `npx tsc --noEmit` clean; existing appointment hook tests pass.
    - Note: `contact_ids: string[]` already in interface; Rust list commands already call `fetch_contact_ids` — no N+1 needed.
 
-▶ [ ] **13.3 — AppointmentForm: add contact picker for Doctor / Clinic**
+[x] **13.3 — AppointmentForm: add contact picker for Doctor / Clinic**
    - File: `src/components/appointments/AppointmentForm.tsx`
    - Import `useContacts` hook.
    - Below the free-text "Doctor" input, add a contact picker:
@@ -831,7 +831,7 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
    - Keep free-text inputs as fallback when no matching contacts exist.
    - Done when: `npx tsc --noEmit` clean; can pick a contact in the form and save.
 
-[ ] **13.4 — Timeline: group by contact name in by-doctor view**
+[x] **13.4 — Timeline: group by contact name in by-doctor view**
    - File: `src/app/(app)/timeline/page.tsx`
    - Import `useContacts`.
    - In the `doctorGroups` memo:
@@ -840,14 +840,14 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
      - Fall back to `appt.doctor_name` text if no contact is linked (backward compat).
    - Done when: appointments linked to a contact appear under that contact's name; unlinked appointments still appear under their free-text doctor name or "No doctor assigned".
 
-[ ] **13.5 — Unit tests: useAppointments contact hydration**
+[x] **13.5 — Unit tests: useAppointments contact hydration**
    - File: `src/hooks/__tests__/useAppointments.test.ts`
    - Mock `contacts_for_appointment` Tauri command.
    - Assert `contact_ids` is populated on loaded appointments.
    - Assert empty array when command returns no contacts.
    - Done when: tests pass; coverage ≥ 80 % on changed hook lines.
 
-[ ] **13.6 — E2E: timeline by-doctor shows contact name**
+[x] **13.6 — E2E: timeline by-doctor shows contact name**
    - File: `e2e/timeline-by-doctor.spec.ts` (new)
    - Scenario A — linked contact:
      1. Create a contact: name "Dr. Alice Brown", role "doctor".
@@ -866,7 +866,7 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
      3. Assert group header "No doctor assigned" is visible.
    - Done when: all three Playwright scenarios pass.
 
-[ ] **13.7 — Commit & push**
+▶ [ ] **13.7 — Commit & push**
    - Run pre-commit checklist: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`.
    - Commit message: `feat: link appointments to contacts; timeline by-doctor uses contact names`
    - Push to `origin/develop`; verify CI green.
