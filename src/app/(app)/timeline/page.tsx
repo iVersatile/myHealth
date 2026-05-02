@@ -13,7 +13,7 @@ import type { Note } from '../../../store/notesStore'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type EventType = 'document' | 'appointment' | 'note'
-type ViewMode = 'chronological' | 'by-category' | 'by-doctor'
+type ViewMode = 'chronological' | 'by-category' | 'by-doctor' | 'by-uploaded-date'
 type TypeFilter = 'all' | EventType
 
 interface TimelineEvent {
@@ -41,17 +41,32 @@ interface DocumentLink {
 
 // ── Converters ────────────────────────────────────────────────────────────────
 
+const PROVIDER_TITLE_PREFIXES = ['Dr', 'Mr', 'Mrs', 'Ms', 'Prof', 'Sr']
+
+function startsWithProviderTitle(t: string): boolean {
+  return PROVIDER_TITLE_PREFIXES.some((p) => t.startsWith(`${p} `) || t.startsWith(`${p}.`))
+}
+
 function buildDocTitle(d: Document): string {
   const eventDate = (d.activity_date ?? d.created_at).slice(0, 10)
   const tags: string[] = d.tags ?? []
 
-  const titleTag = tags.find((t) => t.startsWith('title:'))
-  if (titleTag) return `${eventDate} ${titleTag.slice(6)}`
+  const provider = tags.find(startsWithProviderTitle)
+
+  // A document title tag is mixed-case: not all-uppercase (specialty), not
+  // all-lowercase (type keyword), not a date, and not a provider name.
+  const titleTag = tags.find((t) => {
+    if (t === t.toUpperCase()) return false
+    if (t === t.toLowerCase()) return false
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return false
+    if (startsWithProviderTitle(t)) return false
+    return true
+  })
+  if (titleTag) return provider ? `${eventDate} ${titleTag} ${provider}` : `${eventDate} ${titleTag}`
 
   const specialty = tags.find(
     (t) => t === t.toUpperCase() && t.length > 2 && /^[A-Z]/.test(t),
   )
-  const provider = tags.find((t) => /^[A-Z]/.test(t) && /[a-z]/.test(t))
 
   if (specialty && provider) return `${eventDate} ${specialty} with ${provider}`
   if (specialty) return `${eventDate} ${specialty}`
@@ -366,17 +381,18 @@ export default function TimelinePage() {
   }, [viewMode, loading])
 
   const allEvents = useMemo<TimelineEvent[]>(() => {
+    if (viewMode === 'by-uploaded-date') {
+      return activeDocs
+        .map(docToUploadEvent)
+        .sort((a, b) => b.date.getTime() - a.date.getTime())
+    }
     const events: TimelineEvent[] = [
-      ...activeDocs.flatMap((d) => {
-        const result: TimelineEvent[] = [docToUploadEvent(d)]
-        if (d.activity_date) result.push(docToEvent(d))
-        return result
-      }),
+      ...activeDocs.flatMap((d) => d.activity_date ? [docToEvent(d)] : []),
       ...appointments.map(apptToEvent),
       ...notes.map(noteToEvent),
     ]
     return events.sort((a, b) => b.date.getTime() - a.date.getTime())
-  }, [activeDocs, appointments, notes])
+  }, [viewMode, activeDocs, appointments, notes])
 
   const filtered = useMemo(() => {
     return allEvents.filter((e) => {
@@ -521,6 +537,7 @@ export default function TimelinePage() {
     { value: 'chronological', label: 'Chronological' },
     { value: 'by-category', label: 'By Category' },
     { value: 'by-doctor', label: 'By Doctor' },
+    { value: 'by-uploaded-date', label: 'By Uploaded Date' },
   ]
 
   const chipCls = (active: boolean) =>
@@ -540,11 +557,12 @@ export default function TimelinePage() {
   const inputCls =
     'px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]'
 
-  const isEmpty = viewMode === 'chronological'
-    ? filtered.length === 0
-    : viewMode === 'by-category'
-      ? categoryGroups.length === 0
-      : doctorGroups.length === 0
+  const isEmpty =
+    viewMode === 'chronological' || viewMode === 'by-uploaded-date'
+      ? filtered.length === 0
+      : viewMode === 'by-category'
+        ? categoryGroups.length === 0
+        : doctorGroups.length === 0
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
@@ -652,6 +670,18 @@ export default function TimelinePage() {
               </div>
             ))
       )}
+
+      {/* By Uploaded Date view */}
+      {viewMode === 'by-uploaded-date' && chronoGroups.map(([key, events]) => (
+        <div key={key} className="mb-8">
+          <GroupHeader label={monthLabel(key)} count={events.length} />
+          <div>
+            {events.map((event) => (
+              <TimelineItem key={event.id} event={event} />
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* By Doctor view */}
       {viewMode === 'by-doctor' && (

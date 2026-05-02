@@ -14,6 +14,7 @@ const DOC = {
   notes: null,
   created_at: '2024-03-15T10:00:00Z',
   updated_at: '2024-03-15T10:00:00Z',
+  activity_date: '2024-03-15T10:00:00Z',
   is_deleted: false,
   tags: [],
 }

@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
+const mockConfirm = vi.fn()
+vi.mock('@tauri-apps/plugin-dialog', () => ({ confirm: (...a: unknown[]) => mockConfirm(...a) }))
+
 vi.mock('../../../../components/contacts/ContactForm', () => ({
   ContactForm: ({
     onSave,
@@ -202,7 +205,7 @@ describe('ContactsPage', () => {
   })
 
   it('confirmed delete calls contacts_delete', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockConfirm.mockResolvedValue(true)
     await renderPage()
     await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
     fireEvent.click(screen.getAllByRole('button', { name: /delete/i })[0]!)
@@ -212,7 +215,7 @@ describe('ContactsPage', () => {
   })
 
   it('cancelled delete does not call contacts_delete', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    mockConfirm.mockResolvedValue(false)
     await renderPage()
     await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
     const callsBefore = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'contacts_delete').length

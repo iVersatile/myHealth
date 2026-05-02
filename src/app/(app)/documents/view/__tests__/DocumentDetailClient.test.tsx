@@ -5,6 +5,9 @@ import DocumentDetailClient from '../DocumentDetailClient'
 const mockInvoke = vi.fn()
 const mockConvertFileSrc = vi.fn((path: string) => `asset://localhost${path}`)
 const mockRouterPush = vi.fn()
+const mockConfirm = vi.fn()
+
+vi.mock('@tauri-apps/plugin-dialog', () => ({ confirm: (...a: unknown[]) => mockConfirm(...a) }))
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
@@ -656,7 +659,7 @@ describe('DocumentDetailClient — delete', () => {
   beforeEach(() => {
     mockInvoke.mockReset()
     mockConvertFileSrc.mockClear()
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mockConfirm.mockResolvedValue(true)
   })
 
   it('calls documents_delete and navigates on confirm', async () => {
@@ -673,7 +676,7 @@ describe('DocumentDetailClient — delete', () => {
   })
 
   it('does not delete when confirm returns false', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    mockConfirm.mockResolvedValue(false)
     setupInvoke()
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
