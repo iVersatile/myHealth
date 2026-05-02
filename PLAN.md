@@ -8,7 +8,7 @@
 
 ```
 Phase 13 — Contacts ↔ Appointments Link (v1.6)
-▶ Task 13.1
+▶ Task 13.3
 ```
 
 ---
@@ -797,7 +797,7 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
 
 ---
 
-▶ [ ] **13.1 — Rust: expose appointment_contacts commands**
+[x] **13.1 — Rust: expose appointment_contacts commands**
    - File: `src-tauri/src/commands/appointments.rs`
    - Add three Tauri commands:
      - `appointment_link_contact(appointment_id: String, contact_id: String)` — `INSERT OR IGNORE INTO appointment_contacts`
@@ -810,15 +810,16 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
      - duplicate link is a no-op (no error)
    - Done when: `cargo test` passes; all three commands registered in `lib.rs`.
 
-[ ] **13.2 — TypeScript: hydrate contact_ids on Appointment**
+[x] **13.2 — TypeScript: hydrate contact_ids on Appointment**
    - File: `src/store/appointmentsStore.ts`
      - Add `contact_ids: string[]` field to `Appointment` interface (default `[]`).
    - File: `src/hooks/useAppointments.ts`
      - After fetching the appointments list, call `contacts_for_appointment` for each appointment (parallel `Promise.all`).
      - Merge results into each `Appointment` as `contact_ids`.
    - Done when: `npx tsc --noEmit` clean; existing appointment hook tests pass.
+   - Note: `contact_ids: string[]` already in interface; Rust list commands already call `fetch_contact_ids` — no N+1 needed.
 
-[ ] **13.3 — AppointmentForm: add contact picker for Doctor / Clinic**
+▶ [ ] **13.3 — AppointmentForm: add contact picker for Doctor / Clinic**
    - File: `src/components/appointments/AppointmentForm.tsx`
    - Import `useContacts` hook.
    - Below the free-text "Doctor" input, add a contact picker:
@@ -873,12 +874,237 @@ Phase 13 — Contacts ↔ Appointments Link (v1.6)
 
 ---
 
+---
+
+## Phase 14 — Encrypted Backup Export / Import (v1.7)
+
+> **PRD:** F8.6, F8.7  
+> **Goal:** Allow users to export a full encrypted backup of `myhealth.db` + salt files as a single `.myhealth` archive, and import it on the same or another machine.
+
+### Sprint 26: Rust backend
+
+[ ] **14.1 — Backup export command**
+   - File: `src-tauri/src/commands/backup.rs` (new)
+   - Implement `backup_export(dest_path: String)` Tauri command:
+     - Copy `myhealth.db`, `myhealth.salt`, `myhealth.kdf` into a temp dir
+     - Bundle as a `.zip` renamed to `.myhealth` (extension signals our format)
+     - Write to `dest_path` (user-chosen via save dialog)
+   - The archive itself is not re-encrypted — the DB is already AES-256 encrypted via SQLCipher; the archive is a container only
+   - Done when: `cargo test` verifies (a) exported archive contains all 3 files; (b) archive file size > 0; (c) writing to a read-only path returns a descriptive error
+
+[ ] **14.2 — Backup import command**
+   - File: `src-tauri/src/commands/backup.rs`
+   - Implement `backup_import(src_path: String)` Tauri command:
+     - Validate the archive contains all 3 expected files
+     - Stop the active DB connection (close SQLCipher handle)
+     - Overwrite app data dir files; restart DB connection
+     - Return error if archive is invalid or missing files
+   - Done when: `cargo test` verifies (a) valid archive → files restored; (b) invalid archive → error returned, existing files untouched; (c) missing file in archive → error
+
+[ ] **14.3 — Register in lib.rs + IPC keys**
+   - Add `backupExport: 'backup_export'`, `backupImport: 'backup_import'` to `src/lib/ipc.ts`
+   - Register both commands in `lib.rs` invoke handler
+
+### Sprint 27: Frontend
+
+[ ] **14.4 — Backup UI in Settings**
+   - File: `src/app/(app)/settings/page.tsx`
+   - Add "Backup & Restore" section (above "Danger Zone"):
+     - "Export Backup" button → `@tauri-apps/plugin-dialog` `save()` dialog → calls `backup_export`
+     - "Import Backup" button → `open()` dialog (filter `.myhealth`) → calls `backup_import` → confirmation dialog warning data will be replaced → on confirm execute; navigate to unlock screen after success
+   - Done when: export writes a `.myhealth` file to the chosen path; import replaces data and redirects to unlock
+
+[ ] **14.5 — F8.6/F8.7 tests**
+   - `cargo test` covers export + import round-trip
+   - TypeScript: `npx tsc --noEmit` clean
+   - Done when: coverage ≥ 80% on new backup code; manual smoke: export → wipe → import → data intact
+
+[ ] **14.6 — Commit & push**
+   - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
+   - Commit: `feat: encrypted backup export and import (F8.6, F8.7)`
+   - Push to `origin/develop`; verify CI green
+
+---
+
+## Phase 15 — System Notification Reminders (v1.8)
+
+> **PRD:** F2.6  
+> **Goal:** Trigger OS system notifications 15 min, 1 hour, and 1 day before a scheduled appointment.
+
+### Sprint 28: Rust + Tauri
+
+[ ] **15.1 — Reminders schema migration**
+   - Migration v7 in `src-tauri/src/db/migrations.rs`:
+     - `CREATE TABLE appointment_reminders (id TEXT PRIMARY KEY, appointment_id TEXT NOT NULL REFERENCES appointments(id) ON DELETE CASCADE, remind_at TEXT NOT NULL, offset_label TEXT NOT NULL, is_fired INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)`
+     - Index on `(remind_at, is_fired)` for efficient polling
+   - Done when: `cargo test` confirms table created; existing appointments unaffected
+
+[ ] **15.2 — Reminder scheduler command**
+   - File: `src-tauri/src/commands/reminders.rs` (new)
+   - `reminders_schedule(appointment_id: String, appointment_datetime: String)`:
+     - Compute 3 `remind_at` timestamps (−1d, −1h, −15min) from `appointment_datetime`
+     - `INSERT OR REPLACE` into `appointment_reminders`
+   - `reminders_cancel(appointment_id: String)`: delete all reminder rows for the appointment
+   - Done when: `cargo test` verifies (a) 3 rows created for a future appointment; (b) past offsets skipped (no row created for already-passed times); (c) cancel deletes all rows
+
+[ ] **15.3 — Background polling + OS notification**
+   - In `src-tauri/src/lib.rs` setup: spawn a `tokio` task that polls `appointment_reminders WHERE remind_at <= now AND is_fired = 0` every 60 seconds
+   - For each due row: send OS notification via `tauri-plugin-notification` (title = appointment title, body = "Appointment in X"); set `is_fired = 1`
+   - Add `tauri-plugin-notification` to `src-tauri/Cargo.toml` and `tauri.conf.json` permissions
+   - Done when: `cargo test` (mocked clock) verifies due reminder triggers notification payload; `is_fired` set to 1 after firing; no duplicate fires
+
+[ ] **15.4 — Register in lib.rs + IPC keys**
+   - Add `remindersSchedule: 'reminders_schedule'`, `remindersCancel: 'reminders_cancel'` to `src/lib/ipc.ts`
+   - Register in `lib.rs`
+
+### Sprint 29: Frontend
+
+[ ] **15.5 — Reminder UI in AppointmentForm**
+   - File: `src/components/appointments/AppointmentForm.tsx`
+   - Add "Reminders" section below date/time:
+     - Three checkboxes: "15 minutes before", "1 hour before", "1 day before" (all checked by default for future appointments)
+     - On save: call `reminders_schedule` if any box checked and appointment is in the future; call `reminders_cancel` if all unchecked
+   - Done when: creating an appointment → 3 reminder rows in DB; unchecking all → rows deleted; past appointment → checkboxes disabled
+
+[ ] **15.6 — F2.6 tests**
+   - `cargo test` covers scheduler, polling (mocked), cancel
+   - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
+
+[ ] **15.7 — Commit & push**
+   - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
+   - Commit: `feat: system notification reminders for appointments (F2.6)`
+   - Push to `origin/develop`; verify CI green
+
+---
+
+## Phase 16 — Recurring Appointments (v1.9)
+
+> **PRD:** F2.7  
+> **Goal:** Allow appointments to recur weekly or monthly; each occurrence is a separate row linked to a recurrence series.
+
+### Sprint 30: Rust + schema
+
+[ ] **16.1 — Recurrence schema migration**
+   - Migration v8 in `src-tauri/src/db/migrations.rs`:
+     - `CREATE TABLE recurrence_series (id TEXT PRIMARY KEY, rule TEXT NOT NULL CHECK(rule IN ('weekly','monthly')), interval_n INTEGER NOT NULL DEFAULT 1, until_date TEXT, created_at TEXT NOT NULL)`
+     - `ALTER TABLE appointments ADD COLUMN recurrence_series_id TEXT REFERENCES recurrence_series(id)`
+   - Done when: `cargo test` passes migration; existing appointment rows unaffected (`recurrence_series_id` NULL)
+
+[ ] **16.2 — Recurrence expansion command**
+   - File: `src-tauri/src/commands/recurrence.rs` (new)
+   - `recurrence_create(base_appointment_id: String, rule: String, interval_n: u32, until_date: Option<String>, occurrences: u32)`:
+     - Creates a `recurrence_series` row
+     - Clones the base appointment `occurrences` times, advancing date per rule; links all to `recurrence_series_id`
+     - Max 104 occurrences (2 years weekly) enforced
+   - `recurrence_delete_series(series_id: String, from_occurrence: Option<String>)`:
+     - Delete all occurrences from `from_occurrence` onwards (or all if None)
+   - Done when: `cargo test` verifies (a) weekly rule → dates spaced 7 days; (b) monthly rule → same day-of-month next month; (c) `until_date` respected; (d) max 104 enforced; (e) delete-from removes correct subset
+
+[ ] **16.3 — Register in lib.rs + IPC keys**
+   - Add `recurrenceCreate: 'recurrence_create'`, `recurrenceDeleteSeries: 'recurrence_delete_series'` to `src/lib/ipc.ts`
+   - Register in `lib.rs`
+
+### Sprint 31: Frontend
+
+[ ] **16.4 — Recurrence UI in AppointmentForm**
+   - File: `src/components/appointments/AppointmentForm.tsx`
+   - Add "Repeat" dropdown: None / Weekly / Monthly
+   - When Weekly or Monthly: show "Repeat every N [weeks/months]" stepper + "Until" date picker
+   - On save: call `recurrence_create` if repeat ≠ None
+   - Done when: creating a weekly appointment for 4 weeks creates 4 appointment rows; all appear in calendar view
+
+[ ] **16.5 — Delete series confirmation**
+   - On deleting a recurring appointment, show modal: "Delete this occurrence only" / "Delete this and all following" / "Delete all in series"
+   - Calls `recurrence_delete_series` with appropriate `from_occurrence`
+   - Done when: "this and following" deletes correct subset; "all" deletes entire series
+
+[ ] **16.6 — F2.7 tests**
+   - `cargo test` covers expansion, until_date, max cap, delete variants
+   - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
+
+[ ] **16.7 — Commit & push**
+   - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
+   - Commit: `feat: recurring appointments weekly/monthly (F2.7)`
+   - Push to `origin/develop`; verify CI green
+
+---
+
+## Phase 17 — Note Links + Note Version History (v1.10)
+
+> **PRD:** F3.4, F3.5  
+> **Goal:** Allow notes to be linked to appointments or documents; preserve the last 10 saved versions of each note.
+
+### Sprint 32: Schema + Rust
+
+[ ] **17.1 — Note links + versions schema migration**
+   - Migration v9 in `src-tauri/src/db/migrations.rs`:
+     - `CREATE TABLE note_links (id TEXT PRIMARY KEY, note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE, entity_type TEXT NOT NULL CHECK(entity_type IN ('appointment','document')), entity_id TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(note_id, entity_type, entity_id))`
+     - `CREATE TABLE note_versions (id TEXT PRIMARY KEY, note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE, content TEXT NOT NULL, saved_at TEXT NOT NULL)`
+     - Index on `note_versions(note_id, saved_at DESC)` for efficient version fetch
+   - Done when: `cargo test` confirms both tables created
+
+[ ] **17.2 — Note links CRUD commands**
+   - File: `src-tauri/src/commands/notes.rs`
+   - `note_link(note_id: String, entity_type: String, entity_id: String)` — `INSERT OR IGNORE INTO note_links`
+   - `note_unlink(note_id: String, entity_type: String, entity_id: String)` — `DELETE FROM note_links`
+   - `links_for_note(note_id: String)` → `Vec<NoteLinkDto>`
+   - `notes_for_entity(entity_type: String, entity_id: String)` → `Vec<NoteDto>`
+   - Done when: `cargo test` verifies link/unlink/list round-trip; duplicate link is no-op
+
+[ ] **17.3 — Note version commands**
+   - File: `src-tauri/src/commands/notes.rs`
+   - On every `notes_update` call: `INSERT INTO note_versions(id, note_id, content, saved_at)` before updating the note body
+   - After insert, delete oldest rows if count > 10: `DELETE FROM note_versions WHERE note_id = ? AND id NOT IN (SELECT id FROM note_versions WHERE note_id = ? ORDER BY saved_at DESC LIMIT 10)`
+   - `note_versions_list(note_id: String)` → `Vec<NoteVersionDto>` ordered newest first
+   - `note_version_restore(note_id: String, version_id: String)` → restores content from that version (saves a new version of the current content first)
+   - Done when: `cargo test` verifies (a) 11 saves → only 10 versions kept; (b) restore updates note content; (c) restore creates version of previous content
+
+[ ] **17.4 — Register in lib.rs + IPC keys**
+   - Add `noteLink`, `noteUnlink`, `linksForNote`, `notesForEntity`, `noteVersionsList`, `noteVersionRestore` to `src/lib/ipc.ts`
+   - Register all in `lib.rs`
+
+### Sprint 33: Frontend
+
+[ ] **17.5 — Note links UI**
+   - File: `src/app/(app)/notes/[id]/page.tsx`
+   - Add "Linked To" panel in note detail sidebar:
+     - "Link to Appointment" dropdown (searchable, shows upcoming/recent appointments)
+     - "Link to Document" dropdown (searchable, shows documents list)
+     - Linked items shown as chips with unlink button
+   - Calls `note_link` on add; `note_unlink` on remove
+   - Done when: linking a note to an appointment shows it in the appointment detail page under "Linked Notes"
+
+[ ] **17.6 — Linked notes in Appointment and Document detail**
+   - File: `src/app/(app)/appointments/[id]/page.tsx` — add "Notes" panel calling `notes_for_entity('appointment', id)`
+   - File: `src/app/(app)/documents/[id]/page.tsx` — add "Notes" panel calling `notes_for_entity('document', id)`
+   - Each panel lists linked note titles; click navigates to note detail
+   - Done when: notes linked from the note side appear here without page reload
+
+[ ] **17.7 — Note version history UI**
+   - File: `src/app/(app)/notes/[id]/page.tsx`
+   - Add "Version History" button in note toolbar; opens side drawer
+   - Drawer lists up to 10 versions with timestamp; "Restore" button on each
+   - Restore calls `note_version_restore`; editor updates with restored content
+   - Done when: saving a note 3 times shows 3 versions; restoring v1 sets editor content to v1 text
+
+[ ] **17.8 — F3.4/F3.5 tests**
+   - `cargo test` covers link CRUD, version capping at 10, restore sequence
+   - Done when: coverage ≥ 80%; `npx tsc --noEmit` clean
+
+[ ] **17.9 — Commit & push**
+   - Pre-commit: `npx tsc --noEmit` + `cargo fmt` + `cargo clippy`
+   - Commit: `feat: note links to appointments/documents + note version history (F3.4, F3.5)`
+   - Push to `origin/develop`; verify CI green
+
+---
+
 ## Quick Reference
 
 | Concern | File |
 |---------|------|
 | Feature requirements (v1 + v1.1) | `docs/PRD_V2.md` |
 | Feature requirements (v1.4 upload intelligence) | `docs/PRD_V3.md` |
+| Implementation vs requirements gap analysis | `docs/V3_GAP.md` |
 | Architecture | `docs/ARCHITECTURE_V2.md` |
 | Acceptance tests (v1.2) | `docs/ACCEPTANCE_TESTS_V2.md` |
 | Acceptance tests (v1.4 upload) | `docs/ACCEPTANCE_TESTS_V3.md` |

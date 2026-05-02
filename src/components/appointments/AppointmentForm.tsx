@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import {
   Appointment,
@@ -11,6 +11,10 @@ import {
 } from '../../store/appointmentsStore'
 import { AppointmentInput } from '../../hooks/useAppointments'
 import { CategoryPicker, type Category } from '../categories/CategoryPicker'
+import { Contact } from '../../store/contactsStore'
+
+const DOCTOR_ROLES = new Set(['gp', 'specialist', 'dentist', 'physio'])
+const CLINIC_ROLES = new Set(['hospital', 'clinic'])
 
 interface AppointmentFormProps {
   initial?: Appointment
@@ -46,6 +50,10 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
   const [error, setError] = useState<string | null>(null)
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
+  const [allContacts, setAllContacts] = useState<Contact[]>([])
+  const [linkedDoctorContactId, setLinkedDoctorContactId] = useState<string | null>(null)
+  const [linkedClinicContactId, setLinkedClinicContactId] = useState<string | null>(null)
+  const initContactsResolved = useRef(false)
 
   useEffect(() => {
     const loads: Promise<void>[] = [
@@ -62,6 +70,22 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
             }))
           )
         )
+        .catch(() => {}),
+      invoke<Contact[]>('contacts_list')
+        .then((contacts) => {
+          setAllContacts(contacts)
+          if (!initContactsResolved.current && initial?.contact_ids?.length) {
+            initContactsResolved.current = true
+            const doctorContact = contacts.find(
+              (c) => initial.contact_ids.includes(c.id) && DOCTOR_ROLES.has(c.role)
+            )
+            const clinicContact = contacts.find(
+              (c) => initial.contact_ids.includes(c.id) && CLINIC_ROLES.has(c.role)
+            )
+            if (doctorContact) setLinkedDoctorContactId(doctorContact.id)
+            if (clinicContact) setLinkedClinicContactId(clinicContact.id)
+          }
+        })
         .catch(() => {}),
     ]
     if (initial?.id) {
@@ -96,6 +120,46 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     }
+  }
+
+  async function handleDoctorContactSelect(contactId: string) {
+    const contact = allContacts.find((c) => c.id === contactId)
+    if (!contact) return
+    if (linkedDoctorContactId && linkedDoctorContactId !== contactId && initial?.id) {
+      await invoke('appointment_unlink_contact', { appointmentId: initial.id, contactId: linkedDoctorContactId }).catch(() => {})
+    }
+    setLinkedDoctorContactId(contactId)
+    setDoctorName(contact.name)
+    if (initial?.id) {
+      await invoke('appointment_link_contact', { appointmentId: initial.id, contactId }).catch(() => {})
+    }
+  }
+
+  async function handleDoctorContactClear() {
+    if (linkedDoctorContactId && initial?.id) {
+      await invoke('appointment_unlink_contact', { appointmentId: initial.id, contactId: linkedDoctorContactId }).catch(() => {})
+    }
+    setLinkedDoctorContactId(null)
+  }
+
+  async function handleClinicContactSelect(contactId: string) {
+    const contact = allContacts.find((c) => c.id === contactId)
+    if (!contact) return
+    if (linkedClinicContactId && linkedClinicContactId !== contactId && initial?.id) {
+      await invoke('appointment_unlink_contact', { appointmentId: initial.id, contactId: linkedClinicContactId }).catch(() => {})
+    }
+    setLinkedClinicContactId(contactId)
+    setClinicName(contact.name)
+    if (initial?.id) {
+      await invoke('appointment_link_contact', { appointmentId: initial.id, contactId }).catch(() => {})
+    }
+  }
+
+  async function handleClinicContactClear() {
+    if (linkedClinicContactId && initial?.id) {
+      await invoke('appointment_unlink_contact', { appointmentId: initial.id, contactId: linkedClinicContactId }).catch(() => {})
+    }
+    setLinkedClinicContactId(null)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -187,25 +251,91 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="appt-doctor" className={labelClass}>Doctor</label>
-          <input
-            id="appt-doctor"
-            type="text"
-            value={doctorName}
-            onChange={(e) => setDoctorName(e.target.value)}
-            placeholder="Dr. Smith"
-            className={inputClass}
-          />
+          {allContacts.some((c) => DOCTOR_ROLES.has(c.role)) ? (
+            <div className="space-y-1">
+              <select
+                id="appt-doctor-picker"
+                value={linkedDoctorContactId ?? ''}
+                onChange={(e) => {
+                  if (e.target.value) void handleDoctorContactSelect(e.target.value)
+                  else void handleDoctorContactClear()
+                }}
+                className={inputClass}
+                aria-label="Select doctor from contacts"
+              >
+                <option value="">— Select from contacts —</option>
+                {allContacts
+                  .filter((c) => DOCTOR_ROLES.has(c.role))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.specialty ? ` (${c.specialty})` : ''}
+                    </option>
+                  ))}
+              </select>
+              <input
+                id="appt-doctor"
+                type="text"
+                value={doctorName}
+                onChange={(e) => setDoctorName(e.target.value)}
+                placeholder="Or type a name"
+                className={inputClass}
+                aria-label="Doctor name (free text)"
+              />
+            </div>
+          ) : (
+            <input
+              id="appt-doctor"
+              type="text"
+              value={doctorName}
+              onChange={(e) => setDoctorName(e.target.value)}
+              placeholder="Dr. Smith"
+              className={inputClass}
+            />
+          )}
         </div>
         <div>
           <label htmlFor="appt-clinic" className={labelClass}>Clinic / Hospital</label>
-          <input
-            id="appt-clinic"
-            type="text"
-            value={clinicName}
-            onChange={(e) => setClinicName(e.target.value)}
-            placeholder="City Medical Centre"
-            className={inputClass}
-          />
+          {allContacts.some((c) => CLINIC_ROLES.has(c.role)) ? (
+            <div className="space-y-1">
+              <select
+                id="appt-clinic-picker"
+                value={linkedClinicContactId ?? ''}
+                onChange={(e) => {
+                  if (e.target.value) void handleClinicContactSelect(e.target.value)
+                  else void handleClinicContactClear()
+                }}
+                className={inputClass}
+                aria-label="Select clinic from contacts"
+              >
+                <option value="">— Select from contacts —</option>
+                {allContacts
+                  .filter((c) => CLINIC_ROLES.has(c.role))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+              <input
+                id="appt-clinic"
+                type="text"
+                value={clinicName}
+                onChange={(e) => setClinicName(e.target.value)}
+                placeholder="Or type a name"
+                className={inputClass}
+                aria-label="Clinic name (free text)"
+              />
+            </div>
+          ) : (
+            <input
+              id="appt-clinic"
+              type="text"
+              value={clinicName}
+              onChange={(e) => setClinicName(e.target.value)}
+              placeholder="City Medical Centre"
+              className={inputClass}
+            />
+          )}
         </div>
       </div>
 

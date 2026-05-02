@@ -247,6 +247,8 @@ export default function TimelinePage() {
   const [apptCategoryMap, setApptCategoryMap] = useState<Map<string, string[]>>(new Map())
   // appointmentId -> documentIds linked to it
   const [apptLinkedDocIds, setApptLinkedDocIds] = useState<Map<string, string[]>>(new Map())
+  // contactId -> contact name (for by-doctor grouping via linked contacts)
+  const [contactNameMap, setContactNameMap] = useState<Map<string, string>>(new Map())
   const [extraLoading, setExtraLoading] = useState(false)
 
   async function handleCategoryColorChange(categoryId: string, newColor: string) {
@@ -311,18 +313,27 @@ export default function TimelinePage() {
         setDocCategoryMap(docMap)
         setApptCategoryMap(apptMap)
       } else if (viewMode === 'by-doctor') {
-        const linkResults = await Promise.all(
-          appointments.map((a) =>
+        const [contacts, ...linkResults] = await Promise.all([
+          invoke<Array<{ id: string; name: string; role: string }>>('contacts_list').catch(() => []),
+          ...appointments.map((a) =>
             invoke<DocumentLink[]>('links_list_for_appointment', { appointmentId: a.id })
               .then((links) => ({ apptId: a.id, links }))
               .catch(() => ({ apptId: a.id, links: [] as DocumentLink[] }))
-          )
-        )
+          ),
+        ])
 
         if (cancelled) return
 
+        const DOCTOR_ROLES = new Set(['gp', 'specialist', 'dentist', 'physio'])
+        const nameMap = new Map<string, string>()
+        for (const c of contacts as Array<{ id: string; name: string; role: string }>) {
+          if (DOCTOR_ROLES.has(c.role)) nameMap.set(c.id, c.name)
+        }
+        setContactNameMap(nameMap)
+
         const linkMap = new Map<string, string[]>()
-        for (const { apptId, links } of linkResults) {
+        for (const r of linkResults) {
+          const { apptId, links } = r as { apptId: string; links: DocumentLink[] }
           linkMap.set(apptId, links.map((l) => l.document_id))
         }
         setApptLinkedDocIds(linkMap)
@@ -427,7 +438,10 @@ export default function TimelinePage() {
     for (const e of filtered) {
       if (e.type !== 'appointment') continue
       const appt = appointments.find((a) => a.id === e.rawId)
-      const doctorKey = appt?.doctor_name?.trim() || 'No doctor assigned'
+      const linkedContactName = appt?.contact_ids
+        .map((id) => contactNameMap.get(id))
+        .find((name) => name != null)
+      const doctorKey = linkedContactName ?? (appt?.doctor_name?.trim() || 'No doctor assigned')
       if (!groups.has(doctorKey)) {
         groups.set(doctorKey, { appts: [], docs: [], linkedDocIds: new Set() })
       }
@@ -470,7 +484,7 @@ export default function TimelinePage() {
         if (b[0] === 'No doctor assigned') return -1
         return a[0].localeCompare(b[0])
       })
-  }, [viewMode, filtered, appointments, apptLinkedDocIds])
+  }, [viewMode, filtered, appointments, apptLinkedDocIds, contactNameMap])
 
   // ── Render ──────────────────────────────────────────────────────────────────
 

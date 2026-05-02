@@ -179,4 +179,56 @@ describe('useAppointments', () => {
 
     expect(useAppointmentsStore.getState().statusFilter).toBe('cancelled')
   })
+
+  it('exposes contact_ids populated by the backend', async () => {
+    const { useAppointments } = await import('../useAppointments')
+    const appt = makeAppt({ id: 'a1', contact_ids: ['c1', 'c2'] })
+    mockInvoke.mockResolvedValueOnce([appt])
+
+    const { result } = renderHook(() => useAppointments())
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.appointments[0]?.contact_ids).toEqual(['c1', 'c2'])
+  })
+
+  it('exposes empty contact_ids when no contacts are linked', async () => {
+    const { useAppointments } = await import('../useAppointments')
+    const appt = makeAppt({ id: 'a1', contact_ids: [] })
+    mockInvoke.mockResolvedValueOnce([appt])
+
+    const { result } = renderHook(() => useAppointments())
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.appointments[0]?.contact_ids).toEqual([])
+  })
+
+  it('preserves contact_ids after updateAppointment', async () => {
+    const { useAppointments } = await import('../useAppointments')
+    const original = makeAppt({ id: 'a1', contact_ids: ['c1'] })
+    useAppointmentsStore.setState({ appointments: [original] })
+    mockInvoke.mockResolvedValueOnce([original])
+
+    const updated = makeAppt({ id: 'a1', title: 'Updated', contact_ids: ['c1'] })
+    mockInvoke.mockResolvedValueOnce(updated)
+
+    const { result } = renderHook(() => useAppointments())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.updateAppointment('a1', {
+        title: 'Updated',
+        doctor_name: null,
+        clinic_name: null,
+        specialty: null,
+        appt_date: '2026-04-20T10:00:00',
+        duration_min: null,
+        location: null,
+        notes: null,
+        status: null,
+        reminder_min: null,
+      })
+    })
+
+    expect(result.current.appointments.find((a) => a.id === 'a1')?.contact_ids).toEqual(['c1'])
+  })
 })
