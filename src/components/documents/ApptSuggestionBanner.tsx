@@ -1,8 +1,9 @@
 export interface AppointmentSuggestion {
-  apptDate: string;
+  appt_date: string;
   title: string;
-  doctorName: string | null;
+  doctor_name: string | null;
   specialty: string | null;
+  clinic_name: string | null;
 }
 
 interface Props {
@@ -28,11 +29,12 @@ export function ApptSuggestionBanner({ suggestion, onConfirm, onDismiss, isLoadi
         <p className="mt-0.5 text-sm text-blue-700">
           <span className="font-medium">{suggestion.title}</span>
           {' — '}
-          {suggestion.apptDate}
+          {suggestion.appt_date}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <button
+          type="button"
           onClick={onConfirm}
           disabled={isLoading}
           className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
