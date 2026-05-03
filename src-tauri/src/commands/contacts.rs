@@ -166,6 +166,7 @@ pub fn contacts_create(
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct ContactCreateWithClinicInput {
     pub name: String,
     pub role: String,
