@@ -529,3 +529,71 @@ Scenario: Existing appointment match suppresses suggestion (V3-F6.8)
 | 2 | Max addresses per clinic — is 5 sufficient or should it be unlimited? | Product |
 | 3 | Should tags added automatically be visually distinguished from manually-added tags? | UX |
 | 4 | When both clinic and contact are detected but only one is saved, should the link be created later? | Product |
+
+---
+
+## Post-Release Fixes (Manual Testing — 2026-05-03)
+
+These gaps were discovered during manual smoke testing after V3-F6 shipped. All are implementation misses against existing requirements or newly identified requirements.
+
+### Fix 1 — Appointment Edit: Date Field Not Pre-populated
+
+**Observed:** Opening the Edit view for an existing appointment shows an empty date field, losing the existing `appt_date`.
+
+**Root cause:** `appt_date` from appointments created via the invoice suggestion banner is stored as `YYYY-MM-DD` (date-only). The `<input type="datetime-local">` element requires `YYYY-MM-DDThh:mm` format. The helper `isoToDatetimeLocal(iso)` returns `iso.slice(0, 16)`, which for a 10-character date string yields `"YYYY-MM-DD"` — not accepted by the input, so the field renders empty.
+
+**Fix:** In `isoToDatetimeLocal`, pad date-only strings to `"YYYY-MM-DDT00:00"` before slicing. Additionally, when creating an appointment from the suggestion banner (`handleApptSuggestionConfirm`), normalise `appt_date` to include a time component (`T00:00:00`) before passing to `appointments_create`.
+
+**Requirement addition (V3-F6.9):**
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| V3-F6.9 | `appt_date` stored by the auto-create flow MUST include a time component (`T00:00:00`) so it is recognised by the appointment edit form's `datetime-local` field. | MUST |
+
+---
+
+### Fix 2 — Appointment Title Source and Stale Value Bug
+
+**How appointment title is generated:**
+The title is assembled at suggestion time in `appointments_suggest_from_document` (`src-tauri/src/commands/documents.rs`):
+```
+(specialty, doctor_name) → title
+(Some, Some)  → "{SPECIALTY} with {doctor_name}"
+(Some, None)  → "{SPECIALTY} appointment"
+(None, Some)  → "Appointment with {doctor_name}"
+(None, None)  → "Medical appointment"
+```
+`specialty` = first all-uppercase tag from `auto_extract_tags`. `doctor_name` = result of `extract_performing_doctor(&text)` (performing doctor, not referral GP).
+
+**Observed stale value:** The London Clinic invoice appointment was created before the `extract_performing_doctor` bug was fixed (the function previously fell back to the first referral candidate, incorrectly using Dr. John Green from a prior document's context). The appointment already in the database carries this wrong title and must be corrected manually in the Edit view.
+
+**Requirement addition (V3-F6.10):**
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| V3-F6.10 | The appointment title in the suggestion banner MUST be editable before confirming creation, so users can correct auto-generated values before they are persisted. | SHOULD |
+
+---
+
+### Fix 3 — Appointments Created from Invoices Must Default to "completed"
+
+**Observed:** Appointments auto-created from invoice/receipt uploads default to `status = "scheduled"`. Invoices are past-service billing documents — the service has already been rendered.
+
+**Requirement addition (V3-F6.11):**
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| V3-F6.11 | When an appointment is created from an invoice or receipt document upload (via `appointments_suggest_from_document`), its initial `status` MUST be set to `"completed"`, not `"scheduled"`. | MUST |
+
+---
+
+### Suggestion — Merge View and Edit Appointment Screens (V3-F7, pending approval)
+
+**User suggestion:** The separate "View" and "Edit" appointment screens could be merged into a single inline-editable detail view, reducing navigation steps.
+
+**Current state:** Two routes — `AppointmentDetailClient` (read-only) with an Edit button that navigates to a separate form.
+
+**Proposed behaviour:** Single view where fields are displayed in read mode by default; clicking a field or "Edit" switches to edit mode inline, saving on blur or explicit "Save".
+
+**Decision required before implementation.**
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| V3-F7.1 (proposed) | The appointment detail screen SHOULD support inline editing without navigating to a separate edit route. | SHOULD |

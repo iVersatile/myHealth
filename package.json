@@ -27,11 +27,13 @@
     "@tiptap/extension-ordered-list": "^3.22.4",
     "@tiptap/react": "^3.22.4",
     "@types/dompurify": "^3.0.5",
+    "@types/react-window": "^1.8.8",
     "dompurify": "^3.4.1",
     "next": "16.2.4",
     "pdf-lib": "^1.17.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-window": "^1.8.11",
     "zustand": "^5.0.12"
   },
   "overrides": {

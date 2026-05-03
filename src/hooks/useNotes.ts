@@ -3,18 +3,16 @@ import { invoke } from '@tauri-apps/api/core'
 import { Note, useNotesStore } from '../store/notesStore'
 
 export function useNotes() {
-  const {
-    notes,
-    loading,
-    error,
-    setNotes,
-    setLoading,
-    setError,
-    upsertNote,
-    removeNote,
-    updatePinned,
-    updateTags,
-  } = useNotesStore()
+  const notes = useNotesStore(s => s.notes)
+  const loading = useNotesStore(s => s.loading)
+  const error = useNotesStore(s => s.error)
+  const setNotes = useNotesStore(s => s.setNotes)
+  const setLoading = useNotesStore(s => s.setLoading)
+  const setError = useNotesStore(s => s.setError)
+  const upsertNote = useNotesStore(s => s.upsertNote)
+  const removeNote = useNotesStore(s => s.removeNote)
+  const updatePinned = useNotesStore(s => s.updatePinned)
+  const updateTags = useNotesStore(s => s.updateTags)
 
   const fetchNotes = useCallback(async () => {
     setLoading(true)

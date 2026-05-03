@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 25 — Code Quality & Performance Hardening — Task 25.3 next
+Phase 25 — Code Quality & Performance Hardening — Task 25.6 next
 ```
 
 ---
@@ -1424,7 +1424,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-### ▶ **25.3 — Zustand selector hooks (M5)**
+### [x] **25.3 — Zustand selector hooks (M5)**
 
 **Goal:** Replace wide destructures in hooks with per-value selectors to reduce unnecessary re-renders.
 
@@ -1436,7 +1436,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-### [ ] **25.4 — Virtualize DocumentList for >30 items (L3)**
+### [x] **25.4 — Virtualize DocumentList for >30 items (L3)**
 
 **Goal:** Prevent layout jank when the document list grows large.
 
@@ -1449,7 +1449,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-### [ ] **25.5 — Extract inline dashboard helpers (L6)**
+### [x] **25.5 — Extract inline dashboard helpers (L6)**
 
 **Goal:** Move inline formatting helpers defined inside `dashboard/page.tsx` to `src/lib/formatting.ts` so they are not recreated per render and can be unit tested.
 
@@ -1462,7 +1462,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-### [ ] **25.6 — Commit & push Phase 25**
+### ▶ **25.6 — Commit & push Phase 25**
 
 - Pre-commit: `npx tsc --noEmit` + `cargo fmt --all` + `cargo clippy -- -D warnings`
 - Commit: `refactor: reduce command boilerplate, extraction refactor, Zustand selectors, list virtualisation (Phase 25)`

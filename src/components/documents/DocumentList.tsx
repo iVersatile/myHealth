@@ -1,10 +1,15 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { FixedSizeList, ListChildComponentProps } from 'react-window'
 import { invoke } from '@tauri-apps/api/core'
 import { useDocuments } from '../../hooks/useDocuments'
 import { Document } from '../../store/documentsStore'
 import { DocumentCard } from './DocumentCard'
+
+const ITEM_HEIGHT = 104
+const LIST_HEIGHT = 600
+const VIRTUALISE_THRESHOLD = 30
 
 interface Category {
   id: string
@@ -21,6 +26,33 @@ interface FilteredResult {
 }
 
 const FILTER_PAGE_SIZE = 50
+
+interface RowData {
+  docs: Document[]
+  selectedIds: string[]
+  toggleSelect: (id: string) => void
+  deleteDocument: (id: string) => void
+}
+
+function DocRow({ index, style, data }: ListChildComponentProps<RowData>) {
+  const { docs, selectedIds, toggleSelect, deleteDocument } = data
+  const doc = docs[index]
+  if (!doc) return null
+  return (
+    <div style={style} className="flex items-start gap-3 pb-3">
+      <input
+        type="checkbox"
+        aria-label={`Select ${doc.filename}`}
+        checked={selectedIds.includes(doc.id)}
+        onChange={() => toggleSelect(doc.id)}
+        className="mt-4 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)]"
+      />
+      <div className="min-w-0 flex-1">
+        <DocumentCard document={doc} onDelete={deleteDocument} />
+      </div>
+    </div>
+  )
+}
 
 export function DocumentList() {
   const {
@@ -264,22 +296,34 @@ export function DocumentList() {
             </label>
           </div>
 
-          <ul className="flex flex-col gap-3">
-            {displayDocs.map((doc) => (
-              <li key={doc.id} className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  aria-label={`Select ${doc.filename}`}
-                  checked={selectedIds.includes(doc.id)}
-                  onChange={() => toggleSelect(doc.id)}
-                  className="mt-4 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)]"
-                />
-                <div className="min-w-0 flex-1">
-                  <DocumentCard document={doc} onDelete={deleteDocument} />
-                </div>
-              </li>
-            ))}
-          </ul>
+          {displayDocs.length > VIRTUALISE_THRESHOLD ? (
+            <FixedSizeList
+              height={LIST_HEIGHT}
+              itemCount={displayDocs.length}
+              itemSize={ITEM_HEIGHT}
+              width="100%"
+              itemData={{ docs: displayDocs, selectedIds, toggleSelect, deleteDocument }}
+            >
+              {DocRow}
+            </FixedSizeList>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {displayDocs.map((doc) => (
+                <li key={doc.id} className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${doc.filename}`}
+                    checked={selectedIds.includes(doc.id)}
+                    onChange={() => toggleSelect(doc.id)}
+                    className="mt-4 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <DocumentCard document={doc} onDelete={deleteDocument} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </>
       )}
 

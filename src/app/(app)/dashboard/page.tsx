@@ -6,6 +6,7 @@ import Link from 'next/link'
 import type { Appointment } from '../../../store/appointmentsStore'
 import type { Document } from '../../../store/documentsStore'
 import type { Note } from '../../../store/notesStore'
+import { formatApptDate, docTypeLabel, formatBytes, stripHtml } from '../../../lib/formatting'
 
 interface Stats {
   total_documents: number
@@ -59,26 +60,6 @@ function SectionHeading({ title, href, linkLabel }: { title: string; href?: stri
   )
 }
 
-function formatApptDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function docTypeLabel(mimeType: string): string {
-  if (mimeType === 'application/pdf') return 'PDF'
-  if (mimeType.startsWith('image/')) return mimeType.split('/')[1]?.toUpperCase() ?? 'IMG'
-  return 'FILE'
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '')
-}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({ total_documents: 0, total_notes: 0, upcoming_appointments: 0 })
