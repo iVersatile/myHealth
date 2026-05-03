@@ -597,3 +597,47 @@ The title is assembled at suggestion time in `appointments_suggest_from_document
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | V3-F7.1 (proposed) | The appointment detail screen SHOULD support inline editing without navigating to a separate edit route. | SHOULD |
+
+---
+
+### V3-F8: Clinic Entity Redesign — Tree View and Doctor Association ✅ APPROVED (Option A)
+
+**User feedback (2026-05-03):** "London Clinic" was suggested and accepted via "Save as Clinic" but did not appear on the Clinics/Contact view. Root cause: two disconnected representations exist — the `clinics` table (written by "Save as Clinic") and `contacts` with `role='clinic'` (written by `autoSaveClinic`). The Clinics page only queries the latter.
+
+**Additional requirements from user feedback:**
+1. A clinic can exist without any linked doctors — it provides services in its own right.
+2. A clinic can associate with one or more doctors. Deleting the clinic must delete all clinic–doctor links but keep each doctor as a Contact, appending a history note recording the former association.
+3. The Clinics page must render a **tree view**: each clinic expanded to show its linked doctors (if any).
+
+**Approved approach (Option A — Unify around `clinics` table):**
+- `clinics` table becomes the single canonical source of truth for clinic entities.
+- `contacts.role = 'clinic'` is removed; existing rows migrated to `clinics` table in a new DB migration.
+- `autoSaveClinic` in UploadDialog switches to `clinics_create_if_not_exists` + `clinics_link_contact`.
+- New `clinics_list_with_contacts` command returns each clinic with its linked doctors via `clinic_contacts` JOIN.
+- `clinics_delete` writes a history note to each linked contact before cascade-deleting junction rows.
+- Clinics page replaced with a tree view component.
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| V3-F8.1 | A clinic MUST be creatable without any linked doctor contacts | MUST |
+| V3-F8.2 | A clinic MUST support zero or more linked doctor contacts via `clinic_contacts` | MUST |
+| V3-F8.3 | Deleting a clinic MUST cascade-delete `clinic_contacts` links but MUST NOT delete the linked contact records | MUST |
+| V3-F8.4 | When a clinic is deleted, a history note MUST be appended to each previously linked doctor contact's `notes` field (e.g. "Previously at London Clinic — removed 2026-05-03") | MUST |
+| V3-F8.5 | The Clinics page MUST display clinics as a tree: clinic name at root, linked doctors as children | MUST |
+| V3-F8.6 | A clinic node with no linked doctors MUST still appear in the tree as a leaf | MUST |
+| V3-F8.7 | Clinics saved via "Save as Clinic" in UploadDialog MUST appear on the Clinics page immediately after saving | MUST |
+| V3-F8.8 | `contacts.role` MUST NOT include `'clinic'` after this change; existing `role='clinic'` contacts MUST be migrated to the `clinics` table in a DB migration | MUST |
+
+**Acceptance Tests — V3-F8**
+
+| TC-ID | Scenario | Steps | Expected |
+|-------|----------|-------|----------|
+| TC-F8-01 | Clinic with no doctors appears in tree | Create clinic via `clinics_create_if_not_exists`; call `clinics_list_with_contacts` | Clinic present; `linked_contacts` is empty array |
+| TC-F8-02 | Clinic with two doctors appears in tree | Create clinic; link two contacts via `clinics_link_contact`; call `clinics_list_with_contacts` | Clinic present; `linked_contacts` has 2 entries with name and id |
+| TC-F8-03 | Delete clinic preserves doctor contacts | Link doctor to clinic; call `clinics_delete`; call `contacts_list` | Doctor contact still exists; `clinic_contacts` row gone |
+| TC-F8-04 | Delete clinic appends history note | Link doctor (notes = ""); call `clinics_delete`; fetch contact | Contact `notes` contains "Previously at [Clinic Name]" with today's date |
+| TC-F8-05 | autoSaveClinic writes to clinics table | Upload document with extracted clinic name; trigger auto-save; call `clinics_list_with_contacts` | Clinic row returned; no `contacts` row with `role='clinic'` created |
+| TC-F8-06 | Save as Clinic visible on Clinics page | Upload dialog: accept clinic suggestion → "Save as Clinic"; navigate to Clinics page | Clinic card visible in tree view immediately |
+| TC-F8-07 | Migration moves role=clinic contacts to clinics | Seed DB with contacts having `role='clinic'`; run migration | Rows appear in `clinics` table; no `contacts` rows with `role='clinic'` remain |
+| TC-F8-08 | Tree leaf for standalone clinic | Clinics page loaded with clinic having no linked contacts | Clinic node renders without crashing; no doctor children shown |
+| TC-F8-09 | Tree node shows linked doctor as child | Clinics page with clinic linked to 1 doctor | Doctor name visible as child item under clinic in tree |

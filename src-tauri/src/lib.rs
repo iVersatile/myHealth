@@ -34,11 +34,12 @@ use commands::categories::{
 };
 use commands::clinics::{
     clinics_create, clinics_create_if_not_exists, clinics_delete, clinics_get,
-    clinics_link_contact, clinics_list, clinics_update,
+    clinics_link_contact, clinics_list, clinics_list_with_contacts, clinics_update,
 };
 use commands::contacts::{
-    contacts_create, contacts_delete, contacts_find_similar, contacts_get, contacts_list,
-    contacts_update, documents_link_contact, find_duplicate_contacts, merge_contacts,
+    contacts_create, contacts_create_with_clinic, contacts_delete, contacts_find_similar,
+    contacts_get, contacts_list, contacts_update, documents_link_contact, find_duplicate_contacts,
+    merge_contacts,
 };
 use commands::documents::{
     appointments_suggest_from_document, documents_delete, documents_get,
@@ -190,6 +191,7 @@ pub fn run() {
             icalendar_import,
             icalendar_export,
             clinics_list,
+            clinics_list_with_contacts,
             clinics_get,
             clinics_create,
             clinics_update,
@@ -199,6 +201,7 @@ pub fn run() {
             contacts_list,
             contacts_get,
             contacts_create,
+            contacts_create_with_clinic,
             contacts_update,
             contacts_delete,
             contacts_find_similar,

@@ -4,6 +4,14 @@ import { useState } from 'react'
 import { Contact, CONTACT_ROLES, ROLE_LABELS } from '../../store/contactsStore'
 import type { ContactCreateInput, ContactUpdateInput } from '../../hooks/useContacts'
 
+function tauriErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (typeof e === 'object' && e !== null && 'message' in e) {
+    return String((e as { message: unknown }).message)
+  }
+  return String(e)
+}
+
 export interface ContactFormProps {
   initial?: Contact | null
   onSave: (data: ContactCreateInput | ContactUpdateInput) => Promise<void>
@@ -41,7 +49,7 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
       }
       await onSave(payload as ContactCreateInput | ContactUpdateInput)
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : String(e))
+      setErr(tauriErrorMessage(e))
     } finally {
       setSaving(false)
     }
