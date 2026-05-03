@@ -1404,11 +1404,7 @@ pub fn appointments_suggest_from_document(
 
     // Re-extract contact suggestions live — the stored metadata JSON does not
     // persist contact_suggestions, so reading it from meta_json always yields None.
-    let clinic_name: Option<String> =
-        crate::extraction::contact::extract_contact_suggestions(&text)
-            .into_iter()
-            .next()
-            .and_then(|c| c.clinic);
+    let clinic_name: Option<String> = crate::extraction::contact::first_clinic(&text);
 
     let auto_tags =
         crate::extraction::auto_extract_tags(&text, &doctor_candidates, Some(&appt_date));

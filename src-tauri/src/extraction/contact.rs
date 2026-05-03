@@ -100,7 +100,7 @@ fn first_phone(text: &str) -> Option<String> {
         })
 }
 
-fn first_clinic(text: &str) -> Option<String> {
+pub fn first_clinic(text: &str) -> Option<String> {
     clinic_re()
         .find(text)
         .map(|m| m.as_str().trim().to_string())
