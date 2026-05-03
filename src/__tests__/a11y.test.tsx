@@ -93,7 +93,7 @@ describe('Accessibility — axe-core (G-11)', () => {
       recurrence_series_id: null,
     }
     const { container } = render(
-      React.createElement(AppointmentCard, { appointment: appt, onEdit: vi.fn(), onDelete: vi.fn() })
+      React.createElement(AppointmentCard, { appointment: appt, onDelete: vi.fn() })
     )
     await expectNoViolations(container)
   })

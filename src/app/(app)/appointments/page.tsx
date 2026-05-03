@@ -41,14 +41,12 @@ export default function AppointmentsPage() {
     loading,
     error,
     createAppointment,
-    updateAppointment,
     deleteAppointment,
     filterByStatus,
     refresh,
   } = useAppointments()
 
   const [showForm, setShowForm] = useState(false)
-  const [editingAppt, setEditingAppt] = useState<Appointment | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [icsMessage, setIcsMessage] = useState<string | null>(null)
 
@@ -58,12 +56,7 @@ export default function AppointmentsPage() {
   const groups = groupByMonth(appointments)
 
   async function handleSave(input: AppointmentInput) {
-    let saved: Appointment
-    if (editingAppt) {
-      saved = await updateAppointment(editingAppt.id, input)
-    } else {
-      saved = await createAppointment(input)
-    }
+    const saved = await createAppointment(input)
     const offsets = input.reminder_offsets
     const anyEnabled = offsets && (offsets.min15 || offsets.hr1 || offsets.day1)
     if (anyEnabled) {
@@ -74,7 +67,7 @@ export default function AppointmentsPage() {
     } else {
       await invoke(IPC.remindersCancel, { appointmentId: saved.id }).catch(() => {})
     }
-    if (!editingAppt && input.recurrence) {
+    if (input.recurrence) {
       await invoke(IPC.recurrenceCreate, {
         baseAppointmentId: saved.id,
         rule: input.recurrence.rule,
@@ -84,12 +77,6 @@ export default function AppointmentsPage() {
       }).catch(() => {})
     }
     setShowForm(false)
-    setEditingAppt(null)
-  }
-
-  function handleEdit(appt: Appointment) {
-    setEditingAppt(appt)
-    setShowForm(true)
   }
 
   async function handleDelete(id: string) {
@@ -123,7 +110,6 @@ export default function AppointmentsPage() {
 
   function handleCancelForm() {
     setShowForm(false)
-    setEditingAppt(null)
   }
 
   async function handleIcsImport() {
@@ -180,7 +166,7 @@ export default function AppointmentsPage() {
             </button>
             <button
               type="button"
-              onClick={() => { setEditingAppt(null); setShowForm(true) }}
+              onClick={() => setShowForm(true)}
               className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-[var(--text-sm)] font-medium text-white transition-opacity duration-[var(--duration-fast)] hover:opacity-90"
             >
               + New
@@ -207,10 +193,9 @@ export default function AppointmentsPage() {
       {showForm && (
         <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-6 shadow-[var(--shadow-md)]">
           <h2 className="mb-4 text-[var(--text-lg)] font-semibold text-[var(--color-text)]">
-            {editingAppt ? 'Edit Appointment' : 'New Appointment'}
+            New Appointment
           </h2>
           <AppointmentForm
-            initial={editingAppt ?? undefined}
             onSave={handleSave}
             onCancel={handleCancelForm}
           />
@@ -327,7 +312,6 @@ export default function AppointmentsPage() {
               <li key={appt.id}>
                 <AppointmentCard
                   appointment={appt}
-                  onEdit={handleEdit}
                   onDelete={handleDelete}
                 />
               </li>

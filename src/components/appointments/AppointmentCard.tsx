@@ -3,7 +3,6 @@ import { Appointment, STATUS_LABELS, AppointmentStatus } from '../../store/appoi
 
 interface AppointmentCardProps {
   appointment: Appointment
-  onEdit: (appointment: Appointment) => void
   onDelete: (id: string) => void
 }
 
@@ -22,7 +21,7 @@ function formatApptDate(iso: string): { date: string; time: string } {
   }
 }
 
-export function AppointmentCard({ appointment: appt, onEdit, onDelete }: AppointmentCardProps) {
+export function AppointmentCard({ appointment: appt, onDelete }: AppointmentCardProps) {
   const { time } = formatApptDate(appt.appt_date)
   const statusLabel = STATUS_LABELS[appt.status]
   const statusColor = STATUS_COLORS[appt.status]
@@ -76,15 +75,8 @@ export function AppointmentCard({ appointment: appt, onEdit, onDelete }: Appoint
           href={`/appointments/view?id=${appt.id}`}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
         >
-          View
+          Open
         </Link>
-        <button
-          type="button"
-          onClick={() => onEdit(appt)}
-          className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
-        >
-          Edit
-        </button>
         <button
           type="button"
           aria-label={`Delete ${appt.title}`}

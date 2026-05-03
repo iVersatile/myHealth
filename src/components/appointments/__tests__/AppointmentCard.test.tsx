@@ -24,7 +24,6 @@ const makeAppt = (overrides: Partial<Appointment> = {}): Appointment => ({
 })
 
 describe('AppointmentCard', () => {
-  const onEdit = vi.fn()
   const onDelete = vi.fn()
 
   beforeEach(() => {
@@ -32,12 +31,12 @@ describe('AppointmentCard', () => {
   })
 
   it('renders the appointment title', () => {
-    render(<AppointmentCard appointment={makeAppt()} onEdit={onEdit} onDelete={onDelete} />)
+    render(<AppointmentCard appointment={makeAppt()} onDelete={onDelete} />)
     expect(screen.getByText('Annual Checkup')).toBeDefined()
   })
 
   it('renders scheduled status badge', () => {
-    render(<AppointmentCard appointment={makeAppt()} onEdit={onEdit} onDelete={onDelete} />)
+    render(<AppointmentCard appointment={makeAppt()} onDelete={onDelete} />)
     expect(screen.getByText('Scheduled')).toBeDefined()
   })
 
@@ -45,7 +44,6 @@ describe('AppointmentCard', () => {
     render(
       <AppointmentCard
         appointment={makeAppt({ status: 'completed' })}
-        onEdit={onEdit}
         onDelete={onDelete}
       />
     )
@@ -56,7 +54,6 @@ describe('AppointmentCard', () => {
     render(
       <AppointmentCard
         appointment={makeAppt({ status: 'cancelled' })}
-        onEdit={onEdit}
         onDelete={onDelete}
       />
     )
@@ -67,7 +64,6 @@ describe('AppointmentCard', () => {
     render(
       <AppointmentCard
         appointment={makeAppt({ status: 'missed' })}
-        onEdit={onEdit}
         onDelete={onDelete}
       />
     )
@@ -75,12 +71,12 @@ describe('AppointmentCard', () => {
   })
 
   it('renders doctor name when provided', () => {
-    render(<AppointmentCard appointment={makeAppt()} onEdit={onEdit} onDelete={onDelete} />)
+    render(<AppointmentCard appointment={makeAppt()} onDelete={onDelete} />)
     expect(screen.getByText(/Dr\. Smith/)).toBeDefined()
   })
 
   it('renders clinic name when provided', () => {
-    render(<AppointmentCard appointment={makeAppt()} onEdit={onEdit} onDelete={onDelete} />)
+    render(<AppointmentCard appointment={makeAppt()} onDelete={onDelete} />)
     expect(screen.getByText(/City Clinic/)).toBeDefined()
   })
 
@@ -88,7 +84,6 @@ describe('AppointmentCard', () => {
     render(
       <AppointmentCard
         appointment={makeAppt({ duration_min: 45 })}
-        onEdit={onEdit}
         onDelete={onDelete}
       />
     )
@@ -99,7 +94,6 @@ describe('AppointmentCard', () => {
     render(
       <AppointmentCard
         appointment={makeAppt({ document_ids: ['d1', 'd2'] })}
-        onEdit={onEdit}
         onDelete={onDelete}
       />
     )
@@ -110,32 +104,23 @@ describe('AppointmentCard', () => {
     render(
       <AppointmentCard
         appointment={makeAppt({ document_ids: ['d1'] })}
-        onEdit={onEdit}
         onDelete={onDelete}
       />
     )
     expect(screen.getByText('1 linked document')).toBeDefined()
   })
 
-  it('calls onEdit with appointment when Edit clicked', () => {
-    const appt = makeAppt()
-    render(<AppointmentCard appointment={appt} onEdit={onEdit} onDelete={onDelete} />)
-    fireEvent.click(screen.getByText('Edit'))
-    expect(onEdit).toHaveBeenCalledOnce()
-    expect(onEdit).toHaveBeenCalledWith(appt)
-  })
-
   it('calls onDelete with id when delete button clicked', () => {
-    render(<AppointmentCard appointment={makeAppt({ id: 'a1' })} onEdit={onEdit} onDelete={onDelete} />)
+    render(<AppointmentCard appointment={makeAppt({ id: 'a1' })} onDelete={onDelete} />)
     fireEvent.click(screen.getByRole('button', { name: /Delete Annual Checkup/i }))
     expect(onDelete).toHaveBeenCalledOnce()
     expect(onDelete).toHaveBeenCalledWith('a1')
   })
 
-  it('renders View link pointing to detail page', () => {
-    render(<AppointmentCard appointment={makeAppt({ id: 'a99' })} onEdit={onEdit} onDelete={onDelete} />)
-    const viewLink = screen.getByRole('link', { name: 'View' })
-    expect(viewLink).toBeDefined()
-    expect((viewLink as HTMLAnchorElement).href).toContain('/appointments/view?id=a99')
+  it('renders Open link pointing to detail page', () => {
+    render(<AppointmentCard appointment={makeAppt({ id: 'a99' })} onDelete={onDelete} />)
+    const openLink = screen.getByRole('link', { name: 'Open' })
+    expect(openLink).toBeDefined()
+    expect((openLink as HTMLAnchorElement).href).toContain('/appointments/view?id=a99')
   })
 })

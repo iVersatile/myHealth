@@ -7,6 +7,8 @@ import { invoke } from '@tauri-apps/api/core'
 import { Appointment, STATUS_LABELS } from '../../../../store/appointmentsStore'
 import { CATEGORY_LABELS } from '../../../../store/documentsStore'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
+import { AppointmentForm } from '../../../../components/appointments/AppointmentForm'
+import { AppointmentInput } from '../../../../hooks/useAppointments'
 
 interface LinkedDocument {
   document_id: string
@@ -47,6 +49,9 @@ export default function AppointmentDetailClient() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
 
   const [linkedNotes, setLinkedNotes] = useState<Array<{ id: string; title: string }>>([])
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const [summary, setSummary] = useState<string[] | null>(null)
   const [summarizing, setSummarizing] = useState(false)
@@ -203,6 +208,33 @@ export default function AppointmentDetailClient() {
     }
   }
 
+  async function handleEditSave(input: AppointmentInput) {
+    setSaving(true)
+    try {
+      const updated = await invoke<Appointment>('appointments_update', {
+        id,
+        input: {
+          title: input.title,
+          appt_date: input.appt_date,
+          doctor_name: input.doctor_name ?? null,
+          clinic_name: input.clinic_name ?? null,
+          specialty: input.specialty ?? null,
+          location: input.location ?? null,
+          duration_min: input.duration_min ?? 0,
+          notes: input.notes ?? null,
+          status: input.status ?? 'scheduled',
+          reminder_min: input.reminder_min ?? 60,
+        },
+      })
+      setAppt(updated)
+      setIsEditing(false)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (!id) {
     return (
       <div className="p-8 text-[var(--color-text-secondary)]">
@@ -254,98 +286,118 @@ export default function AppointmentDetailClient() {
 
       {/* Appointment header */}
       <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-6 shadow-[var(--shadow-sm)]">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <h1 className="text-[var(--text-2xl)] font-bold text-[var(--color-text)]">{appt.title}</h1>
-          <span className="rounded-full bg-[var(--color-accent-muted)] px-3 py-0.5 text-[var(--text-sm)] font-medium text-[var(--color-accent)]">
-            {STATUS_LABELS[appt.status]}
-          </span>
-        </div>
-
-        <dl className="mt-4 grid grid-cols-1 gap-3 text-[var(--text-sm)] sm:grid-cols-2">
-          <div>
-            <dt className="text-[var(--color-text-secondary)]">Date &amp; Time</dt>
-            <dd className="font-medium text-[var(--color-text)]">{formatApptDate(appt.appt_date)}</dd>
-          </div>
-          {appt.doctor_name && (
-            <div>
-              <dt className="text-[var(--color-text-secondary)]">Doctor</dt>
-              <dd className="font-medium text-[var(--color-text)]">{appt.doctor_name}</dd>
-            </div>
-          )}
-          {appt.clinic_name && (
-            <div>
-              <dt className="text-[var(--color-text-secondary)]">Clinic</dt>
-              <dd className="font-medium text-[var(--color-text)]">{appt.clinic_name}</dd>
-            </div>
-          )}
-          {appt.specialty && (
-            <div>
-              <dt className="text-[var(--color-text-secondary)]">Specialty</dt>
-              <dd className="font-medium text-[var(--color-text)]">{appt.specialty}</dd>
-            </div>
-          )}
-          {appt.location && (
-            <div>
-              <dt className="text-[var(--color-text-secondary)]">Location</dt>
-              <dd className="font-medium text-[var(--color-text)]">{appt.location}</dd>
-            </div>
-          )}
-          {appt.duration_min > 0 && (
-            <div>
-              <dt className="text-[var(--color-text-secondary)]">Duration</dt>
-              <dd className="font-medium text-[var(--color-text)]">{appt.duration_min} min</dd>
-            </div>
-          )}
-        </dl>
-
-        {appt.notes && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">Notes</p>
-              <button
-                type="button"
-                onClick={() => void handleSummarize()}
-                disabled={summarizing}
-                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-accent)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
-              >
-                {summarizing ? 'Summarizing…' : 'Summarize Notes'}
-              </button>
-            </div>
-            <p className="mt-1 whitespace-pre-wrap text-[var(--text-sm)] text-[var(--color-text)]">{appt.notes}</p>
-
-            {summaryError && (
-              <p className="mt-2 text-[var(--text-xs)] text-[var(--color-danger)]" role="alert">
-                {summaryError}
-              </p>
-            )}
-
-            {summary !== null && (
-              <div className="mt-3">
+        {isEditing ? (
+          <AppointmentForm
+            initial={appt}
+            onSave={handleEditSave}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h1 className="text-[var(--text-2xl)] font-bold text-[var(--color-text)]">{appt.title}</h1>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-[var(--color-accent-muted)] px-3 py-0.5 text-[var(--text-sm)] font-medium text-[var(--color-accent)]">
+                  {STATUS_LABELS[appt.status]}
+                </span>
                 <button
                   type="button"
-                  aria-expanded={summaryOpen}
-                  onClick={() => setSummaryOpen((o) => !o)}
-                  className="flex items-center gap-1 text-[var(--text-xs)] font-medium text-[var(--color-accent)] hover:underline"
+                  onClick={() => setIsEditing(true)}
+                  disabled={saving}
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-xs)] text-[var(--color-accent)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
                 >
-                  <span>{summaryOpen ? '▾' : '▸'}</span>
-                  <span>AI Summary ({summary.length} key {summary.length === 1 ? 'point' : 'points'})</span>
+                  Edit
                 </button>
-                {summaryOpen && (
-                  <ul
-                    aria-label="Appointment notes summary"
-                    className="mt-2 space-y-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
+              </div>
+            </div>
+
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-[var(--text-sm)] sm:grid-cols-2">
+              <div>
+                <dt className="text-[var(--color-text-secondary)]">Date &amp; Time</dt>
+                <dd className="font-medium text-[var(--color-text)]">{formatApptDate(appt.appt_date)}</dd>
+              </div>
+              {appt.doctor_name && (
+                <div>
+                  <dt className="text-[var(--color-text-secondary)]">Doctor</dt>
+                  <dd className="font-medium text-[var(--color-text)]">{appt.doctor_name}</dd>
+                </div>
+              )}
+              {appt.clinic_name && (
+                <div>
+                  <dt className="text-[var(--color-text-secondary)]">Clinic</dt>
+                  <dd className="font-medium text-[var(--color-text)]">{appt.clinic_name}</dd>
+                </div>
+              )}
+              {appt.specialty && (
+                <div>
+                  <dt className="text-[var(--color-text-secondary)]">Specialty</dt>
+                  <dd className="font-medium text-[var(--color-text)]">{appt.specialty}</dd>
+                </div>
+              )}
+              {appt.location && (
+                <div>
+                  <dt className="text-[var(--color-text-secondary)]">Location</dt>
+                  <dd className="font-medium text-[var(--color-text)]">{appt.location}</dd>
+                </div>
+              )}
+              {appt.duration_min > 0 && (
+                <div>
+                  <dt className="text-[var(--color-text-secondary)]">Duration</dt>
+                  <dd className="font-medium text-[var(--color-text)]">{appt.duration_min} min</dd>
+                </div>
+              )}
+            </dl>
+
+            {appt.notes && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">Notes</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleSummarize()}
+                    disabled={summarizing}
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-accent)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
                   >
-                    {summary.map((sentence, i) => (
-                      <li key={i} className="flex gap-2 text-[var(--text-sm)] text-[var(--color-text)]">
-                        <span className="mt-0.5 shrink-0 text-[var(--color-accent)]">•</span>
-                        <span>{sentence}</span>
-                      </li>
-                    ))}
-                  </ul>
+                    {summarizing ? 'Summarizing…' : 'Summarize Notes'}
+                  </button>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap text-[var(--text-sm)] text-[var(--color-text)]">{appt.notes}</p>
+
+                {summaryError && (
+                  <p className="mt-2 text-[var(--text-xs)] text-[var(--color-danger)]" role="alert">
+                    {summaryError}
+                  </p>
+                )}
+
+                {summary !== null && (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      aria-expanded={summaryOpen}
+                      onClick={() => setSummaryOpen((o) => !o)}
+                      className="flex items-center gap-1 text-[var(--text-xs)] font-medium text-[var(--color-accent)] hover:underline"
+                    >
+                      <span>{summaryOpen ? '▾' : '▸'}</span>
+                      <span>AI Summary ({summary.length} key {summary.length === 1 ? 'point' : 'points'})</span>
+                    </button>
+                    {summaryOpen && (
+                      <ul
+                        aria-label="Appointment notes summary"
+                        className="mt-2 space-y-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
+                      >
+                        {summary.map((sentence, i) => (
+                          <li key={i} className="flex gap-2 text-[var(--text-sm)] text-[var(--color-text)]">
+                            <span className="mt-0.5 shrink-0 text-[var(--color-accent)]">•</span>
+                            <span>{sentence}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 )}
               </div>
             )}
-          </div>
+          </>
         )}
       </section>
 
