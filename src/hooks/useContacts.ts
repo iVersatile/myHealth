@@ -20,6 +20,20 @@ export interface ContactCreateInput {
   notes?: string | null
 }
 
+export interface ContactCreateWithClinicInput {
+  name: string
+  role: string
+  title?: string | null
+  specialty?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  notes?: string | null
+  clinic_name?: string | null
+  clinic_phone?: string | null
+  clinic_address?: string | null
+}
+
 export interface ContactUpdateInput {
   id: string
   name?: string | null
@@ -60,6 +74,12 @@ export function useContacts(roleFilter?: string) {
     return contact
   }
 
+  async function createContactWithClinic(input: ContactCreateWithClinicInput): Promise<Contact> {
+    const contact = await invoke<Contact>('contacts_create_with_clinic', { input })
+    upsertContact(contact)
+    return contact
+  }
+
   async function updateContact(input: ContactUpdateInput): Promise<Contact> {
     const contact = await invoke<Contact>('contacts_update', { input })
     upsertContact(contact)
@@ -94,6 +114,7 @@ export function useContacts(roleFilter?: string) {
     loading,
     error,
     createContact,
+    createContactWithClinic,
     updateContact,
     deleteContact,
     findDuplicateContacts,

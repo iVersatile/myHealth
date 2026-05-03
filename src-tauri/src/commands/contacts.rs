@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use rusqlite::OptionalExtension;
+
 use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::{AppState, CommandContext, CommandError};
 
@@ -161,6 +163,136 @@ pub fn contacts_create(
     .join(" ");
     upsert_search_index(conn, "contact", &c.id, &c.name, &body, "", "", "");
     Ok(c)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ContactCreateWithClinicInput {
+    pub name: String,
+    pub role: String,
+    pub title: Option<String>,
+    pub specialty: Option<String>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
+    pub address: Option<String>,
+    pub notes: Option<String>,
+    // If Some, a clinic contact is created and linked atomically.
+    pub clinic_name: Option<String>,
+    pub clinic_phone: Option<String>,
+    pub clinic_address: Option<String>,
+}
+
+/// Creates a person contact and, when `clinic_name` is provided, a clinic entity in a single
+/// SQLite transaction. The clinic is written to the `clinics` table (not contacts) per V3-F8.
+#[tauri::command]
+pub fn contacts_create_with_clinic(
+    input: ContactCreateWithClinicInput,
+    state: State<'_, AppState>,
+) -> Result<Contact, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let tx = conn.unchecked_transaction()?;
+
+    let result: Result<Contact, CommandError> = (|| {
+        let now = Utc::now().to_rfc3339();
+        let person_id = Uuid::new_v4().to_string();
+
+        tx.execute(
+            "INSERT INTO contacts (id, name, role, title, specialty, phone, email, clinic, \
+             address, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                person_id,
+                input.name,
+                input.role,
+                input.title,
+                input.specialty,
+                input.phone,
+                input.email,
+                input.clinic_name, // display-only clinic name string on person row
+                input.address,
+                input.notes,
+                now,
+                now,
+            ],
+        )
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+        if let Some(ref clinic_name) = input.clinic_name {
+            // Find existing clinic by name (case-insensitive) or create a new one.
+            // Clinics live in the `clinics` table after V3-F8 — never in contacts.
+            let clinic_id: String = tx
+                .query_row(
+                    "SELECT id FROM clinics WHERE name = ? COLLATE NOCASE LIMIT 1",
+                    [clinic_name],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(|e| CommandError::Internal(e.to_string()))?
+                .unwrap_or_else(|| {
+                    let id = Uuid::new_v4().to_string();
+                    tx.execute(
+                        "INSERT INTO clinics (id, name, phone, address, created_at) \
+                         VALUES (?, ?, ?, ?, ?)",
+                        rusqlite::params![
+                            id,
+                            clinic_name,
+                            input.clinic_phone,
+                            input.clinic_address,
+                            now,
+                        ],
+                    )
+                    .ok();
+                    id
+                });
+
+            // Link person → clinic via junction table and direct FK.
+            tx.execute(
+                "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES (?, ?)",
+                rusqlite::params![clinic_id, person_id],
+            )
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+            tx.execute(
+                "UPDATE contacts SET clinic_id = ?, updated_at = ? WHERE id = ?",
+                rusqlite::params![clinic_id, now, person_id],
+            )
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+            upsert_search_index(&tx, "clinic", &clinic_id, clinic_name, "", "", "", "");
+        }
+
+        let person = tx
+            .query_row(
+                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+                [&person_id],
+                row_to_contact,
+            )
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+        let body = [
+            person.specialty.as_deref().unwrap_or(""),
+            person.clinic.as_deref().unwrap_or(""),
+            person.address.as_deref().unwrap_or(""),
+            person.notes.as_deref().unwrap_or(""),
+        ]
+        .join(" ");
+        upsert_search_index(&tx, "contact", &person.id, &person.name, &body, "", "", "");
+
+        Ok(person)
+    })();
+
+    match result {
+        Ok(contact) => {
+            tx.commit()
+                .map_err(|e| CommandError::Internal(e.to_string()))?;
+            Ok(contact)
+        }
+        Err(e) => {
+            let _ = tx.rollback();
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]

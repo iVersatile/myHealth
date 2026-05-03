@@ -17,7 +17,7 @@ import { useContacts } from '../../../hooks/useContacts'
 import { useAppointmentsStore } from '../../../store/appointmentsStore'
 import type { Document } from '../../../store/documentsStore'
 import type { Appointment } from '../../../store/appointmentsStore'
-import type { ContactCreateInput } from '../../../hooks/useContacts'
+import type { ContactCreateInput, ContactCreateWithClinicInput } from '../../../hooks/useContacts'
 
 export default function DocumentsPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -40,7 +40,7 @@ export default function DocumentsPage() {
   const documents = useDocumentsStore(s => s.documents)
   const total = useDocumentsStore(s => s.total)
   const setDocuments = useDocumentsStore(s => s.setDocuments)
-  const { createContact, updateContact } = useContacts()
+  const { createContactWithClinic } = useContacts()
   const upsertAppointment = useAppointmentsStore(s => s.upsertAppointment)
 
   async function handleUploaded(doc: Document) {
@@ -144,26 +144,14 @@ export default function DocumentsPage() {
   }
 
   async function handleContactSave(data: ContactCreateInput) {
-    const personContact = await createContact(data)
-
-    // Auto-create the clinic as a separate contact when the accepted suggestion
-    // carries a clinic name — the invoice's phone/email/address belong to the
-    // clinic, so we copy them across. Then link the person contact to the clinic.
-    if (pendingContactSuggestion?.clinic) {
-      const s = pendingContactSuggestion
-      const clinicContact = await createContact({
-        name: s.clinic!,
-        role: 'clinic',
-        specialty: null,
-        phone: s.phone ?? null,
-        email: s.email ?? null,
-        clinic: null,
-        address: s.address ?? null,
-        notes: null,
-      })
-      await updateContact({ id: personContact.id, contact_clinic_id: clinicContact.id })
+    const s = pendingContactSuggestion
+    const input: ContactCreateWithClinicInput = {
+      ...data,
+      clinic_name: s?.clinic ?? null,
+      clinic_phone: s?.phone ?? null,
+      clinic_address: s?.address ?? null,
     }
-
+    await createContactWithClinic(input)
     setShowContactForm(false)
     setPendingContactSuggestion(null)
   }
