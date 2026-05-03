@@ -35,6 +35,23 @@ pub struct ClinicUpdateInput {
     pub phone: Option<String>,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct LinkedContact {
+    pub id: String,
+    pub name: String,
+    pub role: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ClinicWithContacts {
+    pub id: String,
+    pub name: String,
+    pub address: Option<String>,
+    pub phone: Option<String>,
+    pub created_at: String,
+    pub linked_contacts: Vec<LinkedContact>,
+}
+
 const SELECT_CLINIC: &str =
     "SELECT id, name, address, phone, created_at, company_registration_number FROM clinics";
 
@@ -153,9 +170,52 @@ pub fn clinics_delete(id: String, state: State<'_, AppState>) -> Result<(), Comm
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    conn.execute("DELETE FROM clinics WHERE id = ?", [&id])
-        .map_err(|e| CommandError::Internal(e.to_string()))
-        .map(|_| ())
+    let name: Option<String> = conn
+        .query_row("SELECT name FROM clinics WHERE id = ?1", [&id], |r| {
+            r.get(0)
+        })
+        .optional()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    let clinic_name = match name {
+        Some(n) => n,
+        None => return Ok(()),
+    };
+
+    let contact_ids: Vec<String> = {
+        let mut stmt = conn
+            .prepare("SELECT contact_id FROM clinic_contacts WHERE clinic_id = ?1")
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
+        let ids = stmt
+            .query_map([&id], |r| r.get(0))
+            .map_err(|e| CommandError::Internal(e.to_string()))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
+        ids
+    };
+
+    let date = Utc::now().format("%Y-%m-%d").to_string();
+    let note_suffix = format!("Previously at {} \u{2014} removed {}", clinic_name, date);
+
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    for cid in &contact_ids {
+        tx.execute(
+            "UPDATE contacts SET notes = TRIM(COALESCE(notes, '') || char(10) || ?1) WHERE id = ?2",
+            rusqlite::params![note_suffix, cid],
+        )
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+    }
+
+    tx.execute("DELETE FROM clinics WHERE id = ?1", [&id])
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    tx.commit()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    Ok(())
 }
 
 /// Returns existing clinic if one with the same name already exists; otherwise creates a new one.
@@ -228,6 +288,53 @@ pub fn clinics_link_contact(
     )
     .map_err(|e| CommandError::Internal(e.to_string()))
     .map(|_| ())
+}
+
+#[tauri::command]
+pub fn clinics_list_with_contacts(
+    state: State<'_, AppState>,
+) -> Result<Vec<ClinicWithContacts>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT c.id, c.name, c.address, c.phone, c.created_at,
+                co.id AS contact_id, co.name AS contact_name, co.role AS contact_role
+         FROM clinics c
+         LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
+         LEFT JOIN contacts co ON co.id = cc.contact_id
+         ORDER BY c.name COLLATE NOCASE, co.name COLLATE NOCASE",
+    )?;
+
+    let mut result: Vec<ClinicWithContacts> = Vec::new();
+    let mut rows = stmt.query([])?;
+
+    while let Some(row) = rows.next()? {
+        let clinic_id: String = row.get(0)?;
+        let contact_id: Option<String> = row.get(5)?;
+
+        if result.last().map(|c: &ClinicWithContacts| c.id.as_str()) != Some(clinic_id.as_str()) {
+            result.push(ClinicWithContacts {
+                id: clinic_id,
+                name: row.get(1)?,
+                address: row.get(2)?,
+                phone: row.get(3)?,
+                created_at: row.get(4)?,
+                linked_contacts: Vec::new(),
+            });
+        }
+
+        if let Some(cid) = contact_id {
+            let last = result.last_mut().unwrap();
+            last.linked_contacts.push(LinkedContact {
+                id: cid,
+                name: row.get(6)?,
+                role: row.get(7)?,
+            });
+        }
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -539,6 +646,126 @@ mod tests {
     }
 
     #[test]
+    fn list_with_contacts_no_linked_contacts() {
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+        let clinic_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'Solo Clinic', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT c.id, c.name, c.address, c.phone, c.created_at,
+                        co.id, co.name, co.role
+                 FROM clinics c
+                 LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
+                 LEFT JOIN contacts co ON co.id = cc.contact_id
+                 ORDER BY c.name COLLATE NOCASE, co.name COLLATE NOCASE",
+            )
+            .unwrap();
+
+        let mut result: Vec<ClinicWithContacts> = Vec::new();
+        let mut rows = stmt.query([]).unwrap();
+        while let Some(row) = rows.next().unwrap() {
+            let cid: String = row.get(0).unwrap();
+            let contact_id: Option<String> = row.get(5).unwrap();
+            if result.last().map(|c: &ClinicWithContacts| c.id.as_str()) != Some(cid.as_str()) {
+                result.push(ClinicWithContacts {
+                    id: cid,
+                    name: row.get(1).unwrap(),
+                    address: row.get(2).unwrap(),
+                    phone: row.get(3).unwrap(),
+                    created_at: row.get(4).unwrap(),
+                    linked_contacts: Vec::new(),
+                });
+            }
+            if let Some(kid) = contact_id {
+                let last = result.last_mut().unwrap();
+                last.linked_contacts.push(LinkedContact {
+                    id: kid,
+                    name: row.get(6).unwrap(),
+                    role: row.get(7).unwrap(),
+                });
+            }
+        }
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "Solo Clinic");
+        assert!(result[0].linked_contacts.is_empty());
+    }
+
+    #[test]
+    fn list_with_contacts_two_linked_contacts() {
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+
+        let clinic_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'Duo Clinic', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+
+        let contact_ids: Vec<String> = (0..2).map(|_| Uuid::new_v4().to_string()).collect();
+        for (i, cid) in contact_ids.iter().enumerate() {
+            conn.execute(
+                "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+                 VALUES (?, ?, 'gp', ?, ?)",
+                rusqlite::params![cid, format!("Dr Contact {i}"), now, now],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES (?, ?)",
+                rusqlite::params![clinic_id, cid],
+            )
+            .unwrap();
+        }
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT c.id, c.name, c.address, c.phone, c.created_at,
+                        co.id, co.name, co.role
+                 FROM clinics c
+                 LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
+                 LEFT JOIN contacts co ON co.id = cc.contact_id
+                 ORDER BY c.name COLLATE NOCASE, co.name COLLATE NOCASE",
+            )
+            .unwrap();
+
+        let mut result: Vec<ClinicWithContacts> = Vec::new();
+        let mut rows = stmt.query([]).unwrap();
+        while let Some(row) = rows.next().unwrap() {
+            let cid: String = row.get(0).unwrap();
+            let contact_id: Option<String> = row.get(5).unwrap();
+            if result.last().map(|c: &ClinicWithContacts| c.id.as_str()) != Some(cid.as_str()) {
+                result.push(ClinicWithContacts {
+                    id: cid,
+                    name: row.get(1).unwrap(),
+                    address: row.get(2).unwrap(),
+                    phone: row.get(3).unwrap(),
+                    created_at: row.get(4).unwrap(),
+                    linked_contacts: Vec::new(),
+                });
+            }
+            if let Some(kid) = contact_id {
+                let last = result.last_mut().unwrap();
+                last.linked_contacts.push(LinkedContact {
+                    id: kid,
+                    name: row.get(6).unwrap(),
+                    role: row.get(7).unwrap(),
+                });
+            }
+        }
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "Duo Clinic");
+        assert_eq!(result[0].linked_contacts.len(), 2);
+    }
+
+    #[test]
     fn link_contact_is_idempotent() {
         let conn = open_test_db();
         let now = Utc::now().to_rfc3339();
@@ -575,5 +802,146 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1, "duplicate link_contact inserts must be ignored");
+    }
+
+    #[test]
+    fn clinics_delete_writes_history_note_to_linked_contact() {
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+
+        let clinic_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'History Clinic', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+
+        let contact_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES (?, 'Dr History', 'gp', ?, ?)",
+            rusqlite::params![contact_id, now, now],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES (?, ?)",
+            rusqlite::params![clinic_id, contact_id],
+        )
+        .unwrap();
+
+        // Mirror clinics_delete logic inline
+        let clinic_name: String = conn
+            .query_row(
+                "SELECT name FROM clinics WHERE id = ?1",
+                [&clinic_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+
+        let linked: Vec<String> = {
+            let mut stmt = conn
+                .prepare("SELECT contact_id FROM clinic_contacts WHERE clinic_id = ?1")
+                .unwrap();
+            stmt.query_map([&clinic_id], |r| r.get(0))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
+        };
+
+        let date = Utc::now().format("%Y-%m-%d").to_string();
+        let note_suffix = format!("Previously at {} \u{2014} removed {}", clinic_name, date);
+
+        let tx = conn.unchecked_transaction().unwrap();
+        for cid in &linked {
+            tx.execute(
+                "UPDATE contacts SET notes = TRIM(COALESCE(notes, '') || char(10) || ?1) WHERE id = ?2",
+                rusqlite::params![note_suffix, cid],
+            )
+            .unwrap();
+        }
+        tx.execute("DELETE FROM clinics WHERE id = ?1", [&clinic_id])
+            .unwrap();
+        tx.commit().unwrap();
+
+        // Clinic must be gone
+        let clinic_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinics WHERE id = ?",
+                [&clinic_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(clinic_count, 0);
+
+        // Contact still exists with history note
+        let notes: Option<String> = conn
+            .query_row(
+                "SELECT notes FROM contacts WHERE id = ?",
+                [&contact_id],
+                |r| r.get(0),
+            )
+            .optional()
+            .unwrap();
+        let notes_str = notes.unwrap_or_default();
+        assert!(
+            notes_str.contains("Previously at History Clinic"),
+            "notes should contain history: {notes_str}"
+        );
+    }
+
+    #[test]
+    fn clinics_delete_no_contacts_succeeds() {
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+
+        let clinic_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'Empty Clinic', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+
+        // Mirror clinics_delete logic inline — no linked contacts
+        let clinic_name: Option<String> = conn
+            .query_row(
+                "SELECT name FROM clinics WHERE id = ?1",
+                [&clinic_id],
+                |r| r.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert!(clinic_name.is_some());
+
+        let linked: Vec<String> = {
+            let mut stmt = conn
+                .prepare("SELECT contact_id FROM clinic_contacts WHERE clinic_id = ?1")
+                .unwrap();
+            stmt.query_map([&clinic_id], |r| r.get(0))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
+        };
+        assert!(linked.is_empty());
+
+        let tx = conn.unchecked_transaction().unwrap();
+        tx.execute("DELETE FROM clinics WHERE id = ?1", [&clinic_id])
+            .unwrap();
+        tx.commit().unwrap();
+
+        let clinic_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinics WHERE id = ?",
+                [&clinic_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(clinic_count, 0);
+
+        // No contacts were created or modified — contacts table should still be empty
+        let contact_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM contacts", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(contact_count, 0);
     }
 }

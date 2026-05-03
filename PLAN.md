@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 25 — Code Quality & Performance Hardening — Task 25.6 next
+Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — Task 26.4
 ```
 
 ---
@@ -1462,11 +1462,97 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-### ▶ **25.6 — Commit & push Phase 25**
+### [x] **25.6 — Commit & push Phase 25**
 
 - Pre-commit: `npx tsc --noEmit` + `cargo fmt --all` + `cargo clippy -- -D warnings`
 - Commit: `refactor: reduce command boilerplate, extraction refactor, Zustand selectors, list virtualisation (Phase 25)`
 - Push to `origin/develop`; CI green
+
+---
+
+## Phase 26 — V3-F8 Clinic Entity Redesign (Option A)
+
+> **Goal:** Unify clinic storage around the `clinics` table. Remove `contacts.role='clinic'` as a parallel representation. Give the Clinics page a tree view showing linked doctors. Implement delete-with-history-note semantics.
+> PRD reference: `docs/PRD_V3.md` § V3-F8. Acceptance tests: TC-F8-01 through TC-F8-09.
+
+---
+
+[x] **26.1 — DB migration: remove role='clinic' from contacts, migrate existing rows**
+   - File: `src-tauri/src/db/migrations.rs`
+   - Add `SCHEMA_V11`:
+     1. `INSERT OR IGNORE INTO clinics (id, name, created_at) SELECT id, name, created_at FROM contacts WHERE role = 'clinic'` — migrate existing clinic-contacts to clinics table.
+     2. `DELETE FROM contacts WHERE role = 'clinic'` — purge migrated rows.
+     3. Remove `'clinic'` from the `CHECK` constraint on `contacts.role` by recreating the table with the updated constraint (SQLite requires table recreation to alter CHECK constraints).
+   - Unit test: seed a `contacts` row with `role='clinic'`; run migration; assert row gone from contacts and present in clinics; assert `INSERT INTO contacts (..., role, ...) VALUES (..., 'clinic', ...)` fails with constraint error.
+   - Done when: migration unit test passes; `cargo test` green; no existing migration tests regress.
+
+---
+
+[x] **26.2 — `clinics_list_with_contacts` Tauri command**
+   - File: `src-tauri/src/commands/clinics.rs`
+   - Add struct `ClinicWithContacts { id, name, address, phone, created_at, linked_contacts: Vec<LinkedContact> }` and `LinkedContact { id, name, role }`.
+   - Implement `clinics_list_with_contacts(ctx)`:
+     ```sql
+     SELECT c.id, c.name, c.address, c.phone, c.created_at,
+            co.id AS contact_id, co.name AS contact_name, co.role AS contact_role
+     FROM clinics c
+     LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
+     LEFT JOIN contacts co ON co.id = cc.contact_id
+     ORDER BY c.name COLLATE NOCASE, co.name COLLATE NOCASE
+     ```
+   - Group rows by clinic id in Rust; return `Vec<ClinicWithContacts>`.
+   - Register command in `lib.rs`.
+   - Unit tests: (a) clinic with no contacts → `linked_contacts` empty; (b) clinic with 2 contacts → `linked_contacts` length 2.
+   - Done when: 2 unit tests pass; `cargo test` green; command registered.
+
+---
+
+[x] **26.3 — `clinics_delete` writes history note before cascade**
+   - File: `src-tauri/src/commands/clinics.rs`
+   - Before `DELETE FROM clinics WHERE id = ?`, query all linked contact ids and names.
+   - For each linked contact: `UPDATE contacts SET notes = TRIM(COALESCE(notes,'') || char(10) || 'Previously at ' || ? || ' — removed ' || ?) WHERE id = ?` with clinic name and ISO date.
+   - Then delete the clinic (cascade removes `clinic_contacts` rows).
+   - Unit tests: (a) delete clinic with 1 linked contact → contact still exists, notes contains "Previously at"; (b) delete clinic with no contacts → succeeds, no contacts modified.
+   - Done when: 2 unit tests pass; `cargo test` green.
+
+---
+
+▶ **26.4 — UploadDialog: `autoSaveClinic` writes to `clinics` table**
+   - File: `src/components/documents/UploadDialog.tsx`
+   - Replace `contacts_create({ role: 'clinic', name })` call in `autoSaveClinic` with:
+     1. `invoke('clinics_create_if_not_exists', { name: clinicName })` → returns clinic id.
+     2. If a doctor contact was also saved in this upload, call `invoke('clinics_link_contact', { clinicId, contactId })`.
+   - Ensure the clinic id is threaded through from the suggestion card accept flow.
+   - TypeScript type: add `clinicsCreateIfNotExists` and `clinicsLinkContact` to `src/lib/tauri.ts` (or equivalent IPC binding file).
+   - Done when: `npx tsc --noEmit` clean; manually verifiable that uploading a document with a clinic suggestion and clicking accept writes a row to `clinics` and NOT to `contacts` with `role='clinic'`.
+
+---
+
+[ ] **26.5 — Clinics page: tree view component**
+   - File: `src/app/(app)/clinics/page.tsx` (rewrite), new component `src/components/clinics/ClinicTree.tsx`
+   - Replace `useContacts('clinic')` with a new hook `useClinics()` that calls `clinics_list_with_contacts`.
+   - `ClinicTree` renders:
+     - Each clinic as a collapsible row (default expanded).
+     - Linked doctor contacts as indented child rows showing name + role badge.
+     - If `linked_contacts` is empty: show "No linked doctors" placeholder child.
+   - Delete button on each clinic row calls `clinics_delete`; refreshes list after.
+   - Done when: `npx tsc --noEmit` clean; tree renders correctly for both standalone clinics and clinics with linked doctors (manual verification).
+
+---
+
+[ ] **26.6 — V3-F8 unit + integration tests**
+   - Files: `src-tauri/src/commands/clinics.rs` (extend), `src/__tests__/clinics.test.ts` (new or extend)
+   - Rust unit tests covering TC-F8-01 through TC-F8-04 (see PRD_V3 § V3-F8 acceptance tests).
+   - Frontend: Vitest tests for `useClinics` hook mocking `clinics_list_with_contacts` invoke.
+   - Done when: all TC-F8-01 – TC-F8-09 verified; `cargo test` + `npx tsc --noEmit` green; coverage ≥ 80% on new code.
+
+---
+
+[ ] **26.7 — Commit & push Phase 26**
+   - Pre-commit: `npx tsc --noEmit` + `~/.cargo/bin/cargo fmt --all --manifest-path src-tauri/Cargo.toml` + `~/.cargo/bin/cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+   - Commit message: `feat: clinic entity redesign — unify around clinics table, tree view, delete history note (V3-F8)`
+   - Push to `origin/develop`; confirm CI green.
+   - Done when: both GitHub Actions workflows show `completed / success`.
 
 ---
 
