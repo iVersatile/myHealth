@@ -139,3 +139,23 @@ Before writing any code for a new task:
 - [ ] If touching Rust: plan to run `cargo fmt --check && cargo clippy` before pushing
 - [ ] If touching TypeScript: plan to run `pnpm typecheck && pnpm lint && pnpm test run` before pushing
 - [ ] If writing any `invoke<T>` call: open the Rust command file and verify the return type matches `T` (primitive vs struct — see L-009)
+
+---
+
+## L-010: Appointment specialty extraction — order-sensitive tag matching and missing patient-label exclusions
+
+**Symptom:** Auto-generated appointment showed "PHYSIOTHERAPY with Ms Ying Wang" for an echocardiography document from a physiotherapy-footer letterhead.
+
+**Root cause 1:** `auto_extract_tags` drives specialty from the first match in `SPECIALTY_MAP`, an ordered `&[(&str, &str)]`. "physiother" appeared before "cardiol", so any document with a physiotherapy footer phrase fired PHYSIOTHERAPY regardless of the clinical content.
+
+**Root cause 2:** `extract_performing_doctor` excludes names preceded by referral phrases, but "patient:", "patient name:", "for patient", "name:" were absent from the list. Patient names in the header matched the doctor regex and were returned as the performing doctor.
+
+**Fix:**
+1. Derive specialty via `suggest_category` (multi-keyword scoring, order-independent) and extract the leaf after `→`.
+2. Add patient-label phrases to `REFERRAL_PHRASES` in `extract_performing_doctor`.
+3. Append clinic name to title: `"{specialty} with {doctor} — {clinic}"`.
+
+**Rules:**
+1. **Never use order-sensitive substring matching for classification.** If the first match wins, edge cases will silently produce wrong results. Use a scoring or precedence-aware approach.
+2. **Exclusion lists must cover all label patterns that precede a name.** When adding a regex that matches `Title FirstName LastName`, audit the document for every label that can precede a name (patient:, name:, cc:, gp:, referred by, etc.) and add them all to the exclusion window.
+3. **Title fields that combine multiple extraction results need a dedicated integration test** verifying the full composed string, not just the individual components.

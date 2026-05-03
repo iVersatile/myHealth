@@ -462,3 +462,13 @@ The following issues were reported after manual testing of the document upload f
 **Root cause:** No contact extraction logic existed in the Rust backend. `UploadDialog` displayed doctor names as read-only badges with no contact creation flow.
 **Fix:** Added `extraction/contact.rs` (UK phone, email, postcode-anchored address, clinic name, specialty proximity patterns), extended `ExtractionSuggestions` with `contact_suggestions`, and replaced read-only badges with actionable "Detected contacts" cards with "Save as Contact" button (calls `contacts_create`).
 
+
+---
+
+### Bug: Appointment title shows wrong specialty and patient name as doctor
+
+**Reported:** Appointment auto-generated from `Upload (22Nov2021-13_16_15).pdf` showed title "PHYSIOTHERAPY with Ms Ying Wang" — wrong specialty and patient name misidentified as doctor.
+**PRD coverage:** F2.1 (appointment auto-suggestion from document content).
+**Root cause 1 (wrong specialty):** `auto_extract_tags` uses an order-sensitive `SPECIALTY_MAP` where "physiother" precedes "cardiol"; documents containing physiotherapy department footers but echocardiography content incorrectly resolved to PHYSIOTHERAPY.
+**Root cause 2 (patient name as doctor):** `extract_performing_doctor` excluded referral phrases but not patient-label phrases ("patient:", "name:", "for patient"), so "Patient: Ms Ying Wang" was matched as a performing doctor name.
+**Fix:** (1) Switched specialty derivation to `suggest_category` (semantically accurate, order-independent). (2) Added patient-context phrases to `REFERRAL_PHRASES` exclusion list in `extract_performing_doctor`. (3) Appointment title now includes clinic name as suffix: `"{specialty} with {doctor} — {clinic}"`.

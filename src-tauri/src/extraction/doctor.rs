@@ -48,6 +48,12 @@ pub fn extract_performing_doctor(text: &str) -> Option<String> {
         "copy to",
         "cc:",
         "gp:",
+        "patient:",
+        "patient name:",
+        "patient name",
+        "name of patient",
+        "name:",
+        "for patient",
     ];
     const WINDOW: usize = 60;
 
@@ -179,5 +185,30 @@ mod tests {
     fn performing_doctor_returns_none_when_only_referral_candidate() {
         let text = "Referred by Dr. John Smith for echocardiogram.";
         assert!(extract_performing_doctor(text).is_none());
+    }
+
+    #[test]
+    fn performing_doctor_skips_patient_label() {
+        // "Patient: Ms Ying Wang" must not be identified as the performing doctor.
+        let text = "Patient: Ms Ying Wang\nPerformed by Dr. Alice Brown.";
+        assert_eq!(
+            extract_performing_doctor(text).as_deref(),
+            Some("Dr. Alice Brown")
+        );
+    }
+
+    #[test]
+    fn performing_doctor_returns_none_when_only_patient_label() {
+        let text = "Patient name: Ms Ying Wang\nDate: 22 Nov 2021";
+        assert!(extract_performing_doctor(text).is_none());
+    }
+
+    #[test]
+    fn performing_doctor_skips_for_patient_prefix() {
+        let text = "For patient Mrs Jane Doe. Consultant: Dr. Bob Green.";
+        assert_eq!(
+            extract_performing_doctor(text).as_deref(),
+            Some("Dr. Bob Green")
+        );
     }
 }

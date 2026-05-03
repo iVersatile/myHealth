@@ -1412,25 +1412,27 @@ pub fn appointments_suggest_from_document(
 
     let auto_tags =
         crate::extraction::auto_extract_tags(&text, &doctor_candidates, Some(&appt_date));
+    let _ = &auto_tags; // retained for caller; specialty derived below
 
-    // First UPPERCASE-only tag (no lowercase letters) that is not a date.
-    let specialty: Option<String> = auto_tags
-        .iter()
-        .find(|t| {
-            let s = t.as_str();
-            !s.chars().any(|c| c.is_lowercase()) // all uppercase or non-alpha
-            && !s.chars().next().is_some_and(|c| c.is_ascii_digit()) // not a date
-            && s.len() > 2
-        })
-        .cloned();
+    // Use suggest_category for specialty — more semantically accurate than
+    // the first UPPERCASE auto_tag, which is order-sensitive and prone to
+    // false matches (e.g. "physiother" in a footer winning over "cardiol").
+    // Extract the leaf after "→" so "Internal Medicine → Cardiology" → "Cardiology".
+    let specialty: Option<String> = crate::extraction::category::suggest_category(&text)
+        .map(|cat| cat.rsplit('→').next().unwrap_or(&cat).trim().to_string());
 
     let doctor_name: Option<String> = crate::extraction::doctor::extract_performing_doctor(&text);
 
-    let title = match (&specialty, &doctor_name) {
+    // Build title: "{specialty} with {doctor} — {clinic}" with graceful fallback.
+    let core = match (&specialty, &doctor_name) {
         (Some(sp), Some(dr)) => format!("{sp} with {dr}"),
         (Some(sp), None) => format!("{sp} appointment"),
         (None, Some(dr)) => format!("Appointment with {dr}"),
         (None, None) => "Medical appointment".to_string(),
+    };
+    let title = match &clinic_name {
+        Some(cl) => format!("{core} — {cl}"),
+        None => core,
     };
 
     Ok(Some(AppointmentSuggestion {
