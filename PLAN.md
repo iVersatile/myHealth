@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — Task 26.6
+Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — COMPLETE
 ```
 
 ---
@@ -1540,7 +1540,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-▶ **26.6 — V3-F8 unit + integration tests**
+[x] **26.6 — V3-F8 unit + integration tests**
    - Files: `src-tauri/src/commands/clinics.rs` (extend), `src/__tests__/clinics.test.ts` (new or extend)
    - Rust unit tests covering TC-F8-01 through TC-F8-04 (see PRD_V3 § V3-F8 acceptance tests).
    - Frontend: Vitest tests for `useClinics` hook mocking `clinics_list_with_contacts` invoke.
@@ -1548,7 +1548,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-[ ] **26.7 — Commit & push Phase 26**
+[x] **26.7 — Commit & push Phase 26**
    - Pre-commit: `npx tsc --noEmit` + `~/.cargo/bin/cargo fmt --all --manifest-path src-tauri/Cargo.toml` + `~/.cargo/bin/cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
    - Commit message: `feat: clinic entity redesign — unify around clinics table, tree view, delete history note (V3-F8)`
    - Push to `origin/develop`; confirm CI green.
