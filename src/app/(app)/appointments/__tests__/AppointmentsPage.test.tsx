@@ -265,6 +265,33 @@ describe('ICS import/export', () => {
     await userEvent.click(screen.getByRole('button', { name: /import .ics/i }))
     await waitFor(() => expect(screen.getByText(/imported 3 appointments/i)).toBeDefined())
   })
+
+  it('does nothing when export saveDialog returns null', async () => {
+    mockSaveDialog.mockResolvedValue(null)
+    render(<AppointmentsPage />)
+    await waitFor(() => screen.getByRole('button', { name: /export .ics/i }))
+    await userEvent.click(screen.getByRole('button', { name: /export .ics/i }))
+    await waitFor(() => expect(mockSaveDialog).toHaveBeenCalled())
+    expect(screen.queryByText(/exported successfully/i)).toBeNull()
+  })
+
+  it('shows export error message when saveDialog rejects', async () => {
+    mockSaveDialog.mockRejectedValue(new Error('disk full'))
+    render(<AppointmentsPage />)
+    await waitFor(() => screen.getByRole('button', { name: /export .ics/i }))
+    await userEvent.click(screen.getByRole('button', { name: /export .ics/i }))
+    await waitFor(() => expect(screen.getByText(/export failed/i)).toBeDefined())
+  })
+
+  it('dismisses ICS feedback message when ✕ is clicked', async () => {
+    mockSaveDialog.mockRejectedValue(new Error('oops'))
+    render(<AppointmentsPage />)
+    await waitFor(() => screen.getByRole('button', { name: /export .ics/i }))
+    await userEvent.click(screen.getByRole('button', { name: /export .ics/i }))
+    await waitFor(() => screen.getByText(/export failed/i))
+    await userEvent.click(screen.getByRole('button', { name: /✕/i }))
+    await waitFor(() => expect(screen.queryByText(/export failed/i)).toBeNull())
+  })
 })
 
 describe('Form panel', () => {

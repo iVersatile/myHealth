@@ -309,4 +309,71 @@ describe('AppointmentDetailClient', () => {
     await waitFor(() => expect(screen.getByText('M54.5')).toBeDefined())
     expect(screen.getByText(/Low back pain/)).toBeDefined()
   })
+
+  it('renders saved tags when appointment_tags_get returns codes', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt())
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'appointment_tags_get') return Promise.resolve(['M54.5', 'J06.9'])
+      if (cmd === 'notes_for_entity') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => expect(screen.getByText('M54.5')).toBeDefined())
+    expect(screen.getByText('J06.9')).toBeDefined()
+  })
+
+  it('calls appointment_tags_set after clicking remove tag button', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt())
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'appointment_tags_get') return Promise.resolve(['M54.5'])
+      if (cmd === 'notes_for_entity') return Promise.resolve([])
+      if (cmd === 'appointment_tags_set') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByRole('button', { name: /Remove tag M54\.5/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Remove tag M54\.5/i }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('appointment_tags_set', {
+        appointmentId: 'appt-1',
+        tags: [],
+      })
+    )
+  })
+
+  it('checks ICD-10 suggestion checkbox and saves via Accept button', async () => {
+    const suggestions = [{ code: 'M54.5', description: 'Low back pain', confidence: 0.9 }]
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt({ notes: 'back pain' }))
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'appointment_tags_get') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([])
+      if (cmd === 'icd10_suggest') return Promise.resolve(suggestions)
+      if (cmd === 'appointment_tags_set') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('button', { name: /Suggest ICD-10 Codes/i }))
+    await waitFor(() => screen.getByLabelText(/M54\.5/i))
+    fireEvent.click(screen.getByLabelText(/M54\.5/i))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Accept 1 Code/i })).toBeDefined()
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Accept 1 Code/i }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('appointment_tags_set', {
+        appointmentId: 'appt-1',
+        tags: ['M54.5'],
+      })
+    )
+  })
 })
