@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 22 — V3-F6 Auto-Appointment from Invoice — COMPLETE ✓
+Phase 25 — Code Quality & Performance Hardening — Task 25.3 next
 ```
 
 ---
@@ -1322,6 +1322,150 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 ### [x] **22.5 — Commit & push**
 - Pre-commit: `npx tsc --noEmit` + `cargo fmt --all` + `cargo clippy -- -D warnings`
 - Commit: `feat: auto-create appointment from invoice upload (V3-F6)`
+- Push to `origin/develop`; CI green
+
+---
+
+## Phase 23 — Post-Release Fixes (V3-F6 Manual Testing 2026-05-03)
+
+**PRD reference:** `docs/PRD_V3.md` → Post-Release Fixes section (V3-F6.9, V3-F6.11)
+
+### [x] **23.1 — Fix: appt_date stored without time component (V3-F6.9)**
+
+**Problem:** `appt_date` from suggestion banner is stored as `YYYY-MM-DD`. The edit form's `<input type="datetime-local">` requires `YYYY-MM-DDThh:mm`. `isoToDatetimeLocal` slices to 16 chars but `"YYYY-MM-DD"` is only 10 — field renders empty.
+
+**Files to change:**
+1. `src/components/appointments/AppointmentForm.tsx` — fix `isoToDatetimeLocal`: `iso.length === 10 ? iso + 'T00:00' : iso.slice(0, 16)`
+2. `src/app/(app)/documents/page.tsx` — in `handleApptSuggestionConfirm`, normalise `appt_date` before `appointments_create`: append `T00:00:00` when no `T` present
+
+**Done when:** Opening Edit on an appointment created from an invoice shows the correct pre-populated date.
+
+### [x] **23.2 — Fix: auto-created appointments default to "completed" (V3-F6.11)**
+
+**Problem:** Invoice appointments default to `status = "scheduled"`. Invoices are past services.
+
+**Files to change:**
+1. `src/app/(app)/documents/page.tsx` — in `handleApptSuggestionConfirm`, add `status: 'completed'` to the `appointments_create` input object
+
+**Done when:** An appointment created via the invoice suggestion banner has `status = "completed"`.
+
+### [x] **23.3 — Commit & push**
+
+- Pre-commit: `npx tsc --noEmit`
+- Commit: `fix: prepopulate date in appointment edit form and default invoice appointments to completed`
+- Push to `origin/develop`; CI green
+
+---
+
+## Phase 24 — Merge View and Edit appointment screens (V3-F7.1)
+
+**PRD reference:** `docs/PRD_V3.md` → V3-F7.1
+
+### [x] **24.1 — Implement inline edit mode on appointment detail page**
+
+**Goal:** Single `/appointments/view?id=` page that shows read-only details AND allows editing inline. No separate edit mode on the list page for existing appointments.
+
+**Changes:**
+1. `src/app/(app)/appointments/view/AppointmentDetailClient.tsx`
+   - Add `isEditing` state (default `false`)
+   - Add "Edit" button in the header section
+   - When `isEditing`, render `AppointmentForm` with `initial={appt}` instead of read-only `<dl>`
+   - On `onSave`: call `appointments_update` via `useAppointments` hook or direct invoke, update `appt` state, set `isEditing = false`
+   - On `onCancel`: set `isEditing = false`
+2. `src/components/appointments/AppointmentCard.tsx`
+   - Remove the separate "Edit" button
+   - Rename "View" link text to "Open" (clearer intent)
+3. `src/app/(app)/appointments/page.tsx`
+   - Remove `editingAppt` state and `handleEdit` function (no longer needed for existing appointments)
+   - Remove `showForm` logic for edit mode; keep only for new appointments
+   - Simplify `handleSave` — only handles create path now
+
+**Done when:** Clicking "Open" on any appointment card navigates to detail page; clicking "Edit" on detail page renders editable form pre-filled; saving updates the appointment in place; "New" on list page still creates via inline form.
+
+### [x] **24.2 — TypeScript check + commit & push**
+
+- Pre-commit: `npx tsc --noEmit`
+- Commit: `feat: merge appointment view and edit into single detail page (V3-F7.1)`
+- Push to `origin/develop`; CI green
+
+---
+
+## Phase 25 — Code Quality & Performance Hardening (Remaining Open Items)
+
+> Source: `docs/STATUS.md §8` — items deferred from Phase 19 code review.
+
+### [x] **25.1 — Reduce Tauri command boilerplate (H5)**
+
+**Goal:** Define a `CommandContext` helper struct in `src-tauri/src/commands/mod.rs` that wraps the repeated `conn.lock()` / error-string pattern used in every command handler.
+
+**Changes:**
+1. `src-tauri/src/commands/mod.rs`
+   - Add `pub struct CommandContext { conn: Arc<Mutex<Connection>> }`
+   - Add `impl CommandContext { fn db(&self) -> Result<MutexGuard<Connection>, CommandError> }`
+   - Remove repeated `conn.lock().map_err(|e| e.to_string())?` boilerplate from call sites
+2. Update at least the 5 most-duplicated command files to use `CommandContext`
+
+**Done when:** `cargo clippy -- -D warnings` clean; `cargo test` passes (453+ tests); boilerplate lines reduced by ≥30%.
+
+---
+
+### [x] **25.2 — Refactor extraction pipeline (H6)**
+
+**Goal:** Split `extraction/mod.rs` God Object into pure, testable functions.
+
+**Changes:**
+1. `src-tauri/src/extraction/mod.rs`
+   - Extract `parse_doctors(text: &str) -> Vec<String>` as a standalone pure function
+   - Extract `parse_contacts(text: &str) -> Vec<ContactCandidate>` as a standalone pure function
+   - Keep orchestrating `auto_extract_tags()` calling these sub-functions
+2. Add unit tests for each pure function
+
+**Done when:** `cargo test` passes; `cargo clippy` clean; extraction module no longer a single `>300 line` block mixing OCR + parsing + scoring.
+
+---
+
+### ▶ **25.3 — Zustand selector hooks (M5)**
+
+**Goal:** Replace wide destructures in hooks with per-value selectors to reduce unnecessary re-renders.
+
+**Changes:**
+1. `src/hooks/useDocuments.ts` — replace the 11-value destructure with individual `useDocumentStore(s => s.field)` calls
+2. Apply the same pattern to `useAppointments.ts` and `useNotes.ts` where applicable
+
+**Done when:** `tsc --noEmit` clean; Vitest passes.
+
+---
+
+### [ ] **25.4 — Virtualize DocumentList for >30 items (L3)**
+
+**Goal:** Prevent layout jank when the document list grows large.
+
+**Changes:**
+1. Install `react-window` (`npm install react-window @types/react-window`)
+2. `src/components/documents/DocumentList.tsx` — wrap the list in `FixedSizeList` from `react-window`
+3. Keep existing search/filter logic intact
+
+**Done when:** `tsc --noEmit` clean; rendering 100+ document rows does not cause scroll jank; Vitest passes.
+
+---
+
+### [ ] **25.5 — Extract inline dashboard helpers (L6)**
+
+**Goal:** Move inline formatting helpers defined inside `dashboard/page.tsx` to `src/lib/formatting.ts` so they are not recreated per render and can be unit tested.
+
+**Changes:**
+1. Create `src/lib/formatting.ts` with extracted helpers
+2. Update `dashboard/page.tsx` to import from there
+3. Add unit tests in `src/lib/__tests__/formatting.test.ts`
+
+**Done when:** `tsc --noEmit` clean; Vitest passes; no inline helpers remain in dashboard component.
+
+---
+
+### [ ] **25.6 — Commit & push Phase 25**
+
+- Pre-commit: `npx tsc --noEmit` + `cargo fmt --all` + `cargo clippy -- -D warnings`
+- Commit: `refactor: reduce command boilerplate, extraction refactor, Zustand selectors, list virtualisation (Phase 25)`
 - Push to `origin/develop`; CI green
 
 ---
