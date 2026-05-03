@@ -92,7 +92,7 @@ describe('DoctorSuggestionBanner', () => {
     expect(onAccept).toHaveBeenCalledWith(suggestion)
   })
 
-  it('calls onDismiss when Dismiss clicked', async () => {
+  it('calls onDismiss immediately when no appointmentId and Dismiss clicked', async () => {
     mockInvoke.mockResolvedValue(null)
     const onDismiss = vi.fn()
     render(
@@ -100,7 +100,8 @@ describe('DoctorSuggestionBanner', () => {
     )
     await waitFor(() => screen.getByRole('button', { name: /dismiss/i }))
     await userEvent.click(screen.getByRole('button', { name: /dismiss/i }))
-    expect(onDismiss).toHaveBeenCalled()
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText(/is there a doctor/i)).toBeNull()
   })
 
   it('skips matched candidate and shows next unmatched one', async () => {
@@ -116,5 +117,61 @@ describe('DoctorSuggestionBanner', () => {
     )
     await waitFor(() => expect(screen.getByText(/Dr\. Bob Green/)).toBeTruthy())
     expect(screen.queryByText(/Dr\. Alice Brown/)).toBeNull()
+  })
+
+  describe('follow-up prompt (with appointmentId)', () => {
+    it('shows follow-up when Dismiss clicked with appointmentId', async () => {
+      mockInvoke.mockResolvedValue(null)
+      render(
+        <DoctorSuggestionBanner
+          candidates={[makeSuggestion('Dr. John Doe')]}
+          onAccept={vi.fn()}
+          onDismiss={vi.fn()}
+          appointmentId="appt1"
+        />,
+      )
+      await waitFor(() => screen.getByRole('button', { name: /dismiss/i }))
+      await userEvent.click(screen.getByRole('button', { name: /dismiss/i }))
+      expect(screen.getByText(/is there a doctor for this appointment/i)).toBeTruthy()
+      expect(screen.getByRole('button', { name: /yes, keep name/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /no.*service/i })).toBeTruthy()
+    })
+
+    it('Yes keep name calls onDismiss without invoking clear', async () => {
+      mockInvoke.mockResolvedValue(null)
+      const onDismiss = vi.fn()
+      render(
+        <DoctorSuggestionBanner
+          candidates={[makeSuggestion('Dr. John Doe')]}
+          onAccept={vi.fn()}
+          onDismiss={onDismiss}
+          appointmentId="appt1"
+        />,
+      )
+      await waitFor(() => screen.getByRole('button', { name: /dismiss/i }))
+      await userEvent.click(screen.getByRole('button', { name: /dismiss/i }))
+      await userEvent.click(screen.getByRole('button', { name: /yes, keep name/i }))
+      expect(onDismiss).toHaveBeenCalledTimes(1)
+      expect(mockInvoke).not.toHaveBeenCalledWith('appointments_clear_doctor', expect.anything())
+    })
+
+    it('No it is a service invokes appointments_clear_doctor then calls onDismiss', async () => {
+      mockInvoke.mockResolvedValueOnce(null)       // contacts_find_similar
+      mockInvoke.mockResolvedValueOnce(undefined)  // appointments_clear_doctor
+      const onDismiss = vi.fn()
+      render(
+        <DoctorSuggestionBanner
+          candidates={[makeSuggestion('Dr. John Doe')]}
+          onAccept={vi.fn()}
+          onDismiss={onDismiss}
+          appointmentId="appt1"
+        />,
+      )
+      await waitFor(() => screen.getByRole('button', { name: /dismiss/i }))
+      await userEvent.click(screen.getByRole('button', { name: /dismiss/i }))
+      await userEvent.click(screen.getByRole('button', { name: /no.*service/i }))
+      await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1))
+      expect(mockInvoke).toHaveBeenCalledWith('appointments_clear_doctor', { appointmentId: 'appt1' })
+    })
   })
 })

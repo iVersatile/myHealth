@@ -1,3 +1,7 @@
+'use client'
+
+import { useState } from 'react'
+
 export interface AppointmentSuggestion {
   appt_date: string;
   title: string;
@@ -8,12 +12,24 @@ export interface AppointmentSuggestion {
 
 interface Props {
   suggestion: AppointmentSuggestion;
-  onConfirm: () => void;
+  onConfirm: (doctorName: string | null) => void;
   onDismiss: () => void;
   isLoading?: boolean;
 }
 
 export function ApptSuggestionBanner({ suggestion, onConfirm, onDismiss, isLoading }: Props) {
+  const [doctorName, setDoctorName] = useState(suggestion.doctor_name ?? '')
+  const [noDoctor, setNoDoctor] = useState(!suggestion.doctor_name)
+
+  function handleNoDoctorChange(checked: boolean) {
+    setNoDoctor(checked)
+    if (checked) setDoctorName('')
+  }
+
+  function handleConfirm() {
+    onConfirm(noDoctor ? null : (doctorName.trim() || null))
+  }
+
   return (
     <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
       <svg className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -31,11 +47,34 @@ export function ApptSuggestionBanner({ suggestion, onConfirm, onDismiss, isLoadi
           {' — '}
           {suggestion.appt_date}
         </p>
+        <div className="mt-2 space-y-1.5">
+          <label className="block text-xs font-medium text-blue-800">
+            Doctor / Clinician
+          </label>
+          <input
+            type="text"
+            value={doctorName}
+            onChange={(e) => { setDoctorName(e.target.value); setNoDoctor(false) }}
+            disabled={noDoctor || isLoading}
+            placeholder="Doctor name (optional)"
+            className="block w-full rounded border border-blue-200 bg-white px-2 py-1 text-xs text-gray-900 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          />
+          <label className="flex items-center gap-1.5 text-xs text-blue-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={noDoctor}
+              onChange={(e) => handleNoDoctorChange(e.target.checked)}
+              disabled={isLoading}
+              className="h-3.5 w-3.5 rounded border-blue-300 accent-blue-600"
+            />
+            No doctor — service / clinic appointment
+          </label>
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2 pt-0.5">
         <button
           type="button"
-          onClick={onConfirm}
+          onClick={handleConfirm}
           disabled={isLoading}
           className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >

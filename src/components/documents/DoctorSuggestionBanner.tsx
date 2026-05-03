@@ -18,11 +18,13 @@ interface Props {
   candidates: ContactSuggestion[]
   onAccept: (suggestion: ContactSuggestion) => void
   onDismiss: () => void
+  appointmentId?: string | null
 }
 
-export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss }: Props) {
+export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appointmentId }: Props) {
   const [unmatched, setUnmatched] = useState<ContactSuggestion[]>([])
   const [checked, setChecked] = useState(false)
+  const [followUp, setFollowUp] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -46,6 +48,49 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss }: Prop
   const suggestion = unmatched[0]
   if (!suggestion) return null
 
+  function handleDismiss() {
+    if (appointmentId) {
+      setFollowUp(true)
+    } else {
+      onDismiss()
+    }
+  }
+
+  async function handleNoDoctor() {
+    if (appointmentId) {
+      try {
+        await invoke('appointments_clear_doctor', { appointmentId })
+      } catch {
+        // best-effort
+      }
+    }
+    onDismiss()
+  }
+
+  if (followUp) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
+        <span className="text-[var(--color-text)]">
+          Is there a doctor for this appointment?
+        </span>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={onDismiss}
+            className="px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
+          >
+            Yes, keep name
+          </button>
+          <button
+            onClick={() => void handleNoDoctor()}
+            className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs hover:text-[var(--color-text)] transition-colors"
+          >
+            No, it&apos;s a service
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
       <span className="text-[var(--color-text)]">
@@ -59,7 +104,7 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss }: Prop
           Create
         </button>
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs hover:text-[var(--color-text)] transition-colors"
         >
           Dismiss

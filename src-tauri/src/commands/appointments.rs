@@ -406,6 +406,31 @@ pub fn appointments_delete(id: String, state: State<'_, AppState>) -> Result<(),
 }
 
 #[tauri::command]
+pub fn appointments_clear_doctor(
+    appointment_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let rows = conn.execute(
+        "UPDATE appointments SET doctor_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        rusqlite::params![appointment_id],
+    )?;
+
+    if rows == 0 {
+        Err(CommandError::NotFound(format!(
+            "appointment '{appointment_id}'"
+        )))
+    } else {
+        Ok(())
+    }
+}
+
+#[tauri::command]
 pub fn appointment_link_contact(
     appointment_id: String,
     contact_id: String,
@@ -780,5 +805,45 @@ mod tests {
         insert_appt(&conn, "a1", "X", "2026-05-01T10:00:00Z", "scheduled");
         let ids = fetch_contact_ids(&conn, "a1");
         assert!(ids.is_empty());
+    }
+
+    #[test]
+    fn clear_doctor_sets_doctor_name_to_null() {
+        let conn = test_conn();
+        insert_appt(&conn, "a1", "ECG", "2026-05-01T10:00:00Z", "scheduled");
+        conn.execute(
+            "UPDATE appointments SET doctor_name = 'MS YING WANG' WHERE id = 'a1'",
+            [],
+        )
+        .unwrap();
+
+        let rows = conn
+            .execute(
+                "UPDATE appointments SET doctor_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+                rusqlite::params!["a1"],
+            )
+            .unwrap();
+        assert_eq!(rows, 1);
+
+        let doctor_name: Option<String> = conn
+            .query_row(
+                "SELECT doctor_name FROM appointments WHERE id = 'a1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(doctor_name.is_none());
+    }
+
+    #[test]
+    fn clear_doctor_returns_not_found_for_missing_id() {
+        let conn = test_conn();
+        let rows = conn
+            .execute(
+                "UPDATE appointments SET doctor_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+                rusqlite::params!["nonexistent"],
+            )
+            .unwrap();
+        assert_eq!(rows, 0);
     }
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { apptToEvent } from '../page'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -34,8 +35,9 @@ const APPT = {
   reminder_min: 30,
   created_at: '2024-03-01T00:00:00Z',
   updated_at: '2024-03-01T00:00:00Z',
-  document_ids: [],
-  contact_ids: [],
+  document_ids: [] as string[],
+  contact_ids: [] as string[],
+  recurrence_series_id: null,
 }
 
 const NOTE = {
@@ -201,11 +203,11 @@ describe('TimelinePage', () => {
     expect(screen.getByText(/Cardiology checkup/)).toBeDefined()
   })
 
-  it('shows "No doctor assigned" for appointments without a doctor', async () => {
+  it('shows "No doctor / Service" for appointments without a doctor', async () => {
     mockAppointments = [{ ...APPT, id: 'a2', doctor_name: null as unknown as string, clinic_name: null as unknown as string }]
     await renderPage()
     fireEvent.click(screen.getByText('By Doctor'))
-    await waitFor(() => expect(screen.getByText('No doctor assigned')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('No doctor / Service')).toBeDefined())
   })
 
   it('marks linked documents with "linked" badge in By Doctor view', async () => {
@@ -241,7 +243,7 @@ describe('TimelinePage', () => {
     expect(screen.queryByText('deleted.pdf uploaded')).toBeNull()
   })
 
-  it('sorts "No doctor assigned" group last when mixed doctors present', async () => {
+  it('sorts "No doctor / Service" group last when mixed doctors present', async () => {
     mockAppointments = [
       { ...APPT, id: 'a3', doctor_name: null as unknown as string, clinic_name: null as unknown as string },
       APPT,
@@ -250,10 +252,10 @@ describe('TimelinePage', () => {
     await renderPage()
     fireEvent.click(screen.getByText('By Doctor'))
     await waitFor(() => expect(screen.getByText('Dr. Smith')).toBeDefined())
-    await waitFor(() => expect(screen.getByText('No doctor assigned')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('No doctor / Service')).toBeDefined())
     await waitFor(() => expect(screen.getByText('Dr. Adams')).toBeDefined())
-    const headings = screen.getAllByText(/Dr\.|No doctor assigned/)
-    expect(headings.at(-1)?.textContent).toBe('No doctor assigned')
+    const headings = screen.getAllByText(/Dr\.|No doctor \/ Service/)
+    expect(headings.at(-1)?.textContent).toBe('No doctor / Service')
   })
 
   it('handles links_list_for_appointment invoke failure gracefully', async () => {
@@ -321,5 +323,30 @@ describe('TimelinePage', () => {
     await renderPage()
     fireEvent.click(screen.getByText('By Uploaded Date'))
     await waitFor(() => expect(screen.getByText('Uploaded: xray.jpg')).toBeDefined())
+  })
+})
+
+// ── apptToEvent unit tests ────────────────────────────────────────────────────
+
+import type { Appointment } from '../../../../store/appointmentsStore'
+
+function makeAppt(overrides: Partial<Appointment> = {}): Appointment {
+  return { ...APPT, ...overrides }
+}
+
+describe('apptToEvent', () => {
+  it('subtitle includes doctor and clinic when both present', () => {
+    const event = apptToEvent(makeAppt({ doctor_name: 'Dr. Smith', clinic_name: 'Heart Clinic' }))
+    expect(event.subtitle).toBe('Dr. Smith · Heart Clinic')
+  })
+
+  it('subtitle shows only clinic when doctor_name is null', () => {
+    const event = apptToEvent(makeAppt({ doctor_name: null, clinic_name: 'Heart Clinic' }))
+    expect(event.subtitle).toBe('Heart Clinic')
+  })
+
+  it('subtitle is null when both doctor_name and clinic_name are null', () => {
+    const event = apptToEvent(makeAppt({ doctor_name: null, clinic_name: null }))
+    expect(event.subtitle).toBeNull()
   })
 })

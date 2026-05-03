@@ -11,6 +11,14 @@ const baseSuggestion: AppointmentSuggestion = {
   clinic_name: null,
 }
 
+const serviceSuggestion: AppointmentSuggestion = {
+  appt_date: '2022-03-10',
+  title: 'ECG',
+  doctor_name: null,
+  specialty: null,
+  clinic_name: 'London Clinic',
+}
+
 describe('ApptSuggestionBanner', () => {
   it('renders the appointment title and date', () => {
     render(
@@ -36,7 +44,7 @@ describe('ApptSuggestionBanner', () => {
     expect(screen.getByRole('button', { name: /dismiss/i })).toBeTruthy()
   })
 
-  it('calls onConfirm when Create Appointment is clicked', () => {
+  it('calls onConfirm with doctor name when Create Appointment is clicked', () => {
     const onConfirm = vi.fn()
     render(
       <ApptSuggestionBanner
@@ -46,7 +54,53 @@ describe('ApptSuggestionBanner', () => {
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: /create appointment/i }))
-    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(onConfirm).toHaveBeenCalledWith('Dr. Smith')
+  })
+
+  it('calls onConfirm with null when no-doctor checkbox is checked', () => {
+    const onConfirm = vi.fn()
+    render(
+      <ApptSuggestionBanner
+        suggestion={baseSuggestion}
+        onConfirm={onConfirm}
+        onDismiss={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: /create appointment/i }))
+    expect(onConfirm).toHaveBeenCalledWith(null)
+  })
+
+  it('initialises no-doctor checked and passes null when suggestion has no doctor', () => {
+    const onConfirm = vi.fn()
+    render(
+      <ApptSuggestionBanner
+        suggestion={serviceSuggestion}
+        onConfirm={onConfirm}
+        onDismiss={vi.fn()}
+      />,
+    )
+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement
+    expect(checkbox.checked).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /create appointment/i }))
+    expect(onConfirm).toHaveBeenCalledWith(null)
+  })
+
+  it('allows editing the doctor name before confirming', () => {
+    const onConfirm = vi.fn()
+    render(
+      <ApptSuggestionBanner
+        suggestion={serviceSuggestion}
+        onConfirm={onConfirm}
+        onDismiss={vi.fn()}
+      />,
+    )
+    // Uncheck no-doctor to enable input
+    fireEvent.click(screen.getByRole('checkbox'))
+    const input = screen.getByPlaceholderText(/doctor name/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'Dr. Jones' } })
+    fireEvent.click(screen.getByRole('button', { name: /create appointment/i }))
+    expect(onConfirm).toHaveBeenCalledWith('Dr. Jones')
   })
 
   it('calls onDismiss when Dismiss is clicked', () => {
@@ -89,23 +143,5 @@ describe('ApptSuggestionBanner', () => {
     for (const btn of buttons) {
       expect((btn as HTMLButtonElement).disabled).toBe(true)
     }
-  })
-
-  it('renders with null doctorName and specialty', () => {
-    const minimal: AppointmentSuggestion = {
-      appt_date: '2022-01-21',
-      title: 'Medical appointment',
-      doctor_name: null,
-      specialty: null,
-      clinic_name: null,
-    }
-    render(
-      <ApptSuggestionBanner
-        suggestion={minimal}
-        onConfirm={vi.fn()}
-        onDismiss={vi.fn()}
-      />,
-    )
-    expect(screen.getByText('Medical appointment')).toBeTruthy()
   })
 })

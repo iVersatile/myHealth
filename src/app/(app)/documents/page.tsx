@@ -86,7 +86,7 @@ export default function DocumentsPage() {
     }
   }
 
-  async function handleApptSuggestionConfirm() {
+  async function handleApptSuggestionConfirm(doctorName: string | null) {
     if (!apptSuggestion || apptSuggestionLoading) return
     setApptSuggestionLoading(true)
     try {
@@ -97,7 +97,7 @@ export default function DocumentsPage() {
         input: {
           title: suggestion.title,
           appt_date: apptDate,
-          doctor_name: suggestion.doctor_name ?? null,
+          doctor_name: doctorName,
           clinic_name: suggestion.clinic_name ?? null,
           specialty: suggestion.specialty ?? null,
           notes: null,
@@ -196,6 +196,7 @@ export default function DocumentsPage() {
               : doctorCandidates.map(name => ({ name, title: null, specialty: null, clinic: null, address: null, phone: null, email: null }))}
             onAccept={handleBannerAccept}
             onDismiss={() => { setDoctorCandidates([]); setExtractedContactSuggestions([]) }}
+            appointmentId={linkSuggestion?.appointmentId ?? null}
           />
         </div>
       )}
@@ -215,7 +216,7 @@ export default function DocumentsPage() {
         <div className="mb-4">
           <ApptSuggestionBanner
             suggestion={apptSuggestion.suggestion}
-            onConfirm={() => void handleApptSuggestionConfirm()}
+            onConfirm={(doctorName) => void handleApptSuggestionConfirm(doctorName)}
             onDismiss={() => setApptSuggestion(null)}
             isLoading={apptSuggestionLoading}
           />

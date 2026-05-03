@@ -104,7 +104,7 @@ function docToUploadEvent(d: Document): TimelineEvent {
   }
 }
 
-function apptToEvent(a: Appointment): TimelineEvent {
+export function apptToEvent(a: Appointment): TimelineEvent {
   const parts = [a.doctor_name, a.clinic_name].filter(Boolean)
   return {
     id: `appt-${a.id}`,
@@ -479,7 +479,7 @@ export default function TimelinePage() {
       const linkedContactName = (appt?.contact_ids ?? [])
         .map((id) => contactNameMap.get(id))
         .find((name) => name != null)
-      const doctorKey = linkedContactName ?? (appt?.doctor_name?.trim() || 'No doctor assigned')
+      const doctorKey = linkedContactName ?? (appt?.doctor_name?.trim() || 'No doctor / Service')
       if (!groups.has(doctorKey)) {
         groups.set(doctorKey, { appts: [], docs: [], linkedDocIds: new Set() })
       }
@@ -500,7 +500,7 @@ export default function TimelinePage() {
       g.docs.sort((a, b) => b.date.getTime() - a.date.getTime())
     }
 
-    // Documents not linked to any appointment go under "No doctor assigned"
+    // Documents not linked to any appointment go under "No doctor / Service"
     const assignedDocIds = new Set<string>()
     for (const [, g] of groups) {
       for (const id of g.linkedDocIds) assignedDocIds.add(id)
@@ -509,17 +509,17 @@ export default function TimelinePage() {
       (e) => e.type === 'document' && !assignedDocIds.has(e.rawId)
     )
     if (unlinkedDocs.length > 0) {
-      if (!groups.has('No doctor assigned')) {
-        groups.set('No doctor assigned', { appts: [], docs: [], linkedDocIds: new Set() })
+      if (!groups.has('No doctor / Service')) {
+        groups.set('No doctor / Service', { appts: [], docs: [], linkedDocIds: new Set() })
       }
-      for (const d of unlinkedDocs) groups.get('No doctor assigned')!.docs.push(d)
+      for (const d of unlinkedDocs) groups.get('No doctor / Service')!.docs.push(d)
     }
 
     return Array.from(groups.entries())
       .filter(([, g]) => g.appts.length + g.docs.length > 0)
       .sort((a, b) => {
-        if (a[0] === 'No doctor assigned') return 1
-        if (b[0] === 'No doctor assigned') return -1
+        if (a[0] === 'No doctor / Service') return 1
+        if (b[0] === 'No doctor / Service') return -1
         return a[0].localeCompare(b[0])
       })
   }, [viewMode, filtered, appointments, apptLinkedDocIds, contactNameMap])

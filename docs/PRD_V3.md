@@ -600,6 +600,76 @@ The title is assembled at suggestion time in `appointments_suggest_from_document
 
 ---
 
+### V3-F9: Appointment Doctor Name Lifecycle
+
+**Context (2026-05-03):** When uploading an ECG invoice from The London Clinic, the OCR extractor wrote "MS YING WANG" (a technician name from the document) into `appointments.doctor_name`. The user rejected the doctor contact suggestion (correctly — this is a clinic-service appointment with no dedicated personal doctor). However, `appointments.doctor_name` was not cleared, so the Timeline continued to display "MS YING WANG" as the doctor for the appointment, which was incorrect.
+
+**Root cause:** Two independent flows were conflated:
+1. Appointment creation (writes `doctor_name` from OCR extraction unconditionally).
+2. Contact suggestion (optional follow-up — rejecting it has no effect on `appointments.doctor_name`).
+
+**Additional requirement:** Appointments can be of two kinds:
+- **Doctor appointment** — attended by a named clinician (e.g., consultation with Dr. Smith).
+- **Clinic/service appointment** — a service provided by a clinic with no single dedicated doctor (e.g., ECG, blood draw, physiotherapy session at a clinic).
+
+The system must allow the user to distinguish these two cases and must not display an unverified OCR-extracted name as the doctor when the user has indicated there is none.
+
+#### Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| V3-F9.1 | The `ApptSuggestionBanner` MUST make the `doctor_name` field user-editable (clearable) before the user confirms appointment creation, so the appointment can be created with `doctor_name = null` from the outset | MUST |
+| V3-F9.2 | The `ApptSuggestionBanner` MUST include a **"No doctor / Service appointment"** affordance (checkbox or clear button) that sets `doctor_name` to null on confirmation | MUST |
+| V3-F9.3 | When the user dismisses `DoctorSuggestionBanner` (rejects the contact suggestion), the system MUST immediately show a follow-up prompt: *"Is there a doctor for this appointment?"* with two actions: **Yes, keep name** and **No, it's a service** | MUST |
+| V3-F9.4 | If the user selects **"No, it's a service"** in the follow-up prompt, the system MUST call a backend command to clear `appointments.doctor_name` (set to `NULL`) for that appointment | MUST |
+| V3-F9.5 | If the user selects **"Yes, keep name"**, no change is made; the banner is dismissed normally | MUST |
+| V3-F9.6 | The Timeline MUST display the doctor name only when `appointments.doctor_name IS NOT NULL`; when null, the subtitle MUST show clinic name only (or nothing if both are null) | MUST |
+| V3-F9.7 | The "By Doctor" grouping in Timeline MUST use `doctor_name` only when non-null; appointments with `doctor_name = null` MUST be grouped under "No doctor / Service" | MUST |
+
+**Acceptance Criteria (Gherkin):**
+
+```gherkin
+Feature: Appointment Doctor Name Lifecycle
+
+  Scenario: Editable doctor_name in ApptSuggestionBanner
+    Given OCR extracts doctor_name "MS YING WANG" from a document
+    When the ApptSuggestionBanner is shown
+    Then the doctor_name field is editable and can be cleared
+    And a "No doctor / Service appointment" affordance is visible
+
+  Scenario: Service appointment created with no doctor
+    Given the ApptSuggestionBanner is showing with doctor_name "MS YING WANG"
+    When the user selects "No doctor / Service appointment" and clicks "Create Appointment"
+    Then the appointment is created with doctor_name = null
+    And the Timeline subtitle shows clinic_name only (or nothing)
+
+  Scenario: Reject contact suggestion triggers doctor follow-up prompt
+    Given an appointment exists with doctor_name "MS YING WANG"
+    And the DoctorSuggestionBanner is shown for that name
+    When the user clicks "Dismiss"
+    Then a follow-up prompt appears: "Is there a doctor for this appointment?"
+    And two actions are shown: "Yes, keep name" and "No, it's a service"
+
+  Scenario: No, it's a service clears doctor_name
+    Given the follow-up prompt is shown after dismissing the contact suggestion
+    When the user clicks "No, it's a service"
+    Then appointments.doctor_name is set to null for that appointment
+    And the Timeline no longer shows a doctor name for that appointment
+
+  Scenario: Yes, keep name leaves doctor_name unchanged
+    Given the follow-up prompt is shown after dismissing the contact suggestion
+    When the user clicks "Yes, keep name"
+    Then appointments.doctor_name is unchanged
+    And the banner is dismissed
+
+  Scenario: Timeline by-doctor groups service appointments separately
+    Given an appointment with doctor_name = null
+    When the Timeline is viewed in "By Doctor" mode
+    Then the appointment appears under "No doctor / Service"
+```
+
+---
+
 ### V3-F8: Clinic Entity Redesign — Tree View and Doctor Association ✅ APPROVED (Option A)
 
 **User feedback (2026-05-03):** "London Clinic" was suggested and accepted via "Save as Clinic" but did not appear on the Clinics/Contact view. Root cause: two disconnected representations exist — the `clinics` table (written by "Save as Clinic") and `contacts` with `role='clinic'` (written by `autoSaveClinic`). The Clinics page only queries the latter.

@@ -10,9 +10,9 @@ pub(crate) mod services;
 mod acceptance_tests;
 
 use commands::appointments::{
-    appointment_link_contact, appointment_unlink_contact, appointments_create, appointments_delete,
-    appointments_get, appointments_link_document, appointments_list, appointments_list_upcoming,
-    appointments_update, contacts_for_appointment,
+    appointment_link_contact, appointment_unlink_contact, appointments_clear_doctor,
+    appointments_create, appointments_delete, appointments_get, appointments_link_document,
+    appointments_list, appointments_list_upcoming, appointments_update, contacts_for_appointment,
 };
 use commands::auth::{
     app_reset_data, auth_add_user, auth_change_password, auth_has_password, auth_is_locked,
@@ -147,6 +147,7 @@ pub fn run() {
             appointments_create,
             appointments_update,
             appointments_delete,
+            appointments_clear_doctor,
             appointments_link_document,
             appointment_link_contact,
             appointment_unlink_contact,

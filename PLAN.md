@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — COMPLETE
+Phase 27 — V3-F9 Appointment Doctor Name Lifecycle — Task 27.1
 ```
 
 ---
@@ -1551,6 +1551,63 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 [x] **26.7 — Commit & push Phase 26**
    - Pre-commit: `npx tsc --noEmit` + `~/.cargo/bin/cargo fmt --all --manifest-path src-tauri/Cargo.toml` + `~/.cargo/bin/cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
    - Commit message: `feat: clinic entity redesign — unify around clinics table, tree view, delete history note (V3-F8)`
+   - Push to `origin/develop`; confirm CI green.
+   - Done when: both GitHub Actions workflows show `completed / success`.
+
+---
+
+## Phase 27 — V3-F9 Appointment Doctor Name Lifecycle (Option C)
+
+**Requirement:** `docs/PRD_V3.md` § V3-F9  
+**Scope:** (A) Editable doctor_name in ApptSuggestionBanner before confirmation + (B) Post-rejection follow-up prompt to clear doctor_name + (C) Timeline null-safe display.
+
+---
+
+▶ **27.1 — Backend: `appointments_clear_doctor` Tauri command**
+   - File: `src-tauri/src/commands/appointments.rs`
+   - Add command `appointments_clear_doctor(appointment_id: String)`:
+     - SQL: `UPDATE appointments SET doctor_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1`
+     - Returns `()` on success, propagates DB error as `String`.
+   - Register command in `src-tauri/src/lib.rs` alongside existing appointment commands.
+   - Unit test: call command with a known appointment id → verify `doctor_name IS NULL` in DB.
+   - Done when: `cargo test` green; `cargo clippy -- -D warnings` clean; `cargo fmt` applied.
+
+---
+
+[ ] **27.2 — ApptSuggestionBanner: editable + clearable doctor_name (V3-F9.1, F9.2)**
+   - File: `src/components/documents/ApptSuggestionBanner.tsx`
+   - Replace read-only doctor_name display with an editable text input (pre-filled from suggestion).
+   - Add a **"No doctor / Service appointment"** checkbox below the input. When checked: input is disabled and visually struck-through; `doctor_name` is sent as `null` on confirm.
+   - When unchecked: input is active; value sent as typed (or original suggestion value).
+   - Typing in the input and clearing it to empty string is treated the same as `null`.
+   - Done when: `npx tsc --noEmit` clean; manual test: banner with extracted doctor name → check "No doctor" → Create Appointment → appointment has `doctor_name = null`.
+
+---
+
+[ ] **27.3 — DoctorSuggestionBanner: post-dismiss follow-up prompt (V3-F9.3 – F9.5)**
+   - File: `src/components/documents/DoctorSuggestionBanner.tsx`
+   - After user clicks "Dismiss", instead of immediately hiding the banner, replace its content with an inline follow-up:
+     > *"Is there a doctor for this appointment?"*  
+     > **[Yes, keep name]** / **[No, it's a service]**
+   - "Yes, keep name": close banner, no further action.
+   - "No, it's a service": call `invoke('appointments_clear_doctor', { appointmentId })`, then close banner. Show a brief inline success state ("Doctor name removed") before auto-dismissing.
+   - The `appointmentId` prop must be threaded in from the parent (UploadDialog / document detail page) — add it to the component's props interface.
+   - Done when: `npx tsc --noEmit` clean; manual test: upload ECG invoice → reject contact suggestion → select "No, it's a service" → appointment `doctor_name` is null in DB.
+
+---
+
+[ ] **27.4 — Timeline: null-safe doctor_name display (V3-F9.6, F9.7)**
+   - File: `src/app/(app)/timeline/page.tsx`
+   - `apptToEvent()`: already filters with `.filter(Boolean)` — verify this correctly handles `null` (it should; add explicit test).
+   - "By Doctor" grouping: find the `doctorKey` line. Change the fallback from `'No doctor assigned'` to `'No doctor / Service'` to match PRD_V3 wording.
+   - Add a Vitest unit test for `apptToEvent` covering: (a) both doctor + clinic non-null → subtitle = "Dr Name · Clinic", (b) doctor null, clinic non-null → subtitle = "Clinic only", (c) both null → subtitle = null.
+   - Done when: `npx tsc --noEmit` clean; unit tests pass.
+
+---
+
+[ ] **27.5 — Commit & push Phase 27**
+   - Pre-commit: `npx tsc --noEmit` + `~/.cargo/bin/cargo fmt --all --manifest-path src-tauri/Cargo.toml` + `~/.cargo/bin/cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+   - Commit message: `feat: appointment doctor name lifecycle — editable banner, reject follow-up, timeline null-safe (V3-F9)`
    - Push to `origin/develop`; confirm CI green.
    - Done when: both GitHub Actions workflows show `completed / success`.
 
