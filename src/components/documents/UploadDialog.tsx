@@ -455,7 +455,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       setPhase({ kind: 'saving' })
                       try {
                         const newContact = await invoke<{ id: string }>('contacts_create', {
-                          input: { name: cs.name, role: 'Doctor', specialty: cs.specialty, phone: cs.phone, email: cs.email, clinic: cs.clinic, address: cs.address, notes: null },
+                          input: { name: cs.name, role: 'other', specialty: cs.specialty, phone: cs.phone, email: cs.email, clinic: cs.clinic, address: cs.address, notes: null },
                         })
                         const dupes = await invoke<DuplicateCandidate[]>('find_duplicate_contacts', {
                           userId: '', contactId: newContact.id, threshold: 0.85,

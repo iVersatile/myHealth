@@ -159,3 +159,33 @@ Before writing any code for a new task:
 1. **Never use order-sensitive substring matching for classification.** If the first match wins, edge cases will silently produce wrong results. Use a scoring or precedence-aware approach.
 2. **Exclusion lists must cover all label patterns that precede a name.** When adding a regex that matches `Title FirstName LastName`, audit the document for every label that can precede a name (patient:, name:, cc:, gp:, referred by, etc.) and add them all to the exclusion window.
 3. **Title fields that combine multiple extraction results need a dedicated integration test** verifying the full composed string, not just the individual components.
+
+---
+
+## L-011 — Three regressions from incomplete clinic/role refactor
+
+**What happened (2026-05-04):**
+1. Confirm-upload view showed no clinic suggestion even for documents that clearly named a clinic.
+2. A contact suggestion dismissed inside UploadDialog reappeared immediately after the dialog closed.
+3. Accepting the reappeared suggestion and clicking Save crashed with `CHECK constraint failed: role IN ('gp','specialist','dentist','physio','pharmacist','hospital','other')`.
+
+**Root cause 1 — Partial fix for clinic extraction:**
+`appointments_suggest_from_document` was fixed to use `first_clinic(&text)`, but `documents_run_extraction` — the command that drives the confirm-upload view — was not updated. It still used `contact_suggestions.first().and_then(|c| c.clinic.clone())`, which is `None` for service-only appointments. The fix must be applied to every command that builds `clinic_suggestions`.
+
+**Root cause 2 — Duplicate extraction after dialog close:**
+`handleUploaded` in `documents/page.tsx` called `documents_run_extraction` again after UploadDialog closed and wrote the result into `extractedContactSuggestions`. This re-populated `DoctorSuggestionBanner` with contacts the user had just dismissed inside the dialog.
+
+**Root cause 3 — Stale `CONTACT_ROLES` and hardcoded role string:**
+`SCHEMA_V15` removed `'clinic'` from the `contacts.role` CHECK constraint, but `contactsStore.ts` was never updated — `'clinic'` remained in `CONTACT_ROLES`. Separately, `UploadDialog.tsx` saved AI-suggested contacts with a hardcoded `role: 'Doctor'` (capital D), which is not a valid DB role value.
+
+**Fixes:**
+1. Both `documents_run_extraction` paths — replaced broken `contact_suggestions.first().and_then(|c| c.clinic.clone())` with `first_clinic(&text)`.
+2. `handleUploaded` in `page.tsx` — removed redundant `documents_run_extraction` call after dialog close.
+3. `contactsStore.ts` — removed `'clinic'` from `CONTACT_ROLES` and `ROLE_LABELS`.
+4. `UploadDialog.tsx` — changed hardcoded `role: 'Doctor'` to `role: 'other'`.
+
+**Rules:**
+1. **When fixing a bug in one command, grep for every command containing the same pattern.** A fix to one call site is a half-fix if the same logic lives in multiple commands.
+2. **After any DB schema migration that changes a CHECK constraint, immediately audit the frontend** — update `CONTACT_ROLES`, `ROLE_LABELS`, and any role dropdowns to match the new constraint.
+3. **Never hardcode a role string in inline IPC calls.** Reference `CONTACT_ROLES[n]` or a named constant — hardcoded strings bypass type-checking and silently violate DB constraints.
+4. **Re-running extraction after dialog close undoes user decisions.** If a dialog already presented extraction results, do not re-run extraction in the parent's `onClose` handler.

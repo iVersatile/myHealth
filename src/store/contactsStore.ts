@@ -22,7 +22,6 @@ export const CONTACT_ROLES = [
   'physio',
   'pharmacist',
   'hospital',
-  'clinic',
   'other',
 ] as const
 
@@ -35,7 +34,6 @@ export const ROLE_LABELS: Record<ContactRole, string> = {
   physio: 'Physio',
   pharmacist: 'Pharmacist',
   hospital: 'Hospital',
-  clinic: 'Clinic',
   other: 'Other',
 }
 

@@ -1147,7 +1147,7 @@ pub async fn documents_run_extraction(
                 })
                 .collect();
             let clinic_suggestions = {
-                let clinic_name = contact_dtos.first().and_then(|c| c.clinic.clone());
+                let clinic_name = crate::extraction::contact::first_clinic(&text);
                 if let Some(name) = clinic_name {
                     let company_registration_number =
                         crate::extraction::clinic::extract_company_registration_number(&text);
@@ -1223,10 +1223,7 @@ pub async fn documents_run_extraction(
         .collect();
 
     let clinic_suggestions = {
-        let clinic_name = result
-            .contact_suggestions
-            .first()
-            .and_then(|c| c.clinic.clone());
+        let clinic_name = crate::extraction::contact::first_clinic(&result.text);
         if let Some(name) = clinic_name {
             let company_registration_number =
                 crate::extraction::clinic::extract_company_registration_number(&result.text);

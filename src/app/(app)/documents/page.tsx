@@ -46,16 +46,6 @@ export default function DocumentsPage() {
   async function handleUploaded(doc: Document) {
     setDocuments([doc, ...documents], total + 1)
     try {
-      const metadata = await invoke<{ doctor_candidates?: string[]; contact_suggestions?: ContactSuggestion[] }>(
-        'documents_run_extraction',
-        { id: doc.id },
-      )
-      setDoctorCandidates(metadata.doctor_candidates ?? [])
-      setExtractedContactSuggestions(metadata.contact_suggestions ?? [])
-    } catch {
-      // extraction is best-effort; ignore failures
-    }
-    try {
       const candidates = await invoke<Array<{
         appointment_id: string
         appointment_title: string
