@@ -37,7 +37,8 @@ export function useClinics() {
   }
 
   useEffect(() => {
-    load()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load()
   }, [])
 
   return { clinics, loading, error, reload: load }
