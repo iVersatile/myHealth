@@ -14,7 +14,9 @@ import type { AppointmentSuggestion } from '../../../components/documents/ApptSu
 import { ContactForm } from '../../../components/contacts/ContactForm'
 import { useDocumentsStore } from '../../../store/documentsStore'
 import { useContacts } from '../../../hooks/useContacts'
+import { useAppointmentsStore } from '../../../store/appointmentsStore'
 import type { Document } from '../../../store/documentsStore'
+import type { Appointment } from '../../../store/appointmentsStore'
 import type { ContactCreateInput } from '../../../hooks/useContacts'
 
 export default function DocumentsPage() {
@@ -39,6 +41,7 @@ export default function DocumentsPage() {
   const total = useDocumentsStore(s => s.total)
   const setDocuments = useDocumentsStore(s => s.setDocuments)
   const { createContact, updateContact } = useContacts()
+  const upsertAppointment = useAppointmentsStore(s => s.upsertAppointment)
 
   async function handleUploaded(doc: Document) {
     setDocuments([doc, ...documents], total + 1)
@@ -53,11 +56,12 @@ export default function DocumentsPage() {
       // extraction is best-effort; ignore failures
     }
     try {
-      const suggestion = await invoke<{
+      const candidates = await invoke<Array<{
         appointment_id: string
         appointment_title: string
         score: number
-      } | null>('links_score_candidates', { documentId: doc.id })
+      }>>('links_score_candidates', { documentId: doc.id })
+      const suggestion = candidates[0] ?? null
       if (suggestion) {
         setLinkSuggestion({
           appointmentId: suggestion.appointment_id,
@@ -83,24 +87,27 @@ export default function DocumentsPage() {
   }
 
   async function handleApptSuggestionConfirm() {
-    if (!apptSuggestion) return
+    if (!apptSuggestion || apptSuggestionLoading) return
     setApptSuggestionLoading(true)
     try {
       const { suggestion, documentId } = apptSuggestion
-      const appt = await invoke<{ id: string }>('appointments_create', {
+      const appt = await invoke<Appointment>('appointments_create', {
         input: {
           title: suggestion.title,
-          date: suggestion.apptDate,
-          doctor_name: suggestion.doctorName ?? null,
+          appt_date: suggestion.appt_date,
+          doctor_name: suggestion.doctor_name ?? null,
+          clinic_name: suggestion.clinic_name ?? null,
           specialty: suggestion.specialty ?? null,
           notes: null,
-          clinic_id: null,
         },
       })
       await invoke('link_document_to_appointment', {
+        userId: '',
         documentId,
         appointmentId: appt.id,
+        score: 100,
       })
+      upsertAppointment(appt)
     } catch {
       // best-effort
     } finally {

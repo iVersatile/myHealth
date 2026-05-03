@@ -286,9 +286,8 @@ pub fn auto_extract_tags(
 
     // 5. Document title tag — scan first 3 OCR lines for a title-case heading
     if let Some(title) = extract_doc_title(text) {
-        let tag = format!("title:{title}");
-        if !tags_contains_ci(&tags, &tag) {
-            tags.push(tag);
+        if !tags_contains_ci(&tags, &title) {
+            tags.push(title);
         }
     }
 
@@ -627,8 +626,12 @@ mod tests {
         let text = "Registration Form\nDate: 09/03/2023\nPatient details follow";
         let tags = auto_extract_tags(text, &[], Some("2023-03-09"));
         assert!(
-            tags.iter().any(|t| t == "title:Registration Form"),
-            "expected title:Registration Form tag; got {tags:?}"
+            tags.iter().any(|t| t == "Registration Form"),
+            "expected Registration Form tag (no prefix); got {tags:?}"
+        );
+        assert!(
+            !tags.iter().any(|t| t.starts_with("title:")),
+            "unexpected title: prefix found in tags; got {tags:?}"
         );
     }
 
