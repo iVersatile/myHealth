@@ -36,6 +36,7 @@ pub struct ClinicUpdateInput {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[allow(dead_code)]
 pub struct LinkedContact {
     pub id: String,
     pub name: String,
@@ -43,6 +44,7 @@ pub struct LinkedContact {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[allow(dead_code)]
 pub struct ClinicWithContacts {
     pub id: String,
     pub name: String,
@@ -291,6 +293,7 @@ pub fn clinics_link_contact(
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 pub fn clinics_list_with_contacts(
     state: State<'_, AppState>,
 ) -> Result<Vec<ClinicWithContacts>, CommandError> {
