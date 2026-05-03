@@ -145,6 +145,41 @@ const SCHEMA_V11: &str = "
     CREATE INDEX IF NOT EXISTS idx_contacts_is_deduped_with ON contacts(is_deduped_with);
 ";
 
+const SCHEMA_V15: &str = "
+    INSERT OR IGNORE INTO clinics (id, name, address, phone, created_at)
+    SELECT id, name, address, phone, created_at FROM contacts WHERE role = 'clinic';
+    DELETE FROM contacts WHERE role = 'clinic';
+    CREATE TABLE contacts_v15 (
+        id                TEXT PRIMARY KEY,
+        name              TEXT NOT NULL,
+        role              TEXT NOT NULL CHECK(role IN (
+                            'gp','specialist','dentist','physio','pharmacist','hospital','other')),
+        specialty         TEXT,
+        phone             TEXT,
+        email             TEXT,
+        clinic            TEXT,
+        address           TEXT,
+        notes             TEXT,
+        created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+        clinic_id         TEXT REFERENCES clinics(id),
+        is_deduped_with   TEXT,
+        dedup_score       REAL,
+        user_id           TEXT REFERENCES users(id) ON DELETE CASCADE,
+        title             TEXT,
+        contact_clinic_id TEXT REFERENCES contacts_v15(id)
+    );
+    INSERT INTO contacts_v15 (id, name, role, specialty, phone, email, clinic, address, notes,
+                               created_at, updated_at, clinic_id, is_deduped_with, dedup_score,
+                               user_id, title)
+    SELECT id, name, role, specialty, phone, email, clinic, address, notes,
+           created_at, updated_at, clinic_id, is_deduped_with, dedup_score, user_id, title
+    FROM contacts;
+    DROP TABLE contacts;
+    ALTER TABLE contacts_v15 RENAME TO contacts;
+    CREATE INDEX IF NOT EXISTS idx_contacts_is_deduped_with ON contacts(is_deduped_with);
+";
+
 pub fn run(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -257,6 +292,20 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 15 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V15)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [15])?;
+        tx.commit()?;
+    }
+
+    if version < 16 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch("ALTER TABLE clinics ADD COLUMN email TEXT;")?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [16])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -283,7 +332,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 14);
+        assert_eq!(version, 16);
     }
 
     #[test]
@@ -297,7 +346,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 14);
+        assert_eq!(version, 16);
     }
 
     #[test]
@@ -1298,5 +1347,112 @@ mod tests {
             result.is_err(),
             "duplicate (note_id, entity_type, entity_id) must be rejected"
         );
+    }
+
+    // ── v15: migrate role=clinic contacts → clinics ──────────────────────────
+
+    #[test]
+    fn v15_contacts_role_clinic_not_insertable() {
+        let conn = migrated_conn();
+        let result = conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES ('con-v15-bad', 'Old Clinic', 'clinic', '2024-01-01', '2024-01-01')",
+            [],
+        );
+        assert!(
+            result.is_err(),
+            "role='clinic' must be rejected by contacts CHECK constraint after v15"
+        );
+    }
+
+    #[test]
+    fn v15_migration_moves_clinic_contacts_to_clinics_table() {
+        // Simulate a database that had a role='clinic' contact before v15
+        // by running only up to v14, inserting the row, then applying v15 manually
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+
+        // Run migrations 1..14
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS schema_migrations (
+                version     INTEGER PRIMARY KEY,
+                applied_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .unwrap();
+        for schema in [
+            SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5, SCHEMA_V6, SCHEMA_V7, SCHEMA_V8,
+            SCHEMA_V9, SCHEMA_V10, SCHEMA_V11, SCHEMA_V12, SCHEMA_V13, SCHEMA_V14,
+        ]
+        .iter()
+        .enumerate()
+        {
+            let tx = conn.unchecked_transaction().unwrap();
+            tx.execute_batch(schema.1).unwrap();
+            tx.execute(
+                "INSERT INTO schema_migrations (version) VALUES (?1)",
+                [schema.0 as i32 + 1],
+            )
+            .unwrap();
+            tx.commit().unwrap();
+        }
+
+        // Insert a role='clinic' contact (valid before v15)
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, address, phone, created_at, updated_at) \
+             VALUES ('con-clin-1', 'City Physio', 'clinic', '5 Park Rd', '555-0200', \
+             '2024-03-01', '2024-03-01')",
+            [],
+        )
+        .unwrap();
+
+        // Now apply v15
+        let tx = conn.unchecked_transaction().unwrap();
+        tx.execute_batch(SCHEMA_V15).unwrap();
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [15])
+            .unwrap();
+        tx.commit().unwrap();
+
+        // The clinic should now be in the clinics table
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM clinics WHERE id = 'con-clin-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(name, "City Physio");
+
+        // The row must be gone from contacts
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM contacts WHERE id = 'con-clin-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "role=clinic contact must be removed from contacts"
+        );
+    }
+
+    #[test]
+    fn v15_non_clinic_contacts_are_preserved() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES ('con-v15-gp', 'Dr. Green', 'gp', '2024-01-01', '2024-01-01')",
+            [],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM contacts WHERE id = 'con-v15-gp'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "non-clinic contacts must survive v15 migration");
     }
 }

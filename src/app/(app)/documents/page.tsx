@@ -149,6 +149,7 @@ export default function DocumentsPage() {
       ...data,
       clinic_name: s?.clinic ?? null,
       clinic_phone: s?.phone ?? null,
+      clinic_email: s?.email ?? null,
       clinic_address: s?.address ?? null,
     }
     await createContactWithClinic(input)

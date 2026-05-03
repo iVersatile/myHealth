@@ -178,6 +178,7 @@ pub struct ContactCreateWithClinicInput {
     // If Some, a clinic contact is created and linked atomically.
     pub clinic_name: Option<String>,
     pub clinic_phone: Option<String>,
+    pub clinic_email: Option<String>,
     pub clinic_address: Option<String>,
 }
 
@@ -231,12 +232,13 @@ pub fn contacts_create_with_clinic(
                 .unwrap_or_else(|| {
                     let id = Uuid::new_v4().to_string();
                     tx.execute(
-                        "INSERT INTO clinics (id, name, phone, address, created_at) \
-                         VALUES (?, ?, ?, ?, ?)",
+                        "INSERT INTO clinics (id, name, phone, email, address, created_at) \
+                         VALUES (?, ?, ?, ?, ?, ?)",
                         rusqlite::params![
                             id,
                             clinic_name,
                             input.clinic_phone,
+                            input.clinic_email,
                             input.clinic_address,
                             now,
                         ],

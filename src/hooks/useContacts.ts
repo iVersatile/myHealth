@@ -31,6 +31,7 @@ export interface ContactCreateWithClinicInput {
   notes?: string | null
   clinic_name?: string | null
   clinic_phone?: string | null
+  clinic_email?: string | null
   clinic_address?: string | null
 }
 
