@@ -1,16 +1,26 @@
-/// Maps text keywords to a suggested category string.
+/// Maps text keywords to a suggested category using position-weighted scoring.
 ///
-/// Returns the first matching category path, or None if no specialty is detected.
+/// Matches in the first 60% of the text score 2; matches in the second 40% score 1.
+/// This prevents boilerplate footers (e.g., department extension lists on payment
+/// receipts) from overriding medically relevant content in the document body.
 pub fn suggest_category(text: &str) -> Option<String> {
     let lower = text.to_lowercase();
+    let split = (lower.len() as f64 * 0.6) as usize;
 
     let mapping: &[(&[&str], &str)] = &[
         (
-            &["gastroenterolog", "colonoscopy", "endoscopy", "crohn"],
+            &["gastroenterolog", "colonoscopy", "crohn"],
             "Internal Medicine → Gastroenterology",
         ),
         (
-            &["cardiol", "echocardiogram", "arrhythmia", "myocardial"],
+            &[
+                "cardiol",
+                "echocardiogram",
+                "echocardiograph",
+                "arrhythmia",
+                "myocardial",
+                "cardiograph",
+            ],
             "Internal Medicine → Cardiology",
         ),
         (
@@ -122,14 +132,27 @@ pub fn suggest_category(text: &str) -> Option<String> {
         ),
     ];
 
+    let mut best_category: Option<&str> = None;
+    let mut best_score: u32 = 0;
+
     for (keywords, category) in mapping {
-        for kw in *keywords {
-            if lower.contains(kw) {
-                return Some((*category).to_string());
-            }
+        let score: u32 = keywords
+            .iter()
+            .map(|kw| {
+                lower
+                    .match_indices(kw)
+                    .map(|(pos, _)| if pos < split { 2 } else { 1 })
+                    .sum::<u32>()
+            })
+            .sum();
+
+        if score > best_score {
+            best_score = score;
+            best_category = Some(category);
         }
     }
-    None
+
+    best_category.map(|s| s.to_string())
 }
 
 /// Extracts document-level tags from text (specialty name, invoice indicator).
@@ -200,6 +223,38 @@ mod tests {
             suggest_category(text),
             Some("Internal Medicine → Cardiology".to_string())
         );
+    }
+
+    #[test]
+    fn suggests_cardiology_from_echocardiograph_keyword() {
+        // "Echocardiograph" appears in real London Clinic invoices without the "-gram" suffix.
+        let text = "Echocardiograph performed by Ms Ying Wang at The London Clinic.";
+        assert_eq!(
+            suggest_category(text),
+            Some("Internal Medicine → Cardiology".to_string())
+        );
+    }
+
+    #[test]
+    fn endoscopy_in_footer_does_not_trigger_gastroenterology() {
+        // Simulates a London Clinic payment receipt where the real procedure
+        // (Echocardiograph) is in the body and the department extension list
+        // (including "Endoscopy - 3145") is in the footer.
+        let body = "INVOICE\nEchocardiograph\nCardiograph\nThe London Clinic\n".repeat(10);
+        let footer = "DEPARTMENT EXTENSIONS\nEndoscopy - 3145\nPhysiotherapy - 3200\n".repeat(5);
+        let text = format!("{body}{footer}");
+        assert_eq!(
+            suggest_category(&text),
+            Some("Internal Medicine → Cardiology".to_string())
+        );
+    }
+
+    #[test]
+    fn endoscopy_alone_does_not_suggest_gastroenterology() {
+        let text = "Endoscopy department extension 3145.";
+        // "endoscopy" was removed from the gastroenterology keyword list.
+        // No other keyword matches, so result is None.
+        assert_eq!(suggest_category(text), None);
     }
 
     #[test]
