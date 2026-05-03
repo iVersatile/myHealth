@@ -91,14 +91,17 @@ export default function DocumentsPage() {
     setApptSuggestionLoading(true)
     try {
       const { suggestion, documentId } = apptSuggestion
+      const rawDate = suggestion.appt_date
+      const apptDate = rawDate.includes('T') ? rawDate : `${rawDate}T00:00:00`
       const appt = await invoke<Appointment>('appointments_create', {
         input: {
           title: suggestion.title,
-          appt_date: suggestion.appt_date,
+          appt_date: apptDate,
           doctor_name: suggestion.doctor_name ?? null,
           clinic_name: suggestion.clinic_name ?? null,
           specialty: suggestion.specialty ?? null,
           notes: null,
+          status: 'completed',
         },
       })
       await invoke('link_document_to_appointment', {

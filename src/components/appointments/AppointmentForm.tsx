@@ -24,7 +24,8 @@ interface AppointmentFormProps {
 }
 
 function isoToDatetimeLocal(iso: string): string {
-  return iso.slice(0, 16)
+  const normalised = iso.length === 10 ? `${iso}T00:00` : iso
+  return normalised.slice(0, 16)
 }
 
 function datetimeLocalToIso(local: string): string {
