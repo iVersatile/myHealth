@@ -185,6 +185,7 @@ pub struct ContactCreateWithClinicInput {
 
 /// Creates a person contact and, when `clinic_name` is provided, a clinic entity in a single
 /// SQLite transaction. The clinic is written to the `clinics` table (not contacts) per V3-F8.
+#[allow(dead_code)]
 #[tauri::command]
 pub fn contacts_create_with_clinic(
     input: ContactCreateWithClinicInput,
