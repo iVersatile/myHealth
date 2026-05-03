@@ -317,7 +317,6 @@ pub fn auth_change_password(
     let salt = load_salt(&data_dir).map_err(CommandError::Internal)?;
     validate_password_strength(&new_password).map_err(CommandError::Internal)?;
     let old_hex = crypto::key_to_hex(&crypto::derive_key(&old_password, &salt));
-    let new_hex = crypto::key_to_hex(&crypto::derive_key(&new_password, &salt));
 
     // Verify old password matches the stored key.
     {
@@ -327,19 +326,48 @@ pub fn auth_change_password(
         }
     }
 
-    // Rekey the database.
+    // PRAGMA rekey is unreliable with bundled-sqlcipher-vendored-openssl — it may
+    // silently succeed without actually rekeying the file, leaving the DB keyed with
+    // the old key while state.key_hex holds the new key. Use the Online Backup API
+    // (same pattern as the iteration migration in unlock_internal).
+    let new_salt = generate_salt();
+    let new_hex = crypto::key_to_hex(&crypto::derive_key(&new_password, &new_salt));
+    let db_file = db_path(&data_dir);
+    let tmp_file = db_file.with_extension("db.rekey_tmp");
     {
         let db_guard = state.db.lock().unwrap();
         let conn = CommandContext::new(&db_guard)?.conn;
-        if new_hex.len() != 64 || !new_hex.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err(CommandError::Internal(
-                "rekey value must be exactly 64 hex characters".into(),
-            ));
-        }
-        conn.execute_batch(&format!("PRAGMA rekey = \"x'{new_hex}'\";"))
-            .map_err(|e| CommandError::Internal(format!("rekey failed: {e}")))?;
+        let mut new_conn = db::open_db(
+            tmp_file
+                .to_str()
+                .ok_or(CommandError::Internal("tmp path not valid UTF-8".into()))?,
+            &new_hex,
+        )
+        .map_err(|e| CommandError::Internal(format!("open tmp db: {e}")))?;
+        let backup = rusqlite::backup::Backup::new(conn, &mut new_conn)
+            .map_err(|e| CommandError::Internal(format!("backup init: {e}")))?;
+        backup
+            .run_to_completion(1024, std::time::Duration::ZERO, None)
+            .map_err(|e| CommandError::Internal(format!("backup copy: {e}")))?;
     }
 
+    // Drop old connection, swap files, remove stale WAL artifacts.
+    {
+        state.db.lock().unwrap().take();
+    }
+    std::fs::rename(&tmp_file, &db_file)
+        .map_err(|e| CommandError::Internal(format!("rename rekeyed db: {e}")))?;
+    let _ = std::fs::remove_file(db_file.with_extension("db-wal"));
+    let _ = std::fs::remove_file(db_file.with_extension("db-shm"));
+
+    // Persist new salt and iteration count, then reopen.
+    std::fs::write(salt_path(&data_dir), new_salt)
+        .map_err(|e| CommandError::Internal(format!("write salt: {e}")))?;
+    write_iterations(&data_dir, crypto::ITERATIONS).map_err(CommandError::Internal)?;
+    let new_conn = open_db_for_path(&data_dir, &new_hex)
+        .map_err(|e| CommandError::Internal(format!("reopen after rekey: {e}")))?;
+
+    *state.db.lock().unwrap() = Some(new_conn);
     *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(new_hex));
     Ok(())
 }
