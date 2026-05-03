@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — Task 26.4
+Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — Task 26.5
 ```
 
 ---
@@ -1517,7 +1517,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-▶ **26.4 — UploadDialog: `autoSaveClinic` writes to `clinics` table**
+[x] **26.4 — UploadDialog: `autoSaveClinic` writes to `clinics` table**
    - File: `src/components/documents/UploadDialog.tsx`
    - Replace `contacts_create({ role: 'clinic', name })` call in `autoSaveClinic` with:
      1. `invoke('clinics_create_if_not_exists', { name: clinicName })` → returns clinic id.
@@ -1528,7 +1528,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-[ ] **26.5 — Clinics page: tree view component**
+▶ **26.5 — Clinics page: tree view component**
    - File: `src/app/(app)/clinics/page.tsx` (rewrite), new component `src/components/clinics/ClinicTree.tsx`
    - Replace `useContacts('clinic')` with a new hook `useClinics()` that calls `clinics_list_with_contacts`.
    - `ClinicTree` renders:

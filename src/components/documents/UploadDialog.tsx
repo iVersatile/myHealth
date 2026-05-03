@@ -434,27 +434,18 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       if (clinicSuggestions.some((c) => c.name === cs.clinic)) return
                       setClinicPhase({ kind: 'saving' })
                       try {
-                        const matchingClinic = clinicSuggestions.find((c) => c.name === cs.clinic)
-                        const clinicContact = await invoke<{ id: string }>('contacts_create', {
-                          input: {
-                            name: cs.clinic,
-                            role: 'clinic',
-                            specialty: null,
-                            phone: matchingClinic ? null : null,
-                            email: null,
-                            clinic: null,
-                            address: matchingClinic?.addresses[0] ?? null,
-                            notes: null,
-                          },
+                        const clinic = await invoke<{ id: string }>('clinics_create_if_not_exists', {
+                          name: cs.clinic,
+                          address: null,
+                          phone: null,
+                          companyRegistrationNumber: null,
+                          addresses: [],
                         })
-                        await invoke('contacts_update', {
-                          input: { id: personContactId, contact_clinic_id: clinicContact.id },
+                        await invoke('clinics_link_contact', {
+                          clinicId: clinic.id,
+                          contactId: personContactId,
                         })
                         setClinicPhase({ kind: 'saved' })
-                        setDismissedClinics((prev) => {
-                          if (matchingClinic) return new Set([...prev, matchingClinic.name])
-                          return prev
-                        })
                       } catch {
                         setClinicPhase({ kind: 'idle' })
                       }
