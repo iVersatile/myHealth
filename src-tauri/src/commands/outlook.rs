@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::State;
 
-use super::{AppState, CommandError};
+use super::{AppState, CommandContext, CommandError};
 
 const CLIENT_ID: &str = "00000000-0000-0000-0000-000000000000";
 const REDIRECT_URI: &str = "http://localhost:62749";
@@ -294,11 +294,8 @@ pub async fn outlook_exchange_code(
         .refresh_token
         .ok_or_else(|| CommandError::Internal("no refresh_token in response".into()))?;
 
-    let db = state
-        .db
-        .lock()
-        .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
+    let db = state.db.lock()?;
+    let conn = CommandContext::new(&db)?.conn;
 
     let key = format!("outlook_refresh_token_{user_id}");
     conn.execute(
@@ -318,11 +315,8 @@ pub async fn outlook_sync(
 ) -> Result<usize, CommandError> {
     // Load refresh token without holding the mutex across await
     let refresh_token = {
-        let db = state
-            .db
-            .lock()
-            .map_err(|e| CommandError::Internal(e.to_string()))?;
-        let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
+        let db = state.db.lock()?;
+        let conn = CommandContext::new(&db)?.conn;
         let key = format!("outlook_refresh_token_{user_id}");
         conn.query_row(
             "SELECT value FROM settings WHERE key = ?1",
@@ -335,11 +329,8 @@ pub async fn outlook_sync(
     let token = refresh_access_token(&refresh_token, TOKEN_BASE).await?;
 
     if let Some(new_refresh) = &token.refresh_token {
-        let db = state
-            .db
-            .lock()
-            .map_err(|e| CommandError::Internal(e.to_string()))?;
-        let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
+        let db = state.db.lock()?;
+        let conn = CommandContext::new(&db)?.conn;
         let key = format!("outlook_refresh_token_{user_id}");
         conn.execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2) \
@@ -359,11 +350,8 @@ pub async fn outlook_sync(
 
     let events = fetch_calendar_events(&token.access_token, &start, &end, GRAPH_BASE).await?;
 
-    let db = state
-        .db
-        .lock()
-        .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
+    let db = state.db.lock()?;
+    let conn = CommandContext::new(&db)?.conn;
     upsert_graph_events(conn, events, &user_id)
 }
 
@@ -372,11 +360,8 @@ pub fn outlook_is_connected(
     user_id: String,
     state: State<'_, AppState>,
 ) -> Result<bool, CommandError> {
-    let db = state
-        .db
-        .lock()
-        .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
+    let db = state.db.lock()?;
+    let conn = CommandContext::new(&db)?.conn;
     let key = format!("outlook_refresh_token_{user_id}");
     let exists: bool = conn
         .query_row(
@@ -391,11 +376,8 @@ pub fn outlook_is_connected(
 
 #[tauri::command]
 pub fn outlook_disconnect(user_id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
-    let db = state
-        .db
-        .lock()
-        .map_err(|e| CommandError::Internal(e.to_string()))?;
-    let conn = db.as_ref().ok_or(CommandError::DbLocked)?;
+    let db = state.db.lock()?;
+    let conn = CommandContext::new(&db)?.conn;
     let key = format!("outlook_refresh_token_{user_id}");
     conn.execute(
         "DELETE FROM settings WHERE key = ?1",
