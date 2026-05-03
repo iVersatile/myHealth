@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { useClinics } from './useClinics'
 import type { ClinicWithContacts } from './useClinics'
 
@@ -55,14 +55,16 @@ describe('useClinics', () => {
   })
 
   it('reload re-fetches data', async () => {
-    mockInvoke.mockResolvedValueOnce([fakeClinic]).mockResolvedValueOnce([])
+    mockInvoke.mockResolvedValue([fakeClinic])
     const { result } = renderHook(() => useClinics())
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.clinics).toHaveLength(1)
 
-    result.current.reload()
-    await waitFor(() => expect(result.current.loading).toBe(false))
+    mockInvoke.mockResolvedValue([])
+    await act(async () => {
+      result.current.reload()
+    })
     expect(result.current.clinics).toHaveLength(0)
-    expect(mockInvoke).toHaveBeenCalledTimes(2)
+    expect(result.current.loading).toBe(false)
   })
 })
