@@ -103,6 +103,28 @@ describe('ApptSuggestionBanner', () => {
     expect(onConfirm).toHaveBeenCalledWith('Dr. Jones')
   })
 
+  it('shows clinic name when suggestion includes clinic_name', () => {
+    render(
+      <ApptSuggestionBanner
+        suggestion={serviceSuggestion}
+        onConfirm={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    )
+    expect(screen.getByText(/London Clinic/)).toBeTruthy()
+  })
+
+  it('does not render a clinic row when clinic_name is null', () => {
+    render(
+      <ApptSuggestionBanner
+        suggestion={baseSuggestion}
+        onConfirm={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText(/Clinic:/)).toBeNull()
+  })
+
   it('calls onDismiss when Dismiss is clicked', () => {
     const onDismiss = vi.fn()
     render(

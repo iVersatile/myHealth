@@ -47,6 +47,11 @@ export function ApptSuggestionBanner({ suggestion, onConfirm, onDismiss, isLoadi
           {' — '}
           {suggestion.appt_date}
         </p>
+        {suggestion.clinic_name && (
+          <p className="mt-0.5 text-xs text-blue-600">
+            <span className="font-medium">Clinic:</span> {suggestion.clinic_name}
+          </p>
+        )}
         <div className="mt-2 space-y-1.5">
           <label className="block text-xs font-medium text-blue-800">
             Doctor / Clinician
