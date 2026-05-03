@@ -1351,9 +1351,8 @@ pub struct AppointmentSuggestion {
     pub title: String,
     pub doctor_name: Option<String>,
     pub specialty: Option<String>,
+    pub clinic_name: Option<String>,
 }
-
-const INVOICE_TYPE_TAGS: &[&str] = &["invoice", "receipt", "bill"];
 
 /// Returns a pre-filled appointment suggestion when the document has an
 /// `activity_date` AND one of the invoice/receipt/bill type tags in its
@@ -1387,10 +1386,13 @@ pub fn appointments_suggest_from_document(
 
     let text = extracted_text.unwrap_or_default();
 
-    // Derive doctor_candidates from stored metadata or re-extract.
-    let doctor_candidates: Vec<String> = extracted_metadata
+    let meta_json: Option<serde_json::Value> = extracted_metadata
         .as_deref()
-        .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+        .and_then(|s| serde_json::from_str(s).ok());
+
+    // Derive doctor_candidates from stored metadata or re-extract.
+    let doctor_candidates: Vec<String> = meta_json
+        .as_ref()
         .and_then(|v| {
             v["doctor_candidates"].as_array().map(|arr| {
                 arr.iter()
@@ -1400,16 +1402,16 @@ pub fn appointments_suggest_from_document(
         })
         .unwrap_or_else(|| crate::extraction::doctor::extract_doctor_candidates(&text));
 
+    // Re-extract contact suggestions live — the stored metadata JSON does not
+    // persist contact_suggestions, so reading it from meta_json always yields None.
+    let clinic_name: Option<String> =
+        crate::extraction::contact::extract_contact_suggestions(&text)
+            .into_iter()
+            .next()
+            .and_then(|c| c.clinic);
+
     let auto_tags =
         crate::extraction::auto_extract_tags(&text, &doctor_candidates, Some(&appt_date));
-
-    // Require at least one invoice/receipt/bill type tag.
-    let has_invoice_tag = auto_tags
-        .iter()
-        .any(|t| INVOICE_TYPE_TAGS.contains(&t.as_str()));
-    if !has_invoice_tag {
-        return Ok(None);
-    }
 
     // First UPPERCASE-only tag (no lowercase letters) that is not a date.
     let specialty: Option<String> = auto_tags
@@ -1422,7 +1424,7 @@ pub fn appointments_suggest_from_document(
         })
         .cloned();
 
-    let doctor_name: Option<String> = doctor_candidates.into_iter().next();
+    let doctor_name: Option<String> = crate::extraction::doctor::extract_performing_doctor(&text);
 
     let title = match (&specialty, &doctor_name) {
         (Some(sp), Some(dr)) => format!("{sp} with {dr}"),
@@ -1436,5 +1438,6 @@ pub fn appointments_suggest_from_document(
         title,
         doctor_name,
         specialty,
+        clinic_name,
     }))
 }

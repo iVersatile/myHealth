@@ -4,10 +4,11 @@ import { ApptSuggestionBanner } from './ApptSuggestionBanner'
 import type { AppointmentSuggestion } from './ApptSuggestionBanner'
 
 const baseSuggestion: AppointmentSuggestion = {
-  apptDate: '2022-01-21',
+  appt_date: '2022-01-21',
   title: 'PHYSIOTHERAPY with Dr. Smith',
-  doctorName: 'Dr. Smith',
+  doctor_name: 'Dr. Smith',
   specialty: 'PHYSIOTHERAPY',
+  clinic_name: null,
 }
 
 describe('ApptSuggestionBanner', () => {
@@ -92,10 +93,11 @@ describe('ApptSuggestionBanner', () => {
 
   it('renders with null doctorName and specialty', () => {
     const minimal: AppointmentSuggestion = {
-      apptDate: '2022-01-21',
+      appt_date: '2022-01-21',
       title: 'Medical appointment',
-      doctorName: null,
+      doctor_name: null,
       specialty: null,
+      clinic_name: null,
     }
     render(
       <ApptSuggestionBanner

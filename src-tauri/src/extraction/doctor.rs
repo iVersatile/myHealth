@@ -32,6 +32,48 @@ pub fn extract_doctor_candidates(text: &str) -> Vec<String> {
     results
 }
 
+/// Returns the first doctor name that does NOT appear in a referral context
+/// (e.g. "Referred by Dr. Smith", "Requested by Dr. Jones").
+/// Falls back to the first candidate when all are in referral contexts.
+pub fn extract_performing_doctor(text: &str) -> Option<String> {
+    const REFERRAL_PHRASES: &[&str] = &[
+        "referred by",
+        "referring dr",
+        "referring physician",
+        "referring doctor",
+        "requested by",
+        "ordered by",
+        "from dr",
+        "from prof",
+        "copy to",
+        "cc:",
+        "gp:",
+    ];
+    const WINDOW: usize = 60;
+
+    let re = dr_regex();
+    let lower = text.to_lowercase();
+    // Track previous match end so referral phrases from earlier candidates
+    // don't bleed into the context window of later candidates.
+    let mut prev_match_end = 0usize;
+
+    for cap in re.captures_iter(text) {
+        let name = format!("{} {} {}", &cap[1], &cap[2], &cap[3]);
+        let match_start = cap.get(0).unwrap().start();
+        let match_end = cap.get(0).unwrap().end();
+        let context_start = match_start.saturating_sub(WINDOW).max(prev_match_end);
+        let context = &lower[context_start..match_start];
+        let is_referral = REFERRAL_PHRASES.iter().any(|p| context.contains(p));
+
+        if !is_referral {
+            return Some(name);
+        }
+        prev_match_end = match_end;
+    }
+
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -100,5 +142,42 @@ mod tests {
         let text = "Prof. Sarah Jones led the research.";
         let candidates = extract_doctor_candidates(text);
         assert_eq!(candidates, vec!["Prof. Sarah Jones"]);
+    }
+
+    // --- extract_performing_doctor ---
+
+    #[test]
+    fn performing_doctor_skips_referred_by() {
+        let text = "Referred by Dr. John Smith. Performed by Dr. Alice Brown.";
+        assert_eq!(
+            extract_performing_doctor(text).as_deref(),
+            Some("Dr. Alice Brown")
+        );
+    }
+
+    #[test]
+    fn performing_doctor_skips_requested_by() {
+        let text = "Requested by Dr. John Smith. Cardiologist Dr. Alice Brown.";
+        assert_eq!(
+            extract_performing_doctor(text).as_deref(),
+            Some("Dr. Alice Brown")
+        );
+    }
+
+    #[test]
+    fn performing_doctor_returns_none_when_all_referral() {
+        let text = "Referred by Dr. John Smith. Ordered by Dr. Alice Brown.";
+        assert!(extract_performing_doctor(text).is_none());
+    }
+
+    #[test]
+    fn performing_doctor_returns_none_when_empty() {
+        assert!(extract_performing_doctor("No doctors here.").is_none());
+    }
+
+    #[test]
+    fn performing_doctor_returns_none_when_only_referral_candidate() {
+        let text = "Referred by Dr. John Smith for echocardiogram.";
+        assert!(extract_performing_doctor(text).is_none());
     }
 }
