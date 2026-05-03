@@ -51,6 +51,7 @@ export function ClinicTree({ clinics, onDeleted }: ClinicTreeProps) {
                 className="flex items-center gap-2 text-left flex-1 min-w-0"
                 onClick={() => toggleExpanded(clinic.id)}
                 aria-expanded={isExpanded}
+                aria-label={`Toggle ${clinic.name}`}
               >
                 <span className="text-[var(--color-text-muted)] text-xs select-none" aria-hidden>
                   {isExpanded ? '▾' : '▸'}
