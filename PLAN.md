@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — Task 26.5
+Phase 26 — V3-F8 Clinic Entity Redesign (Option A) — Task 26.6
 ```
 
 ---
@@ -1528,7 +1528,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-▶ **26.5 — Clinics page: tree view component**
+[x] **26.5 — Clinics page: tree view component**
    - File: `src/app/(app)/clinics/page.tsx` (rewrite), new component `src/components/clinics/ClinicTree.tsx`
    - Replace `useContacts('clinic')` with a new hook `useClinics()` that calls `clinics_list_with_contacts`.
    - `ClinicTree` renders:
@@ -1540,7 +1540,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-[ ] **26.6 — V3-F8 unit + integration tests**
+▶ **26.6 — V3-F8 unit + integration tests**
    - Files: `src-tauri/src/commands/clinics.rs` (extend), `src/__tests__/clinics.test.ts` (new or extend)
    - Rust unit tests covering TC-F8-01 through TC-F8-04 (see PRD_V3 § V3-F8 acceptance tests).
    - Frontend: Vitest tests for `useClinics` hook mocking `clinics_list_with_contacts` invoke.
