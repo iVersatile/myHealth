@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 
 interface TrashItem {
@@ -48,21 +48,20 @@ export function TrashClient() {
   const [confirmEmpty, setConfirmEmpty] = useState(false)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
 
-  const load = useCallback(async () => {
-    try {
-      const result = await invoke<TrashItem[]>('trash_list')
-      setItems(result)
-      setError(null)
-    } catch (e) {
-      setError(String(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    void load()
-  }, [load])
+    async function run() {
+      try {
+        const result = await invoke<TrashItem[]>('trash_list')
+        setItems(result)
+        setError(null)
+      } catch (e) {
+        setError(String(e))
+      } finally {
+        setLoading(false)
+      }
+    }
+    void run()
+  }, [])
 
   async function handleRestore(item: TrashItem) {
     setBusyIds((prev) => new Set(prev).add(item.id))
