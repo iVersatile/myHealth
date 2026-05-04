@@ -150,10 +150,12 @@ function ContactCard({
   const [showAddresses, setShowAddresses] = useState(false)
   const [addresses, setAddresses] = useState<Address[]>([])
 
+  const linkedClinicId = contact.contact_clinic_id ?? null
+
   function loadAddresses() {
-    invoke<Address[]>('contact_addresses_list', { contactId: contact.id })
-      .then(setAddresses)
-      .catch(() => {})
+    const cmd = linkedClinicId ? 'clinic_addresses_list' : 'contact_addresses_list'
+    const args = linkedClinicId ? { clinicId: linkedClinicId } : { contactId: contact.id }
+    invoke<Address[]>(cmd, args).then(setAddresses).catch(() => {})
   }
 
   function toggleAddresses() {
@@ -194,8 +196,8 @@ function ContactCard({
         <div className="mb-3">
           <AddressList
             addresses={addresses}
-            entityId={contact.id}
-            entityType="contact"
+            entityId={linkedClinicId ?? contact.id}
+            entityType={linkedClinicId ? 'clinic' : 'contact'}
             onChanged={loadAddresses}
           />
         </div>

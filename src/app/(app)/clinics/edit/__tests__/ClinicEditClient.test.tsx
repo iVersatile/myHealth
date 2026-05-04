@@ -91,7 +91,12 @@ describe('ClinicEditClient — edit form', () => {
     mockInvoke.mockReset()
     mockRouterPush.mockClear()
     mockId = 'clinic-1'
-    mockInvoke.mockResolvedValue(makeClinic())
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'clinic_addresses_list') return Promise.resolve([])
+      if (cmd === 'clinics_get_linked_contacts') return Promise.resolve([])
+      if (cmd === 'clinics_get_linked_documents') return Promise.resolve([])
+      return Promise.resolve(makeClinic())
+    })
   })
 
   it('renders form pre-filled with clinic data', async () => {
@@ -154,7 +159,13 @@ describe('ClinicEditClient — edit form', () => {
   })
 
   it('populates null address/phone/crn as empty strings', async () => {
-    mockInvoke.mockResolvedValue(makeClinic({ address: null, phone: null, company_registration_number: null }))
+    const nullClinic = makeClinic({ address: null, phone: null, company_registration_number: null })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'clinic_addresses_list') return Promise.resolve([])
+      if (cmd === 'clinics_get_linked_contacts') return Promise.resolve([])
+      if (cmd === 'clinics_get_linked_documents') return Promise.resolve([])
+      return Promise.resolve(nullClinic)
+    })
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
     expect((screen.getByLabelText('Address') as HTMLInputElement).value).toBe('')
@@ -197,6 +208,7 @@ describe('ClinicEditClient — linked contacts & documents', () => {
   } = {}) {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'clinics_get') return Promise.resolve(makeClinic())
+      if (cmd === 'clinic_addresses_list') return Promise.resolve([])
       if (cmd === 'clinics_get_linked_contacts') return Promise.resolve(contacts)
       if (cmd === 'clinics_get_linked_documents') return Promise.resolve(documents)
       return Promise.resolve(undefined)

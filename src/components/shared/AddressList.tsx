@@ -168,13 +168,15 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
     setError(null)
     try {
       await invoke(updateCmd(entityType), {
-        id: editId,
-        label: editForm.label.trim() || null,
-        line1: editForm.line1.trim(),
-        line2: editForm.line2.trim() || null,
-        city: editForm.city.trim() || null,
-        postcode: editForm.postcode.trim() || null,
-        country: editForm.country.trim() || null,
+        input: {
+          id: editId,
+          label: editForm.label.trim() || null,
+          line1: editForm.line1.trim(),
+          line2: editForm.line2.trim() || null,
+          city: editForm.city.trim() || null,
+          postcode: editForm.postcode.trim() || null,
+          country: editForm.country.trim() || null,
+        },
       })
       setEditId(null)
       onChanged()
@@ -192,12 +194,14 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
     try {
       await invoke(createCmd(entityType), {
         [entityKey(entityType)]: entityId,
-        label: addForm.label.trim() || null,
-        line1: addForm.line1.trim(),
-        line2: addForm.line2.trim() || null,
-        city: addForm.city.trim() || null,
-        postcode: addForm.postcode.trim() || null,
-        country: addForm.country.trim() || null,
+        input: {
+          label: addForm.label.trim() || null,
+          line1: addForm.line1.trim(),
+          line2: addForm.line2.trim() || null,
+          city: addForm.city.trim() || null,
+          postcode: addForm.postcode.trim() || null,
+          country: addForm.country.trim() || null,
+        },
       })
       setAdding(false)
       onChanged()
