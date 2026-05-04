@@ -12,10 +12,15 @@ interface UploadDialogProps {
   onUploaded: (doc: Document, unsavedClinicSuggestions: ClinicSuggestion[]) => void
 }
 
+export interface ExtractedAddress {
+  label: string | null
+  line1: string
+}
+
 export interface ClinicSuggestion {
   name: string
   company_registration_number: string | null
-  addresses: string[]
+  addresses: ExtractedAddress[]
 }
 
 interface ContactSuggestion {
@@ -657,7 +662,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                               data-testid="clinic-address-item"
                               className="text-[var(--color-text-secondary)]"
                             >
-                              {addr}
+                              {addr.label ? `${addr.label}: ` : ''}{addr.line1}
                             </div>
                           ))}
                         </div>

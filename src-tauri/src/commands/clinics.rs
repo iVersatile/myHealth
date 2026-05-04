@@ -18,13 +18,19 @@ pub struct Clinic {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ClinicAddressInput {
+    pub label: Option<String>,
+    pub line1: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ClinicCreateInput {
     pub name: String,
     pub address: Option<String>,
     pub phone: Option<String>,
     pub company_registration_number: Option<String>,
     #[serde(default)]
-    pub addresses: Vec<String>,
+    pub addresses: Vec<ClinicAddressInput>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -131,9 +137,9 @@ pub fn clinics_create(
     for addr in &input.addresses {
         let addr_id = Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary, created_at) \
-             VALUES (?, ?, ?, 0, ?)",
-            rusqlite::params![addr_id, id, addr, now],
+            "INSERT INTO clinic_addresses (id, clinic_id, label, line1, is_primary, created_at) \
+             VALUES (?, ?, ?, ?, 0, ?)",
+            rusqlite::params![addr_id, id, addr.label, addr.line1, now],
         )?;
     }
 
@@ -350,9 +356,9 @@ pub fn clinics_create_if_not_exists(
     for addr in &input.addresses {
         let addr_id = Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary, created_at) \
-             VALUES (?, ?, ?, 0, ?)",
-            rusqlite::params![addr_id, id, addr, now],
+            "INSERT INTO clinic_addresses (id, clinic_id, label, line1, is_primary, created_at) \
+             VALUES (?, ?, ?, ?, 0, ?)",
+            rusqlite::params![addr_id, id, addr.label, addr.line1, now],
         )?;
     }
 

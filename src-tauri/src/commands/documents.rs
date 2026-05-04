@@ -1124,7 +1124,7 @@ pub struct ContactSuggestionDto {
 pub struct ClinicSuggestionDto {
     pub name: String,
     pub company_registration_number: Option<String>,
-    pub addresses: Vec<String>,
+    pub addresses: Vec<crate::extraction::clinic::ExtractedAddress>,
 }
 
 #[derive(Debug, Serialize)]

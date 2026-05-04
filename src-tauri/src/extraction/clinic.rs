@@ -1,4 +1,11 @@
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ExtractedAddress {
+    pub label: Option<String>,
+    pub line1: String,
+}
 
 /// Extract a UK company registration number from OCR text.
 /// Matches patterns like "Company Registration No: 6780032" or "Company Registration Number 01234567".
@@ -12,7 +19,9 @@ pub fn extract_company_registration_number(text: &str) -> Option<String> {
 
 /// Extract up to 5 postal addresses from OCR text.
 /// An address is a contiguous block of lines that contains a UK postcode.
-pub fn extract_clinic_addresses(text: &str) -> Vec<String> {
+/// If the line immediately before the block is all-caps, ≤ 4 words, and contains
+/// at least one alphabetic character, it is treated as a label for that address.
+pub fn extract_clinic_addresses(text: &str) -> Vec<ExtractedAddress> {
     let postcode_re = Regex::new(r"[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}").expect("valid regex");
 
     let lines: Vec<&str> = text.lines().collect();
@@ -27,14 +36,43 @@ pub fn extract_clinic_addresses(text: &str) -> Vec<String> {
                 .find(|&j| !lines[j].trim().is_empty())
                 .unwrap_or(i);
             let end = (i + 1).min(lines.len());
-            let candidate = lines[block_start..end]
+
+            // Detect label: all-caps, ≤ 4 words, contains at least one letter.
+            // Check the first line of the block first; if it matches, skip it
+            // from the address content. Otherwise check the line before the block.
+            let is_label = |s: &str| -> bool {
+                let words: Vec<&str> = s.split_whitespace().collect();
+                !s.is_empty()
+                    && words.len() <= 4
+                    && s == s.to_uppercase()
+                    && s.chars().any(|c| c.is_alphabetic())
+            };
+
+            let first_line = lines[block_start].trim();
+            let (label, content_start) = if is_label(first_line) && block_start + 1 < end {
+                (Some(first_line.to_string()), block_start + 1)
+            } else if block_start > 0 {
+                let prev = lines[block_start - 1].trim();
+                if is_label(prev) {
+                    (Some(prev.to_string()), block_start)
+                } else {
+                    (None, block_start)
+                }
+            } else {
+                (None, block_start)
+            };
+
+            let candidate = lines[content_start..end]
                 .iter()
                 .map(|l| l.trim())
                 .filter(|l| !l.is_empty())
                 .collect::<Vec<_>>()
                 .join(", ");
             if !candidate.is_empty() {
-                addresses.push(candidate);
+                addresses.push(ExtractedAddress {
+                    label,
+                    line1: candidate,
+                });
             }
             i = end;
         } else {
@@ -104,5 +142,45 @@ B1 1BB
     fn returns_empty_when_no_postcode() {
         let text = "No address here at all";
         assert!(extract_clinic_addresses(text).is_empty());
+    }
+
+    #[test]
+    fn extracts_label_from_all_caps_line_before_block() {
+        let text = "\
+MAIN RECEPTION
+1 Hospital Road
+London
+SW1A 1AA
+";
+        let addresses = extract_clinic_addresses(text);
+        assert_eq!(addresses.len(), 1);
+        assert_eq!(addresses[0].label.as_deref(), Some("MAIN RECEPTION"));
+        assert!(addresses[0].line1.contains("1 Hospital Road"));
+    }
+
+    #[test]
+    fn does_not_use_label_when_line_is_mixed_case() {
+        let text = "\
+Main Reception
+1 Hospital Road
+London
+SW1A 1AA
+";
+        let addresses = extract_clinic_addresses(text);
+        assert_eq!(addresses.len(), 1);
+        assert!(addresses[0].label.is_none());
+    }
+
+    #[test]
+    fn does_not_use_label_when_line_exceeds_four_words() {
+        let text = "\
+THIS IS A VERY LONG LABEL HERE
+1 Hospital Road
+London
+SW1A 1AA
+";
+        let addresses = extract_clinic_addresses(text);
+        assert_eq!(addresses.len(), 1);
+        assert!(addresses[0].label.is_none());
     }
 }
