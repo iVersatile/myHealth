@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29+30 complete. Tasks 31.2/31.3/31.4 complete. ▶ Task 31.5 next. Task 28-E.4 blocked on manual run.
+Phase 29+30 complete. Tasks 31.2–31.8 complete. ▶ Task 31.9 next (manual test approval). Task 28-E.4 blocked on manual run.
 ```
 
 ---
@@ -1821,14 +1821,14 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Update `clinics_create_if_not_exists` and any other clinic-create paths to use new structured `clinic_addresses` insert (map extracted `Vec<String>` to `line1` field, `label=NULL`)
    - Done when: `cargo build` passes; document-upload clinic auto-creation still writes address rows to new schema
 
-▶ [ ] **31.5 — Extraction: label detection for clinic addresses**
+[x] **31.5 — Extraction: label detection for clinic addresses**
    - File: `src-tauri/src/extraction/clinic.rs`
    - `extract_clinic_addresses` currently returns `Vec<String>`; extend to return `Vec<ExtractedAddress>` with `label: Option<String>, line1: String`
    - Label heuristic: if the line immediately before the detected address block is bold (PDF bold marker) or all-caps ≤ 4 words, treat it as the label; otherwise `label = None`
    - Update call sites in `documents.rs` to use new return type
    - Done when: `cargo test` passes; structured address with optional label written on document upload
 
-[ ] **31.6 — Frontend: shared `AddressList` component**
+[x] **31.6 — Frontend: shared `AddressList` component**
    - File: `src/components/shared/AddressList.tsx` (new)
    - Props: `addresses: Address[], entityId: string, entityType: 'clinic' | 'contact', onChanged: () => void`
    - Renders address cards: label (editable inline), line1, line2, city, postcode, country; star icon for is_primary; Delete button per row; "Add address" button at bottom
@@ -1836,19 +1836,19 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Add calls `clinic_address_create` or `contact_address_create`; Delete calls the matching delete command
    - Done when: component renders; add/edit/delete/set-primary all work against Tauri IPC
 
-[ ] **31.7 — Wire `AddressList` into clinic edit page**
+[x] **31.7 — Wire `AddressList` into clinic edit page**
    - File: `src/app/(app)/clinics/edit/ClinicEditClient.tsx`
    - Below existing fields, add `<AddressList entityId={id} entityType="clinic" ... />`
    - Load addresses via `invoke('clinic_addresses_list', { clinicId: id })` on mount
    - Done when: clinic edit page shows address list; add/edit/delete/primary persist
 
-[ ] **31.8 — Wire `AddressList` into contact edit/detail page**
+[x] **31.8 — Wire `AddressList` into contact edit/detail page**
    - File: contact detail page (identify correct file at implementation time)
    - Add `<AddressList entityId={contactId} entityType="contact" ... />` below existing fields
    - Load via `invoke('contact_addresses_list', { contactId })`
    - Done when: contact detail page shows address list; operations persist
 
-[ ] **31.9 — TypeScript check + cargo check + manual test approval**
+▶ [ ] **31.9 — TypeScript check + cargo check + manual test approval**
    - Run `npx tsc --noEmit` and `cargo check`
    - Done when: both pass; user confirms manual test passes
 
