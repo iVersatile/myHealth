@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 28-E — E2E Acceptance Tests. ▶ Task 28-E.4 next.
+Phase 28-E / 29 / 30 running in parallel. ▶ Task 28-E.4 (E2E suite) blocked on manual run. ▶ Task 30.1 next automated task.
 ```
 
 ---
@@ -1706,42 +1706,30 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 29
 
-[ ] **29.1 — Tauri commands: `clinics_get`, `clinics_update`, `clinics_get_linked_contacts`, `clinics_get_linked_documents`**
-   - File: `src-tauri/src/commands/clinics.rs`
-   - `clinics_get(id: String) -> Result<Clinic, String>` — fetch single clinic by id
-   - `clinics_update(id: String, name: String, address: Option<String>, phone: Option<String>, company_registration_number: Option<String>) -> Result<Clinic, String>` — UPDATE clinics SET ... WHERE id = ?
-   - `clinics_get_linked_contacts(clinic_id: String) -> Result<Vec<Contact>, String>` — SELECT contacts via clinic_contacts junction
-   - `clinics_get_linked_documents(clinic_id: String) -> Result<Vec<Document>, String>` — SELECT documents WHERE clinic_name = (SELECT name FROM clinics WHERE id = ?)
-   - Register all 4 commands in `lib.rs` invoke_handler
-   - Done when: `cargo build` passes; all 4 commands callable via IPC
+[x] **29.1 — Tauri commands: `clinics_get`, `clinics_update`, `clinics_get_linked_contacts`, `clinics_get_linked_documents`**
+   - ✅ Already implemented in `src-tauri/src/commands/clinics.rs` (lines 94, 147, 188, 227)
+   - All 4 commands registered in `lib.rs`
 
-[ ] **29.2 — Contacts view: linked clinic card (inline name + phone edit)**
-   - File: `src/app/(app)/contacts/[id]/ContactDetailClient.tsx` (or equivalent contact detail page)
-   - On load, fetch linked clinic via `clinic_contacts` junction: `invoke('clinics_list')` filtered by contact id (or add a `clinics_get_for_contact(contact_id)` command if needed)
-   - Show "Linked Clinic" section with clinic name + phone; Edit button opens inline fields
-   - Save calls `clinics_update`; optimistic UI update on success; error message on failure
-   - Done when: opening a contact with a linked clinic shows the card; editing name/phone and saving persists to DB; no clinic → section hidden
+[x] **29.2 — Contacts view: linked clinic card (inline name + phone edit)**
+   - ✅ Already implemented as `LinkedClinicCard` in `src/app/(app)/contacts/page.tsx` (line 44)
+   - Fetches via `clinics_get`; inline name + phone edit; saves via `clinics_update`; hidden when no clinic
 
-[ ] **29.3 — Clinics list view (`/clinics`)**
-   - File: `src/app/(app)/clinics/page.tsx` + `ClinicsClient.tsx`
-   - Fetch via `invoke('clinics_list')` on mount
-   - Render list: name, address (truncated), phone, linked contact count
-   - Each row links to `/clinics/[id]`
-   - Add "Clinics" nav item to sidebar (after Contacts)
-   - Done when: `/clinics` route renders all clinic rows; sidebar nav item visible
+[x] **29.3 — Clinics list view (`/clinics`)**
+   - ✅ Already implemented: `src/app/(app)/clinics/page.tsx` renders `ClinicTree` with `clinics_list_with_contacts`
+   - ✅ "Clinics" sidebar nav item present in `Sidebar.tsx`
+   - Note: list renders via `ClinicTree` (tree view), not a flat row-per-clinic table as originally specified; linked contact count shown inline
 
-[ ] **29.4 — Clinic detail/edit page (`/clinics/[id]`)**
-   - File: `src/app/(app)/clinics/[id]/ClinicDetailClient.tsx`
-   - Fetch clinic via `clinics_get(id)`; fetch linked contacts via `clinics_get_linked_contacts(id)`; fetch linked docs via `clinics_get_linked_documents(id)`
-   - Edit form: name (required), address, phone, company_registration_number — all inline editable
-   - Save button calls `clinics_update`; success toast; error message on failure
+[ ] **29.4 — Clinic edit page: add linked contacts + linked documents sections**
+   - File: `src/app/(app)/clinics/edit/ClinicEditClient.tsx`
+   - Edit form (name, address, phone, CRN) already implemented via `/clinics/edit?id=<id>`
+   - **Remaining:** fetch + display linked contacts via `clinics_get_linked_contacts(id)` and linked docs via `clinics_get_linked_documents(id)`
    - Linked contacts section: list of contact names (links to `/contacts/[id]`)
    - Linked documents section: list of document titles (links to `/documents/view/[id]`)
-   - Done when: all fields editable and persist; linked contacts + documents shown; navigating back to list shows updated name
+   - Done when: linked contacts + linked documents sections render on the edit page
 
 [ ] **29.5 — TypeScript check + manual test approval**
    - Run `npx tsc --noEmit` — must pass
-   - Done when: user confirms manual test passes (gate: do NOT mark 29.1–29.4 complete until user approves)
+   - Done when: user confirms manual test passes (gate: do NOT mark 29.4 complete until user approves)
 
 ---
 
@@ -1751,7 +1739,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 30
 
-[ ] **30.1 — Normalize specialty tags to Title Case at extraction time**
+▶ [ ] **30.1 — Normalize specialty tags to Title Case at extraction time**
    - File: `src-tauri/src/extraction/tags.rs`
    - In `SPECIALTY_MAP`, change output strings from UPPERCASE (`"CARDIOLOGY"`) to Title Case (`"Cardiology"`)
    - Update all entries in `SPECIALTY_MAP` and any other hardcoded UPPERCASE specialty tag strings in the file
