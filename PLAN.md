@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29+30 complete. Tasks 31.2–31.8 complete. ▶ Task 31.9 next (manual test approval). Task 28-E.4 blocked on manual run.
+Phase 29+30 complete. Tasks 31.2–31.10 complete. ▶ Task 31.11 next (clinic address auto-extraction). Task 28-E.4 blocked on manual run.
 ```
 
 ---
@@ -1848,9 +1848,23 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Load via `invoke('contact_addresses_list', { contactId })`
    - Done when: contact detail page shows address list; operations persist
 
-▶ [ ] **31.9 — TypeScript check + cargo check + manual test approval**
+[x] **31.9 — TypeScript check + cargo check + manual test approval**
    - Run `npx tsc --noEmit` and `cargo check`
    - Done when: both pass; user confirms manual test passes
+
+[x] **31.10 — Fix: specialty tag inconsistency between document auto-tags and appointment specialty**
+   - **Root cause:** `auto_extract_tags()` (tags.rs) SPECIALTY_MAP has only `"cardiol"` for Cardiology; `suggest_category()` (category.rs) additionally matches `"echocardiogram"`, `"echocardiograph"`, `"arrhythmia"`, `"myocardial"`, `"cardiograph"`. If the PDF contains e.g. "arrhythmia" but not "cardiol", the appointment gets "Cardiology" via `suggest_category` but the document auto-tag misses it.
+   - **Fix (Option A):** In `src-tauri/src/extraction/mod.rs`, after computing `auto_tags` and `category_suggestion` (line ~144), extract the leaf of `category_suggestion` (split by `→`, take last, trim) and append to `auto_tags` if not already present (case-insensitive check). Apply the same patch in `appointments_suggest_from_document` (documents.rs line ~1441) if needed.
+   - File: `src-tauri/src/extraction/mod.rs` (primary), optionally `src-tauri/src/commands/documents.rs`
+   - Add unit test: text containing "arrhythmia" but not "cardiol" → `auto_extract_tags` result includes "Cardiology"
+   - Done when: `cargo test` passes; uploading a document with "arrhythmia"/"echocardiogram" produces "Cardiology" in auto-tags
+
+▶ [ ] **31.11 — Fix: clinic address auto-extraction for non-postcode PDF text**
+   - **Root cause:** `extract_clinic_addresses()` uses strict UK postcode regex as anchor (`[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}`). PDFs where OCR renders addresses without valid postcodes (e.g. London Clinic with 3 addresses) produce zero extracted addresses.
+   - **Fix:** Broaden address detection in `src-tauri/src/extraction/clinic.rs`: if fewer than expected addresses are found via postcode anchor, also scan for known London/UK partial postcode prefixes (e.g. W1, EC1, SW1, SE1, E1, N1, NW1, WC) as secondary anchors, or detect multi-line address blocks containing "Street", "Road", "Avenue", "Lane", "Gardens", "London" as fallback.
+   - File: `src-tauri/src/extraction/clinic.rs`
+   - Add fixture test: address block with no full postcode but containing "London" and "Street" → at least 1 address extracted
+   - Done when: `cargo test` passes; London Clinic PDF re-extraction produces ≥1 address from OCR text
 
 ---
 

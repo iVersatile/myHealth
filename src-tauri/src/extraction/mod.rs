@@ -141,7 +141,20 @@ fn extract_inner(path: &Path, app_handle: Option<&tauri::AppHandle>) -> Extracti
     let contact_suggestions = contact::extract_contact_suggestions(&text);
 
     let activity_date = extract_activity_date(&text);
-    let auto_tags = auto_extract_tags(&text, &doctor_candidates, activity_date.as_deref());
+    let mut auto_tags = auto_extract_tags(&text, &doctor_candidates, activity_date.as_deref());
+
+    // Merge category leaf into auto_tags so document tags stay consistent with
+    // appointment specialty even when category.rs matches broader keywords than tags.rs.
+    if let Some(ref suggestion) = category_suggestion {
+        let leaf = suggestion
+            .split('→')
+            .next_back()
+            .unwrap_or(suggestion)
+            .trim();
+        if !leaf.is_empty() && !auto_tags.iter().any(|t| t.eq_ignore_ascii_case(leaf)) {
+            auto_tags.push(leaf.to_string());
+        }
+    }
 
     ExtractionResult {
         text,
@@ -399,6 +412,35 @@ mod tests {
             !result.text.contains("[OCR_TIMEOUT]"),
             "unexpected OCR_TIMEOUT in output; text: {:?}",
             result.text
+        );
+    }
+
+    // ── Specialty tag consistency tests ─────────────────────────────────────
+
+    #[test]
+    fn arrhythmia_text_produces_cardiology_auto_tag() {
+        // "arrhythmia" is matched by category::suggest_category but NOT by
+        // tags.rs SPECIALTY_MAP — the merge step in extract_with_text must bridge the gap.
+        let text = "Patient presented with arrhythmia requiring ECG monitoring.";
+        let doctor_candidates = doctor::extract_doctor_candidates(text);
+        let activity_date = extract_activity_date(text);
+        let mut auto_tags = auto_extract_tags(text, &doctor_candidates, activity_date.as_deref());
+        let category_suggestion = category::suggest_category(text);
+        if let Some(ref suggestion) = category_suggestion {
+            let leaf = suggestion
+                .split('→')
+                .next_back()
+                .unwrap_or(suggestion)
+                .trim();
+            if !leaf.is_empty() && !auto_tags.iter().any(|t| t.eq_ignore_ascii_case(leaf)) {
+                auto_tags.push(leaf.to_string());
+            }
+        }
+        assert!(
+            auto_tags
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case("Cardiology")),
+            "expected 'Cardiology' in auto_tags after merge; got {auto_tags:?}"
         );
     }
 }
