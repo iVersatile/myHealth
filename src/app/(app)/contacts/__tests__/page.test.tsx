@@ -263,4 +263,21 @@ describe('ContactsPage', () => {
     )
     await waitFor(() => expect(screen.queryByTestId('contact-form')).not.toBeInTheDocument())
   })
+
+  it('Save Contact in new mode calls contacts_create', async () => {
+    const created = { ...CONTACT_A, id: 'c-new', name: 'New' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([CONTACT_A])
+      if (cmd === 'contacts_create') return Promise.resolve(created)
+      return Promise.resolve([])
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('+ New')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('+ New'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Contact' }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('contacts_create', expect.anything())
+    )
+    await waitFor(() => expect(screen.queryByTestId('contact-form')).not.toBeInTheDocument())
+  })
 })

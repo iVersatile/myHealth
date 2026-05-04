@@ -691,3 +691,167 @@ describe('DocumentDetailClient — delete', () => {
     })
   })
 })
+
+describe('DocumentDetailClient — clinic entity section', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+  })
+
+  function setupWithClinic(clinicExists: boolean) {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc({ clinic_name: 'City Clinic' }))
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([])
+      if (cmd === 'clinics_list')
+        return Promise.resolve(clinicExists ? [{ id: 'c-1', name: 'City Clinic' }] : [])
+      return Promise.resolve(undefined)
+    })
+  }
+
+  it('shows clinic name when doc has clinic_name', async () => {
+    setupWithClinic(true)
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('City Clinic')).toBeTruthy()
+  })
+
+  it('hides Save as Clinic button when clinic already exists', async () => {
+    setupWithClinic(true)
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.queryByTestId('detail-save-clinic-btn')).toBeNull()
+  })
+
+  it('shows Save as Clinic button when clinic does not exist', async () => {
+    setupWithClinic(false)
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByTestId('detail-save-clinic-btn')).toBeTruthy()
+  })
+
+  it('calls clinics_create_if_not_exists on Save as Clinic click', async () => {
+    setupWithClinic(false)
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    mockInvoke.mockImplementationOnce(() => Promise.resolve(undefined))
+    fireEvent.click(screen.getByTestId('detail-save-clinic-btn'))
+    await waitFor(() => {
+      const calls = mockInvoke.mock.calls.filter((c: unknown[]) => c[0] === 'clinics_create_if_not_exists')
+      expect(calls).toHaveLength(1)
+    })
+    expect(screen.queryByTestId('detail-save-clinic-btn')).toBeNull()
+  })
+
+  it('shows error message when clinics_create_if_not_exists fails', async () => {
+    setupWithClinic(false)
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('DB error')))
+    fireEvent.click(screen.getByTestId('detail-save-clinic-btn'))
+    await waitFor(() =>
+      expect(screen.getByText('Failed to create clinic. Please try again.')).toBeTruthy()
+    )
+  })
+})
+
+describe('DocumentDetailClient — linked notes', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+  })
+
+  it('shows empty state when no notes linked', async () => {
+    setupInvoke()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('No notes linked yet.')).toBeTruthy()
+  })
+
+  it('renders linked note titles', async () => {
+    setupInvoke({}, { links: [], appointments: [] })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([{ id: 'n-1', title: 'My Note' }])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('My Note')).toBeTruthy()
+  })
+
+  it('falls back to Untitled for notes without a title', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([{ id: 'n-2', title: '' }])
+      return Promise.resolve(undefined)
+    })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Untitled')).toBeTruthy()
+  })
+})
+
+describe('DocumentDetailClient — save feedback states', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+  })
+
+  it('shows ✓ after activity date saved', async () => {
+    setupInvoke()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    mockInvoke.mockResolvedValueOnce(undefined)
+    fireEvent.click(screen.getByTestId('detail-activity-date-save'))
+    await waitFor(() => expect(screen.getByTestId('detail-activity-date-save').textContent).toBe('✓'))
+  })
+
+  it('shows ✓ Saved after notes saved', async () => {
+    setupInvoke()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    mockInvoke.mockResolvedValueOnce(undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Save Notes' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '✓ Saved' })).toBeTruthy())
+  })
+})
+
+describe('DocumentDetailClient — unlink error path', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+    mockConfirm.mockResolvedValue(true)
+  })
+
+  it('shows error when links_delete rejects', async () => {
+    const link = makeLink()
+    const appt = makeAppointment()
+    setupInvoke({}, { links: [link], appointments: [appt] })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('unlink failed')))
+    fireEvent.click(screen.getByRole('button', { name: /unlink/i }))
+    await waitFor(() =>
+      expect(screen.getByText('unlink failed')).toBeTruthy()
+    )
+  })
+})
