@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29+30 complete. Tasks 31.2–31.10 complete. ▶ Task 31.11 next (clinic address auto-extraction). Task 28-E.4 blocked on manual run.
+Phase 29+30 complete. Tasks 31.2–31.11 complete. ▶ Phase 32 next (soft-delete + trash screen). Task 28-E.4 blocked on manual run.
 ```
 
 ---
@@ -1859,7 +1859,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Add unit test: text containing "arrhythmia" but not "cardiol" → `auto_extract_tags` result includes "Cardiology"
    - Done when: `cargo test` passes; uploading a document with "arrhythmia"/"echocardiogram" produces "Cardiology" in auto-tags
 
-▶ [ ] **31.11 — Fix: clinic address auto-extraction for non-postcode PDF text**
+[x] **31.11 — Fix: clinic address auto-extraction for non-postcode PDF text**
    - **Root cause:** `extract_clinic_addresses()` uses strict UK postcode regex as anchor (`[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}`). PDFs where OCR renders addresses without valid postcodes (e.g. London Clinic with 3 addresses) produce zero extracted addresses.
    - **Fix:** Broaden address detection in `src-tauri/src/extraction/clinic.rs`: if fewer than expected addresses are found via postcode anchor, also scan for known London/UK partial postcode prefixes (e.g. W1, EC1, SW1, SE1, E1, N1, NW1, WC) as secondary anchors, or detect multi-line address blocks containing "Street", "Road", "Avenue", "Lane", "Gardens", "London" as fallback.
    - File: `src-tauri/src/extraction/clinic.rs`
@@ -1876,7 +1876,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 32
 
-[ ] **32.1 — DB migration: add `is_deleted` + `deleted_at` to all entity tables**
+▶ [ ] **32.1 — DB migration: add `is_deleted` + `deleted_at` to all entity tables**
    - File: `src-tauri/src/db/migrations.rs`
    - Tables: `clinics`, `contacts`, `appointments`, `notes`
    - `documents` already has `is_deleted INTEGER NOT NULL DEFAULT 0` — verify and skip

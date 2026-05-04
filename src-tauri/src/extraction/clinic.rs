@@ -17,10 +17,52 @@ pub fn extract_company_registration_number(text: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
+fn is_label(s: &str) -> bool {
+    let words: Vec<&str> = s.split_whitespace().collect();
+    !s.is_empty()
+        && words.len() <= 4
+        && s == s.to_uppercase()
+        && s.chars().any(|c| c.is_alphabetic())
+}
+
+fn collect_block(lines: &[&str], anchor: usize) -> (Option<String>, String, usize) {
+    let start = anchor.saturating_sub(5);
+    let block_start = (start..=anchor)
+        .find(|&j| !lines[j].trim().is_empty())
+        .unwrap_or(anchor);
+    let end = (anchor + 1).min(lines.len());
+
+    let first_line = lines[block_start].trim();
+    let (label, content_start) = if is_label(first_line) && block_start + 1 < end {
+        (Some(first_line.to_string()), block_start + 1)
+    } else if block_start > 0 {
+        let prev = lines[block_start - 1].trim();
+        if is_label(prev) {
+            (Some(prev.to_string()), block_start)
+        } else {
+            (None, block_start)
+        }
+    } else {
+        (None, block_start)
+    };
+
+    let candidate = lines[content_start..end]
+        .iter()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    (label, candidate, end)
+}
+
 /// Extract up to 5 postal addresses from OCR text.
-/// An address is a contiguous block of lines that contains a UK postcode.
-/// If the line immediately before the block is all-caps, ≤ 4 words, and contains
-/// at least one alphabetic character, it is treated as a label for that address.
+///
+/// Primary strategy: anchor on lines that contain a full UK postcode.
+/// Fallback (when zero addresses found via postcode): anchor on lines that contain
+/// a street-type keyword (e.g. "Street", "Road") or a partial London postcode
+/// prefix (e.g. W1, EC1, SW1), to handle OCR output where the full postcode is
+/// absent or malformed.
 pub fn extract_clinic_addresses(text: &str) -> Vec<ExtractedAddress> {
     let postcode_re = Regex::new(r"[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}").expect("valid regex");
 
@@ -30,44 +72,45 @@ pub fn extract_clinic_addresses(text: &str) -> Vec<ExtractedAddress> {
     let mut i = 0;
     while i < lines.len() && addresses.len() < 5 {
         if postcode_re.is_match(lines[i]) {
-            // Walk back up to 5 lines to find the address start
-            let start = i.saturating_sub(5);
-            let block_start = (start..=i)
-                .find(|&j| !lines[j].trim().is_empty())
-                .unwrap_or(i);
-            let end = (i + 1).min(lines.len());
+            let (label, candidate, end) = collect_block(&lines, i);
+            if !candidate.is_empty() {
+                addresses.push(ExtractedAddress {
+                    label,
+                    line1: candidate,
+                });
+            }
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
 
-            // Detect label: all-caps, ≤ 4 words, contains at least one letter.
-            // Check the first line of the block first; if it matches, skip it
-            // from the address content. Otherwise check the line before the block.
-            let is_label = |s: &str| -> bool {
-                let words: Vec<&str> = s.split_whitespace().collect();
-                !s.is_empty()
-                    && words.len() <= 4
-                    && s == s.to_uppercase()
-                    && s.chars().any(|c| c.is_alphabetic())
-            };
+    if addresses.is_empty() {
+        addresses = extract_addresses_by_street_keyword(text, &lines);
+    }
 
-            let first_line = lines[block_start].trim();
-            let (label, content_start) = if is_label(first_line) && block_start + 1 < end {
-                (Some(first_line.to_string()), block_start + 1)
-            } else if block_start > 0 {
-                let prev = lines[block_start - 1].trim();
-                if is_label(prev) {
-                    (Some(prev.to_string()), block_start)
-                } else {
-                    (None, block_start)
-                }
-            } else {
-                (None, block_start)
-            };
+    addresses
+}
 
-            let candidate = lines[content_start..end]
-                .iter()
-                .map(|l| l.trim())
-                .filter(|l| !l.is_empty())
-                .collect::<Vec<_>>()
-                .join(", ");
+/// Fallback address extraction anchored on street-type keywords or partial London
+/// postcode prefixes. Used when the primary postcode-based scan finds nothing.
+fn extract_addresses_by_street_keyword(text: &str, lines: &[&str]) -> Vec<ExtractedAddress> {
+    let _ = text;
+    let street_re = Regex::new(
+        r"(?i)\b(?:Street|Road|Avenue|Lane|Gardens?|Close|Drive|Crescent|Place|Square|Way|Court|Terrace|Hill|Gate|Walk|Row|Mews)\b",
+    )
+    .expect("valid regex");
+    // Partial London/UK postcode area codes without the full inward code
+    let partial_re =
+        Regex::new(r"\b(?:W1|EC[1-4]|SW\d|SE\d|E\d|N\d|NW\d|WC[12])[A-Z]?\b").expect("valid regex");
+
+    let mut addresses: Vec<ExtractedAddress> = Vec::new();
+    let mut i = 0;
+
+    while i < lines.len() && addresses.len() < 5 {
+        let line = lines[i];
+        if street_re.is_match(line) || partial_re.is_match(line) {
+            let (label, candidate, end) = collect_block(lines, i);
             if !candidate.is_empty() {
                 addresses.push(ExtractedAddress {
                     label,
@@ -139,9 +182,66 @@ B1 1BB
     }
 
     #[test]
-    fn returns_empty_when_no_postcode() {
+    fn returns_empty_when_no_postcode_and_no_street_keyword() {
         let text = "No address here at all";
         assert!(extract_clinic_addresses(text).is_empty());
+    }
+
+    #[test]
+    fn fallback_extracts_address_with_street_keyword_and_no_postcode() {
+        let text = "\
+25 Wimpole Street
+London
+";
+        let addresses = extract_clinic_addresses(text);
+        assert!(
+            !addresses.is_empty(),
+            "expected ≥1 address from street-keyword fallback; got none"
+        );
+        assert!(
+            addresses[0].line1.contains("Wimpole Street"),
+            "expected 'Wimpole Street' in address; got: {:?}",
+            addresses[0].line1
+        );
+    }
+
+    #[test]
+    fn fallback_extracts_multiple_addresses_by_street_keyword() {
+        let text = "\
+25 Wimpole Street
+London
+
+10 Harley Road
+London
+";
+        let addresses = extract_clinic_addresses(text);
+        assert!(
+            addresses.len() >= 2,
+            "expected ≥2 addresses; got: {:?}",
+            addresses
+        );
+    }
+
+    #[test]
+    fn postcode_path_takes_priority_over_fallback() {
+        // When a full postcode is present the primary path should run, not the fallback
+        let text = "\
+25 Wimpole Street
+London
+W1G 8GT
+";
+        let addresses = extract_clinic_addresses(text);
+        assert_eq!(
+            addresses.len(),
+            1,
+            "expected exactly 1 address via postcode path; got: {:?}",
+            addresses
+        );
+        assert!(
+            addresses[0].line1.contains("Wimpole Street"),
+            "expected 'Wimpole Street' in address; got: {:?}",
+            addresses[0].line1
+        );
     }
 
     #[test]
