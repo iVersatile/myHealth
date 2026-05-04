@@ -50,6 +50,7 @@ const makeDoc = (id: string): Document => ({
   document_date: null,
   activity_date: null,
   tags: [],
+  clinic_name: null,
 })
 
 describe('DocumentList', () => {

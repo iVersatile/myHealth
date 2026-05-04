@@ -25,6 +25,15 @@ interface LinkSuggestion {
   reasons: string[]
 }
 
+interface Clinic {
+  id: string
+  name: string
+  address: string | null
+  phone: string | null
+  created_at: string
+  company_registration_number: string | null
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -63,6 +72,10 @@ export default function DocumentDetailClient() {
   const [selectedApptId, setSelectedApptId] = useState('')
   const [linkingAppt, setLinkingAppt] = useState(false)
 
+  const [clinicEntityExists, setClinicEntityExists] = useState<boolean | null>(null)
+  const [savingClinic, setSavingClinic] = useState(false)
+  const [clinicSaveError, setClinicSaveError] = useState<string | null>(null)
+
   const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([])
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   const [linkedNotes, setLinkedNotes] = useState<Array<{ id: string; title: string }>>([])
@@ -95,6 +108,11 @@ export default function DocumentDetailClient() {
         setTags(fetched.tags)
         setNotes(fetched.notes ?? '')
         setActivityDate(fetched.activity_date?.slice(0, 10) ?? '')
+        if (fetched.clinic_name) {
+          const allClinics = await invoke<Clinic[]>('clinics_list')
+          const match = allClinics.some((c) => c.name.toLowerCase() === fetched.clinic_name!.toLowerCase())
+          setClinicEntityExists(match)
+        }
         setAllCategories(
           catRows.map((r) => ({
             id: r.id,
@@ -118,6 +136,26 @@ export default function DocumentDetailClient() {
     }
     void load()
   }, [id])
+
+  async function handleSaveClinicEntity() {
+    if (!doc?.clinic_name) return
+    setSavingClinic(true)
+    setClinicSaveError(null)
+    try {
+      await invoke('clinics_create_if_not_exists', {
+        name: doc.clinic_name,
+        address: null,
+        phone: null,
+        companyRegistrationNumber: null,
+        addresses: [],
+      })
+      setClinicEntityExists(true)
+    } catch {
+      setClinicSaveError('Failed to create clinic. Please try again.')
+    } finally {
+      setSavingClinic(false)
+    }
+  }
 
   async function handleSaveActivityDate() {
     if (!doc) return
@@ -330,6 +368,29 @@ export default function DocumentDetailClient() {
               <dt className="text-[var(--color-text-secondary)]">Category</dt>
               <dd className="font-medium text-[var(--color-text)]">{catLabel}</dd>
             </div>
+            {doc.clinic_name && (
+              <div>
+                <dt className="text-[var(--color-text-secondary)]">Clinic</dt>
+                <dd className="font-medium text-[var(--color-text)]">{doc.clinic_name}</dd>
+                {clinicEntityExists === false && (
+                  <div className="mt-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+                    <p className="mb-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">Not saved as a clinic yet</p>
+                    {clinicSaveError && (
+                      <p className="mb-1 text-[var(--text-xs)] text-red-500">{clinicSaveError}</p>
+                    )}
+                    <button
+                      type="button"
+                      data-testid="detail-save-clinic-btn"
+                      disabled={savingClinic}
+                      onClick={() => void handleSaveClinicEntity()}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-40"
+                    >
+                      {savingClinic ? 'Saving…' : 'Save as Clinic'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <div>
               <dt className="text-[var(--color-text-secondary)]">Uploaded</dt>
               <dd className="font-medium text-[var(--color-text)]">{formatDate(doc.created_at)}</dd>

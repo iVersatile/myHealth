@@ -34,7 +34,8 @@ use commands::categories::{
 };
 use commands::clinics::{
     clinics_create, clinics_create_if_not_exists, clinics_delete, clinics_get,
-    clinics_link_contact, clinics_list, clinics_list_with_contacts, clinics_update,
+    clinics_get_linked_contacts, clinics_get_linked_documents, clinics_link_contact, clinics_list,
+    clinics_list_with_contacts, clinics_update,
 };
 use commands::contacts::{
     contacts_create, contacts_create_with_clinic, contacts_delete, contacts_find_similar,
@@ -44,8 +45,8 @@ use commands::contacts::{
 use commands::documents::{
     appointments_suggest_from_document, documents_delete, documents_get,
     documents_get_extraction_status, documents_get_file_url, documents_list, documents_restore,
-    documents_run_extraction, documents_search_filtered, documents_tags_set, documents_update,
-    documents_upload,
+    documents_run_extraction, documents_search_filtered, documents_set_clinic, documents_tags_set,
+    documents_update, documents_upload,
 };
 use commands::export::{export_pdf_bundle, export_pdf_summary_bytes, export_save_bytes};
 use commands::links::{
@@ -139,6 +140,7 @@ pub fn run() {
             documents_get_extraction_status,
             documents_run_extraction,
             documents_tags_set,
+            documents_set_clinic,
             appointments_suggest_from_document,
             documents_search_filtered,
             appointments_list,
@@ -199,6 +201,8 @@ pub fn run() {
             clinics_delete,
             clinics_create_if_not_exists,
             clinics_link_contact,
+            clinics_get_linked_contacts,
+            clinics_get_linked_documents,
             contacts_list,
             contacts_get,
             contacts_create,

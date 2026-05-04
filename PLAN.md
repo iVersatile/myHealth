@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 27 — V3-F9 Appointment Doctor Name Lifecycle — Task 27.1
+Phase 29 — Clinic Editing (Option C). ▶ Task 29.1 next.
 ```
 
 ---
@@ -1563,7 +1563,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-▶ **27.1 — Backend: `appointments_clear_doctor` Tauri command**
+[x] **27.1 — Backend: `appointments_clear_doctor` Tauri command**
    - File: `src-tauri/src/commands/appointments.rs`
    - Add command `appointments_clear_doctor(appointment_id: String)`:
      - SQL: `UPDATE appointments SET doctor_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1`
@@ -1574,7 +1574,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-[ ] **27.2 — ApptSuggestionBanner: editable + clearable doctor_name (V3-F9.1, F9.2)**
+[x] **27.2 — ApptSuggestionBanner: editable + clearable doctor_name (V3-F9.1, F9.2)**
    - File: `src/components/documents/ApptSuggestionBanner.tsx`
    - Replace read-only doctor_name display with an editable text input (pre-filled from suggestion).
    - Add a **"No doctor / Service appointment"** checkbox below the input. When checked: input is disabled and visually struck-through; `doctor_name` is sent as `null` on confirm.
@@ -1584,7 +1584,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-[ ] **27.3 — DoctorSuggestionBanner: post-dismiss follow-up prompt (V3-F9.3 – F9.5)**
+[x] **27.3 — DoctorSuggestionBanner: post-dismiss follow-up prompt (V3-F9.3 – F9.5)**
    - File: `src/components/documents/DoctorSuggestionBanner.tsx`
    - After user clicks "Dismiss", instead of immediately hiding the banner, replace its content with an inline follow-up:
      > *"Is there a doctor for this appointment?"*  
@@ -1596,7 +1596,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-[ ] **27.4 — Timeline: null-safe doctor_name display (V3-F9.6, F9.7)**
+[x] **27.4 — Timeline: null-safe doctor_name display (V3-F9.6, F9.7)**
    - File: `src/app/(app)/timeline/page.tsx`
    - `apptToEvent()`: already filters with `.filter(Boolean)` — verify this correctly handles `null` (it should; add explicit test).
    - "By Doctor" grouping: find the `doctorKey` line. Change the fallback from `'No doctor assigned'` to `'No doctor / Service'` to match PRD_V3 wording.
@@ -1605,7 +1605,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
-[ ] **27.5 — Commit & push Phase 27**
+[x] **27.5 — Commit & push Phase 27**
    - Pre-commit: `npx tsc --noEmit` + `~/.cargo/bin/cargo fmt --all --manifest-path src-tauri/Cargo.toml` + `~/.cargo/bin/cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
    - Commit message: `feat: appointment doctor name lifecycle — editable banner, reject follow-up, timeline null-safe (V3-F9)`
    - Push to `origin/develop`; confirm CI green.
@@ -1629,3 +1629,254 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 | CI/CD pipeline | `.github/workflows/` |
 | Commit strategy | `docs/COMMIT_STRATEGY.md` |
 | **Where to resume** | **This file — find ▶** |
+
+---
+
+## Phase 28 — Clinic Creation Bug Fixes
+
+### Sprint 28
+
+[x] **28.1 — Fix `autoSaveClinic()` to call `documents_set_clinic`**
+   - In `src/components/documents/UploadDialog.tsx` `autoSaveClinic()`: after `clinics_link_contact` succeeds, call `documents_set_clinic` if `uploadedDoc` is non-null
+   - Done: implemented
+
+[x] **28.2 — Surface `documents_set_clinic` errors in `handleSaveClinic()`**
+   - Added `error` variant to `ClinicPhase`; `handleSaveClinic` now sets `{ kind: 'error', message }` and returns early instead of swallowing silently; error shown in UI
+   - Done: implemented
+
+[x] **28.3 — Add clinic suggestion card to `DocumentDetailClient`**
+   - On load, if `doc.clinic_name` is set, calls `clinics_list` to check if a matching entity exists; if not, shows a "Save as Clinic" recovery card with error feedback
+   - Done: implemented
+
+---
+
+## Phase 29 — Clinic Editing (Option C)
+
+> Goal: Clinics are editable via two surfaces:
+> - **Contacts view** — lightweight "Linked Clinic" card on the contact detail page (inline name + phone edit)
+> - **Clinics view** — full `/clinics` route with list + detail/edit page (name, address, phone, company reg, linked contacts, linked documents)
+
+### Sprint 29
+
+▶ [ ] **29.1 — Tauri commands: `clinics_get`, `clinics_update`, `clinics_get_linked_contacts`, `clinics_get_linked_documents`**
+   - File: `src-tauri/src/commands/clinics.rs`
+   - `clinics_get(id: String) -> Result<Clinic, String>` — fetch single clinic by id
+   - `clinics_update(id: String, name: String, address: Option<String>, phone: Option<String>, company_registration_number: Option<String>) -> Result<Clinic, String>` — UPDATE clinics SET ... WHERE id = ?
+   - `clinics_get_linked_contacts(clinic_id: String) -> Result<Vec<Contact>, String>` — SELECT contacts via clinic_contacts junction
+   - `clinics_get_linked_documents(clinic_id: String) -> Result<Vec<Document>, String>` — SELECT documents WHERE clinic_name = (SELECT name FROM clinics WHERE id = ?)
+   - Register all 4 commands in `lib.rs` invoke_handler
+   - Done when: `cargo build` passes; all 4 commands callable via IPC
+
+[ ] **29.2 — Contacts view: linked clinic card (inline name + phone edit)**
+   - File: `src/app/(app)/contacts/[id]/ContactDetailClient.tsx` (or equivalent contact detail page)
+   - On load, fetch linked clinic via `clinic_contacts` junction: `invoke('clinics_list')` filtered by contact id (or add a `clinics_get_for_contact(contact_id)` command if needed)
+   - Show "Linked Clinic" section with clinic name + phone; Edit button opens inline fields
+   - Save calls `clinics_update`; optimistic UI update on success; error message on failure
+   - Done when: opening a contact with a linked clinic shows the card; editing name/phone and saving persists to DB; no clinic → section hidden
+
+[ ] **29.3 — Clinics list view (`/clinics`)**
+   - File: `src/app/(app)/clinics/page.tsx` + `ClinicsClient.tsx`
+   - Fetch via `invoke('clinics_list')` on mount
+   - Render list: name, address (truncated), phone, linked contact count
+   - Each row links to `/clinics/[id]`
+   - Add "Clinics" nav item to sidebar (after Contacts)
+   - Done when: `/clinics` route renders all clinic rows; sidebar nav item visible
+
+[ ] **29.4 — Clinic detail/edit page (`/clinics/[id]`)**
+   - File: `src/app/(app)/clinics/[id]/ClinicDetailClient.tsx`
+   - Fetch clinic via `clinics_get(id)`; fetch linked contacts via `clinics_get_linked_contacts(id)`; fetch linked docs via `clinics_get_linked_documents(id)`
+   - Edit form: name (required), address, phone, company_registration_number — all inline editable
+   - Save button calls `clinics_update`; success toast; error message on failure
+   - Linked contacts section: list of contact names (links to `/contacts/[id]`)
+   - Linked documents section: list of document titles (links to `/documents/view/[id]`)
+   - Done when: all fields editable and persist; linked contacts + documents shown; navigating back to list shows updated name
+
+[ ] **29.5 — TypeScript check + manual test approval**
+   - Run `npx tsc --noEmit` — must pass
+   - Done when: user confirms manual test passes (gate: do NOT mark 29.1–29.4 complete until user approves)
+
+---
+
+## Phase 30 — Tag Normalization: Title Case Specialty Tags
+
+> **Source:** Manual test finding — "Cardiology" recognized for appointment but missing from document tags because `SPECIALTY_MAP` emits UPPERCASE (e.g. `CARDIOLOGY`). Fix: normalize to Title Case at write time in `extraction/tags.rs`.
+
+### Sprint 30
+
+[ ] **30.1 — Normalize specialty tags to Title Case at extraction time**
+   - File: `src-tauri/src/extraction/tags.rs`
+   - In `SPECIALTY_MAP`, change output strings from UPPERCASE (`"CARDIOLOGY"`) to Title Case (`"Cardiology"`)
+   - Update all entries in `SPECIALTY_MAP` and any other hardcoded UPPERCASE specialty tag strings in the file
+   - Update unit tests: rename `auto_tags_specialty_physiotherapy_uppercase` and assert Title Case output
+   - Done when: `cargo test` passes; specialty tags extracted from a document containing "cardiol" are stored as `"Cardiology"` (not `"CARDIOLOGY"`)
+
+[ ] **30.2 — TypeScript check + cargo check**
+   - Run `npx tsc --noEmit` and `cargo check --manifest-path src-tauri/Cargo.toml`
+   - Done when: both pass with zero errors
+
+---
+
+## Phase 31 — Structured Multi-Address (Two Junction Tables)
+
+> **Source:** Manual test finding — Clinic and Contact detail views lack structured multi-address support. Fix: redesign `clinic_addresses` with structured fields; add new `contact_addresses` table. Both use two-junction-table pattern (no polymorphic association).
+>
+> **Estimate:** Medium-Large (~4.5 dev-days). DB migration (~0.5d), Rust CRUD commands (~1.5d), shared frontend component (~1d), wire into clinic edit + contact edit (~1d), extraction integration (~0.5d).
+>
+> **Schema:**
+> ```sql
+> -- Replaces existing clinic_addresses (existing data dropped — app reset before test)
+> CREATE TABLE clinic_addresses (
+>   id          TEXT PRIMARY KEY,
+>   clinic_id   TEXT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+>   label       TEXT,                        -- e.g. "Main", "Billing"; NULL allowed
+>   line1       TEXT NOT NULL,
+>   line2       TEXT,
+>   city        TEXT,
+>   postcode    TEXT,
+>   country     TEXT NOT NULL DEFAULT 'GB',
+>   is_primary  INTEGER NOT NULL DEFAULT 0 CHECK(is_primary IN (0,1)),
+>   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+> );
+> CREATE INDEX idx_clinic_addresses_clinic ON clinic_addresses(clinic_id);
+>
+> CREATE TABLE contact_addresses (
+>   id          TEXT PRIMARY KEY,
+>   contact_id  TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+>   label       TEXT,
+>   line1       TEXT NOT NULL,
+>   line2       TEXT,
+>   city        TEXT,
+>   postcode    TEXT,
+>   country     TEXT NOT NULL DEFAULT 'GB',
+>   is_primary  INTEGER NOT NULL DEFAULT 0 CHECK(is_primary IN (0,1)),
+>   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+> );
+> CREATE INDEX idx_contact_addresses_contact ON contact_addresses(contact_id);
+> ```
+
+### Sprint 31
+
+[ ] **31.1 — DB migration: recreate `clinic_addresses` (structured) + new `contact_addresses`**
+   - File: `src-tauri/src/db/migrations.rs`
+   - Add migration: `DROP TABLE IF EXISTS clinic_addresses` then `CREATE TABLE clinic_addresses (...)` with structured columns per schema above
+   - Add migration: `CREATE TABLE IF NOT EXISTS contact_addresses (...)` with same structure
+   - Add cascade-delete tests for both tables (mirror existing `clinic_addresses_cascade_delete` test)
+   - Done when: `cargo test` passes; both tables created with correct schema
+
+[ ] **31.2 — Rust: `Address` struct + `clinic_addresses` CRUD commands**
+   - File: `src-tauri/src/commands/addresses.rs` (new)
+   - Define shared `Address` struct: `id, label, line1, line2, city, postcode, country, is_primary, created_at`
+   - Commands: `clinic_addresses_list(clinic_id: String) -> Result<Vec<Address>, String>`
+   - `clinic_address_create(clinic_id: String, input: AddressInput) -> Result<Address, String>`
+   - `clinic_address_update(input: AddressUpdateInput) -> Result<Address, String>` — updates fields/is_primary; enforces only one `is_primary=1` per clinic
+   - `clinic_address_delete(id: String) -> Result<(), String>`
+   - Unit tests for each command (in-memory DB)
+   - Done when: `cargo test` passes for all clinic address commands
+
+[ ] **31.3 — Rust: `contact_addresses` CRUD commands**
+   - Same file: `src-tauri/src/commands/addresses.rs`
+   - Commands: `contact_addresses_list`, `contact_address_create`, `contact_address_update`, `contact_address_delete`
+   - Same is_primary enforcement: only one primary per contact
+   - Unit tests for each
+   - Done when: `cargo test` passes for all contact address commands
+
+[ ] **31.4 — Rust: register commands in `lib.rs` + update `clinics_create_if_not_exists`**
+   - Register all 8 address commands in `lib.rs` invoke_handler
+   - Update `clinics_create_if_not_exists` and any other clinic-create paths to use new structured `clinic_addresses` insert (map extracted `Vec<String>` to `line1` field, `label=NULL`)
+   - Done when: `cargo build` passes; document-upload clinic auto-creation still writes address rows to new schema
+
+[ ] **31.5 — Extraction: label detection for clinic addresses**
+   - File: `src-tauri/src/extraction/clinic.rs`
+   - `extract_clinic_addresses` currently returns `Vec<String>`; extend to return `Vec<ExtractedAddress>` with `label: Option<String>, line1: String`
+   - Label heuristic: if the line immediately before the detected address block is bold (PDF bold marker) or all-caps ≤ 4 words, treat it as the label; otherwise `label = None`
+   - Update call sites in `documents.rs` to use new return type
+   - Done when: `cargo test` passes; structured address with optional label written on document upload
+
+[ ] **31.6 — Frontend: shared `AddressList` component**
+   - File: `src/components/shared/AddressList.tsx` (new)
+   - Props: `addresses: Address[], entityId: string, entityType: 'clinic' | 'contact', onChanged: () => void`
+   - Renders address cards: label (editable inline), line1, line2, city, postcode, country; star icon for is_primary; Delete button per row; "Add address" button at bottom
+   - Save calls `clinic_address_update` or `contact_address_update` based on `entityType`
+   - Add calls `clinic_address_create` or `contact_address_create`; Delete calls the matching delete command
+   - Done when: component renders; add/edit/delete/set-primary all work against Tauri IPC
+
+[ ] **31.7 — Wire `AddressList` into clinic edit page**
+   - File: `src/app/(app)/clinics/edit/ClinicEditClient.tsx`
+   - Below existing fields, add `<AddressList entityId={id} entityType="clinic" ... />`
+   - Load addresses via `invoke('clinic_addresses_list', { clinicId: id })` on mount
+   - Done when: clinic edit page shows address list; add/edit/delete/primary persist
+
+[ ] **31.8 — Wire `AddressList` into contact edit/detail page**
+   - File: contact detail page (identify correct file at implementation time)
+   - Add `<AddressList entityId={contactId} entityType="contact" ... />` below existing fields
+   - Load via `invoke('contact_addresses_list', { contactId })`
+   - Done when: contact detail page shows address list; operations persist
+
+[ ] **31.9 — TypeScript check + cargo check + manual test approval**
+   - Run `npx tsc --noEmit` and `cargo check`
+   - Done when: both pass; user confirms manual test passes
+
+---
+
+## Phase 32 — Soft-Delete + Trash Screen (All Entities)
+
+> **Source:** Manual test finding — Delete is irreversible for clinics, contacts, appointments, notes; only documents have soft-delete. Fix: add `is_deleted / deleted_at` to all entities; replace hard-deletes with soft-deletes; Trash screen with 30-day auto-purge, Empty Trash action, and restore; exclude soft-deleted items from all queries and search.
+>
+> **Scope:** documents (already has `is_deleted`; wire into Trash), clinics, contacts, appointments, notes.
+
+### Sprint 32
+
+[ ] **32.1 — DB migration: add `is_deleted` + `deleted_at` to all entity tables**
+   - File: `src-tauri/src/db/migrations.rs`
+   - Tables: `clinics`, `contacts`, `appointments`, `notes`
+   - `documents` already has `is_deleted INTEGER NOT NULL DEFAULT 0` — verify and skip
+   - Add to each: `is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0,1))` and `deleted_at TEXT`
+   - Add index: `CREATE INDEX IF NOT EXISTS idx_<table>_is_deleted ON <table>(is_deleted)` for each
+   - Done when: `cargo test` passes; migration runs on fresh DB
+
+[ ] **32.2 — Rust: convert hard-delete to soft-delete for all entities**
+   - Files: `src-tauri/src/commands/{clinics,contacts,appointments,notes,documents}.rs`
+   - For each entity, change the existing delete command to: `UPDATE <table> SET is_deleted = 1, deleted_at = ? WHERE id = ?`
+   - Add `<entity>_hard_delete(id)` command that executes actual `DELETE` (used by Trash + auto-purge)
+   - Done when: `cargo test` passes; deleting an entity sets `is_deleted=1` without removing the row
+
+[ ] **32.3 — Rust: filter soft-deleted items from all list/search queries**
+   - Add `AND is_deleted = 0` to every `SELECT` in list and search commands across all entity modules
+   - FTS5 search: exclude `is_deleted=1` rows (update FTS trigger or rebuild filter)
+   - Done when: `cargo test` passes; soft-deleted items absent from all list and search results
+
+[ ] **32.4 — Rust: `trash_list`, `trash_restore`, `trash_hard_delete`, `trash_empty`, `trash_purge_expired` commands**
+   - File: `src-tauri/src/commands/trash.rs` (new)
+   - `trash_list() -> Result<Vec<TrashItem>, String>` — unified list across all tables WHERE is_deleted=1; `TrashItem` has `entity_type, id, display_name, deleted_at`
+   - `trash_restore(entity_type: String, id: String) -> Result<(), String>` — sets `is_deleted=0, deleted_at=NULL`
+   - `trash_hard_delete(entity_type: String, id: String) -> Result<(), String>` — hard DELETE single item
+   - `trash_empty() -> Result<u32, String>` — hard DELETE all is_deleted=1 rows across all tables; returns count removed
+   - `trash_purge_expired() -> Result<u32, String>` — hard DELETE all rows WHERE `deleted_at < now - 30 days`
+   - Register all commands in `lib.rs`
+   - Unit tests for each command
+   - Done when: `cargo test` passes
+
+[ ] **32.5 — Rust: call `trash_purge_expired` on app startup**
+   - File: `src-tauri/src/lib.rs`
+   - In the `setup` closure (after DB init), call `trash_purge_expired` directly (not via IPC)
+   - Done when: `cargo build` passes; expired items auto-purge on each startup
+
+[ ] **32.6 — Frontend: Trash screen (`/trash`)**
+   - Files: `src/app/(app)/trash/page.tsx` + `TrashClient.tsx` (new)
+   - Load via `invoke('trash_list')` on mount
+   - Group items by entity type (Documents / Appointments / Notes / Contacts / Clinics)
+   - Each row: display name, deleted date, "Restore" button, "Delete Permanently" button
+   - Header: "Empty Trash" button (confirm dialog before `invoke('trash_empty')`)
+   - Empty state message: "Trash is empty"
+   - Add "Trash" nav item to sidebar (bottom, below main nav items)
+   - Done when: Trash screen renders all soft-deleted items; restore/delete-permanently/empty-trash all function correctly
+
+[ ] **32.7 — Frontend: update all Delete buttons to use soft-delete + "Moved to Trash" toast**
+   - Update Delete actions across Documents, Clinics, Contacts, Appointments, Notes views
+   - After soft-delete, show brief toast: "Moved to Trash"
+   - No entity should be hard-deleted from any list or detail view
+   - Done when: every Delete action results in soft-delete; toast appears; item disappears from list
+
+[ ] **32.8 — TypeScript check + cargo check + manual test approval**
+   - Run `npx tsc --noEmit` and `cargo check`
+   - Done when: both pass; user confirms manual test passes (gate: do NOT mark 32.1–32.7 complete until user approves)

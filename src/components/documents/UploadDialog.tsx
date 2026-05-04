@@ -9,7 +9,13 @@ import { CategoryPicker, Category } from '../categories/CategoryPicker'
 
 interface UploadDialogProps {
   onClose: () => void
-  onUploaded: (doc: Document) => void
+  onUploaded: (doc: Document, unsavedClinicSuggestions: ClinicSuggestion[]) => void
+}
+
+export interface ClinicSuggestion {
+  name: string
+  company_registration_number: string | null
+  addresses: string[]
 }
 
 interface ContactSuggestion {
@@ -20,12 +26,6 @@ interface ContactSuggestion {
   address: string | null
   phone: string | null
   email: string | null
-}
-
-interface ClinicSuggestion {
-  name: string
-  company_registration_number: string | null
-  addresses: string[]
 }
 
 interface ExtractionSuggestions {
@@ -71,7 +71,7 @@ type ContactPhase =
   | { kind: 'duplicate'; newId: string; match: DuplicateCandidate }
   | { kind: 'saved'; contactId: string }
 
-type ClinicPhase = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' }
+type ClinicPhase = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'error'; message: string }
 
 type Step = 'pick' | 'analyzing' | 'review'
 
@@ -240,7 +240,10 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       ])
 
       const final = await invoke<Document>('documents_get', { id: uploadedDoc.id })
-      onUploaded(final)
+      const unsaved = clinicSuggestions.filter(
+        (c) => !dismissedClinics.has(c.name) && clinicPhase.kind !== 'saved',
+      )
+      onUploaded(final, unsaved)
       onClose()
     } catch (err: unknown) {
       setConfirmError(err instanceof Error ? err.message : String(err))
@@ -435,16 +438,24 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       setClinicPhase({ kind: 'saving' })
                       try {
                         const clinic = await invoke<{ id: string }>('clinics_create_if_not_exists', {
-                          name: cs.clinic,
-                          address: null,
-                          phone: null,
-                          companyRegistrationNumber: null,
-                          addresses: [],
+                          input: {
+                            name: cs.clinic,
+                            address: null,
+                            phone: null,
+                            company_registration_number: null,
+                            addresses: [],
+                          },
                         })
                         await invoke('clinics_link_contact', {
                           clinicId: clinic.id,
                           contactId: personContactId,
                         })
+                        if (uploadedDoc) {
+                          await invoke('documents_set_clinic', {
+                            documentId: uploadedDoc.id,
+                            clinicName: cs.clinic,
+                          })
+                        }
                         setClinicPhase({ kind: 'saved' })
                       } catch {
                         setClinicPhase({ kind: 'idle' })
@@ -587,8 +598,13 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                       setClinicPhase({ kind: 'saving' })
                       try {
                         const result = await invoke<{ id: string }>('clinics_create_if_not_exists', {
-                          name: clinic.name,
-                          addresses: clinic.addresses,
+                          input: {
+                            name: clinic.name,
+                            address: null,
+                            phone: null,
+                            company_registration_number: clinic.company_registration_number ?? null,
+                            addresses: clinic.addresses,
+                          },
                         })
                         const savedContactId = [...contactPhases.values()].find(
                           (p) => p.kind === 'saved'
@@ -597,6 +613,17 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                           try {
                             await invoke('clinics_link_contact', { clinicId: result.id, contactId: savedContactId.contactId })
                           } catch { /* link failure is non-fatal */ }
+                        }
+                        if (uploadedDoc) {
+                          try {
+                            await invoke('documents_set_clinic', {
+                              documentId: uploadedDoc.id,
+                              clinicName: clinic.name,
+                            })
+                          } catch {
+                            setClinicPhase({ kind: 'error', message: 'Clinic saved but could not be linked to this document' })
+                            return
+                          }
                         }
                         setClinicPhase({ kind: 'saved' })
                       } catch {
@@ -644,6 +671,9 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                           >
                             {clinicPhase.kind === 'saved' ? 'Saved' : clinicPhase.kind === 'saving' ? 'Saving…' : 'Save as Clinic'}
                           </button>
+                          {clinicPhase.kind === 'error' && (
+                            <span className="text-[var(--text-xs)] text-red-500">{clinicPhase.message}</span>
+                          )}
                           {clinicPhase.kind === 'idle' && (
                             <button
                               type="button"

@@ -8,6 +8,8 @@ import { ExportDialog } from '../../../components/export/ExportDialog'
 import { SummaryExportDialog } from '../../../components/export/SummaryExportDialog'
 import { DoctorSuggestionBanner } from '../../../components/documents/DoctorSuggestionBanner'
 import type { ContactSuggestion } from '../../../components/documents/DoctorSuggestionBanner'
+import { ClinicSuggestionBanner } from '../../../components/documents/ClinicSuggestionBanner'
+import type { ClinicSuggestion } from '../../../components/documents/UploadDialog'
 import { LinkSuggestionBanner } from '../../../components/documents/LinkSuggestionBanner'
 import { ApptSuggestionBanner } from '../../../components/documents/ApptSuggestionBanner'
 import type { AppointmentSuggestion } from '../../../components/documents/ApptSuggestionBanner'
@@ -37,13 +39,15 @@ export default function DocumentsPage() {
     documentId: string
   } | null>(null)
   const [apptSuggestionLoading, setApptSuggestionLoading] = useState(false)
+  const [pendingClinicSuggestions, setPendingClinicSuggestions] = useState<ClinicSuggestion[]>([])
   const documents = useDocumentsStore(s => s.documents)
   const total = useDocumentsStore(s => s.total)
   const setDocuments = useDocumentsStore(s => s.setDocuments)
   const { createContactWithClinic } = useContacts()
   const upsertAppointment = useAppointmentsStore(s => s.upsertAppointment)
 
-  async function handleUploaded(doc: Document) {
+  async function handleUploaded(doc: Document, unsavedClinics: ClinicSuggestion[]) {
+    if (unsavedClinics.length > 0) setPendingClinicSuggestions(unsavedClinics)
     setDocuments([doc, ...documents], total + 1)
     try {
       const candidates = await invoke<Array<{
@@ -83,9 +87,12 @@ export default function DocumentsPage() {
       const { suggestion, documentId } = apptSuggestion
       const rawDate = suggestion.appt_date
       const apptDate = rawDate.includes('T') ? rawDate : `${rawDate}T00:00:00`
+      const title = doctorName === null
+        ? suggestion.title.replace(/\s+with\s+[^—–-][^—–]*/i, '').trim()
+        : suggestion.title
       const appt = await invoke<Appointment>('appointments_create', {
         input: {
-          title: suggestion.title,
+          title,
           appt_date: apptDate,
           doctor_name: doctorName,
           clinic_name: suggestion.clinic_name ?? null,
@@ -178,6 +185,15 @@ export default function DocumentsPage() {
         </div>
       </div>
 
+      {pendingClinicSuggestions.length > 0 && (
+        <div className="mb-4">
+          <ClinicSuggestionBanner
+            suggestions={pendingClinicSuggestions}
+            onDismiss={() => setPendingClinicSuggestions([])}
+          />
+        </div>
+      )}
+
       {(extractedContactSuggestions.length > 0 || doctorCandidates.length > 0) && (
         <div className="mb-4">
           <DoctorSuggestionBanner
@@ -218,7 +234,7 @@ export default function DocumentsPage() {
       {uploadOpen && (
         <UploadDialog
           onClose={() => setUploadOpen(false)}
-          onUploaded={(doc) => void handleUploaded(doc)}
+          onUploaded={(doc, unsaved) => void handleUploaded(doc, unsaved)}
         />
       )}
       {exportOpen && (

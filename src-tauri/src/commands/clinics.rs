@@ -33,6 +33,16 @@ pub struct ClinicUpdateInput {
     pub name: Option<String>,
     pub address: Option<String>,
     pub phone: Option<String>,
+    pub company_registration_number: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct LinkedDocument {
+    pub id: String,
+    pub filename: String,
+    pub category: String,
+    pub document_date: Option<String>,
+    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -158,6 +168,12 @@ pub fn clinics_update(
             rusqlite::params![phone, input.id],
         )?;
     }
+    if let Some(crn) = input.company_registration_number {
+        conn.execute(
+            "UPDATE clinics SET company_registration_number = ? WHERE id = ?",
+            rusqlite::params![crn, input.id],
+        )?;
+    }
 
     conn.query_row(
         &format!("{SELECT_CLINIC} WHERE id = ?"),
@@ -165,6 +181,75 @@ pub fn clinics_update(
         row_to_clinic,
     )
     .map_err(|e| CommandError::Internal(e.to_string()))
+}
+
+#[tauri::command]
+pub fn clinics_get_linked_contacts(
+    clinic_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::commands::contacts::Contact>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT c.id, c.name, c.role, c.specialty, c.phone, c.email, c.clinic, c.address, \
+                c.notes, c.created_at, c.updated_at, c.title, c.contact_clinic_id \
+         FROM contacts c \
+         INNER JOIN clinic_contacts cc ON cc.contact_id = c.id \
+         WHERE cc.clinic_id = ? \
+         ORDER BY c.name COLLATE NOCASE",
+    )?;
+
+    let rows = stmt.query_map([&clinic_id], |row| {
+        Ok(crate::commands::contacts::Contact {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            role: row.get(2)?,
+            specialty: row.get(3)?,
+            phone: row.get(4)?,
+            email: row.get(5)?,
+            clinic: row.get(6)?,
+            address: row.get(7)?,
+            notes: row.get(8)?,
+            created_at: row.get(9)?,
+            updated_at: row.get(10)?,
+            title: row.get(11)?,
+            contact_clinic_id: row.get(12)?,
+        })
+    })?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| CommandError::Internal(e.to_string()))
+}
+
+#[tauri::command]
+pub fn clinics_get_linked_documents(
+    clinic_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<LinkedDocument>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT d.id, d.filename, d.category, d.document_date, d.created_at \
+         FROM documents d \
+         WHERE d.is_deleted = 0 \
+           AND d.clinic_name = (SELECT name FROM clinics WHERE id = ?) \
+         ORDER BY d.document_date DESC, d.created_at DESC",
+    )?;
+
+    let rows = stmt.query_map([&clinic_id], |row| {
+        Ok(LinkedDocument {
+            id: row.get(0)?,
+            filename: row.get(1)?,
+            category: row.get(2)?,
+            document_date: row.get(3)?,
+            created_at: row.get(4)?,
+        })
+    })?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| CommandError::Internal(e.to_string()))
 }
 
 #[tauri::command]

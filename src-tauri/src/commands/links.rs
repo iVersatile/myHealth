@@ -280,6 +280,7 @@ pub fn links_score_candidates(
                 extracted_metadata: row.get(13)?,
                 extracted_text: row.get(14)?,
                 tags: vec![],
+                clinic_name: None,
             })
         },
     )?;

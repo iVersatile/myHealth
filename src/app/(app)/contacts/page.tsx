@@ -1,10 +1,21 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { invoke } from '@tauri-apps/api/core'
 import { confirm } from '@tauri-apps/plugin-dialog'
 import { useContacts, ContactCreateInput, ContactUpdateInput, DuplicateCandidate } from '../../../hooks/useContacts'
 import { Contact, CONTACT_ROLES, ROLE_LABELS, ContactRole } from '../../../store/contactsStore'
 import { ContactForm } from '../../../components/contacts/ContactForm'
+
+interface Clinic {
+  id: string
+  name: string
+  address: string | null
+  phone: string | null
+  company_registration_number: string | null
+  created_at: string
+}
 
 // ── CopyButton ────────────────────────────────────────────────────────────────
 
@@ -28,29 +39,113 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   )
 }
 
+// ── LinkedClinicCard ──────────────────────────────────────────────────────────
+
+function LinkedClinicCard({ clinicId }: { clinicId: string | null }) {
+  const [clinic, setClinic] = useState<Clinic | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!clinicId) return
+    invoke<Clinic>('clinics_get', { id: clinicId }).then(setClinic).catch(() => undefined)
+  }, [clinicId])
+
+  if (!clinicId || !clinic) return null
+
+  async function handleSave() {
+    if (!clinic) return
+    setSaving(true)
+    try {
+      const newName = editName.trim() || clinic.name
+      const newPhone = editPhone.trim() || null
+      await invoke('clinics_update', {
+        input: { id: clinic.id, name: newName, phone: newPhone },
+      })
+      setClinic((prev) => prev ? { ...prev, name: newName, phone: newPhone } : prev)
+      setEditing(false)
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="mb-2 p-2 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-surface)] text-xs flex flex-col gap-1">
+        <input
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          placeholder="Clinic name"
+          className="px-2 py-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
+        />
+        <input
+          value={editPhone}
+          onChange={(e) => setEditPhone(e.target.value)}
+          placeholder="Phone"
+          className="px-2 py-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
+        />
+        <div className="flex gap-2 mt-0.5">
+          <button
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="px-2 py-0.5 rounded bg-[var(--color-accent)] text-white disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            onClick={() => setEditing(false)}
+            className="px-2 py-0.5 rounded border border-[var(--color-border)] text-[var(--color-text-muted)]"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-2 flex items-center gap-2 flex-wrap">
+      <Link
+        href={`/clinics/${clinic.id}`}
+        className="flex items-center gap-1 text-xs text-[var(--color-tag-text)] bg-[var(--color-tag-bg)] rounded px-2 py-0.5 hover:opacity-80 transition-opacity"
+      >
+        <span>🏥</span>
+        <span>{clinic.name}</span>
+        <span className="opacity-60">↗</span>
+      </Link>
+      {clinic.phone && (
+        <span className="text-xs text-[var(--color-text-muted)]">{clinic.phone}</span>
+      )}
+      <button
+        onClick={() => { setEditName(clinic.name); setEditPhone(clinic.phone ?? ''); setEditing(true) }}
+        className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
+      >
+        Edit clinic
+      </button>
+    </div>
+  )
+}
+
 // ── ContactCard ───────────────────────────────────────────────────────────────
 
 function ContactCard({
   contact,
-  allContacts,
   onEdit,
   onDelete,
-  onScrollTo,
   highlighted,
   cardRef,
 }: {
   contact: Contact
-  allContacts: Contact[]
   onEdit: (c: Contact) => void
   onDelete: (id: string) => void
-  onScrollTo: (id: string) => void
   highlighted?: boolean
   cardRef?: (el: HTMLDivElement | null) => void
 }) {
   const roleLabel = ROLE_LABELS[contact.role as ContactRole] ?? contact.role
-  const linkedClinic = contact.contact_clinic_id
-    ? allContacts.find((c) => c.id === contact.contact_clinic_id)
-    : null
 
   return (
     <div
@@ -69,20 +164,9 @@ function ContactCard({
         </span>
       </div>
 
-      {linkedClinic && (
-        <button
-          type="button"
-          onClick={() => onScrollTo(linkedClinic.id)}
-          className="flex items-center gap-1 text-xs text-[var(--color-tag-text)] bg-[var(--color-tag-bg)] rounded px-2 py-0.5 w-fit mb-2 hover:opacity-80 transition-opacity cursor-pointer"
-          title={`Go to ${linkedClinic.name}`}
-        >
-          <span>🏥</span>
-          <span>{linkedClinic.name}</span>
-          <span className="opacity-60">↗</span>
-        </button>
-      )}
+      <LinkedClinicCard clinicId={contact.contact_clinic_id ?? null} />
 
-      {!linkedClinic && contact.clinic && (
+      {!contact.contact_clinic_id && contact.clinic && (
         <p className="text-sm text-[var(--color-text-muted)] mb-2">{contact.clinic}</p>
       )}
 
@@ -382,10 +466,8 @@ export default function ContactsPage() {
               <ContactCard
                 key={c.id}
                 contact={c}
-                allContacts={contacts}
                 onEdit={openEdit}
                 onDelete={(id) => void handleDelete(id)}
-                onScrollTo={scrollToContact}
                 highlighted={highlightedId === c.id}
                 cardRef={(el) => {
                   if (el) cardRefs.current.set(c.id, el)

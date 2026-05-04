@@ -27,6 +27,7 @@ const fakeDoc: Document = {
   document_date: null,
   activity_date: null,
   tags: [],
+  clinic_name: null,
 }
 
 function setupInvoke() {

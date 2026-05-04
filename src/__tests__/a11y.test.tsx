@@ -67,6 +67,7 @@ describe('Accessibility — axe-core (G-11)', () => {
       document_date: '2026-01-15',
       activity_date: null,
       tags: [],
+      clinic_name: null,
     }
     const { container } = render(React.createElement(DocumentCard, { document: doc, onDelete: vi.fn() }))
     await expectNoViolations(container)

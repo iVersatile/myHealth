@@ -306,6 +306,13 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 17 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch("ALTER TABLE documents ADD COLUMN clinic_name TEXT;")?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [17])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -332,7 +339,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 16);
+        assert_eq!(version, 17);
     }
 
     #[test]
@@ -346,7 +353,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 16);
+        assert_eq!(version, 17);
     }
 
     #[test]

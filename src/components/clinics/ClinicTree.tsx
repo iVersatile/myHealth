@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import type { ClinicWithContacts } from '../../hooks/useClinics'
 
@@ -65,14 +66,23 @@ export function ClinicTree({ clinics, onDeleted }: ClinicTreeProps) {
                   </span>
                 )}
               </button>
-              <button
-                className="ml-3 text-xs text-red-500 hover:text-red-700 disabled:opacity-40 shrink-0"
-                onClick={() => handleDelete(clinic.id)}
-                disabled={deleting === clinic.id}
-                aria-label={`Delete ${clinic.name}`}
-              >
-                {deleting === clinic.id ? 'Deleting…' : 'Delete'}
-              </button>
+              <div className="flex items-center gap-3 ml-3 shrink-0">
+                <Link
+                  href={`/clinics/edit?id=${clinic.id}`}
+                  className="text-xs text-[var(--color-accent)] hover:opacity-80 transition-opacity"
+                  aria-label={`Edit ${clinic.name}`}
+                >
+                  Edit
+                </Link>
+                <button
+                  className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40"
+                  onClick={() => handleDelete(clinic.id)}
+                  disabled={deleting === clinic.id}
+                  aria-label={`Delete ${clinic.name}`}
+                >
+                  {deleting === clinic.id ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
             </div>
 
             {isExpanded && (
