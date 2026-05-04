@@ -7,6 +7,7 @@ import { confirm } from '@tauri-apps/plugin-dialog'
 import { useContacts, ContactCreateInput, ContactUpdateInput, DuplicateCandidate } from '../../../hooks/useContacts'
 import { Contact, CONTACT_ROLES, ROLE_LABELS, ContactRole } from '../../../store/contactsStore'
 import { ContactForm } from '../../../components/contacts/ContactForm'
+import { AddressList, type Address } from '../../../components/shared/AddressList'
 
 interface Clinic {
   id: string
@@ -146,6 +147,19 @@ function ContactCard({
   cardRef?: (el: HTMLDivElement | null) => void
 }) {
   const roleLabel = ROLE_LABELS[contact.role as ContactRole] ?? contact.role
+  const [showAddresses, setShowAddresses] = useState(false)
+  const [addresses, setAddresses] = useState<Address[]>([])
+
+  function loadAddresses() {
+    invoke<Address[]>('contact_addresses_list', { contactId: contact.id })
+      .then(setAddresses)
+      .catch(() => {})
+  }
+
+  function toggleAddresses() {
+    if (!showAddresses) loadAddresses()
+    setShowAddresses((v) => !v)
+  }
 
   return (
     <div
@@ -176,6 +190,17 @@ function ContactCard({
         {contact.email && <CopyButton value={contact.email} label="email" />}
       </div>
 
+      {showAddresses && (
+        <div className="mb-3">
+          <AddressList
+            addresses={addresses}
+            entityId={contact.id}
+            entityType="contact"
+            onChanged={loadAddresses}
+          />
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           onClick={() => onEdit(contact)}
@@ -188,6 +213,12 @@ function ContactCard({
           className="text-xs px-3 py-1 rounded border border-[var(--color-border)] text-[var(--color-danger)] hover:bg-[var(--color-danger)] hover:text-white transition-colors"
         >
           Delete
+        </button>
+        <button
+          onClick={toggleAddresses}
+          className="text-xs px-3 py-1 rounded border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-text-muted)] transition-colors"
+        >
+          {showAddresses ? 'Hide addresses' : 'Addresses'}
         </button>
       </div>
     </div>

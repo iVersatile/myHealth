@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
+import { AddressList, type Address } from '@/components/shared/AddressList'
 
 interface Clinic {
   id: string
@@ -47,6 +48,7 @@ export function ClinicEditClient() {
 
   const [linkedContacts, setLinkedContacts] = useState<LinkedContact[]>([])
   const [linkedDocuments, setLinkedDocuments] = useState<LinkedDocument[]>([])
+  const [addresses, setAddresses] = useState<Address[]>([])
 
   useEffect(() => {
     if (!id) {
@@ -72,7 +74,17 @@ export function ClinicEditClient() {
     invoke<LinkedDocument[]>('clinics_get_linked_documents', { clinicId: id })
       .then(setLinkedDocuments)
       .catch(() => {})
+
+    invoke<Address[]>('clinic_addresses_list', { clinicId: id })
+      .then(setAddresses)
+      .catch(() => {})
   }, [id])
+
+  function reloadAddresses() {
+    invoke<Address[]>('clinic_addresses_list', { clinicId: id })
+      .then(setAddresses)
+      .catch(() => {})
+  }
 
   async function handleSave() {
     if (!clinic) return
@@ -203,6 +215,18 @@ export function ClinicEditClient() {
             value={crn}
             onChange={(e) => setCrn(e.target.value)}
             className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+            Addresses
+          </label>
+          <AddressList
+            addresses={addresses}
+            entityId={id}
+            entityType="clinic"
+            onChanged={reloadAddresses}
           />
         </div>
 
