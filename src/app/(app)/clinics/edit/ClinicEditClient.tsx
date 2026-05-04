@@ -32,7 +32,6 @@ export function ClinicEditClient() {
     if (!id) {
       return
     }
-    setLoading(true)
     invoke<Clinic>('clinics_get', { id })
       .then((c) => {
         setClinic(c)

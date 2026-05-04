@@ -90,18 +90,9 @@ export function DocumentList() {
     invoke<Category[]>('categories_list').then(setAllCategories).catch(() => {})
   }, [])
 
-  // Reset filter page when criteria change
-  useEffect(() => {
-    setFilterPage(0)
-  }, [dateFrom, dateTo, filterCatIds])
-
   // Debounced filter effect
   useEffect(() => {
-    if (!hasFilter) {
-      setFilteredResult(null)
-      setFilterError('')
-      return
-    }
+    if (!hasFilter) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       setFilterLoading(true)
@@ -133,6 +124,7 @@ export function DocumentList() {
   }
 
   function toggleFilterCat(id: string) {
+    setFilterPage(0)
     setFilterCatIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     )
@@ -196,7 +188,7 @@ export function DocumentList() {
               id="filter-date-from"
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={(e) => { setDateFrom(e.target.value); setFilterPage(0) }}
               className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-sm)] text-[var(--color-text)]"
             />
           </div>
@@ -211,7 +203,7 @@ export function DocumentList() {
               id="filter-date-to"
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={(e) => { setDateTo(e.target.value); setFilterPage(0) }}
               className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-sm)] text-[var(--color-text)]"
             />
           </div>
