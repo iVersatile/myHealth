@@ -246,6 +246,14 @@ pub fn run() {
             reminders_cancel,
             recurrence_create,
             recurrence_delete_series,
+            commands::addresses::clinic_addresses_list,
+            commands::addresses::clinic_address_create,
+            commands::addresses::clinic_address_update,
+            commands::addresses::clinic_address_delete,
+            commands::addresses::contact_addresses_list,
+            commands::addresses::contact_address_create,
+            commands::addresses::contact_address_update,
+            commands::addresses::contact_address_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -129,9 +129,11 @@ pub fn clinics_create(
     )?;
 
     for addr in &input.addresses {
+        let addr_id = Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 0)",
-            rusqlite::params![id, addr],
+            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary, created_at) \
+             VALUES (?, ?, ?, 0, ?)",
+            rusqlite::params![addr_id, id, addr, now],
         )?;
     }
 
@@ -346,9 +348,11 @@ pub fn clinics_create_if_not_exists(
     )?;
 
     for addr in &input.addresses {
+        let addr_id = Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 0)",
-            rusqlite::params![id, addr],
+            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary, created_at) \
+             VALUES (?, ?, ?, 0, ?)",
+            rusqlite::params![addr_id, id, addr, now],
         )?;
     }
 

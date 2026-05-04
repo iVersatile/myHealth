@@ -33,6 +33,7 @@ impl<T> From<std::sync::PoisonError<T>> for CommandError {
     }
 }
 
+pub mod addresses;
 pub mod appointments;
 pub mod auth;
 pub mod backup;

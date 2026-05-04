@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 28-E / 29 / 30 running in parallel. ▶ Task 28-E.4 (E2E suite) blocked on manual run. ▶ Task 30.1 next automated task.
+Phase 29+30 complete. Tasks 31.2/31.3/31.4 complete. ▶ Task 31.5 next. Task 28-E.4 blocked on manual run.
 ```
 
 ---
@@ -1719,7 +1719,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - ✅ "Clinics" sidebar nav item present in `Sidebar.tsx`
    - Note: list renders via `ClinicTree` (tree view), not a flat row-per-clinic table as originally specified; linked contact count shown inline
 
-[ ] **29.4 — Clinic edit page: add linked contacts + linked documents sections**
+[x] **29.4 — Clinic edit page: add linked contacts + linked documents sections**
    - File: `src/app/(app)/clinics/edit/ClinicEditClient.tsx`
    - Edit form (name, address, phone, CRN) already implemented via `/clinics/edit?id=<id>`
    - **Remaining:** fetch + display linked contacts via `clinics_get_linked_contacts(id)` and linked docs via `clinics_get_linked_documents(id)`
@@ -1727,7 +1727,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Linked documents section: list of document titles (links to `/documents/view/[id]`)
    - Done when: linked contacts + linked documents sections render on the edit page
 
-[ ] **29.5 — TypeScript check + manual test approval**
+[x] **29.5 — TypeScript check + manual test approval**
    - Run `npx tsc --noEmit` — must pass
    - Done when: user confirms manual test passes (gate: do NOT mark 29.4 complete until user approves)
 
@@ -1739,14 +1739,14 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 30
 
-▶ [ ] **30.1 — Normalize specialty tags to Title Case at extraction time**
+[x] **30.1 — Normalize specialty tags to Title Case at extraction time**
    - File: `src-tauri/src/extraction/tags.rs`
    - In `SPECIALTY_MAP`, change output strings from UPPERCASE (`"CARDIOLOGY"`) to Title Case (`"Cardiology"`)
    - Update all entries in `SPECIALTY_MAP` and any other hardcoded UPPERCASE specialty tag strings in the file
    - Update unit tests: rename `auto_tags_specialty_physiotherapy_uppercase` and assert Title Case output
    - Done when: `cargo test` passes; specialty tags extracted from a document containing "cardiol" are stored as `"Cardiology"` (not `"CARDIOLOGY"`)
 
-[ ] **30.2 — TypeScript check + cargo check**
+[x] **30.2 — TypeScript check + cargo check**
    - Run `npx tsc --noEmit` and `cargo check --manifest-path src-tauri/Cargo.toml`
    - Done when: both pass with zero errors
 
@@ -1792,14 +1792,14 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 31
 
-[ ] **31.1 — DB migration: recreate `clinic_addresses` (structured) + new `contact_addresses`**
+[x] **31.1 — DB migration: recreate `clinic_addresses` (structured) + new `contact_addresses`**
    - File: `src-tauri/src/db/migrations.rs`
    - Add migration: `DROP TABLE IF EXISTS clinic_addresses` then `CREATE TABLE clinic_addresses (...)` with structured columns per schema above
    - Add migration: `CREATE TABLE IF NOT EXISTS contact_addresses (...)` with same structure
    - Add cascade-delete tests for both tables (mirror existing `clinic_addresses_cascade_delete` test)
    - Done when: `cargo test` passes; both tables created with correct schema
 
-[ ] **31.2 — Rust: `Address` struct + `clinic_addresses` CRUD commands**
+[x] **31.2 — Rust: `Address` struct + `clinic_addresses` CRUD commands**
    - File: `src-tauri/src/commands/addresses.rs` (new)
    - Define shared `Address` struct: `id, label, line1, line2, city, postcode, country, is_primary, created_at`
    - Commands: `clinic_addresses_list(clinic_id: String) -> Result<Vec<Address>, String>`
@@ -1809,19 +1809,19 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Unit tests for each command (in-memory DB)
    - Done when: `cargo test` passes for all clinic address commands
 
-[ ] **31.3 — Rust: `contact_addresses` CRUD commands**
+[x] **31.3 — Rust: `contact_addresses` CRUD commands**
    - Same file: `src-tauri/src/commands/addresses.rs`
    - Commands: `contact_addresses_list`, `contact_address_create`, `contact_address_update`, `contact_address_delete`
    - Same is_primary enforcement: only one primary per contact
    - Unit tests for each
    - Done when: `cargo test` passes for all contact address commands
 
-[ ] **31.4 — Rust: register commands in `lib.rs` + update `clinics_create_if_not_exists`**
+[x] **31.4 — Rust: register commands in `lib.rs` + update `clinics_create_if_not_exists`**
    - Register all 8 address commands in `lib.rs` invoke_handler
    - Update `clinics_create_if_not_exists` and any other clinic-create paths to use new structured `clinic_addresses` insert (map extracted `Vec<String>` to `line1` field, `label=NULL`)
    - Done when: `cargo build` passes; document-upload clinic auto-creation still writes address rows to new schema
 
-[ ] **31.5 — Extraction: label detection for clinic addresses**
+▶ [ ] **31.5 — Extraction: label detection for clinic addresses**
    - File: `src-tauri/src/extraction/clinic.rs`
    - `extract_clinic_addresses` currently returns `Vec<String>`; extend to return `Vec<ExtractedAddress>` with `label: Option<String>, line1: String`
    - Label heuristic: if the line immediately before the detected address block is bold (PDF bold marker) or all-caps ≤ 4 words, treat it as the label; otherwise `label = None`
