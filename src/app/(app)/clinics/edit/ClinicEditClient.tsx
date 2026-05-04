@@ -18,7 +18,7 @@ export function ClinicEditClient() {
   const id = searchParams.get('id') ?? ''
 
   const [clinic, setClinic] = useState<Clinic | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !!id)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -30,7 +30,6 @@ export function ClinicEditClient() {
 
   useEffect(() => {
     if (!id) {
-      setLoading(false)
       return
     }
     setLoading(true)

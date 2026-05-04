@@ -92,16 +92,13 @@ export function DocumentList() {
 
   // Reset filter page when criteria change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFilterPage(0)
   }, [dateFrom, dateTo, filterCatIds])
 
   // Debounced filter effect
   useEffect(() => {
     if (!hasFilter) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFilteredResult(null)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFilterError('')
       return
     }
