@@ -59,7 +59,7 @@ fn email_re() -> &'static Regex {
 fn clinic_re() -> &'static Regex {
     CLINIC_PATTERN.get_or_init(|| {
         Regex::new(
-            r"(?m)^(?:The[ \t]+)?([A-Z][A-Za-z0-9'\-]+(?:(?:[ \t]+&[ \t]+|[ \t]+)[A-Z][A-Za-z0-9'\-]+)*)[ \t]+(?i:Medical(?:[ \t]+Centre|[ \t]+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:[ \t]+Centre)?|Physiotherapy|Dental(?:[ \t]+Practice)?|Osteopath(?:ic)?|Chiropractic|Therapy|Wellness|Ltd\.?|Limited|PLC|LLP|LLC)",
+            r"(?:The[ \t]+)?([A-Z][A-Za-z0-9'\-]+(?:(?:[ \t]+&[ \t]+|[ \t]+)[A-Z][A-Za-z0-9'\-]+)*)[ \t]+(?i:Medical(?:[ \t]+Centre|[ \t]+Group)?|Clinic|Hospital|Practice|Surgery|Health(?:[ \t]+Centre)?|Physiotherapy|Dental(?:[ \t]+Practice)?|Osteopath(?:ic)?|Chiropractic|Therapy|Wellness|Ltd\.?|Limited|PLC|LLP|LLC)",
         )
         .expect("clinic regex valid")
     })
@@ -439,5 +439,17 @@ mod tests {
             suggestions[0].clinic.as_deref(),
             Some("Springfield Physiotherapy & Sports Medicine Clinic")
         );
+    }
+
+    #[test]
+    fn detects_clinic_inline_mid_sentence() {
+        let text = "Your appointment at City Medical Centre has been confirmed.";
+        assert_eq!(first_clinic(text), Some("City Medical Centre".to_string()));
+    }
+
+    #[test]
+    fn detects_clinic_inline_with_the_prefix() {
+        let text = "You were seen at The Riverside Clinic on 1st January.";
+        assert_eq!(first_clinic(text), Some("The Riverside Clinic".to_string()));
     }
 }

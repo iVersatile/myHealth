@@ -30,6 +30,7 @@ pub struct Document {
     pub extracted_metadata: Option<String>,
     pub extracted_text: Option<String>,
     pub tags: Vec<String>,
+    pub clinic_name: Option<String>,
 }
 
 const VALID_CATEGORIES: &[&str] = &[
@@ -92,7 +93,7 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, CommandEr
     let mut stmt = conn.prepare(
         "SELECT id, filename, file_path, mime_type, file_size_bytes, category, \
              thumbnail_path, notes, created_at, updated_at, is_deleted, \
-             document_date, activity_date, extracted_metadata, extracted_text \
+             document_date, activity_date, extracted_metadata, extracted_text, clinic_name \
              FROM documents WHERE id = ?",
     )?;
     let mut doc = stmt.query_row([id], |row| {
@@ -113,6 +114,7 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, CommandEr
             extracted_metadata: row.get(13)?,
             extracted_text: row.get(14)?,
             tags: vec![],
+            clinic_name: row.get(15)?,
         })
     })?;
     doc.tags = fetch_tags(conn, id);
@@ -434,6 +436,37 @@ pub fn documents_tags_set(
     Ok(())
 }
 
+#[tauri::command]
+pub fn documents_set_clinic(
+    state: State<'_, AppState>,
+    document_id: String,
+    clinic_name: String,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM documents WHERE id = ? AND is_deleted = 0",
+            [&document_id],
+            |row| row.get::<_, i64>(0),
+        )
+        .map(|n| n > 0)?;
+    if !exists {
+        return Err(CommandError::NotFound(format!(
+            "document not found: {document_id}"
+        )));
+    }
+
+    let now = Utc::now().to_rfc3339();
+    conn.execute(
+        "UPDATE documents SET clinic_name = ?1, updated_at = ?2 WHERE id = ?3",
+        rusqlite::params![clinic_name, now, document_id],
+    )?;
+
+    Ok(())
+}
+
 // ── Advanced filtered search ──────────────────────────────────────────────────
 
 #[derive(Debug, Serialize)]
@@ -547,6 +580,7 @@ pub fn documents_search_filtered(
                 extracted_metadata: row.get(13)?,
                 extracted_text: row.get(14)?,
                 tags: vec![],
+                clinic_name: None,
             })
         })?
         .filter_map(|r| r.ok())
@@ -601,7 +635,8 @@ mod tests {
                 activity_date   TEXT,
                 extracted_metadata TEXT,
                 extracted_text  TEXT,
-                extraction_status TEXT
+                extraction_status TEXT,
+                clinic_name     TEXT
             );
             CREATE TABLE document_tags (
                 document_id TEXT NOT NULL,

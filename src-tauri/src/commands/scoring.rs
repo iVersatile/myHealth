@@ -135,6 +135,7 @@ mod tests {
             extracted_metadata: None,
             extracted_text: None,
             tags: vec![],
+            clinic_name: None,
         }
     }
 

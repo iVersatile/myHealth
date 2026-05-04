@@ -162,6 +162,7 @@ mod tests {
             extracted_metadata: None,
             extracted_text: extracted_text.map(str::to_string),
             tags: vec![],
+            clinic_name: None,
         }
     }
 

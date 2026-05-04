@@ -189,3 +189,19 @@ Before writing any code for a new task:
 2. **After any DB schema migration that changes a CHECK constraint, immediately audit the frontend** — update `CONTACT_ROLES`, `ROLE_LABELS`, and any role dropdowns to match the new constraint.
 3. **Never hardcode a role string in inline IPC calls.** Reference `CONTACT_ROLES[n]` or a named constant — hardcoded strings bypass type-checking and silently violate DB constraints.
 4. **Re-running extraction after dialog close undoes user decisions.** If a dialog already presented extraction results, do not re-run extraction in the parent's `onClose` handler.
+
+---
+
+## Lesson 8 — Regex anchor `(?m)^` silently prevented clinic suggestions (2026-05-04)
+
+**Symptom:** Clinic suggestion card never appeared in the confirm-upload UI despite documents containing clinic names.
+
+**Root cause:** `clinic_re()` in `extraction/contact.rs` compiled with `(?m)^` at the start of the pattern, requiring clinic names to appear at the very start of a line. Real medical letters embed clinic names mid-sentence (e.g., "Your appointment at City Medical Centre has been confirmed."), so the regex never matched and `first_clinic()` always returned `None`.
+
+**Fix:** Removed `(?m)^` from the clinic regex. Added two regression tests: `detects_clinic_inline_mid_sentence` and `detects_clinic_inline_with_the_prefix`.
+
+**Secondary fix:** Inline test schema in `commands::documents::tests::test_conn()` lacked the `clinic_name` column added by migration SCHEMA_V18, causing 6 document tests to fail with "no such column: clinic_name".
+
+**Rules:**
+1. **Regex anchors change semantics silently.** `(?m)^` means start-of-line — real documents rarely start a line with a clinic name. Always test regexes against realistic mid-sentence examples.
+2. **Inline test schemas must track every `ALTER TABLE` migration.** When a new column is added via a migration, also add it to any inline `CREATE TABLE` strings in test helpers.
