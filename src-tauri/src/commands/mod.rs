@@ -54,6 +54,7 @@ pub mod settings;
 pub mod stats;
 pub mod summarizer;
 pub mod tags;
+pub mod trash;
 
 pub struct AuthRateLimit {
     pub fail_count: u32,

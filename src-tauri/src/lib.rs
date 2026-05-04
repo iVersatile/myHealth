@@ -73,6 +73,9 @@ use commands::settings::{
 use commands::stats::stats_summary;
 use commands::summarizer::summarize_appointment_notes;
 use commands::tags::{appointment_tags_get, appointment_tags_set, icd10_suggest};
+use commands::trash::{
+    trash_empty, trash_hard_delete, trash_list, trash_purge_expired, trash_restore,
+};
 use commands::AppState;
 use tauri::Manager;
 
@@ -260,6 +263,11 @@ pub fn run() {
             commands::addresses::contact_address_create,
             commands::addresses::contact_address_update,
             commands::addresses::contact_address_delete,
+            trash_list,
+            trash_restore,
+            trash_hard_delete,
+            trash_empty,
+            trash_purge_expired,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

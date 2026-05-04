@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29+30 complete. Tasks 31.2–31.11 complete. Tasks 32.1–32.3 complete. ▶ Task 32.4 next (Rust trash commands).
+Phase 29+30 complete. Tasks 31.2–31.11 complete. Tasks 32.1–32.4 complete. ▶ Task 32.5 next (call trash_purge_expired on startup).
 ```
 
 ---
@@ -1895,7 +1895,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - FTS5 search: exclude `is_deleted=1` rows (update FTS trigger or rebuild filter)
    - Done when: `cargo test` passes; soft-deleted items absent from all list and search results
 
-▶ [ ] **32.4 — Rust: `trash_list`, `trash_restore`, `trash_hard_delete`, `trash_empty`, `trash_purge_expired` commands**
+[x] **32.4 — Rust: `trash_list`, `trash_restore`, `trash_hard_delete`, `trash_empty`, `trash_purge_expired` commands**
    - File: `src-tauri/src/commands/trash.rs` (new)
    - `trash_list() -> Result<Vec<TrashItem>, String>` — unified list across all tables WHERE is_deleted=1; `TrashItem` has `entity_type, id, display_name, deleted_at`
    - `trash_restore(entity_type: String, id: String) -> Result<(), String>` — sets `is_deleted=0, deleted_at=NULL`
@@ -1906,7 +1906,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Unit tests for each command
    - Done when: `cargo test` passes
 
-[ ] **32.5 — Rust: call `trash_purge_expired` on app startup**
+▶ [ ] **32.5 — Rust: call `trash_purge_expired` on app startup**
    - File: `src-tauri/src/lib.rs`
    - In the `setup` closure (after DB init), call `trash_purge_expired` directly (not via IPC)
    - Done when: `cargo build` passes; expired items auto-purge on each startup
