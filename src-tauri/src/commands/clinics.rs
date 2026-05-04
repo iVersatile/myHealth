@@ -305,12 +305,25 @@ pub fn clinics_delete(id: String, state: State<'_, AppState>) -> Result<(), Comm
         .map_err(|e| CommandError::Internal(e.to_string()))?;
     }
 
-    tx.execute("DELETE FROM clinics WHERE id = ?1", [&id])
-        .map_err(|e| CommandError::Internal(e.to_string()))?;
+    let now = Utc::now().to_rfc3339();
+    tx.execute(
+        "UPDATE clinics SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2",
+        rusqlite::params![now, id],
+    )
+    .map_err(|e| CommandError::Internal(e.to_string()))?;
 
     tx.commit()
         .map_err(|e| CommandError::Internal(e.to_string()))?;
 
+    Ok(())
+}
+
+#[tauri::command]
+pub fn clinics_hard_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    conn.execute("DELETE FROM clinics WHERE id = ?1", [&id])
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
     Ok(())
 }
 
@@ -546,6 +559,35 @@ mod tests {
             .unwrap();
 
         assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn soft_delete_sets_is_deleted_flag() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'Soft Delete Test', ?)",
+            rusqlite::params![id, now],
+        )
+        .unwrap();
+
+        let deleted_at = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE clinics SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2",
+            rusqlite::params![deleted_at, id],
+        )
+        .unwrap();
+
+        let (is_deleted, dt): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT is_deleted, deleted_at FROM clinics WHERE id = ?",
+                [&id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+        assert!(dt.is_some());
     }
 
     #[test]

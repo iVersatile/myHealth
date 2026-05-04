@@ -214,15 +214,27 @@ pub fn notes_update(
 pub fn notes_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-
-    let rows = conn.execute("DELETE FROM notes WHERE id = ?", [&id])?;
-
+    let now = Utc::now().to_rfc3339();
+    let rows = conn.execute(
+        "UPDATE notes SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_deleted = 0",
+        rusqlite::params![now, id],
+    )?;
     if rows == 0 {
-        Err(CommandError::Internal(format!("note '{id}' not found")))
+        Err(CommandError::NotFound(format!(
+            "note '{id}' not found or already deleted"
+        )))
     } else {
         remove_from_search_index(conn, &id);
         Ok(())
     }
+}
+
+#[tauri::command]
+pub fn notes_hard_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    conn.execute("DELETE FROM notes WHERE id = ?", [&id])?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -510,7 +522,9 @@ mod tests {
                 content TEXT NOT NULL DEFAULT '',
                 is_pinned INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT
             );
             CREATE TABLE note_tags (
                 note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
@@ -658,6 +672,27 @@ mod tests {
         insert_note(&conn, "n1", "X", false);
         conn.execute("DELETE FROM notes WHERE id='n1'", []).unwrap();
         assert!(load_note(&conn, "n1").is_err());
+    }
+
+    #[test]
+    fn soft_delete_sets_is_deleted_flag() {
+        let conn = test_conn();
+        insert_note(&conn, "sd1", "Soft Del", false);
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE notes SET is_deleted = 1, deleted_at = ?1 WHERE id = 'sd1' AND is_deleted = 0",
+            rusqlite::params![now],
+        )
+        .unwrap();
+        let (is_deleted, dt): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT is_deleted, deleted_at FROM notes WHERE id = 'sd1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+        assert!(dt.is_some());
     }
 
     #[test]

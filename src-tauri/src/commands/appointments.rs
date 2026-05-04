@@ -394,15 +394,31 @@ pub fn appointments_delete(id: String, state: State<'_, AppState>) -> Result<(),
         .lock()
         .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
-
-    let rows = conn.execute("DELETE FROM appointments WHERE id = ?", [&id])?;
-
+    let now = Utc::now().to_rfc3339();
+    let rows = conn.execute(
+        "UPDATE appointments SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_deleted = 0",
+        rusqlite::params![now, id],
+    )?;
     if rows == 0 {
         Err(CommandError::NotFound(format!("appointment '{id}'")))
     } else {
         remove_from_search_index(conn, &id);
         Ok(())
     }
+}
+
+#[tauri::command]
+pub fn appointments_hard_delete(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+    conn.execute("DELETE FROM appointments WHERE id = ?", [&id])?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -537,7 +553,9 @@ mod tests {
                 reminder_min INTEGER NOT NULL DEFAULT 60,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL,
-                recurrence_series_id TEXT
+                recurrence_series_id TEXT,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT
             );
             CREATE TABLE documents (
                 id TEXT PRIMARY KEY,
@@ -712,6 +730,33 @@ mod tests {
         conn.execute("DELETE FROM appointments WHERE id='a1'", [])
             .unwrap();
         assert!(load_appointment(&conn, "a1").is_err());
+    }
+
+    #[test]
+    fn soft_delete_sets_is_deleted_flag() {
+        let conn = test_conn();
+        insert_appt(
+            &conn,
+            "sd1",
+            "Soft Del",
+            "2026-06-01T10:00:00Z",
+            "scheduled",
+        );
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE appointments SET is_deleted = 1, deleted_at = ?1 WHERE id = 'sd1' AND is_deleted = 0",
+            rusqlite::params![now],
+        )
+        .unwrap();
+        let (is_deleted, dt): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT is_deleted, deleted_at FROM appointments WHERE id = 'sd1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+        assert!(dt.is_some());
     }
 
     #[test]

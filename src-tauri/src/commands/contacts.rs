@@ -391,9 +391,25 @@ pub fn contacts_update(
 pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-
-    conn.execute("DELETE FROM contacts WHERE id = ?", [&id])?;
+    let now = Utc::now().to_rfc3339();
+    let affected = conn.execute(
+        "UPDATE contacts SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_deleted = 0",
+        rusqlite::params![now, id],
+    )?;
+    if affected == 0 {
+        return Err(CommandError::NotFound(format!(
+            "contact not found or already deleted: {id}"
+        )));
+    }
     remove_from_search_index(conn, &id);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn contacts_hard_delete(id: String, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    conn.execute("DELETE FROM contacts WHERE id = ?", [&id])?;
     Ok(())
 }
 
@@ -815,6 +831,35 @@ mod tests {
             })
             .unwrap();
         assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn soft_delete_sets_is_deleted_flag() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) VALUES (?, 'Soft Del', 'gp', ?, ?)",
+            rusqlite::params![id, now, now],
+        )
+        .unwrap();
+
+        let deleted_at = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE contacts SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_deleted = 0",
+            rusqlite::params![deleted_at, id],
+        )
+        .unwrap();
+
+        let (is_deleted, dt): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT is_deleted, deleted_at FROM contacts WHERE id = ?",
+                [&id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+        assert!(dt.is_some());
     }
 
     fn insert_contact(conn: &rusqlite::Connection, name: &str) {

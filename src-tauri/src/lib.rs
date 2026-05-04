@@ -11,8 +11,9 @@ mod acceptance_tests;
 
 use commands::appointments::{
     appointment_link_contact, appointment_unlink_contact, appointments_clear_doctor,
-    appointments_create, appointments_delete, appointments_get, appointments_link_document,
-    appointments_list, appointments_list_upcoming, appointments_update, contacts_for_appointment,
+    appointments_create, appointments_delete, appointments_get, appointments_hard_delete,
+    appointments_link_document, appointments_list, appointments_list_upcoming, appointments_update,
+    contacts_for_appointment,
 };
 use commands::auth::{
     app_reset_data, auth_add_user, auth_change_password, auth_has_password, auth_is_locked,
@@ -34,13 +35,13 @@ use commands::categories::{
 };
 use commands::clinics::{
     clinics_create, clinics_create_if_not_exists, clinics_delete, clinics_get,
-    clinics_get_linked_contacts, clinics_get_linked_documents, clinics_link_contact, clinics_list,
-    clinics_list_with_contacts, clinics_update,
+    clinics_get_linked_contacts, clinics_get_linked_documents, clinics_hard_delete,
+    clinics_link_contact, clinics_list, clinics_list_with_contacts, clinics_update,
 };
 use commands::contacts::{
     contacts_create, contacts_create_with_clinic, contacts_delete, contacts_find_similar,
-    contacts_get, contacts_list, contacts_update, documents_link_contact, find_duplicate_contacts,
-    merge_contacts,
+    contacts_get, contacts_hard_delete, contacts_list, contacts_update, documents_link_contact,
+    find_duplicate_contacts, merge_contacts,
 };
 use commands::documents::{
     appointments_suggest_from_document, documents_delete, documents_get,
@@ -56,7 +57,8 @@ use commands::links::{
 };
 use commands::notes::{
     links_for_note, note_link, note_unlink, note_version_restore, note_versions_list, notes_create,
-    notes_delete, notes_for_entity, notes_get, notes_list, notes_pin, notes_tags_set, notes_update,
+    notes_delete, notes_for_entity, notes_get, notes_hard_delete, notes_list, notes_pin,
+    notes_tags_set, notes_update,
 };
 use commands::outlook::{
     outlook_disconnect, outlook_exchange_code, outlook_get_auth_url, outlook_is_connected,
@@ -149,6 +151,7 @@ pub fn run() {
             appointments_create,
             appointments_update,
             appointments_delete,
+            appointments_hard_delete,
             appointments_clear_doctor,
             appointments_link_document,
             appointment_link_contact,
@@ -159,6 +162,7 @@ pub fn run() {
             notes_create,
             notes_update,
             notes_delete,
+            notes_hard_delete,
             notes_pin,
             notes_tags_set,
             note_link,
@@ -199,6 +203,7 @@ pub fn run() {
             clinics_create,
             clinics_update,
             clinics_delete,
+            clinics_hard_delete,
             clinics_create_if_not_exists,
             clinics_link_contact,
             clinics_get_linked_contacts,
@@ -209,6 +214,7 @@ pub fn run() {
             contacts_create_with_clinic,
             contacts_update,
             contacts_delete,
+            contacts_hard_delete,
             contacts_find_similar,
             find_duplicate_contacts,
             merge_contacts,
