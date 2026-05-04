@@ -109,7 +109,7 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={onClose} onUploaded={onUploaded} />)
     await pickFileAndReachReview()
     await userEvent.click(screen.getByRole('button', { name: /confirm upload/i }))
-    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(fakeDoc))
+    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(fakeDoc, []))
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -461,8 +461,13 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy())
     await userEvent.click(screen.getByRole('button', { name: /save as clinic/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('clinics_create_if_not_exists', {
-      name: 'John Green Physiotherapy Ltd',
-      addresses: ['1 Clinic Rd, London, SW1A 1AA'],
+      input: {
+        name: 'John Green Physiotherapy Ltd',
+        address: null,
+        phone: null,
+        company_registration_number: '6780032',
+        addresses: ['1 Clinic Rd, London, SW1A 1AA'],
+      },
     }))
     await waitFor(() => expect(screen.getByRole('button', { name: /^saved$/i })).toBeTruthy())
   })
