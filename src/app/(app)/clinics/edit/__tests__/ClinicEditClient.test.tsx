@@ -183,3 +183,78 @@ describe('ClinicEditClient — edit form', () => {
     await waitFor(() => expect(screen.getByText('Failed to save clinic')).toBeTruthy())
   })
 })
+
+describe('ClinicEditClient — linked contacts & documents', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockRouterPush.mockClear()
+    mockId = 'clinic-1'
+  })
+
+  function setupInvoke({
+    contacts = [] as { id: string; name: string; role: string | null; specialty: string | null; phone: string | null }[],
+    documents = [] as { id: string; filename: string; category: string | null; document_date: string | null }[],
+  } = {}) {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'clinics_get') return Promise.resolve(makeClinic())
+      if (cmd === 'clinics_get_linked_contacts') return Promise.resolve(contacts)
+      if (cmd === 'clinics_get_linked_documents') return Promise.resolve(documents)
+      return Promise.resolve(undefined)
+    })
+  }
+
+  it('renders linked contacts section when contacts exist', async () => {
+    setupInvoke({ contacts: [{ id: 'c1', name: 'Dr Smith', role: 'gp', specialty: null, phone: null }] })
+    render(<ClinicEditClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Linked Contacts')).toBeTruthy()
+    expect(screen.getByText('Dr Smith')).toBeTruthy()
+    expect(screen.getByText('gp')).toBeTruthy()
+  })
+
+  it('renders role and specialty together when both present', async () => {
+    setupInvoke({ contacts: [{ id: 'c2', name: 'Dr Jones', role: 'consultant', specialty: 'cardiology', phone: null }] })
+    render(<ClinicEditClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('consultant · cardiology')).toBeTruthy()
+  })
+
+  it('hides role/specialty span when both are null', async () => {
+    setupInvoke({ contacts: [{ id: 'c3', name: 'Nurse Patel', role: null, specialty: null, phone: null }] })
+    render(<ClinicEditClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Nurse Patel')).toBeTruthy()
+    expect(screen.queryByText(' · ')).toBeNull()
+  })
+
+  it('hides linked contacts section when list is empty', async () => {
+    setupInvoke({ contacts: [] })
+    render(<ClinicEditClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.queryByText('Linked Contacts')).toBeNull()
+  })
+
+  it('renders linked documents section when documents exist', async () => {
+    setupInvoke({ documents: [{ id: 'd1', filename: 'scan.pdf', category: null, document_date: '2026-01-15' }] })
+    render(<ClinicEditClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Linked Documents')).toBeTruthy()
+    expect(screen.getByText('scan.pdf')).toBeTruthy()
+    expect(screen.getByText('2026-01-15')).toBeTruthy()
+  })
+
+  it('hides document_date span when date is null', async () => {
+    setupInvoke({ documents: [{ id: 'd2', filename: 'report.pdf', category: null, document_date: null }] })
+    render(<ClinicEditClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('report.pdf')).toBeTruthy()
+    expect(screen.queryByText('null')).toBeNull()
+  })
+
+  it('hides linked documents section when list is empty', async () => {
+    setupInvoke({ documents: [] })
+    render(<ClinicEditClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.queryByText('Linked Documents')).toBeNull()
+  })
+})
