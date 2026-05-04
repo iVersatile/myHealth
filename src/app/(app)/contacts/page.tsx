@@ -150,6 +150,7 @@ function ContactCard({
   return (
     <div
       ref={cardRef}
+      data-testid="contact-list-item"
       className={`p-4 rounded-[var(--radius-md)] border bg-[var(--color-surface)] transition-colors duration-700 ${highlighted ? 'border-[var(--color-accent)]' : 'border-[var(--color-border)]'}`}
     >
       <div className="flex items-start justify-between gap-2 mb-1">

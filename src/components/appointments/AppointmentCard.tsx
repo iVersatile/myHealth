@@ -27,7 +27,7 @@ export function AppointmentCard({ appointment: appt, onDelete }: AppointmentCard
   const statusColor = STATUS_COLORS[appt.status]
 
   return (
-    <article className="flex items-start gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[var(--shadow-sm)] transition-shadow duration-[var(--duration-fast)] hover:shadow-[var(--shadow-md)]">
+    <article data-testid="appointment-card" className="flex items-start gap-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[var(--shadow-sm)] transition-shadow duration-[var(--duration-fast)] hover:shadow-[var(--shadow-md)]">
       {/* Date block */}
       <div className="flex w-14 shrink-0 flex-col items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)] py-2 text-center">
         <span className="text-[var(--text-xs)] font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">

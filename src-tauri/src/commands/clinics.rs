@@ -61,6 +61,7 @@ pub struct ClinicWithContacts {
     pub address: Option<String>,
     pub phone: Option<String>,
     pub created_at: String,
+    pub company_registration_number: Option<String>,
     pub linked_contacts: Vec<LinkedContact>,
 }
 
@@ -386,7 +387,7 @@ pub fn clinics_list_with_contacts(
     let conn = CommandContext::new(&guard)?.conn;
 
     let mut stmt = conn.prepare(
-        "SELECT c.id, c.name, c.address, c.phone, c.created_at,
+        "SELECT c.id, c.name, c.address, c.phone, c.created_at, c.company_registration_number,
                 co.id AS contact_id, co.name AS contact_name, co.role AS contact_role
          FROM clinics c
          LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
@@ -399,7 +400,7 @@ pub fn clinics_list_with_contacts(
 
     while let Some(row) = rows.next()? {
         let clinic_id: String = row.get(0)?;
-        let contact_id: Option<String> = row.get(5)?;
+        let contact_id: Option<String> = row.get(6)?;
 
         if result.last().map(|c: &ClinicWithContacts| c.id.as_str()) != Some(clinic_id.as_str()) {
             result.push(ClinicWithContacts {
@@ -408,6 +409,7 @@ pub fn clinics_list_with_contacts(
                 address: row.get(2)?,
                 phone: row.get(3)?,
                 created_at: row.get(4)?,
+                company_registration_number: row.get(5)?,
                 linked_contacts: Vec::new(),
             });
         }
@@ -416,8 +418,8 @@ pub fn clinics_list_with_contacts(
             let last = result.last_mut().unwrap();
             last.linked_contacts.push(LinkedContact {
                 id: cid,
-                name: row.get(6)?,
-                role: row.get(7)?,
+                name: row.get(7)?,
+                role: row.get(8)?,
             });
         }
     }
@@ -746,7 +748,7 @@ mod tests {
 
         let mut stmt = conn
             .prepare(
-                "SELECT c.id, c.name, c.address, c.phone, c.created_at,
+                "SELECT c.id, c.name, c.address, c.phone, c.created_at, c.company_registration_number,
                         co.id, co.name, co.role
                  FROM clinics c
                  LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
@@ -759,7 +761,7 @@ mod tests {
         let mut rows = stmt.query([]).unwrap();
         while let Some(row) = rows.next().unwrap() {
             let cid: String = row.get(0).unwrap();
-            let contact_id: Option<String> = row.get(5).unwrap();
+            let contact_id: Option<String> = row.get(6).unwrap();
             if result.last().map(|c: &ClinicWithContacts| c.id.as_str()) != Some(cid.as_str()) {
                 result.push(ClinicWithContacts {
                     id: cid,
@@ -767,6 +769,7 @@ mod tests {
                     address: row.get(2).unwrap(),
                     phone: row.get(3).unwrap(),
                     created_at: row.get(4).unwrap(),
+                    company_registration_number: row.get(5).unwrap(),
                     linked_contacts: Vec::new(),
                 });
             }
@@ -774,8 +777,8 @@ mod tests {
                 let last = result.last_mut().unwrap();
                 last.linked_contacts.push(LinkedContact {
                     id: kid,
-                    name: row.get(6).unwrap(),
-                    role: row.get(7).unwrap(),
+                    name: row.get(7).unwrap(),
+                    role: row.get(8).unwrap(),
                 });
             }
         }
@@ -814,7 +817,7 @@ mod tests {
 
         let mut stmt = conn
             .prepare(
-                "SELECT c.id, c.name, c.address, c.phone, c.created_at,
+                "SELECT c.id, c.name, c.address, c.phone, c.created_at, c.company_registration_number,
                         co.id, co.name, co.role
                  FROM clinics c
                  LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
@@ -827,7 +830,7 @@ mod tests {
         let mut rows = stmt.query([]).unwrap();
         while let Some(row) = rows.next().unwrap() {
             let cid: String = row.get(0).unwrap();
-            let contact_id: Option<String> = row.get(5).unwrap();
+            let contact_id: Option<String> = row.get(6).unwrap();
             if result.last().map(|c: &ClinicWithContacts| c.id.as_str()) != Some(cid.as_str()) {
                 result.push(ClinicWithContacts {
                     id: cid,
@@ -835,6 +838,7 @@ mod tests {
                     address: row.get(2).unwrap(),
                     phone: row.get(3).unwrap(),
                     created_at: row.get(4).unwrap(),
+                    company_registration_number: row.get(5).unwrap(),
                     linked_contacts: Vec::new(),
                 });
             }
@@ -842,8 +846,8 @@ mod tests {
                 let last = result.last_mut().unwrap();
                 last.linked_contacts.push(LinkedContact {
                     id: kid,
-                    name: row.get(6).unwrap(),
-                    role: row.get(7).unwrap(),
+                    name: row.get(7).unwrap(),
+                    role: row.get(8).unwrap(),
                 });
             }
         }

@@ -45,6 +45,7 @@ export function ClinicTree({ clinics, onDeleted }: ClinicTreeProps) {
         return (
           <div
             key={clinic.id}
+            data-testid="clinic-row"
             className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden"
           >
             <div className="flex items-center justify-between px-4 py-3">
@@ -60,6 +61,11 @@ export function ClinicTree({ clinics, onDeleted }: ClinicTreeProps) {
                 <span className="font-medium text-[var(--color-text)] truncate">
                   {clinic.name}
                 </span>
+                {clinic.company_registration_number && (
+                  <span className="text-xs text-[var(--color-text-muted)] hidden sm:inline">
+                    CRN {clinic.company_registration_number}
+                  </span>
+                )}
                 {clinic.phone && (
                   <span className="text-xs text-[var(--color-text-muted)] hidden sm:inline">
                     {clinic.phone}

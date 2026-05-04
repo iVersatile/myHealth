@@ -15,6 +15,7 @@ export interface ClinicWithContacts {
   address: string | null
   phone: string | null
   created_at: string
+  company_registration_number: string | null
   linked_contacts: LinkedContact[]
 }
 

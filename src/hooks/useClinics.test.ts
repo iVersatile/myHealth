@@ -12,6 +12,7 @@ const fakeClinic: ClinicWithContacts = {
   address: null,
   phone: null,
   created_at: '2026-05-01T10:00:00Z',
+  company_registration_number: null,
   linked_contacts: [{ id: 'ct-1', name: 'Dr Test', role: 'gp' }],
 }
 

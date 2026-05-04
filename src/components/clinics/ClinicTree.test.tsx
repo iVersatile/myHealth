@@ -12,6 +12,7 @@ const clinicNoContacts: ClinicWithContacts = {
   address: null,
   phone: null,
   created_at: '2026-05-01T10:00:00Z',
+  company_registration_number: null,
   linked_contacts: [],
 }
 
@@ -21,6 +22,7 @@ const clinicWithContacts: ClinicWithContacts = {
   address: '1 Main St',
   phone: '555-0100',
   created_at: '2026-05-01T10:00:00Z',
+  company_registration_number: null,
   linked_contacts: [
     { id: 'contact-1', name: 'Dr Alice', role: 'gp' },
     { id: 'contact-2', name: 'Dr Bob', role: 'specialist' },
