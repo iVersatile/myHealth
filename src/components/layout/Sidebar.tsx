@@ -78,6 +78,17 @@ export function Sidebar() {
 
       <div className="flex flex-col gap-0.5 px-2 py-3">
         <Link
+          href="/trash"
+          className={[
+            'flex items-center rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-sm)] transition-colors',
+            pathname === '/trash'
+              ? 'bg-[var(--color-primary)]/10 font-medium text-[var(--color-primary)]'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)]',
+          ].join(' ')}
+        >
+          Trash
+        </Link>
+        <Link
           href="/settings"
           className={[
             'flex items-center rounded-[var(--radius-md)] px-3 py-2 text-[var(--text-sm)] transition-colors',

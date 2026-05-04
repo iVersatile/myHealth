@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29+30 complete. Tasks 31.2–31.11 complete. Tasks 32.1–32.4 complete. ▶ Task 32.5 next (call trash_purge_expired on startup).
+Phase 29+30 complete. Tasks 31.2–31.11 complete. Tasks 32.1–32.5 complete. ▶ Task 32.6 next (Frontend Trash screen).
 ```
 
 ---
@@ -1906,12 +1906,12 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Unit tests for each command
    - Done when: `cargo test` passes
 
-▶ [ ] **32.5 — Rust: call `trash_purge_expired` on app startup**
+[x] **32.5 — Rust: call `trash_purge_expired` on app startup**
    - File: `src-tauri/src/lib.rs`
    - In the `setup` closure (after DB init), call `trash_purge_expired` directly (not via IPC)
    - Done when: `cargo build` passes; expired items auto-purge on each startup
 
-[ ] **32.6 — Frontend: Trash screen (`/trash`)**
+▶ [ ] **32.6 — Frontend: Trash screen (`/trash`)**
    - Files: `src/app/(app)/trash/page.tsx` + `TrashClient.tsx` (new)
    - Load via `invoke('trash_list')` on mount
    - Group items by entity type (Documents / Appointments / Notes / Contacts / Clinics)
