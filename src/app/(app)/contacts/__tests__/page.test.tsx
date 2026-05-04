@@ -32,6 +32,7 @@ const CONTACT_A = {
   clinic: 'City Clinic',
   address: null,
   notes: null,
+  contact_clinic_id: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 }
@@ -46,8 +47,24 @@ const CONTACT_B = {
   clinic: null,
   address: null,
   notes: null,
+  contact_clinic_id: null,
   created_at: '2026-01-02T00:00:00Z',
   updated_at: '2026-01-02T00:00:00Z',
+}
+
+const CONTACT_WITH_CLINIC = {
+  id: 'c3',
+  name: 'John Green',
+  role: 'physiotherapist',
+  specialty: null,
+  phone: null,
+  email: null,
+  clinic: null,
+  address: null,
+  notes: null,
+  contact_clinic_id: 'clinic-linked-99',
+  created_at: '2026-01-03T00:00:00Z',
+  updated_at: '2026-01-03T00:00:00Z',
 }
 
 const DUPLICATE_CANDIDATE = {
@@ -279,5 +296,40 @@ describe('ContactsPage', () => {
       expect(mockInvoke).toHaveBeenCalledWith('contacts_create', expect.anything())
     )
     await waitFor(() => expect(screen.queryByTestId('contact-form')).not.toBeInTheDocument())
+  })
+})
+
+describe('ContactsPage — address routing', () => {
+  it('toggles addresses for a plain contact using contact_addresses_list', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([CONTACT_A])
+      if (cmd === 'contact_addresses_list') return Promise.resolve([])
+      return Promise.resolve([])
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Addresses' }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('contact_addresses_list', { contactId: 'c1' })
+    )
+    const clinicAddressCalls = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'clinic_addresses_list')
+    expect(clinicAddressCalls).toHaveLength(0)
+  })
+
+  it('toggles addresses for a clinic-linked contact using clinic_addresses_list', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([CONTACT_WITH_CLINIC])
+      if (cmd === 'clinics_get') return Promise.resolve(null)
+      if (cmd === 'clinic_addresses_list') return Promise.resolve([])
+      return Promise.resolve([])
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('John Green')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Addresses' }))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('clinic_addresses_list', { clinicId: 'clinic-linked-99' })
+    )
+    const contactAddressCalls = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'contact_addresses_list')
+    expect(contactAddressCalls).toHaveLength(0)
   })
 })
