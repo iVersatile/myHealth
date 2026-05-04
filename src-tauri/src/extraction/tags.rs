@@ -91,27 +91,25 @@ fn parse_date_to_iso(s: &str, fmt: &str) -> Option<String> {
 
 /// Builds the timeline description for a document.
 ///
-/// Format: `{YYYY-MM-DD} {SPECIALTY} with {Title} {Provider Name}`
+/// Format: `{YYYY-MM-DD} {Specialty} with {Title} {Provider Name}`
 /// Falls back gracefully when tags are missing.
 #[allow(dead_code)]
 pub fn format_timeline_description(activity_date: &str, auto_tags: &[String]) -> String {
+    // Specialty tags: single-word Title Case (e.g. "Physiotherapy", "Cardiology").
     let specialty = auto_tags
         .iter()
         .find(|t| {
-            t.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
-                && t.chars().all(|c| c.is_uppercase() || c == '_' || c == ' ')
-        })
-        .map(String::as_str)
-        .unwrap_or("DOCUMENT");
-
-    // Provider tags: start with uppercase AND contain lowercase (rules out type tags
-    // which are all-lowercase, and specialty tags which are all-uppercase).
-    let provider: Option<&str> = auto_tags
-        .iter()
-        .find(|t| {
-            t.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
+            !t.contains(' ')
+                && t.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
                 && t.chars().any(|c| c.is_lowercase())
         })
+        .map(String::as_str)
+        .unwrap_or("Document");
+
+    // Provider tags: multi-word, start with uppercase (e.g. "Mr John Green").
+    let provider: Option<&str> = auto_tags
+        .iter()
+        .find(|t| t.contains(' ') && t.chars().next().map(|c| c.is_uppercase()).unwrap_or(false))
         .map(String::as_str);
 
     match provider {
@@ -169,7 +167,7 @@ fn text_has_word(lower_text: &str, word: &str) -> bool {
 ///
 /// 1. **Type tags** (lowercase): invoice, receipt, bill, referral, prescription,
 ///    report, summary, discharge — whole-word match in text.
-/// 2. **Specialty tags** (uppercase): PHYSIOTHERAPY, CARDIOLOGY, etc.
+/// 2. **Specialty tags** (Title Case): Physiotherapy, Cardiology, etc.
 /// 3. **Provider name tags**: each entry from `doctor_candidates`.
 /// 4. **Activity date tag**: `activity_date` as-is (YYYY-MM-DD).
 pub fn auto_extract_tags(
@@ -197,23 +195,23 @@ pub fn auto_extract_tags(
     }
 
     const SPECIALTY_MAP: &[(&[&str], &str)] = &[
-        (&["physiother"], "PHYSIOTHERAPY"),
-        (&["gastroenterolog"], "GASTROENTEROLOGY"),
-        (&["cardiol"], "CARDIOLOGY"),
-        (&["neurol", "neurolog"], "NEUROLOGY"),
-        (&["dermatol"], "DERMATOLOGY"),
-        (&["orthopaed", "orthoped"], "ORTHOPAEDICS"),
-        (&["oncol"], "ONCOLOGY"),
-        (&["endocrinol"], "ENDOCRINOLOGY"),
-        (&["respirator", "pulmonol"], "RESPIRATORY"),
-        (&["rheumatol"], "RHEUMATOLOGY"),
-        (&["ophthalmol"], "OPHTHALMOLOGY"),
-        (&["urol"], "UROLOGY"),
-        (&["gynaecol", "gynecol"], "GYNAECOLOGY"),
-        (&["haematol", "hematol"], "HAEMATOLOGY"),
-        (&["nephrol"], "NEPHROLOGY"),
-        (&["psychiatr", "psychol"], "PSYCHIATRY"),
-        (&["radiol"], "RADIOLOGY"),
+        (&["physiother"], "Physiotherapy"),
+        (&["gastroenterolog"], "Gastroenterology"),
+        (&["cardiol"], "Cardiology"),
+        (&["neurol", "neurolog"], "Neurology"),
+        (&["dermatol"], "Dermatology"),
+        (&["orthopaed", "orthoped"], "Orthopaedics"),
+        (&["oncol"], "Oncology"),
+        (&["endocrinol"], "Endocrinology"),
+        (&["respirator", "pulmonol"], "Respiratory"),
+        (&["rheumatol"], "Rheumatology"),
+        (&["ophthalmol"], "Ophthalmology"),
+        (&["urol"], "Urology"),
+        (&["gynaecol", "gynecol"], "Gynaecology"),
+        (&["haematol", "hematol"], "Haematology"),
+        (&["nephrol"], "Nephrology"),
+        (&["psychiatr", "psychol"], "Psychiatry"),
+        (&["radiol"], "Radiology"),
     ];
     for (keywords, tag) in SPECIALTY_MAP {
         for &kw in *keywords {
@@ -267,10 +265,10 @@ mod tests {
     }
 
     #[test]
-    fn auto_tags_specialty_physiotherapy_uppercase() {
+    fn auto_tags_specialty_physiotherapy_title_case() {
         let tags = auto_extract_tags("Physiotherapy assessment report", &[], None);
         assert!(
-            tags.contains(&"PHYSIOTHERAPY".to_string()),
+            tags.contains(&"Physiotherapy".to_string()),
             "tags: {tags:?}"
         );
     }
@@ -308,7 +306,7 @@ mod tests {
             "missing type tag; tags: {tags:?}"
         );
         assert!(
-            tags.contains(&"PHYSIOTHERAPY".to_string()),
+            tags.contains(&"Physiotherapy".to_string()),
             "missing specialty tag; tags: {tags:?}"
         );
         assert!(
@@ -420,32 +418,32 @@ mod tests {
     fn timeline_description_physio_with_provider() {
         let tags = vec![
             "invoice".to_string(),
-            "PHYSIOTHERAPY".to_string(),
+            "Physiotherapy".to_string(),
             "Mr John Green".to_string(),
             "2023-03-09".to_string(),
         ];
         let desc = format_timeline_description("2023-03-09", &tags);
-        assert_eq!(desc, "2023-03-09 PHYSIOTHERAPY with Mr John Green");
+        assert_eq!(desc, "2023-03-09 Physiotherapy with Mr John Green");
     }
 
     #[test]
     fn timeline_description_no_provider_fallback() {
-        let tags = vec!["CARDIOLOGY".to_string(), "2024-01-15".to_string()];
+        let tags = vec!["Cardiology".to_string(), "2024-01-15".to_string()];
         let desc = format_timeline_description("2024-01-15", &tags);
-        assert_eq!(desc, "2024-01-15 CARDIOLOGY");
+        assert_eq!(desc, "2024-01-15 Cardiology");
     }
 
     #[test]
     fn timeline_description_no_specialty_uses_document() {
         let tags = vec!["invoice".to_string(), "Dr Smith".to_string()];
         let desc = format_timeline_description("2024-01-15", &tags);
-        assert_eq!(desc, "2024-01-15 DOCUMENT with Dr Smith");
+        assert_eq!(desc, "2024-01-15 Document with Dr Smith");
     }
 
     #[test]
     fn timeline_description_no_specialty_no_provider_uses_document() {
         let tags = vec!["invoice".to_string(), "2024-01-15".to_string()];
         let desc = format_timeline_description("2024-01-15", &tags);
-        assert_eq!(desc, "2024-01-15 DOCUMENT");
+        assert_eq!(desc, "2024-01-15 Document");
     }
 }

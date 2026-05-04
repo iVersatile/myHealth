@@ -265,8 +265,8 @@ mod tests {
             "missing 'Mr John Green' tag; tags: {tags:?}"
         );
         assert!(
-            tags.contains(&"PHYSIOTHERAPY".to_string()),
-            "missing 'PHYSIOTHERAPY' tag; tags: {tags:?}"
+            tags.contains(&"Physiotherapy".to_string()),
+            "missing 'Physiotherapy' tag; tags: {tags:?}"
         );
         assert!(
             tags.contains(&"2023-03-09".to_string()),
@@ -279,7 +279,7 @@ mod tests {
         let doctor_candidates = doctor::extract_doctor_candidates(PHYSIO_INVOICE_TEXT);
         let tags = auto_extract_tags(PHYSIO_INVOICE_TEXT, &doctor_candidates, Some("2023-03-09"));
         let desc = format_timeline_description("2023-03-09", &tags);
-        assert_eq!(desc, "2023-03-09 PHYSIOTHERAPY with Mr John Green");
+        assert_eq!(desc, "2023-03-09 Physiotherapy with Mr John Green");
     }
 
     #[test]
