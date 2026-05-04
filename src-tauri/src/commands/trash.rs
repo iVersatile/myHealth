@@ -1,4 +1,5 @@
 use chrono::Utc;
+use rusqlite::Connection;
 use serde::Serialize;
 use tauri::State;
 
@@ -179,6 +180,16 @@ pub fn trash_purge_expired(state: State<'_, AppState>) -> Result<u32, CommandErr
         count += n as u32;
     }
     Ok(count)
+}
+
+pub fn purge_expired_direct(conn: &Connection) {
+    let cutoff = (Utc::now() - chrono::Duration::days(30)).to_rfc3339();
+    for table in &["clinics", "contacts", "appointments", "notes", "documents"] {
+        let _ = conn.execute(
+            &format!("DELETE FROM {table} WHERE is_deleted = 1 AND deleted_at < ?1"),
+            [&cutoff],
+        );
+    }
 }
 
 fn entity_table(entity_type: &str) -> Result<&'static str, CommandError> {
