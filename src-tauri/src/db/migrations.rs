@@ -313,6 +313,43 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 18 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "DROP TABLE IF EXISTS clinic_addresses;
+             CREATE TABLE clinic_addresses (
+               id         TEXT PRIMARY KEY,
+               clinic_id  TEXT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+               label      TEXT,
+               line1      TEXT NOT NULL,
+               line2      TEXT,
+               city       TEXT,
+               postcode   TEXT,
+               country    TEXT NOT NULL DEFAULT 'GB',
+               is_primary INTEGER NOT NULL DEFAULT 0 CHECK(is_primary IN (0,1)),
+               created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+             );
+             CREATE INDEX IF NOT EXISTS idx_clinic_addresses_clinic
+               ON clinic_addresses(clinic_id);
+             CREATE TABLE IF NOT EXISTS contact_addresses (
+               id         TEXT PRIMARY KEY,
+               contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+               label      TEXT,
+               line1      TEXT NOT NULL,
+               line2      TEXT,
+               city       TEXT,
+               postcode   TEXT,
+               country    TEXT NOT NULL DEFAULT 'GB',
+               is_primary INTEGER NOT NULL DEFAULT 0 CHECK(is_primary IN (0,1)),
+               created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+             );
+             CREATE INDEX IF NOT EXISTS idx_contact_addresses_contact
+               ON contact_addresses(contact_id);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [18])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -339,7 +376,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 17);
+        assert_eq!(version, 18);
     }
 
     #[test]
@@ -353,7 +390,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 17);
+        assert_eq!(version, 18);
     }
 
     #[test]
@@ -984,34 +1021,71 @@ mod tests {
     fn clinic_addresses_cascade_delete() {
         let conn = migrated_conn();
         conn.execute(
-            "INSERT INTO clinics (id, name) VALUES ('clin-v8-2', 'BackCare')",
+            "INSERT INTO clinics (id, name) VALUES ('clin-v18-1', 'BackCare')",
             [],
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) \
-             VALUES ('clin-v8-2', '10 Spine St', 1)",
+            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary) \
+             VALUES ('addr-v18-1', 'clin-v18-1', '10 Spine St', 1)",
             [],
         )
         .unwrap();
         let count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = 'clin-v8-2'",
+                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = 'clin-v18-1'",
                 [],
                 |r| r.get(0),
             )
             .unwrap();
         assert_eq!(count, 1);
-        conn.execute("DELETE FROM clinics WHERE id = 'clin-v8-2'", [])
+        conn.execute("DELETE FROM clinics WHERE id = 'clin-v18-1'", [])
             .unwrap();
         let count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = 'clin-v8-2'",
+                "SELECT COUNT(*) FROM clinic_addresses WHERE clinic_id = 'clin-v18-1'",
                 [],
                 |r| r.get(0),
             )
             .unwrap();
         assert_eq!(count, 0, "clinic_addresses must cascade-delete with clinic");
+    }
+
+    #[test]
+    fn contact_addresses_cascade_delete() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role) VALUES ('con-v18-1', 'Dr Smith', 'gp')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO contact_addresses (id, contact_id, line1, is_primary) \
+             VALUES ('addr-v18-2', 'con-v18-1', '22 Health Rd', 1)",
+            [],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM contact_addresses WHERE contact_id = 'con-v18-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+        conn.execute("DELETE FROM contacts WHERE id = 'con-v18-1'", [])
+            .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM contact_addresses WHERE contact_id = 'con-v18-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "contact_addresses must cascade-delete with contact"
+        );
     }
 
     #[test]

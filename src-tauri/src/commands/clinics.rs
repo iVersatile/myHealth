@@ -634,26 +634,26 @@ mod tests {
         let conn = open_test_db();
         let now = Utc::now().to_rfc3339();
         let clinic_id = Uuid::new_v4().to_string();
+        let addr_id = Uuid::new_v4().to_string();
         conn.execute(
-            "INSERT INTO clinics (id, name, address, created_at) \
-             VALUES (?, 'City Physio', '10 High St', ?)",
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'City Physio', ?)",
             rusqlite::params![clinic_id, now],
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 1)",
-            rusqlite::params![clinic_id, "10 High St"],
+            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary) VALUES (?, ?, ?, 1)",
+            rusqlite::params![addr_id, clinic_id, "10 High St"],
         )
         .unwrap();
 
-        let (addr, is_primary): (String, i64) = conn
+        let (line1, is_primary): (String, i64) = conn
             .query_row(
-                "SELECT address, is_primary FROM clinic_addresses WHERE clinic_id = ?",
+                "SELECT line1, is_primary FROM clinic_addresses WHERE clinic_id = ?",
                 [&clinic_id],
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .unwrap();
-        assert_eq!(addr, "10 High St");
+        assert_eq!(line1, "10 High St");
         assert_eq!(is_primary, 1);
     }
 
@@ -669,13 +669,13 @@ mod tests {
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 1)",
-            rusqlite::params![clinic_id, "10 High St"],
+            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary) VALUES (?, ?, ?, 1)",
+            rusqlite::params![Uuid::new_v4().to_string(), clinic_id, "10 High St"],
         )
         .unwrap();
         conn.execute(
-            "INSERT INTO clinic_addresses (clinic_id, address, is_primary) VALUES (?, ?, 0)",
-            rusqlite::params![clinic_id, "20 Low St"],
+            "INSERT INTO clinic_addresses (id, clinic_id, line1, is_primary) VALUES (?, ?, ?, 0)",
+            rusqlite::params![Uuid::new_v4().to_string(), clinic_id, "20 Low St"],
         )
         .unwrap();
 
