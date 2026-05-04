@@ -313,6 +313,26 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 19 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "ALTER TABLE clinics      ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0,1));
+             ALTER TABLE clinics      ADD COLUMN deleted_at TEXT;
+             ALTER TABLE contacts     ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0,1));
+             ALTER TABLE contacts     ADD COLUMN deleted_at TEXT;
+             ALTER TABLE appointments ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0,1));
+             ALTER TABLE appointments ADD COLUMN deleted_at TEXT;
+             ALTER TABLE notes        ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0,1));
+             ALTER TABLE notes        ADD COLUMN deleted_at TEXT;
+             CREATE INDEX IF NOT EXISTS idx_clinics_is_deleted      ON clinics(is_deleted);
+             CREATE INDEX IF NOT EXISTS idx_contacts_is_deleted     ON contacts(is_deleted);
+             CREATE INDEX IF NOT EXISTS idx_appointments_is_deleted ON appointments(is_deleted);
+             CREATE INDEX IF NOT EXISTS idx_notes_is_deleted        ON notes(is_deleted);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [19])?;
+        tx.commit()?;
+    }
+
     if version < 18 {
         let tx = conn.unchecked_transaction()?;
         tx.execute_batch(
@@ -376,7 +396,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 18);
+        assert_eq!(version, 19);
     }
 
     #[test]
@@ -390,7 +410,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 18);
+        assert_eq!(version, 19);
     }
 
     #[test]
@@ -1535,5 +1555,115 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1, "non-clinic contacts must survive v15 migration");
+    }
+
+    // ── v19: is_deleted / deleted_at on all entity tables ───────────────────
+
+    #[test]
+    fn v19_clinics_is_deleted_defaults_to_zero() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO clinics (id, name) VALUES ('clin-v19-1', 'Test Clinic')",
+            [],
+        )
+        .unwrap();
+        let is_deleted: i64 = conn
+            .query_row(
+                "SELECT is_deleted FROM clinics WHERE id = 'clin-v19-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 0);
+        conn.execute(
+            "UPDATE clinics SET is_deleted = 1 WHERE id = 'clin-v19-1'",
+            [],
+        )
+        .unwrap();
+        let is_deleted: i64 = conn
+            .query_row(
+                "SELECT is_deleted FROM clinics WHERE id = 'clin-v19-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+    }
+
+    #[test]
+    fn v19_contacts_is_deleted_defaults_to_zero() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role) VALUES ('con-v19-1', 'Dr Test', 'gp')",
+            [],
+        )
+        .unwrap();
+        let is_deleted: i64 = conn
+            .query_row(
+                "SELECT is_deleted FROM contacts WHERE id = 'con-v19-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 0);
+        conn.execute(
+            "UPDATE contacts SET is_deleted = 1, deleted_at = '2026-05-04T12:00:00Z' \
+             WHERE id = 'con-v19-1'",
+            [],
+        )
+        .unwrap();
+        let (is_deleted, deleted_at): (i64, Option<String>) = conn
+            .query_row(
+                "SELECT is_deleted, deleted_at FROM contacts WHERE id = 'con-v19-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+        assert_eq!(deleted_at.as_deref(), Some("2026-05-04T12:00:00Z"));
+    }
+
+    #[test]
+    fn v19_appointments_is_deleted_defaults_to_zero() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, status, created_at, updated_at) \
+             VALUES ('appt-v19-1', 'ECG', '2026-01-01', 'scheduled', '2026-01-01', '2026-01-01')",
+            [],
+        )
+        .unwrap();
+        let is_deleted: i64 = conn
+            .query_row(
+                "SELECT is_deleted FROM appointments WHERE id = 'appt-v19-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 0);
+    }
+
+    #[test]
+    fn v19_notes_is_deleted_defaults_to_zero() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO users (id, display_name) VALUES ('u-v19', 'Test')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO notes (id, title, content, created_at, updated_at, user_id) \
+             VALUES ('note-v19-1', 'Test Note', 'body', '2026-01-01T00:00:00', \
+             '2026-01-01T00:00:00', 'u-v19')",
+            [],
+        )
+        .unwrap();
+        let is_deleted: i64 = conn
+            .query_row(
+                "SELECT is_deleted FROM notes WHERE id = 'note-v19-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 0);
     }
 }
