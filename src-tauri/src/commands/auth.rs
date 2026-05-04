@@ -2,7 +2,7 @@ use rand::RngCore;
 use rusqlite::Connection;
 use std::path::{Path, PathBuf};
 
-use crate::{crypto, db};
+use crate::{commands::trash::purge_expired_direct, crypto, db};
 
 use super::{AppState, CommandContext, CommandError};
 
@@ -260,6 +260,7 @@ pub fn auth_set_password(
     validate_password_strength(&password).map_err(CommandError::Internal)?;
     let (conn, hex) =
         set_password_internal(&data_dir, &password).map_err(CommandError::Internal)?;
+    purge_expired_direct(&conn);
     *state.db.lock().unwrap() = Some(conn);
     *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
     Ok(())
@@ -285,6 +286,7 @@ pub fn auth_unlock(
     match unlock_internal(&data_dir, &password) {
         Ok((conn, hex)) => {
             state.auth_rate_limit.lock().unwrap().reset();
+            purge_expired_direct(&conn);
             *state.db.lock().unwrap() = Some(conn);
             *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
             Ok(())
