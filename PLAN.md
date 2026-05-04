@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29 — Clinic Editing (Option C). ▶ Task 29.1 next.
+Phase 28-E — E2E Acceptance Tests. ▶ Task 28-E.1 next.
 ```
 
 ---
@@ -1650,6 +1650,54 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ---
 
+## Phase 28-E — E2E Acceptance Tests: Document Upload Flow
+
+> Goal: Validate the full upload-to-entities flow end-to-end using Playwright against the running Tauri app.
+> Two acceptance scenarios:
+> 1. Upload a real invoice PDF → Contact & Clinic auto-created, Tags created, Appointment created
+> 2. Verify all extracted fields are correct and editable in the UI
+
+### Sprint 28-E
+
+▶ [ ] **28-E.1 — Create rich fixture PDF**
+   - File: `tests/fixtures/medical-invoice.pdf`
+   - Must contain enough structured text for OCR to extract:
+     - Provider name + phone (Contact)
+     - Clinic/practice name + address (Clinic)
+     - Activity date (Appointment date)
+     - Specialty / procedure description (Tags)
+     - Invoice total amount
+   - Use a script (`scripts/gen-fixture-pdf.ts`) with `pdfkit` to generate deterministically
+   - Done when: `tests/fixtures/medical-invoice.pdf` exists and contains all required fields as readable text
+
+[ ] **28-E.2 — E2E test: Upload Document → entities created**
+   - File: `tests/e2e/upload-document-flow.spec.ts`
+   - Scenario: upload `medical-invoice.pdf` via the Upload button, complete confirm-upload dialog
+     (accept Contact suggestion, accept Clinic suggestion, accept Appointment suggestion, accept Tags)
+   - Assertions:
+     - Document appears in Documents list with correct title
+     - Contact created: name matches provider on invoice
+     - Clinic created: name matches practice on invoice
+     - Appointment created with correct activity date
+     - At least one tag created matching the specialty
+   - Done when: test passes locally with `npx playwright test upload-document-flow`
+
+[ ] **28-E.3 — E2E test: Verify extracted info is visible and editable**
+   - File: `tests/e2e/verify-edit-entities.spec.ts`
+   - Pre-condition: runs after 28-E.2 (uses same uploaded document + created entities)
+   - Assertions:
+     - Document detail page shows provider name, clinic name, activity date, tags
+     - Editing the contact name persists after page reload
+     - Editing the clinic phone persists after page reload
+     - Editing the appointment notes persists after page reload
+   - Done when: test passes locally with `npx playwright test verify-edit-entities`
+
+[ ] **28-E.4 — Run full E2E suite locally and confirm green**
+   - Run `npx playwright test` — all tests pass
+   - Done when: no failures; user confirms
+
+---
+
 ## Phase 29 — Clinic Editing (Option C)
 
 > Goal: Clinics are editable via two surfaces:
@@ -1658,7 +1706,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 29
 
-▶ [ ] **29.1 — Tauri commands: `clinics_get`, `clinics_update`, `clinics_get_linked_contacts`, `clinics_get_linked_documents`**
+[ ] **29.1 — Tauri commands: `clinics_get`, `clinics_update`, `clinics_get_linked_contacts`, `clinics_get_linked_documents`**
    - File: `src-tauri/src/commands/clinics.rs`
    - `clinics_get(id: String) -> Result<Clinic, String>` — fetch single clinic by id
    - `clinics_update(id: String, name: String, address: Option<String>, phone: Option<String>, company_registration_number: Option<String>) -> Result<Clinic, String>` — UPDATE clinics SET ... WHERE id = ?

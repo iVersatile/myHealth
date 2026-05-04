@@ -59,3 +59,34 @@ Please pay within 30 days.`
 const noDateBytes = await createPdf(noDateContent)
 writeFileSync(join(fixturesDir, 'no-date-no-filename.pdf'), noDateBytes)
 console.log('Created no-date-no-filename.pdf')
+
+// medical-invoice.pdf — rich fixture triggering all suggestion types:
+//   Contact: Dr Sarah Mitchell (title+name pattern)
+//   Clinic:  Hartfield Physiotherapy Clinic (name + keyword suffix + UK postcode)
+//   Date:    Date of Service: 15/01/2024 → appointment suggestion
+//   Tags:    invoice (type), PHYSIOTHERAPY (specialty), Dr Sarah Mitchell (provider), 2024-01-15 (date)
+const medicalInvoiceContent = `Medical Invoice
+
+Hartfield Physiotherapy Clinic
+Company Registration No: 5432109
+12 Cavendish Square
+London
+W1G 0PU
+Tel: 020 7946 0234
+
+Date of Service: 15/01/2024
+
+Invoice
+
+Provider: Dr Sarah Mitchell BSc MSc MCSP
+Specialty: Physiotherapy Assessment
+
+Description: Initial physiotherapy assessment and treatment plan
+
+Amount Due: GBP 150.00
+
+Please settle within 14 days of receipt.`
+
+const medicalInvoiceBytes = await createPdf(medicalInvoiceContent)
+writeFileSync(join(fixturesDir, 'medical-invoice.pdf'), medicalInvoiceBytes)
+console.log('Created medical-invoice.pdf')
