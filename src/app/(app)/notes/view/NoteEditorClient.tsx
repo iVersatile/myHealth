@@ -14,6 +14,8 @@ import { useNotes } from '../../../../hooks/useNotes'
 import { Note } from '../../../../store/notesStore'
 import type { Appointment } from '../../../../store/appointmentsStore'
 import type { Document } from '../../../../store/documentsStore'
+import { useToast } from '../../../../hooks/useToast'
+import { Toast } from '../../../../components/shared/Toast'
 
 interface NoteLinkDto {
   id: string
@@ -59,6 +61,7 @@ export default function NoteEditorClient() {
   const id = searchParams.get('id') ?? ''
 
   const { getNote, saveNote, deleteNote, pinNote, setNoteTags } = useNotes()
+  const { message: toastMessage, show: showToast } = useToast()
 
   const [note, setNote] = useState<Note | null>(null)
   const [title, setTitle] = useState('')
@@ -211,6 +214,7 @@ export default function NoteEditorClient() {
 
   async function handleDelete() {
     if (!await confirm('Delete this note? This cannot be undone.')) return
+    showToast('Moved to Trash')
     await deleteNote(id)
     router.push('/notes')
   }
@@ -537,6 +541,7 @@ export default function NoteEditorClient() {
           </aside>
         </>
       )}
+      <Toast message={toastMessage} />
     </div>
   )
 }

@@ -8,6 +8,8 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { Document, CATEGORY_LABELS } from '../../../../store/documentsStore'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 import type { Appointment } from '../../../../store/appointmentsStore'
+import { useToast } from '../../../../hooks/useToast'
+import { Toast } from '../../../../components/shared/Toast'
 
 interface DocumentLink {
   id: string
@@ -50,6 +52,7 @@ export default function DocumentDetailClient() {
   const id = searchParams.get('id') ?? ''
   const router = useRouter()
 
+  const { message: toastMessage, show: showToast } = useToast()
   const [doc, setDoc] = useState<Document | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -286,6 +289,7 @@ export default function DocumentDetailClient() {
   async function handleDelete() {
     if (!doc) return
     if (!await confirm(`Delete "${doc.filename}"? This can be undone from the trash.`)) return
+    showToast('Moved to Trash')
     await invoke('documents_delete', { id: doc.id })
     router.push('/documents')
   }
@@ -663,6 +667,7 @@ export default function DocumentDetailClient() {
           </button>
         </aside>
       </div>
+      <Toast message={toastMessage} />
     </div>
   )
 }

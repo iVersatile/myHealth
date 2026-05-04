@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29+30 complete. Tasks 31.2–31.11 complete. Tasks 32.1–32.5 complete. ▶ Task 32.6 next (Frontend Trash screen).
+Phase 29+30 complete. Tasks 31.2–31.11 complete. Tasks 32.1–32.8 complete. Phase 32 done — awaiting next phase.
 ```
 
 ---
@@ -1921,12 +1921,12 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Add "Trash" nav item to sidebar (bottom, below main nav items)
    - Done when: Trash screen renders all soft-deleted items; restore/delete-permanently/empty-trash all function correctly
 
-[ ] **32.7 — Frontend: update all Delete buttons to use soft-delete + "Moved to Trash" toast**
+[x] **32.7 — Frontend: update all Delete buttons to use soft-delete + "Moved to Trash" toast**
    - Update Delete actions across Documents, Clinics, Contacts, Appointments, Notes views
    - After soft-delete, show brief toast: "Moved to Trash"
    - No entity should be hard-deleted from any list or detail view
    - Done when: every Delete action results in soft-delete; toast appears; item disappears from list
 
-[ ] **32.8 — TypeScript check + cargo check + manual test approval**
+[x] **32.8 — TypeScript check + cargo check + manual test approval**
    - Run `npx tsc --noEmit` and `cargo check`
    - Done when: both pass; user confirms manual test passes (gate: do NOT mark 32.1–32.7 complete until user approves)

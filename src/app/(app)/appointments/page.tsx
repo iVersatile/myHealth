@@ -8,6 +8,8 @@ import { AppointmentCard } from '../../../components/appointments/AppointmentCar
 import { AppointmentForm } from '../../../components/appointments/AppointmentForm'
 import { Appointment, AppointmentStatus } from '../../../store/appointmentsStore'
 import { IPC } from '../../../lib/ipc'
+import { useToast } from '../../../hooks/useToast'
+import { Toast } from '../../../components/shared/Toast'
 
 type FilterValue = AppointmentStatus | 'all'
 
@@ -46,6 +48,7 @@ export default function AppointmentsPage() {
     refresh,
   } = useAppointments()
 
+  const { message: toastMessage, show: showToast } = useToast()
   const [showForm, setShowForm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [icsMessage, setIcsMessage] = useState<string | null>(null)
@@ -88,6 +91,7 @@ export default function AppointmentsPage() {
     if (deleteConfirm === id) {
       await deleteAppointment(id)
       setDeleteConfirm(null)
+      showToast('Moved to Trash')
     } else {
       setDeleteConfirm(id)
     }
@@ -106,6 +110,7 @@ export default function AppointmentsPage() {
       })
       await refresh()
     }
+    showToast('Moved to Trash')
   }
 
   function handleCancelForm() {
@@ -319,6 +324,7 @@ export default function AppointmentsPage() {
           </ul>
         </section>
       ))}
+      <Toast message={toastMessage} />
     </div>
   )
 }

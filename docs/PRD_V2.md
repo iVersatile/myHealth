@@ -472,3 +472,23 @@ The following issues were reported after manual testing of the document upload f
 **Root cause 1 (wrong specialty):** `auto_extract_tags` uses an order-sensitive `SPECIALTY_MAP` where "physiother" precedes "cardiol"; documents containing physiotherapy department footers but echocardiography content incorrectly resolved to PHYSIOTHERAPY.
 **Root cause 2 (patient name as doctor):** `extract_performing_doctor` excluded referral phrases but not patient-label phrases ("patient:", "name:", "for patient"), so "Patient: Ms Ying Wang" was matched as a performing doctor name.
 **Fix:** (1) Switched specialty derivation to `suggest_category` (semantically accurate, order-independent). (2) Added patient-context phrases to `REFERRAL_PHRASES` exclusion list in `extract_performing_doctor`. (3) Appointment title now includes clinic name as suffix: `"{specialty} with {doctor} — {clinic}"`.
+
+---
+
+### Bug: Document auto-tag missing specialty that appointment correctly identifies
+
+**Reported:** Uploading a cardiology PDF (containing "arrhythmia" / "echocardiogram") correctly generates an appointment titled with "Cardiology", but the document's auto-generated tags do not include "Cardiology".
+**PRD coverage:** V3-F4 (specialty tag auto-extraction).
+**Root cause:** `auto_extract_tags()` SPECIALTY_MAP checks only `"cardiol"` for Cardiology. `suggest_category()` checks 6 keywords: `cardiol`, `echocardiogram`, `echocardiograph`, `arrhythmia`, `myocardial`, `cardiograph`. If the PDF contains "arrhythmia" but not "cardiol", `suggest_category()` fires but `auto_extract_tags()` misses. The two keyword sets were created independently and fell out of sync when the previous bug fix switched appointment specialty to `suggest_category`.
+**Fix:** In `extraction/mod.rs`, after computing `category_suggestion` and `auto_tags`, extract the leaf of `category_suggestion` and append to `auto_tags` if not already present. Guarantees consistency — document tags always reflect the same specialty as the appointment system.
+**Task:** 31.10
+
+---
+
+### Bug: Clinic address auto-extraction produces no results for London Clinic PDF
+
+**Reported:** London Clinic has 3 addresses in the DB (manually entered), but uploading the clinic's PDF document produces zero auto-extracted addresses.
+**PRD coverage:** V3-F3 (clinic multi-address extraction from PDF).
+**Root cause:** `extract_clinic_addresses()` uses a strict UK postcode regex (`[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}`) as the address anchor. PDFs where OCR text does not contain full valid postcodes (partial postcodes, missing space, OCR noise) yield zero matches. London-based addresses frequently use short postcode prefixes (W1, EC1, SW1) that may not render as full postcodes in OCR output.
+**Fix:** Add fallback address detection using known London/UK partial postcode prefixes and street-type keywords ("Street", "Road", "Avenue", "Lane", "Gardens", "London") when the postcode regex produces no results.
+**Task:** 31.11

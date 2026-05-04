@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import type { ClinicWithContacts } from '../../hooks/useClinics'
+import { useToast } from '../../hooks/useToast'
+import { Toast } from '../shared/Toast'
 
 interface ClinicTreeProps {
   clinics: ClinicWithContacts[]
@@ -15,6 +17,7 @@ export function ClinicTree({ clinics, onDeleted }: ClinicTreeProps) {
     Object.fromEntries(clinics.map((c) => [c.id, true]))
   )
   const [deleting, setDeleting] = useState<string | null>(null)
+  const { message: toastMessage, show: showToast } = useToast()
 
   function toggleExpanded(id: string) {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -25,6 +28,7 @@ export function ClinicTree({ clinics, onDeleted }: ClinicTreeProps) {
     try {
       await invoke('clinics_delete', { id })
       onDeleted()
+      showToast('Moved to Trash')
     } finally {
       setDeleting(null)
     }
@@ -112,6 +116,7 @@ export function ClinicTree({ clinics, onDeleted }: ClinicTreeProps) {
           </div>
         )
       })}
+      <Toast message={toastMessage} />
     </div>
   )
 }

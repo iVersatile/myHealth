@@ -8,6 +8,8 @@ import { useContacts, ContactCreateInput, ContactUpdateInput, DuplicateCandidate
 import { Contact, CONTACT_ROLES, ROLE_LABELS, ContactRole } from '../../../store/contactsStore'
 import { ContactForm } from '../../../components/contacts/ContactForm'
 import { AddressList, type Address } from '../../../components/shared/AddressList'
+import { useToast } from '../../../hooks/useToast'
+import { Toast } from '../../../components/shared/Toast'
 
 interface Clinic {
   id: string
@@ -314,6 +316,7 @@ export default function ContactsPage() {
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
+  const { message: toastMessage, show: showToast } = useToast()
   const { contacts, loading, error, createContact, updateContact, deleteContact, findDuplicateContacts, mergeContacts } =
     useContacts(roleFilter === 'all' ? undefined : roleFilter)
 
@@ -350,6 +353,7 @@ export default function ContactsPage() {
   async function handleDelete(id: string) {
     if (!await confirm('Delete this contact?')) return
     await deleteContact(id)
+    showToast('Moved to Trash')
   }
 
   function scrollToContact(id: string) {
@@ -523,6 +527,7 @@ export default function ContactsPage() {
           }}
         />
       )}
+      <Toast message={toastMessage} />
     </div>
   )
 }
