@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
+
 interface Clinic {
   id: string
   name: string
@@ -10,6 +12,21 @@ interface Clinic {
   phone: string | null
   company_registration_number: string | null
   created_at: string
+}
+
+interface LinkedContact {
+  id: string
+  name: string
+  role: string | null
+  specialty: string | null
+  phone: string | null
+}
+
+interface LinkedDocument {
+  id: string
+  filename: string
+  category: string | null
+  document_date: string | null
 }
 
 export function ClinicEditClient() {
@@ -28,6 +45,9 @@ export function ClinicEditClient() {
   const [phone, setPhone] = useState('')
   const [crn, setCrn] = useState('')
 
+  const [linkedContacts, setLinkedContacts] = useState<LinkedContact[]>([])
+  const [linkedDocuments, setLinkedDocuments] = useState<LinkedDocument[]>([])
+
   useEffect(() => {
     if (!id) {
       return
@@ -44,6 +64,14 @@ export function ClinicEditClient() {
         setError(err instanceof Error ? err.message : 'Failed to load clinic')
       })
       .finally(() => setLoading(false))
+
+    invoke<LinkedContact[]>('clinics_get_linked_contacts', { clinicId: id })
+      .then(setLinkedContacts)
+      .catch(() => {})
+
+    invoke<LinkedDocument[]>('clinics_get_linked_documents', { clinicId: id })
+      .then(setLinkedDocuments)
+      .catch(() => {})
   }, [id])
 
   async function handleSave() {
@@ -196,6 +224,52 @@ export function ClinicEditClient() {
           </button>
         </div>
       </div>
+
+      {linkedContacts.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-[var(--color-text)] mb-3">Linked Contacts</h2>
+          <ul className="flex flex-col gap-2">
+            {linkedContacts.map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/contacts/${c.id}`}
+                  className="text-sm text-[var(--color-accent)] hover:opacity-80"
+                >
+                  {c.name}
+                </Link>
+                {(c.role ?? c.specialty) && (
+                  <span className="text-sm text-[var(--color-text-muted)] ml-2">
+                    {[c.role, c.specialty].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {linkedDocuments.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-[var(--color-text)] mb-3">Linked Documents</h2>
+          <ul className="flex flex-col gap-2">
+            {linkedDocuments.map((d) => (
+              <li key={d.id}>
+                <Link
+                  href={`/documents/view/${d.id}`}
+                  className="text-sm text-[var(--color-accent)] hover:opacity-80"
+                >
+                  {d.filename}
+                </Link>
+                {d.document_date && (
+                  <span className="text-sm text-[var(--color-text-muted)] ml-2">
+                    {d.document_date}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
