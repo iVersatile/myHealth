@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 28-E — E2E Acceptance Tests. ▶ Task 28-E.1 next.
+Phase 28-E — E2E Acceptance Tests. ▶ Task 28-E.4 next.
 ```
 
 ---
@@ -1659,7 +1659,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 28-E
 
-▶ [ ] **28-E.1 — Create rich fixture PDF**
+[x] **28-E.1 — Create rich fixture PDF**
    - File: `tests/fixtures/medical-invoice.pdf`
    - Must contain enough structured text for OCR to extract:
      - Provider name + phone (Contact)
@@ -1670,7 +1670,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Use a script (`scripts/gen-fixture-pdf.ts`) with `pdfkit` to generate deterministically
    - Done when: `tests/fixtures/medical-invoice.pdf` exists and contains all required fields as readable text
 
-[ ] **28-E.2 — E2E test: Upload Document → entities created**
+[x] **28-E.2 — E2E test: Upload Document → entities created**
    - File: `tests/e2e/upload-document-flow.spec.ts`
    - Scenario: upload `medical-invoice.pdf` via the Upload button, complete confirm-upload dialog
      (accept Contact suggestion, accept Clinic suggestion, accept Appointment suggestion, accept Tags)
@@ -1682,7 +1682,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
      - At least one tag created matching the specialty
    - Done when: test passes locally with `npx playwright test upload-document-flow`
 
-[ ] **28-E.3 — E2E test: Verify extracted info is visible and editable**
+[x] **28-E.3 — E2E test: Verify extracted info is visible and editable**
    - File: `tests/e2e/verify-edit-entities.spec.ts`
    - Pre-condition: runs after 28-E.2 (uses same uploaded document + created entities)
    - Assertions:
@@ -1692,7 +1692,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
      - Editing the appointment notes persists after page reload
    - Done when: test passes locally with `npx playwright test verify-edit-entities`
 
-[ ] **28-E.4 — Run full E2E suite locally and confirm green**
+▶ [ ] **28-E.4 — Run full E2E suite locally and confirm green**
    - Run `npx playwright test` — all tests pass
    - Done when: no failures; user confirms
 
