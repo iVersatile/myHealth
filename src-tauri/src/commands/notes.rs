@@ -43,7 +43,7 @@ fn fetch_tags(conn: &rusqlite::Connection, note_id: &str) -> Vec<String> {
 fn load_note(conn: &rusqlite::Connection, id: &str) -> Result<Note, CommandError> {
     conn.query_row(
         "SELECT id, title, content, is_pinned, created_at, updated_at
-         FROM notes WHERE id = ?",
+         FROM notes WHERE id = ? AND is_deleted = 0",
         [id],
         |row| {
             Ok(Note {
@@ -84,8 +84,10 @@ pub fn notes_list(
         "ORDER BY updated_at DESC"
     };
 
-    let sql =
-        format!("SELECT id, title, content, is_pinned, created_at, updated_at FROM notes {order}");
+    let sql = format!(
+        "SELECT id, title, content, is_pinned, created_at, updated_at \
+         FROM notes WHERE is_deleted = 0 {order}"
+    );
 
     let mut stmt = conn.prepare(&sql)?;
     let notes: Vec<Note> = stmt
@@ -403,7 +405,7 @@ pub fn notes_for_entity(
         "SELECT n.id, n.title, n.content, n.is_pinned, n.created_at, n.updated_at
          FROM notes n
          INNER JOIN note_links nl ON nl.note_id = n.id
-         WHERE nl.entity_type = ?1 AND nl.entity_id = ?2
+         WHERE nl.entity_type = ?1 AND nl.entity_id = ?2 AND n.is_deleted = 0
          ORDER BY n.updated_at DESC",
     )?;
 

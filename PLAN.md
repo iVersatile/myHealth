@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 29+30 complete. Tasks 31.2–31.11 complete. ▶ Phase 32 next (soft-delete + trash screen). Task 28-E.4 blocked on manual run.
+Phase 29+30 complete. Tasks 31.2–31.11 complete. Tasks 32.1–32.3 complete. ▶ Task 32.4 next (Rust trash commands).
 ```
 
 ---
@@ -1876,7 +1876,7 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
 
 ### Sprint 32
 
-▶ [ ] **32.1 — DB migration: add `is_deleted` + `deleted_at` to all entity tables**
+[x] **32.1 — DB migration: add `is_deleted` + `deleted_at` to all entity tables**
    - File: `src-tauri/src/db/migrations.rs`
    - Tables: `clinics`, `contacts`, `appointments`, `notes`
    - `documents` already has `is_deleted INTEGER NOT NULL DEFAULT 0` — verify and skip
@@ -1884,18 +1884,18 @@ Closes G-01 through G-12 identified in the 2026-05-02 gap analysis.
    - Add index: `CREATE INDEX IF NOT EXISTS idx_<table>_is_deleted ON <table>(is_deleted)` for each
    - Done when: `cargo test` passes; migration runs on fresh DB
 
-[ ] **32.2 — Rust: convert hard-delete to soft-delete for all entities**
+[x] **32.2 — Rust: convert hard-delete to soft-delete for all entities**
    - Files: `src-tauri/src/commands/{clinics,contacts,appointments,notes,documents}.rs`
    - For each entity, change the existing delete command to: `UPDATE <table> SET is_deleted = 1, deleted_at = ? WHERE id = ?`
    - Add `<entity>_hard_delete(id)` command that executes actual `DELETE` (used by Trash + auto-purge)
    - Done when: `cargo test` passes; deleting an entity sets `is_deleted=1` without removing the row
 
-[ ] **32.3 — Rust: filter soft-deleted items from all list/search queries**
+[x] **32.3 — Rust: filter soft-deleted items from all list/search queries**
    - Add `AND is_deleted = 0` to every `SELECT` in list and search commands across all entity modules
    - FTS5 search: exclude `is_deleted=1` rows (update FTS trigger or rebuild filter)
    - Done when: `cargo test` passes; soft-deleted items absent from all list and search results
 
-[ ] **32.4 — Rust: `trash_list`, `trash_restore`, `trash_hard_delete`, `trash_empty`, `trash_purge_expired` commands**
+▶ [ ] **32.4 — Rust: `trash_list`, `trash_restore`, `trash_hard_delete`, `trash_empty`, `trash_purge_expired` commands**
    - File: `src-tauri/src/commands/trash.rs` (new)
    - `trash_list() -> Result<Vec<TrashItem>, String>` — unified list across all tables WHERE is_deleted=1; `TrashItem` has `entity_type, id, display_name, deleted_at`
    - `trash_restore(entity_type: String, id: String) -> Result<(), String>` — sets `is_deleted=0, deleted_at=NULL`

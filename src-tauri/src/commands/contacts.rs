@@ -82,7 +82,8 @@ pub fn contacts_list(
     let contacts: Vec<Contact> = if let Some(r) = role {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE role = ? ORDER BY name",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts \
+                 WHERE is_deleted = 0 AND role = ? ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([r], row_to_contact)?
@@ -92,7 +93,8 @@ pub fn contacts_list(
     } else {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts ORDER BY name",
+                 created_at, updated_at, title, contact_clinic_id FROM contacts \
+                 WHERE is_deleted = 0 ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([], row_to_contact)?
@@ -111,11 +113,18 @@ pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, C
 
     conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-         created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+         created_at, updated_at, title, contact_clinic_id FROM contacts \
+         WHERE id = ? AND is_deleted = 0",
         [&id],
         row_to_contact,
     )
-    .map_err(|e| CommandError::Internal(e.to_string()))
+    .map_err(|e| {
+        if e == rusqlite::Error::QueryReturnedNoRows {
+            CommandError::NotFound(format!("contact '{id}'"))
+        } else {
+            CommandError::Internal(e.to_string())
+        }
+    })
 }
 
 #[tauri::command]

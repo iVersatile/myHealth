@@ -84,7 +84,7 @@ fn load_appointment(conn: &rusqlite::Connection, id: &str) -> Result<Appointment
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
                 duration_min, location, notes, status, reminder_min, created_at, updated_at,
                 recurrence_series_id
-         FROM appointments WHERE id = ?",
+         FROM appointments WHERE id = ? AND is_deleted = 0",
         [id],
         |row| {
             Ok(Appointment {
@@ -141,7 +141,7 @@ pub fn appointments_list(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
                 duration_min, location, notes, status, reminder_min, created_at, updated_at,
                 recurrence_series_id
-         FROM appointments WHERE 1=1",
+         FROM appointments WHERE is_deleted = 0",
     );
     if month.is_some() {
         sql.push_str(" AND strftime('%Y-%m', appt_date) = ?1");
@@ -199,7 +199,8 @@ pub fn appointments_list_upcoming(
                     duration_min, location, notes, status, reminder_min, created_at, updated_at,
                     recurrence_series_id
              FROM appointments
-             WHERE status = 'scheduled'
+             WHERE is_deleted = 0
+               AND status = 'scheduled'
                AND appt_date >= ?1
                AND appt_date <= ?2
              ORDER BY appt_date ASC",

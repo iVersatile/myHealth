@@ -90,7 +90,9 @@ pub fn clinics_list(state: State<'_, AppState>) -> Result<Vec<Clinic>, CommandEr
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    let mut stmt = conn.prepare(&format!("{SELECT_CLINIC} ORDER BY name ASC"))?;
+    let mut stmt = conn.prepare(&format!(
+        "{SELECT_CLINIC} WHERE is_deleted = 0 ORDER BY name ASC"
+    ))?;
     let rows = stmt.query_map([], row_to_clinic)?;
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| CommandError::Internal(e.to_string()))
@@ -102,11 +104,17 @@ pub fn clinics_get(id: String, state: State<'_, AppState>) -> Result<Clinic, Com
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.query_row(
-        &format!("{SELECT_CLINIC} WHERE id = ?"),
+        &format!("{SELECT_CLINIC} WHERE id = ? AND is_deleted = 0"),
         [&id],
         row_to_clinic,
     )
-    .map_err(|e| CommandError::Internal(e.to_string()))
+    .map_err(|e| {
+        if e == rusqlite::Error::QueryReturnedNoRows {
+            CommandError::NotFound(format!("clinic '{id}'"))
+        } else {
+            CommandError::Internal(e.to_string())
+        }
+    })
 }
 
 #[tauri::command]
@@ -205,7 +213,7 @@ pub fn clinics_get_linked_contacts(
                 c.notes, c.created_at, c.updated_at, c.title, c.contact_clinic_id \
          FROM contacts c \
          INNER JOIN clinic_contacts cc ON cc.contact_id = c.id \
-         WHERE cc.clinic_id = ? \
+         WHERE cc.clinic_id = ? AND c.is_deleted = 0 \
          ORDER BY c.name COLLATE NOCASE",
     )?;
 
@@ -414,7 +422,8 @@ pub fn clinics_list_with_contacts(
                 co.id AS contact_id, co.name AS contact_name, co.role AS contact_role
          FROM clinics c
          LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
-         LEFT JOIN contacts co ON co.id = cc.contact_id
+         LEFT JOIN contacts co ON co.id = cc.contact_id AND co.is_deleted = 0
+         WHERE c.is_deleted = 0
          ORDER BY c.name COLLATE NOCASE, co.name COLLATE NOCASE",
     )?;
 
