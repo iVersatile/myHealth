@@ -109,7 +109,7 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={onClose} onUploaded={onUploaded} />)
     await pickFileAndReachReview()
     await userEvent.click(screen.getByRole('button', { name: /confirm upload/i }))
-    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(fakeDoc, []))
+    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(fakeDoc, [], []))
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -424,6 +424,7 @@ describe('UploadDialog', () => {
     const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA', '2 Health St, Manchester, M1 1AE', '3 Physio Ave, Birmingham, B1 1BB'] }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'clinics_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [], clinic_suggestions: [clinicSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -447,6 +448,7 @@ describe('UploadDialog', () => {
     const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA'] }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'clinics_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [], clinic_suggestions: [clinicSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -477,6 +479,7 @@ describe('UploadDialog', () => {
     const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA'] }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'clinics_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [contactSugg], clinic_suggestions: [clinicSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
