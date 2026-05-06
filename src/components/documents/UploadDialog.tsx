@@ -165,7 +165,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
               setClinicPhase({ kind: 'duplicate', existingId: match.id })
             }
           }
-          const actDate = suggestions.activity_date ?? new Date().toISOString().slice(0, 10)
+          const actDate = suggestions.activity_date ?? null
           setActivityDate(actDate)
           setTimelineDescription(buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null))
 

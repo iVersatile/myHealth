@@ -86,7 +86,8 @@ export default function NoteEditorClient() {
   // eslint-disable-next-line react-hooks/refs
   titleRef.current = title
 
-  // @ts-expect-error — @tiptap/core resolved from two paths (npm + pnpm) causing private-member type conflict
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore — @tiptap/core resolved from two paths (npm + pnpm) causing private-member type conflict
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
