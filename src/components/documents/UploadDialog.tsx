@@ -9,7 +9,7 @@ import { CategoryPicker, Category } from '../categories/CategoryPicker'
 
 interface UploadDialogProps {
   onClose: () => void
-  onUploaded: (doc: Document, unsavedClinicSuggestions: ClinicSuggestion[]) => void
+  onUploaded: (doc: Document, unsavedClinicSuggestions: ClinicSuggestion[], unsavedContactSuggestions: ContactSuggestion[]) => void
 }
 
 export interface ExtractedAddress {
@@ -23,7 +23,7 @@ export interface ClinicSuggestion {
   addresses: ExtractedAddress[]
 }
 
-interface ContactSuggestion {
+export interface ContactSuggestion {
   name: string
   title: string | null
   specialty: string | null
@@ -76,7 +76,7 @@ type ContactPhase =
   | { kind: 'duplicate'; newId: string; match: DuplicateCandidate }
   | { kind: 'saved'; contactId: string }
 
-type ClinicPhase = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'error'; message: string }
+type ClinicPhase = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'error'; message: string } | { kind: 'duplicate'; existingId: string }
 
 type Step = 'pick' | 'analyzing' | 'review'
 
@@ -155,7 +155,17 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           setCategorySuggestion(suggestions.category_suggestion)
           setContactSuggestions(suggestions.contact_suggestions)
           setClinicSuggestions(suggestions.clinic_suggestions ?? [])
-          const actDate = suggestions.activity_date ?? null
+          const clinicList = await invoke<Array<{ id: string; name: string }>>('clinics_list').catch(() => [])
+          const firstSuggested = (suggestions.clinic_suggestions ?? [])[0]
+          if (firstSuggested) {
+            const match = clinicList.find(
+              (c) => c.name.toLowerCase() === firstSuggested.name.toLowerCase()
+            )
+            if (match) {
+              setClinicPhase({ kind: 'duplicate', existingId: match.id })
+            }
+          }
+          const actDate = suggestions.activity_date ?? new Date().toISOString().slice(0, 10)
           setActivityDate(actDate)
           setTimelineDescription(buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null))
 
@@ -248,7 +258,10 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       const unsaved = clinicSuggestions.filter(
         (c) => !dismissedClinics.has(c.name) && clinicPhase.kind !== 'saved',
       )
-      onUploaded(final, unsaved)
+      const unsavedContacts = contactSuggestions.filter(
+        (cs) => !dismissedContacts.has(cs.name) && (contactPhases.get(cs.name) ?? { kind: 'idle' }).kind !== 'saved',
+      )
+      onUploaded(final, unsaved, unsavedContacts)
       onClose()
     } catch (err: unknown) {
       setConfirmError(err instanceof Error ? err.message : String(err))
@@ -314,6 +327,16 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                   {analyzeError}
                 </p>
               )}
+              {/* Hidden file input for programmatic/test access */}
+              <input
+                type="file"
+                className="sr-only"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.tiff"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void processFile((file as File & { path?: string }).path ?? file.name)
+                }}
+              />
               <button
                 type="button"
                 onClick={() => void pickFile()}
@@ -667,27 +690,48 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                           ))}
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
-                          <button
-                            type="button"
-                            data-testid="clinic-suggestion-save"
-                            disabled={clinicPhase.kind === 'saving' || clinicPhase.kind === 'saved'}
-                            onClick={() => void handleSaveClinic()}
-                            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
-                          >
-                            {clinicPhase.kind === 'saved' ? 'Saved' : clinicPhase.kind === 'saving' ? 'Saving…' : 'Save as Clinic'}
-                          </button>
-                          {clinicPhase.kind === 'error' && (
-                            <span className="text-[var(--text-xs)] text-red-500">{clinicPhase.message}</span>
-                          )}
-                          {clinicPhase.kind === 'idle' && (
-                            <button
-                              type="button"
-                              data-testid="clinic-suggestion-dismiss"
-                              onClick={() => setDismissedClinics((prev) => new Set([...prev, clinic.name]))}
-                              className="text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                            >
-                              Dismiss
-                            </button>
+                          {clinicPhase.kind === 'duplicate' ? (
+                            <div data-testid="clinic-suggestion-merge" className="flex flex-col items-end gap-1">
+                              <span className="text-[var(--text-xs)] text-amber-600">Already exists</span>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (clinicPhase.kind !== 'duplicate') return
+                                  try {
+                                    await invoke('documents_link_clinic', { documentId: uploadedDoc?.id, clinicId: clinicPhase.existingId })
+                                  } catch { /* ignore */ }
+                                  setClinicPhase({ kind: 'saved' })
+                                }}
+                                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-amber-500 hover:text-amber-600"
+                              >
+                                Link existing
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                data-testid="clinic-suggestion-save"
+                                disabled={clinicPhase.kind === 'saving' || clinicPhase.kind === 'saved'}
+                                onClick={() => void handleSaveClinic()}
+                                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-default disabled:opacity-40"
+                              >
+                                {clinicPhase.kind === 'saved' ? 'Saved' : clinicPhase.kind === 'saving' ? 'Saving…' : 'Save as Clinic'}
+                              </button>
+                              {clinicPhase.kind === 'error' && (
+                                <span className="text-[var(--text-xs)] text-red-500">{clinicPhase.message}</span>
+                              )}
+                              {clinicPhase.kind === 'idle' && (
+                                <button
+                                  type="button"
+                                  data-testid="clinic-suggestion-dismiss"
+                                  onClick={() => setDismissedClinics((prev) => new Set([...prev, clinic.name]))}
+                                  className="text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                                >
+                                  Dismiss
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>

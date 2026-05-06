@@ -86,6 +86,7 @@ export default function NoteEditorClient() {
   // eslint-disable-next-line react-hooks/refs
   titleRef.current = title
 
+  // @ts-expect-error — @tiptap/core resolved from two paths (npm + pnpm) causing private-member type conflict
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -313,13 +314,15 @@ export default function NoteEditorClient() {
             {
               label: '•',
               title: 'Bullet list',
-              action: () => editor?.chain().focus().toggleBulletList().run(),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              action: () => (editor?.chain().focus() as any).toggleBulletList().run(),
               active: editor?.isActive('bulletList'),
             },
             {
               label: '1.',
               title: 'Ordered list',
-              action: () => editor?.chain().focus().toggleOrderedList().run(),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              action: () => (editor?.chain().focus() as any).toggleOrderedList().run(),
               active: editor?.isActive('orderedList'),
             },
           ] as const
