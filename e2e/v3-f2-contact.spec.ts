@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
@@ -23,7 +23,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('contact-suggestion-save').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/contacts')
     const contact = page.getByText('John Green')
@@ -45,7 +45,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
 
   test('TC-V3-F2-04 — no duplicate contact created if contact already exists', async ({ page }) => {
     await page.goto('/contacts')
-    await page.getByRole('button', { name: /add contact/i }).click()
+    await page.getByRole('button', { name: '+ New' }).click()
     await page.getByLabel(/name/i).fill('John Green')
     await page.getByRole('button', { name: /save/i }).click()
 
@@ -64,7 +64,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('contact-suggestion-dismiss').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/contacts')
     await expect(page.getByText('John Green')).not.toBeVisible()

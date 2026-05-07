@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
@@ -24,7 +24,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('clinic-suggestion-save').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/contacts')
     await page.getByText('JOHN GREEN PHYSIOTHERAPY LTD').click()
@@ -41,7 +41,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
 
     await page.getByTestId('contact-suggestion-save').click()
     await page.getByTestId('clinic-suggestion-save').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/contacts')
     await page.getByText('John Green').click()
@@ -59,12 +59,23 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
   })
 
   test('TC-V3-F3-05 — no duplicate clinic created if clinic already exists', async ({ page }) => {
-    await page.goto('/contacts')
-    await page.getByRole('button', { name: /add clinic/i }).click()
-    await page.getByLabel(/name/i).fill('JOHN GREEN PHYSIOTHERAPY LTD')
-    await page.getByRole('button', { name: /save/i }).click()
-
+    // Pre-seed a clinic with the same name in mock state so duplicate detection fires
     await page.goto('/documents')
+    await page.evaluate(() => {
+      const state = JSON.parse(sessionStorage.getItem('tauri_mock_state') ?? '{}')
+      state.clinics = state.clinics ?? []
+      state.clinics.push({
+        id: 'preset-clinic-1',
+        name: 'JOHN GREEN PHYSIOTHERAPY LTD',
+        address: null,
+        phone: null,
+        created_at: new Date().toISOString(),
+        company_registration_number: '6780032',
+        linked_contacts: [],
+      })
+      sessionStorage.setItem('tauri_mock_state', JSON.stringify(state))
+    })
+
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
@@ -79,7 +90,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('clinic-suggestion-dismiss').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/contacts')
     await expect(page.getByText('JOHN GREEN PHYSIOTHERAPY LTD')).not.toBeVisible()

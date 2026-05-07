@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
@@ -14,7 +14,7 @@ test.describe('V3-F4 — Tag Auto-Extraction', () => {
     const tagSet = allTags.map((t) => t.trim().toLowerCase())
 
     expect(tagSet).toContain('invoice')
-    expect(tagSet).toContain('john green')
+    expect(tagSet).toContain('mr john green')
     expect(tagSet).toContain('physiotherapy')
     expect(tagSet).toContain('2023-03-09')
   })
@@ -24,7 +24,7 @@ test.describe('V3-F4 — Tag Auto-Extraction', () => {
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/documents')
     await page.getByTestId('document-card').first().click()
@@ -34,7 +34,7 @@ test.describe('V3-F4 — Tag Auto-Extraction', () => {
     const tagSet = allTags.map((t) => t.trim().toLowerCase())
 
     expect(tagSet).toContain('invoice')
-    expect(tagSet).toContain('john green')
+    expect(tagSet).toContain('mr john green')
     expect(tagSet).toContain('physiotherapy')
     expect(tagSet).toContain('2023-03-09')
   })
@@ -50,7 +50,7 @@ test.describe('V3-F4 — Tag Auto-Extraction', () => {
     await page.getByTestId('tag-input').fill('custom-tag')
     await page.keyboard.press('Enter')
 
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/documents')
     await page.getByTestId('document-card').first().click()

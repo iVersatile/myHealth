@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 const NO_DATE_PHYSIO_PDF = 'src-tauri/tests/fixtures/no-date-physio.pdf'
@@ -43,7 +43,7 @@ test.describe('V3-F5 — Timeline Activity Date', () => {
     await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByTestId('contact-suggestion-save').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/timeline')
     const entry = page.getByTestId('timeline-entry').first()
@@ -58,7 +58,7 @@ test.describe('V3-F5 — Timeline Activity Date', () => {
 
     const dateField = page.getByTestId('activity-date-field')
     await dateField.fill('2023-03-15')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/timeline')
     const entry = page.getByTestId('timeline-entry').first()

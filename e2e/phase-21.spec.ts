@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 const NO_DATE_NO_FILENAME_PDF = 'src-tauri/tests/fixtures/no-date-no-filename.pdf'
@@ -23,7 +23,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/documents')
     await page.getByTestId('document-card').first().click()
@@ -46,7 +46,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/timeline')
     await page.getByRole('button', { name: /by uploaded date/i }).click()
@@ -62,7 +62,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
 
     const dateField = page.getByTestId('activity-date-field')
     await dateField.fill('')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/timeline')
     const chronoButton = page.getByRole('button', { name: /chronological/i })
@@ -83,7 +83,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
 
     const dateField = page.getByTestId('activity-date-field')
     await dateField.fill('')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/documents')
     await page.getByTestId('document-card').first().click()
@@ -100,7 +100,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
 
     const dateField = page.getByTestId('activity-date-field')
     await dateField.fill('')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/documents')
     await page.getByTestId('document-card').first().click()
@@ -122,7 +122,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
 
     const dateField = page.getByTestId('activity-date-field')
     await dateField.fill('')
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/documents')
     await page.getByTestId('document-card').first().click()

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
@@ -21,7 +21,7 @@ test.describe('V3-F1 — Category Auto-Creation', () => {
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('category-suggestion-accept').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/documents')
     const doc = page.getByTestId('document-card').first()
@@ -38,7 +38,7 @@ test.describe('V3-F1 — Category Auto-Creation', () => {
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('category-suggestion-dismiss').click()
-    await page.getByRole('button', { name: /save|confirm/i }).click()
+    await page.getByRole('button', { name: /confirm upload/i }).click()
 
     await page.goto('/settings/categories')
     await expect(page.getByText('Physiotherapy')).not.toBeVisible()
