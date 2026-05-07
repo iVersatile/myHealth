@@ -65,6 +65,15 @@ describe('fetch on mount', () => {
     expect(result.current.error).toBe('DB locked')
     expect(result.current.contacts).toEqual([])
   })
+
+  it('sets error state as string when rejection is not an Error instance', async () => {
+    mockInvoke.mockRejectedValueOnce('connection timeout')
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.error).toBe('connection timeout')
+  })
 })
 
 describe('createContact', () => {

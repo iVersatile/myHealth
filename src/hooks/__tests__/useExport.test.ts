@@ -227,4 +227,21 @@ describe('useExport', () => {
     })
     expect(success).toBe(true)
   })
+
+  it('handles TOC page overflow when more than 27 documents are included', async () => {
+    const { useExport } = await import('../useExport')
+    const manyDocs = Array.from({ length: 30 }, (_, i) =>
+      makeDoc({ id: `d${i}`, filename: `doc-${i}.pdf` }),
+    )
+    const bundle = makeBundle({ documents: manyDocs })
+    mockInvoke.mockResolvedValueOnce(bundle)
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() => useExport())
+    let success: boolean | undefined
+    await act(async () => {
+      success = await result.current.exportBundle(manyDocs.map(d => d.id), 'My Records', '/tmp/out.pdf')
+    })
+    expect(success).toBe(true)
+  })
 })

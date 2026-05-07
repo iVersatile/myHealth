@@ -167,6 +167,23 @@ describe('ApptSuggestionBanner', () => {
     }
   })
 
+  it('calls onConfirm with null when noDoctor is false but doctor name is empty', () => {
+    const onConfirm = vi.fn()
+    render(
+      <ApptSuggestionBanner
+        suggestion={serviceSuggestion}
+        onConfirm={onConfirm}
+        onDismiss={vi.fn()}
+      />,
+    )
+    // Uncheck no-doctor so noDoctor=false, then leave name empty
+    fireEvent.click(screen.getByRole('checkbox'))
+    const input = screen.getByPlaceholderText(/doctor name/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /create appointment/i }))
+    expect(onConfirm).toHaveBeenCalledWith(null)
+  })
+
   it('renders root element with data-testid appt-suggestion-banner', () => {
     const { container } = render(
       <ApptSuggestionBanner

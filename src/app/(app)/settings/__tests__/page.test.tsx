@@ -44,6 +44,7 @@ beforeEach(() => {
     if (cmd === 'calendar_list_sources') return Promise.resolve([])
     if (cmd === 'calendar_toggle_source') return Promise.resolve()
     if (cmd === 'calendar_sync') return Promise.resolve(0)
+    if (cmd === 'categories_list') return Promise.resolve([])
     return Promise.resolve()
   })
 })
@@ -798,5 +799,75 @@ describe('SettingsPage — Outlook Calendar Sync (Windows)', () => {
 
     await waitFor(() => expect(screen.getByText('Connect Outlook')).toBeDefined())
     openSpy.mockRestore()
+  })
+
+  describe('show archived categories toggle', () => {
+    const activeCategory = { id: 'cat-1', name: 'Cardiology', color_hex: '#FF0000', is_system: 0, sort_order: 1, is_archived: 0 }
+    const archivedCategory = { id: 'cat-2', name: 'OldEmpty', color_hex: '#6B7280', is_system: 0, sort_order: 2, is_archived: 1 }
+
+    function makeCategoriesInvoke(withArchived: boolean) {
+      return (cmd: string, args?: Record<string, unknown>) => {
+        if (cmd === 'settings_get') return Promise.resolve(null)
+        if (cmd === 'settings_get_data_dir') return Promise.resolve('/tmp')
+        if (cmd === 'settings_set') return Promise.resolve()
+        if (cmd === 'calendar_list_sources') return Promise.resolve([])
+        if (cmd === 'categories_list') {
+          if (args?.includeArchived) return Promise.resolve([activeCategory, archivedCategory])
+          return Promise.resolve([activeCategory])
+        }
+        return Promise.resolve()
+      }
+    }
+
+    it('fetches archived categories and shows them when toggle enabled', async () => {
+      mockInvoke.mockImplementation(makeCategoriesInvoke(true))
+      await renderPage()
+      const checkbox = screen.getByLabelText('Show archived categories') as HTMLInputElement
+      expect(checkbox.checked).toBe(false)
+
+      fireEvent.click(checkbox)
+
+      await waitFor(() => {
+        expect(screen.getAllByText('OldEmpty').length).toBeGreaterThan(0)
+      })
+      expect(mockInvoke).toHaveBeenCalledWith('categories_list', { includeArchived: true })
+    })
+
+    it('shows empty-state message when no archived categories exist', async () => {
+      mockInvoke.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+        if (cmd === 'settings_get') return Promise.resolve(null)
+        if (cmd === 'settings_get_data_dir') return Promise.resolve('/tmp')
+        if (cmd === 'settings_set') return Promise.resolve()
+        if (cmd === 'calendar_list_sources') return Promise.resolve([])
+        if (cmd === 'categories_list') return Promise.resolve([activeCategory])
+        return Promise.resolve()
+      })
+      await renderPage()
+      fireEvent.click(screen.getByLabelText('Show archived categories'))
+
+      await waitFor(() => {
+        expect(screen.getByText('No archived categories.')).toBeDefined()
+      })
+    })
+
+    it('does not re-fetch when toggled on a second time', async () => {
+      mockInvoke.mockImplementation(makeCategoriesInvoke(true))
+      await renderPage()
+      const checkbox = screen.getByLabelText('Show archived categories')
+      fireEvent.click(checkbox)
+      await waitFor(() => expect(screen.getAllByText('OldEmpty').length).toBeGreaterThan(0))
+      const fetchCountAfterFirst = mockInvoke.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'categories_list' && (c[1] as Record<string, unknown>)?.includeArchived
+      ).length
+
+      fireEvent.click(checkbox) // off
+      fireEvent.click(checkbox) // on again
+
+      await waitFor(() => expect(screen.getAllByText('OldEmpty').length).toBeGreaterThan(0))
+      const fetchCountAfterSecond = mockInvoke.mock.calls.filter(
+        (c: unknown[]) => c[0] === 'categories_list' && (c[1] as Record<string, unknown>)?.includeArchived
+      ).length
+      expect(fetchCountAfterSecond).toBe(fetchCountAfterFirst)
+    })
   })
 })
