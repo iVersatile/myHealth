@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Task 37.2 complete. Next: Task 37.3 — Tests + commit.
+Task 37.3 complete. Next: Task 38.1 — Extracted text surface.
 ```
 
 ---
@@ -284,7 +284,7 @@ These elements likely don't exist in the UI (not a testid naming issue).
    - Frontend: hide archived from default list; add "Show archived" toggle
    - Done when: empty category disappears from list; backdated test confirms archive logic
 
-▶ [ ] **37.3 — Tests + commit**
+[x] **37.3 — Tests + commit**
    - Unit tests for archive logic; E2E for drag reorder
    - `feat: category drag-to-organize and auto-archive (F3.4, F3.7)`
 
@@ -315,7 +315,7 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
 
 ### Sprint 38
 
-[ ] **38.1 — Verify FTS5 index covers `extracted_text`**
+▶ [ ] **38.1 — Verify FTS5 index covers `extracted_text`**
    - Read `src-tauri/src/db/migrations.rs`; find the `documents_fts` virtual table definition
    - If `extracted_text` is not in the FTS5 column list, add it in a new migration
    - Done when: `cargo test` passes and FTS search returns hits from `extracted_text`
