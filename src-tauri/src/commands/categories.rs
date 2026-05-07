@@ -511,6 +511,23 @@ pub fn category_reorder(
 }
 
 #[tauri::command]
+pub fn categories_reorder(
+    ordered_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    for (i, id) in ordered_ids.iter().enumerate() {
+        conn.execute(
+            "UPDATE categories SET sort_order = ?1 WHERE id = ?2 AND is_system = 0",
+            rusqlite::params![i as i64, id],
+        )?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn categories_archive_stale(
     months_inactive: u32,
     state: State<'_, AppState>,

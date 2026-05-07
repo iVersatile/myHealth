@@ -1,12 +1,35 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../../hooks/useAuth'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 type Theme = 'light' | 'dark' | 'system'
+
+type Category = {
+  id: string
+  name: string
+  color_hex: string
+  is_system: boolean
+  sort_order: number
+}
 
 type CalendarSourceRow = {
   id: string
@@ -119,6 +142,42 @@ function Field({ label, id, children }: { label: string; id?: string; children: 
   )
 }
 
+function SortableCategoryItem({ cat }: { cat: Category }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id })
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-2)',
+    padding: 'var(--space-2) var(--space-3)',
+    background: 'var(--color-surface-sunken)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    marginBottom: 'var(--space-2)',
+    userSelect: 'none',
+    cursor: isDragging ? 'grabbing' : 'grab',
+  }
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <span style={{ color: 'var(--color-text-muted)', fontSize: 12, flexShrink: 0 }}>⠿</span>
+      <span style={{
+        width: 12, height: 12, borderRadius: '50%',
+        background: cat.color_hex, flexShrink: 0,
+      }} />
+      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', flex: 1 }}>
+        {cat.name}
+      </span>
+      {cat.is_system && (
+        <span style={{ fontSize: 10, color: 'var(--color-text-muted)', background: 'var(--color-border)', borderRadius: 4, padding: '1px 5px' }}>
+          system
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const { lock } = useAuth()
   const router = useRouter()
@@ -154,6 +213,11 @@ export default function SettingsPage() {
   const [archiveBusy, setArchiveBusy] = useState(false)
   const [archiveMsg, setArchiveMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
+  const [categories, setCategories] = useState<Category[]>([])
+  const reorderPending = useRef(false)
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
   const [conflicts, setConflicts] = useState<ConflictPair[]>([])
   const [conflictsLoading, setConflictsLoading] = useState(false)
   const [showConflicts, setShowConflicts] = useState(false)
@@ -180,6 +244,9 @@ export default function SettingsPage() {
       setDataDir(dir)
       setAutoArchive(aa === 'true')
       if (am) setArchiveMonths(parseInt(am, 10) || 12)
+
+      const cats = await invoke<Category[]>('categories_list')
+      setCategories(cats.slice().sort((a, b) => a.sort_order - b.sort_order))
     }
     void loadSettings()
   }, [])
@@ -355,6 +422,20 @@ export default function SettingsPage() {
     } finally {
       setArchiveBusy(false)
     }
+  }
+
+  function handleCategoryDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = categories.findIndex(c => c.id === active.id)
+    const newIndex = categories.findIndex(c => c.id === over.id)
+    const reordered = arrayMove(categories, oldIndex, newIndex)
+    setCategories(reordered)
+    if (reorderPending.current) return
+    reorderPending.current = true
+    void invoke('categories_reorder', { orderedIds: reordered.map(c => c.id) }).finally(() => {
+      reorderPending.current = false
+    })
   }
 
   useEffect(() => {
@@ -698,6 +779,21 @@ export default function SettingsPage() {
       {/* Categories */}
       <div style={sectionStyle}>
         <SectionTitle>Categories</SectionTitle>
+
+        {categories.length > 0 && (
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)', marginTop: 0 }}>
+              Drag to reorder categories
+            </p>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCategoryDragEnd}>
+              <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                {categories.map(cat => (
+                  <SortableCategoryItem key={cat.id} cat={cat} />
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
           <div>
