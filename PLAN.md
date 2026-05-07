@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 33 complete. Phase 34 complete.
-Next: Task 35.1 — Fix strict-mode regex in upload E2E specs.
+Phase 33 complete. Phase 34 complete. Tasks 35.1–35.6 complete (35.4/35.5/35.6 already implemented).
+Next: Task 35.7 — Full suite run + CI verification.
 ```
 
 ---
@@ -179,7 +179,7 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
 **Root cause:** Selector `/save|confirm/i` matches "Save as Contact", "Save as Clinic", and "Confirm Upload" simultaneously.
 **Fix:** Change to `getByRole('button', { name: /confirm upload/i })` in all affected specs.
 
-▶ **35.1 — Fix strict-mode regex in upload E2E specs**
+[x] **35.1 — Fix strict-mode regex in upload E2E specs**
    - `grep -r "save|confirm" e2e/` to find all occurrences
    - Replace with `/confirm upload/i` or exact button role where context is ambiguous
    - Done when: `npx playwright test --grep "upload"` passes without strict-mode errors
@@ -188,7 +188,7 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
 
 **Root cause:** Document detail page lacked editable activity_date field. Fixed in Phase 33.
 
-[ ] **35.2 — Verify Phase 33 testids resolve all v3-f5 E2E failures**
+[x] **35.2 — Verify Phase 33 testids resolve all v3-f5 E2E failures**
    - `npx playwright test e2e/v3-f5*`
    - Done when: all v3-f5 specs pass
 
@@ -196,7 +196,7 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
 
 **Root cause:** V3-F6 not implemented. Fixed in Phase 34.
 
-[ ] **35.3 — Verify Phase 34 resolves all v3-f6 E2E failures**
+[x] **35.3 — Verify Phase 34 resolves all v3-f6 E2E failures**
    - `npx playwright test e2e/v3-f6*`
    - Done when: all v3-f6 specs pass
 
@@ -207,11 +207,11 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
 - TC-EDIT-04: `clinicRow.getByRole('link', { name: /edit/i }).or(getByRole('button', { name: /edit/i }))` on clinic list row
 These elements likely don't exist in the UI (not a testid naming issue).
 
-[ ] **35.4 — Add missing edit button to appointment detail page**
+[x] **35.4 — Add missing edit button to appointment detail page**
    - Locate appointment detail component; add an "Edit" button that opens the edit dialog
    - Done when: TC-EDIT-02 passes
 
-[ ] **35.5 — Add missing edit link/button to clinic list row**
+[x] **35.5 — Add missing edit link/button to clinic list row**
    - Locate clinic list row component (`clinic-row` testid); add an Edit link/button
    - Done when: TC-EDIT-04 passes
 
@@ -219,12 +219,12 @@ These elements likely don't exist in the UI (not a testid naming issue).
 
 **Root cause:** Timeline tabs exist (4 tabs: chronological, by-category, by-doctor, by-uploaded-date) but E2E specs may have fragile selectors or missing `waitFor` calls.
 
-[ ] **35.6 — Fix timeline E2E selector and timing issues**
+[x] **35.6 — Fix timeline E2E selector and timing issues**
    - Read `e2e/v3-f5-timeline.spec.ts` and `e2e/timeline-by-doctor.spec.ts`
    - Identify testid mismatch vs timing issue; add `waitForSelector` where needed
    - Done when: `npx playwright test e2e/v3-f5-timeline.spec.ts e2e/timeline-by-doctor.spec.ts` passes
 
-[ ] **35.7 — Full suite run + CI verification**
+▶ **35.7 — Full suite run + CI verification**
    - `npx playwright test` — all pass, exit 0
    - Push to `origin/develop`; confirm CI `e2e` job green
    - Done when: CI green
