@@ -166,4 +166,15 @@ describe('ApptSuggestionBanner', () => {
       expect((btn as HTMLButtonElement).disabled).toBe(true)
     }
   })
+
+  it('renders root element with data-testid appt-suggestion-banner', () => {
+    const { container } = render(
+      <ApptSuggestionBanner
+        suggestion={baseSuggestion}
+        onConfirm={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    )
+    expect(container.querySelector('[data-testid="appt-suggestion-banner"]')).not.toBeNull()
+  })
 })

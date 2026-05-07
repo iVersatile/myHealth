@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 33 complete. Phase 34 partially complete (34.1–34.4 done).
-Next: Task 34.5 — Unit test for banner integration (mock invoke, assert appt-suggestion-banner visible).
+Phase 33 complete. Phase 34 partially complete (34.1–34.5 done).
+Next: Task 34.6 — E2E spec: V3-F6 suggestion banner.
 ```
 
 ---
@@ -149,12 +149,12 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
    - Doc with provider → `Some(suggestion)`; doc without provider → `None`
    - Done when: `cargo test` passes
 
-▶ **34.5 — Unit test for banner integration**
+[x] **34.5 — Unit test for banner integration**
    - Mock `invoke('appointments_suggest_from_document')` returning a suggestion
    - Assert `doctor-suggestion-banner` visible; clicking Accept fires `onAccept`
    - Done when: `npx vitest run` passes
 
-[ ] **34.6 — E2E spec: V3-F6 suggestion banner**
+▶ **34.6 — E2E spec: V3-F6 suggestion banner**
    - File: `e2e/v3-f6.spec.ts` (new; `v3-f8-clinic-contact-creation.spec.ts` covers adjacent flows but not appointment creation)
    - Upload invoice with provider → banner appears → Accept → appointment dialog pre-filled
    - Upload doc without provider → banner does NOT appear
