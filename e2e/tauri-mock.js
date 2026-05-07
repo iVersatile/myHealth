@@ -226,8 +226,12 @@
     if (cmd === 'auth_switch_user') return Promise.resolve(null);
 
     // Settings
-    if (cmd === 'settings_get') return Promise.resolve({});
+    if (cmd === 'settings_get') return Promise.resolve(null);
     if (cmd === 'settings_set') return Promise.resolve(null);
+    if (cmd === 'settings_get_data_dir') return Promise.resolve('/mock/data');
+
+    // Calendar
+    if (cmd === 'calendar_list_sources') return Promise.resolve([]);
 
     // Stats
     if (cmd === 'stats_summary') {
@@ -817,6 +821,16 @@
         return Promise.resolve(state.categories[idx]);
       }
       return Promise.reject(new Error('Category not found'));
+    }
+
+    if (cmd === 'categories_reorder') {
+      const orderedIds = args?.orderedIds || args?.ordered_ids || [];
+      orderedIds.forEach((id, idx) => {
+        const cat = state.categories.find((c) => c.id === id);
+        if (cat) cat.sort_order = idx;
+      });
+      saveState(state);
+      return Promise.resolve(null);
     }
 
     if (cmd === 'categories_assign_document' || cmd === 'assign_category_to_document') {
