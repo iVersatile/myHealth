@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 36 complete. Next: Task 37.1 — F3.4 drag-to-reorder categories.
+Task 37.2 complete. Next: Task 37.3 — Tests + commit.
 ```
 
 ---
@@ -274,17 +274,17 @@ These elements likely don't exist in the UI (not a testid naming issue).
 
 ### Sprint 37
 
-▶ [ ] **37.1 — F3.4: drag-to-reorder categories**
+[x] **37.1 — F3.4: drag-to-reorder categories**
    - Verify `@dnd-kit/sortable` is already in `package.json`; add if missing
    - On drop: invoke `categories_reorder` (new Rust command) with new order array
    - Done when: drag reorder persists across app restarts
 
-[ ] **37.2 — F3.7: auto-archive empty categories**
+[x] **37.2 — F3.7: auto-archive empty categories**
    - Rust: on app launch, mark categories with 0 documents as `archived_at` if created >30 days ago
    - Frontend: hide archived from default list; add "Show archived" toggle
    - Done when: empty category disappears from list; backdated test confirms archive logic
 
-[ ] **37.3 — Tests + commit**
+▶ [ ] **37.3 — Tests + commit**
    - Unit tests for archive logic; E2E for drag reorder
    - `feat: category drag-to-organize and auto-archive (F3.4, F3.7)`
 

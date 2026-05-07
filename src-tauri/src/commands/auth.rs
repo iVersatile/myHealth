@@ -2,7 +2,10 @@ use rand::RngCore;
 use rusqlite::Connection;
 use std::path::{Path, PathBuf};
 
-use crate::{commands::trash::purge_expired_direct, crypto, db};
+use crate::{
+    commands::categories::archive_stale_if_enabled, commands::trash::purge_expired_direct, crypto,
+    db,
+};
 
 use super::{AppState, CommandContext, CommandError};
 
@@ -287,6 +290,7 @@ pub fn auth_unlock(
         Ok((conn, hex)) => {
             state.auth_rate_limit.lock().unwrap().reset();
             purge_expired_direct(&conn);
+            archive_stale_if_enabled(&conn);
             *state.db.lock().unwrap() = Some(conn);
             *state.key_hex.lock().unwrap() = Some(zeroize::Zeroizing::new(hex));
             Ok(())

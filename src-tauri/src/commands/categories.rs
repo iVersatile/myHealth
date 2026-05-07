@@ -527,6 +527,44 @@ pub fn categories_reorder(
     Ok(())
 }
 
+/// Called from auth_unlock with an already-open connection.
+/// Reads auto_archive_categories + auto_archive_months from settings, runs archive if enabled.
+pub fn archive_stale_if_enabled(conn: &rusqlite::Connection) {
+    let enabled: bool = conn
+        .query_row(
+            "SELECT value FROM settings WHERE key = 'auto_archive_categories'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .ok()
+        .map(|v| v == "true")
+        .unwrap_or(false);
+
+    if !enabled {
+        return;
+    }
+
+    let months: u32 = conn
+        .query_row(
+            "SELECT value FROM settings WHERE key = 'auto_archive_months'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(12);
+
+    let _ = conn.execute(
+        "UPDATE categories SET is_archived = 1 \
+         WHERE is_system = 0 \
+           AND is_archived = 0 \
+           AND id NOT IN (SELECT DISTINCT category_id FROM document_categories) \
+           AND id NOT IN (SELECT DISTINCT category_id FROM appointment_categories) \
+           AND created_at < datetime('now', printf('-%d months', ?1))",
+        rusqlite::params![months],
+    );
+}
+
 #[tauri::command]
 pub fn categories_archive_stale(
     months_inactive: u32,
@@ -1272,5 +1310,102 @@ mod tests {
             .optional()
             .unwrap();
         assert_eq!(found.as_deref(), Some(id.as_str()));
+    }
+
+    #[test]
+    fn archive_stale_if_enabled_does_nothing_when_disabled() {
+        let conn = open_test_db();
+        // No setting row → disabled by default
+        let id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, 'OldEmpty', NULL, '#6B7280', 0, 200, datetime('now', '-24 months'))",
+            rusqlite::params![id],
+        )
+        .unwrap();
+        archive_stale_if_enabled(&conn);
+        let archived: i64 = conn
+            .query_row(
+                "SELECT is_archived FROM categories WHERE id = ?1",
+                rusqlite::params![id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(archived, 0);
+    }
+
+    #[test]
+    fn archive_stale_if_enabled_archives_old_empty_category() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('auto_archive_categories', 'true')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('auto_archive_months', '12')",
+            [],
+        )
+        .unwrap();
+        let id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, 'StaleEmpty', NULL, '#6B7280', 0, 201, datetime('now', '-13 months'))",
+            rusqlite::params![id],
+        )
+        .unwrap();
+        archive_stale_if_enabled(&conn);
+        let archived: i64 = conn
+            .query_row(
+                "SELECT is_archived FROM categories WHERE id = ?1",
+                rusqlite::params![id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(archived, 1);
+    }
+
+    #[test]
+    fn archive_stale_if_enabled_skips_category_with_documents() {
+        let conn = open_test_db();
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('auto_archive_categories', 'true')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('auto_archive_months', '12')",
+            [],
+        )
+        .unwrap();
+        let cat_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO categories (id, name, parent_id, color_hex, is_system, sort_order, created_at) \
+             VALUES (?1, 'OldWithDoc', NULL, '#6B7280', 0, 202, datetime('now', '-13 months'))",
+            rusqlite::params![cat_id],
+        )
+        .unwrap();
+        // Link a document to this category so it should not be archived
+        let doc_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category) \
+             VALUES (?1, 'test.pdf', '/tmp/test.pdf', 'application/pdf', 0, 'other')",
+            rusqlite::params![doc_id],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO document_categories (document_id, category_id) VALUES (?1, ?2)",
+            rusqlite::params![doc_id, cat_id],
+        )
+        .unwrap();
+        archive_stale_if_enabled(&conn);
+        let archived: i64 = conn
+            .query_row(
+                "SELECT is_archived FROM categories WHERE id = ?1",
+                rusqlite::params![cat_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(archived, 0);
     }
 }

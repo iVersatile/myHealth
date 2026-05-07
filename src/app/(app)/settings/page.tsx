@@ -214,6 +214,8 @@ export default function SettingsPage() {
   const [archiveMsg, setArchiveMsg] = useState<{ text: string; ok: boolean } | null>(null)
 
   const [categories, setCategories] = useState<Category[]>([])
+  const [archivedCategories, setArchivedCategories] = useState<Category[]>([])
+  const [showArchivedCategories, setShowArchivedCategories] = useState(false)
   const reorderPending = useRef(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -409,6 +411,14 @@ export default function SettingsPage() {
     const clamped = Math.max(1, Math.min(120, val))
     setArchiveMonths(clamped)
     await invoke('settings_set', { key: 'auto_archive_months', value: String(clamped) })
+  }
+
+  async function handleShowArchivedToggle(show: boolean) {
+    setShowArchivedCategories(show)
+    if (show && archivedCategories.length === 0) {
+      const all = await invoke<Category[]>('categories_list', { includeArchived: true })
+      setArchivedCategories(all.filter(c => !categories.some(a => a.id === c.id)))
+    }
   }
 
   async function handleRunArchive() {
@@ -793,6 +803,43 @@ export default function SettingsPage() {
               </SortableContext>
             </DndContext>
           </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+          <input
+            type="checkbox"
+            id="show-archived-cats"
+            checked={showArchivedCategories}
+            onChange={e => { void handleShowArchivedToggle(e.target.checked) }}
+            style={{ cursor: 'pointer', accentColor: 'var(--color-primary)', width: 16, height: 16 }}
+          />
+          <label htmlFor="show-archived-cats" style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+            Show archived categories
+          </label>
+        </div>
+
+        {showArchivedCategories && archivedCategories.length > 0 && (
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            {archivedCategories.map(cat => (
+              <div key={cat.id} style={{
+                display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                padding: 'var(--space-2) var(--space-3)',
+                background: 'var(--color-surface-sunken)', border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-2)',
+                opacity: 0.5,
+              }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: cat.color_hex, flexShrink: 0 }} />
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', flex: 1, textDecoration: 'line-through' }}>{cat.name}</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-muted)', background: 'var(--color-border)', borderRadius: 4, padding: '1px 5px' }}>archived</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showArchivedCategories && archivedCategories.length === 0 && (
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+            No archived categories.
+          </p>
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
