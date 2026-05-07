@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 33 complete. Phase 34 partially complete (34.1–34.5 done).
-Next: Task 34.6 — E2E spec: V3-F6 suggestion banner.
+Phase 33 complete. Phase 34 partially complete (34.1–34.6 done).
+Next: Task 34.7 — Pre-commit checks + commit feat: appointment suggestion banner.
 ```
 
 ---
@@ -154,14 +154,14 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
    - Assert `doctor-suggestion-banner` visible; clicking Accept fires `onAccept`
    - Done when: `npx vitest run` passes
 
-▶ **34.6 — E2E spec: V3-F6 suggestion banner**
+[x] **34.6 — E2E spec: V3-F6 suggestion banner**
    - File: `e2e/v3-f6.spec.ts` (new; `v3-f8-clinic-contact-creation.spec.ts` covers adjacent flows but not appointment creation)
    - Upload invoice with provider → banner appears → Accept → appointment dialog pre-filled
    - Upload doc without provider → banner does NOT appear
    - Start `test.skip`; un-skip after 34.4 manual verification
    - Done when: `npx playwright test e2e/v3-f6.spec.ts` passes
 
-[ ] **34.7 — Pre-commit checks + commit**
+▶ **34.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: appointment suggestion banner from invoice upload (V3-F6)`
