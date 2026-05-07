@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 33 complete. Phase 34 complete. Tasks 35.1–35.7 complete. Full suite green (exit 0).
-Next: Task 35.8 — Commit E2E green gate.
+Phase 35 complete. All E2E specs green. Committed and pushed.
+Next: Phase 36 — Advanced Search Filters. Task 36.1 — Backend: extend documents_search with filter params.
 ```
 
 ---
@@ -229,7 +229,7 @@ These elements likely don't exist in the UI (not a testid naming issue).
    - Push to `origin/develop`; confirm CI `e2e` job green
    - Done when: CI green
 
-▶ **35.8 — Commit**
+[x] **35.8 — Commit**
    - `test: fix E2E green gate — all 5 failure buckets resolved`
 
 ---
@@ -242,7 +242,7 @@ These elements likely don't exist in the UI (not a testid naming issue).
 
 ### Sprint 36
 
-[ ] **36.1 — Backend: extend `documents_search` with filter params**
+▶ [ ] **36.1 — Backend: extend `documents_search` with filter params**
    - Add optional params: `date_from: Option<String>`, `date_to: Option<String>`, `category_ids: Option<Vec<i64>>`
    - Extend SQL WHERE with BETWEEN and JOIN on `document_categories`
    - Done when: `cargo test` passes with new filter tests
