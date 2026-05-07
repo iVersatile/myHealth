@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 33 complete. Phase 34 partially pre-implemented (34.1+34.2 done).
-Next: Task 34.3 — Verify banner wiring in upload flow.
+Phase 33 complete. Phase 34 partially complete (34.1–34.4 done).
+Next: Task 34.5 — Unit test for banner integration (mock invoke, assert appt-suggestion-banner visible).
 ```
 
 ---
@@ -137,19 +137,19 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
    - Status: IMPLEMENTED (verified 2026-05-05)
    - Note: component is in `documents/`, not `appointments/` — correct location
 
-▶ **34.3 — Verify banner wiring in upload flow**
-   - Read `src/components/documents/UploadDialog.tsx` (or equivalent upload component)
-   - Confirm `invoke('appointments_suggest_from_document', { documentId })` is called post-upload
-   - Confirm Accept → pre-filled appointment dialog; Dismiss → clears state
-   - If wiring gaps exist, fill them
-   - Done when: manual smoke test confirms banner appears after uploading invoice with provider tag
+[x] **34.3 — Verify banner wiring in upload flow**
+   - `documents/page.tsx:handleUploaded` calls `appointments_suggest_from_document` after upload
+   - Accept calls `handleApptSuggestionConfirm` → `appointments_create` + `link_document_to_appointment`
+   - Dismiss calls `setApptSuggestion(null)`
+   - `ApptSuggestionBanner` now has `data-testid="appt-suggestion-banner"`
+   - Status: IMPLEMENTED (verified 2026-05-07)
 
-[ ] **34.4 — Rust unit test for `appointments_suggest_from_document`**
+[x] **34.4 — Rust unit test for `appointments_suggest_from_document`**
    - In `#[cfg(test)]` mod in `documents.rs` (near line 1393) or `appointments.rs`
    - Doc with provider → `Some(suggestion)`; doc without provider → `None`
    - Done when: `cargo test` passes
 
-[ ] **34.5 — Unit test for banner integration**
+▶ **34.5 — Unit test for banner integration**
    - Mock `invoke('appointments_suggest_from_document')` returning a suggestion
    - Assert `doctor-suggestion-banner` visible; clicking Accept fires `onAccept`
    - Done when: `npx vitest run` passes

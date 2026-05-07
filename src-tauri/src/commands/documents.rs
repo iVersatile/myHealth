@@ -1107,6 +1107,35 @@ mod tests {
         );
         eprintln!("[PERF] document list 1000 rows: {}ms", elapsed.as_millis());
     }
+
+    #[test]
+    fn suggest_appointment_returns_none_when_no_activity_date() {
+        let conn = test_conn();
+        insert_doc(&conn, "doc-appt-none", "lab", false);
+        let result = suggest_appointment_from_doc(&conn, "doc-appt-none").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn suggest_appointment_returns_suggestion_when_activity_date_set() {
+        let conn = test_conn();
+        insert_doc(&conn, "doc-appt-some", "lab", false);
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE documents \
+             SET activity_date = '2024-03-15', \
+                 extracted_text = 'Cardiology appointment with Dr. Smith at City Clinic', \
+                 updated_at = ?1 \
+             WHERE id = 'doc-appt-some'",
+            rusqlite::params![now],
+        )
+        .unwrap();
+        let result = suggest_appointment_from_doc(&conn, "doc-appt-some").unwrap();
+        assert!(result.is_some());
+        let s = result.unwrap();
+        assert_eq!(s.appt_date, "2024-03-15");
+        assert!(!s.title.is_empty());
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1396,7 +1425,13 @@ pub fn appointments_suggest_from_document(
 ) -> Result<Option<AppointmentSuggestion>, CommandError> {
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
+    suggest_appointment_from_doc(conn, &id)
+}
 
+fn suggest_appointment_from_doc(
+    conn: &rusqlite::Connection,
+    id: &str,
+) -> Result<Option<AppointmentSuggestion>, CommandError> {
     let row: Option<(Option<String>, Option<String>, Option<String>)> = conn
         .query_row(
             "SELECT activity_date, extracted_text, extracted_metadata \
