@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 33 complete. Phase 34 partially complete (34.1–34.6 done).
-Next: Task 34.7 — Pre-commit checks + commit feat: appointment suggestion banner.
+Phase 33 complete. Phase 34 complete.
+Next: Task 35.1 — Fix strict-mode regex in upload E2E specs.
 ```
 
 ---
@@ -161,7 +161,7 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
    - Start `test.skip`; un-skip after 34.4 manual verification
    - Done when: `npx playwright test e2e/v3-f6.spec.ts` passes
 
-▶ **34.7 — Pre-commit checks + commit**
+[x] **34.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: appointment suggestion banner from invoice upload (V3-F6)`
@@ -179,7 +179,7 @@ Backend (`documents_update`) already accepts `activity_date: Option<String>` —
 **Root cause:** Selector `/save|confirm/i` matches "Save as Contact", "Save as Clinic", and "Confirm Upload" simultaneously.
 **Fix:** Change to `getByRole('button', { name: /confirm upload/i })` in all affected specs.
 
-[ ] **35.1 — Fix strict-mode regex in upload E2E specs**
+▶ **35.1 — Fix strict-mode regex in upload E2E specs**
    - `grep -r "save|confirm" e2e/` to find all occurrences
    - Replace with `/confirm upload/i` or exact button role where context is ambiguous
    - Done when: `npx playwright test --grep "upload"` passes without strict-mode errors
