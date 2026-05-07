@@ -14,7 +14,7 @@ export default function ClinicsPage() {
 
       {loading && <p className="text-[var(--color-text-muted)] text-sm">Loading…</p>}
       {error && <p className="text-red-500 text-sm">{error}</p>}
-      {!loading && <ClinicTree clinics={clinics} onDeleted={reload} />}
+      <ClinicTree clinics={clinics} onDeleted={reload} />
     </div>
   )
 }

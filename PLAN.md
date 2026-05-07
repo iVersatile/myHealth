@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 33 complete. Phase 34 complete. Tasks 35.1–35.6 complete (35.4/35.5/35.6 already implemented).
-Next: Task 35.7 — Full suite run + CI verification.
+Phase 33 complete. Phase 34 complete. Tasks 35.1–35.7 complete. Full suite green (exit 0).
+Next: Task 35.8 — Commit E2E green gate.
 ```
 
 ---
@@ -224,12 +224,12 @@ These elements likely don't exist in the UI (not a testid naming issue).
    - Identify testid mismatch vs timing issue; add `waitForSelector` where needed
    - Done when: `npx playwright test e2e/v3-f5-timeline.spec.ts e2e/timeline-by-doctor.spec.ts` passes
 
-▶ **35.7 — Full suite run + CI verification**
+[x] **35.7 — Full suite run + CI verification**
    - `npx playwright test` — all pass, exit 0
    - Push to `origin/develop`; confirm CI `e2e` job green
    - Done when: CI green
 
-[ ] **35.8 — Commit**
+▶ **35.8 — Commit**
    - `test: fix E2E green gate — all 5 failure buckets resolved`
 
 ---

@@ -9,7 +9,7 @@ import { SummaryExportDialog } from '../../../components/export/SummaryExportDia
 import { DoctorSuggestionBanner } from '../../../components/documents/DoctorSuggestionBanner'
 import type { ContactSuggestion } from '../../../components/documents/DoctorSuggestionBanner'
 import { ClinicSuggestionBanner } from '../../../components/documents/ClinicSuggestionBanner'
-import type { ClinicSuggestion } from '../../../components/documents/UploadDialog'
+import type { ClinicSuggestion, ContactSuggestion as UploadContactSuggestion } from '../../../components/documents/UploadDialog'
 import { LinkSuggestionBanner } from '../../../components/documents/LinkSuggestionBanner'
 import { ApptSuggestionBanner } from '../../../components/documents/ApptSuggestionBanner'
 import type { AppointmentSuggestion } from '../../../components/documents/ApptSuggestionBanner'
@@ -46,7 +46,8 @@ export default function DocumentsPage() {
   const { createContactWithClinic } = useContacts()
   const upsertAppointment = useAppointmentsStore(s => s.upsertAppointment)
 
-  async function handleUploaded(doc: Document, unsavedClinics: ClinicSuggestion[]) {
+  async function handleUploaded(doc: Document, unsavedClinics: ClinicSuggestion[], contactSuggestions: UploadContactSuggestion[]) {
+    if (contactSuggestions.length > 0) setExtractedContactSuggestions(contactSuggestions)
     if (unsavedClinics.length > 0) setPendingClinicSuggestions(unsavedClinics)
     setDocuments([doc, ...documents], total + 1)
     try {
@@ -234,7 +235,7 @@ export default function DocumentsPage() {
       {uploadOpen && (
         <UploadDialog
           onClose={() => setUploadOpen(false)}
-          onUploaded={(doc, unsaved) => void handleUploaded(doc, unsaved)}
+          onUploaded={(doc, unsaved, contacts) => void handleUploaded(doc, unsaved, contacts)}
         />
       )}
       {exportOpen && (

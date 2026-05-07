@@ -92,16 +92,16 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
+    <div data-testid="doctor-suggestion-banner" className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
       <span className="text-[var(--color-text)]">
-        Create contact for <strong>{suggestion.name}</strong>?
+        Create contact for <strong data-testid="suggestion-name">{suggestion.name}</strong>?
       </span>
       <div className="flex gap-2 shrink-0">
         <button
           onClick={() => onAccept(suggestion)}
           className="px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
         >
-          Create
+          Add to contacts
         </button>
         <button
           onClick={handleDismiss}

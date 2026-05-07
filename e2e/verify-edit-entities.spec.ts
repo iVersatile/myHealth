@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const FIXTURE_PDF = 'src-tauri/tests/fixtures/medical-invoice.pdf'
 

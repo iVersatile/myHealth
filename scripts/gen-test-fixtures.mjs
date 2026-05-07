@@ -90,3 +90,30 @@ Please settle within 14 days of receipt.`
 const medicalInvoiceBytes = await createPdf(medicalInvoiceContent)
 writeFileSync(join(fixturesDir, 'medical-invoice.pdf'), medicalInvoiceBytes)
 console.log('Created medical-invoice.pdf')
+
+// sample-Upload (09Mar2023-16_31_26).pdf — REAL_PDF fixture used by most V3 specs
+const realPdfContent = `INVOICE
+
+JOHN GREEN PHYSIOTHERAPY LTD
+Company Registration No: 6780032
+16 High Street
+London SW1A 1AA
+Also at: 42 Regent Street, London W1B 5AH
+Also at: 8 Victoria Road, London SW1V 1QT
+Tel: 07544 370440
+Email: jg@johngreenphysio.com
+
+Date of Service: 09/03/2023
+
+Provider: Mr John Green MCSP
+Specialty: Physiotherapy Assessment
+
+Description: Physiotherapy consultation and treatment session
+
+Amount Due: GBP 120.00
+
+Please settle within 30 days of receipt.`
+
+const realPdfBytes = await createPdf(realPdfContent)
+writeFileSync(join(fixturesDir, 'sample-Upload (09Mar2023-16_31_26).pdf'), realPdfBytes)
+console.log('Created sample-Upload (09Mar2023-16_31_26).pdf')

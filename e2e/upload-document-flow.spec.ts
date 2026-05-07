@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const FIXTURE_PDF = 'src-tauri/tests/fixtures/medical-invoice.pdf'
 
@@ -31,7 +31,7 @@ test.describe('Upload Document — full extraction flow', () => {
 
     const crn = card.getByTestId('clinic-suggestion-reg-number')
     await expect(crn).toBeVisible()
-    await expect(crn).toContainText('5432109')
+    await expect(crn).toHaveValue('5432109')
 
     const address = card.getByTestId('clinic-address-item').first()
     await expect(address).toBeVisible()
@@ -69,7 +69,7 @@ test.describe('Upload Document — full extraction flow', () => {
 
     const phone = card.getByTestId('contact-suggestion-phone')
     await expect(phone).toBeVisible()
-    await expect(phone).toContainText('020')
+    await expect(phone).toHaveValue(/020/)
   })
 
   test('TC-UPLOAD-04 — saving contact suggestion creates a contact record', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const BLOOD_TEST_PDF = 'src-tauri/tests/fixtures/BloodTest_2024-01-15.pdf'
 const CLINIC_PDF = 'src-tauri/tests/fixtures/StMarysHospital_2024-06-15.pdf'

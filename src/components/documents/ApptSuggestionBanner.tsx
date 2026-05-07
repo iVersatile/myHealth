@@ -31,7 +31,7 @@ export function ApptSuggestionBanner({ suggestion, onConfirm, onDismiss, isLoadi
   }
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+    <div data-testid="appt-suggestion-banner" className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
       <svg className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
         <line x1="16" y1="2" x2="16" y2="6" />
