@@ -247,7 +247,7 @@ export default function SettingsPage() {
       setAutoArchive(aa === 'true')
       if (am) setArchiveMonths(parseInt(am, 10) || 12)
 
-      const cats = await invoke<Category[]>('categories_list')
+      const cats = ((await invoke<Category[]>('categories_list')) ?? []) as Category[]
       setCategories(cats.slice().sort((a, b) => a.sort_order - b.sort_order))
     }
     void loadSettings()
@@ -416,7 +416,7 @@ export default function SettingsPage() {
   async function handleShowArchivedToggle(show: boolean) {
     setShowArchivedCategories(show)
     if (show && archivedCategories.length === 0) {
-      const all = await invoke<Category[]>('categories_list', { includeArchived: true })
+      const all = ((await invoke<Category[]>('categories_list', { includeArchived: true })) ?? []) as Category[]
       setArchivedCategories(all.filter(c => !categories.some(a => a.id === c.id)))
     }
   }
