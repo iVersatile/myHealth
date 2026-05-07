@@ -880,6 +880,26 @@
       return Promise.resolve(null);
     }
 
+    // ------------------------------------------------------------------
+    // Advanced search filters
+    // ------------------------------------------------------------------
+    if (cmd === 'documents_search_filtered') {
+      const { dateFrom, dateTo, categoryIds, page = 0, limit = 20 } = args || {};
+      let docs = state.documents.filter((d) => !d._deleted);
+      if (dateFrom) {
+        docs = docs.filter((d) => d.activity_date && d.activity_date >= dateFrom);
+      }
+      if (dateTo) {
+        docs = docs.filter((d) => d.activity_date && d.activity_date <= dateTo);
+      }
+      if (categoryIds && categoryIds.length > 0) {
+        docs = docs.filter((d) => categoryIds.includes(d.category_id));
+      }
+      const total = docs.length;
+      const items = docs.slice(page * limit, page * limit + limit);
+      return Promise.resolve({ items, total });
+    }
+
     // Unknown command — log and resolve null
     console.warn('[tauri-mock] Unknown command:', cmd, args);
     return Promise.resolve(null);

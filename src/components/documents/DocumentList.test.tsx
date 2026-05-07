@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DocumentList } from './DocumentList'
 import type { Document } from '../../store/documentsStore'
@@ -128,6 +128,37 @@ describe('DocumentList', () => {
         categoryIds: ['cat-1'],
       })),
     )
+  })
+
+  it('calls documents_search_filtered with dateFrom when From date set', async () => {
+    mockInvoke.mockResolvedValue({ items: [], total: 0 })
+    render(<DocumentList />)
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('documents_search_filtered', expect.objectContaining({
+        dateFrom: '2026-01-01',
+      })),
+    )
+  })
+
+  it('calls documents_search_filtered with dateTo when To date set', async () => {
+    mockInvoke.mockResolvedValue({ items: [], total: 0 })
+    render(<DocumentList />)
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-12-31' } })
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('documents_search_filtered', expect.objectContaining({
+        dateTo: '2026-12-31',
+      })),
+    )
+  })
+
+  it('shows Clear button when filter active; clicking it clears the filter', async () => {
+    mockInvoke.mockResolvedValue({ items: [], total: 0 })
+    render(<DocumentList />)
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: /clear/i })).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /clear/i }))
+    expect(screen.queryByRole('button', { name: /clear/i })).toBeNull()
   })
 
   it('does not show pagination when total fits on one page', () => {
