@@ -1,0 +1,962 @@
+/**
+ * Tauri IPC mock for Playwright E2E tests.
+ * Injected via addInitScript before every page load.
+ * Uses sessionStorage['tauri_mock_state'] for persistence within a test.
+ */
+(function () {
+  'use strict';
+
+  const STATE_KEY = 'tauri_mock_state';
+
+  function loadState() {
+    try {
+      const raw = sessionStorage.getItem(STATE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return {
+      documents: [],
+      contacts: [],
+      clinics: [],
+      appointments: [],
+      notes: [],
+      categories: [],
+      trash: [],
+    };
+  }
+
+  function saveState(state) {
+    sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
+  }
+
+  function uid() {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // ------------------------------------------------------------------
+  // Extraction fixtures keyed by filename (basename)
+  // ------------------------------------------------------------------
+  const EXTRACTION_MAP = {
+    'sample-Upload (09Mar2023-16_31_26).pdf': {
+      contact_suggestions: [
+        {
+          name: 'Mr John Green',
+          phone: '07544 370440',
+          email: 'jg@johngreenphysio.com',
+          role: 'doctor',
+        },
+      ],
+      clinic_suggestions: [
+        {
+          name: 'JOHN GREEN PHYSIOTHERAPY LTD',
+          company_registration_number: '6780032',
+          addresses: [
+            { line1: '1 Physio Lane', city: 'London', postcode: 'W1 1AA' },
+            { line1: '2 Clinic Road', city: 'London', postcode: 'W1 2BB' },
+            { line1: '3 Health Street', city: 'London', postcode: 'W1 3CC' },
+          ],
+        },
+      ],
+      category_suggestion: 'Physiotherapy',
+      document_tags: ['invoice', 'Mr John Green', 'Physiotherapy', '2023-03-09'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-03-09',
+      appointment_suggestion: null,
+    },
+    'medical-invoice.pdf': {
+      contact_suggestions: [
+        {
+          name: 'Dr Sarah Mitchell',
+          phone: '020 7946 0958',
+          email: null,
+          role: 'doctor',
+        },
+      ],
+      clinic_suggestions: [
+        {
+          name: 'Hartfield Physiotherapy Clinic',
+          company_registration_number: '5432109',
+          addresses: [{ line1: '1 Harley Street', city: 'London', postcode: 'W1G 0PU' }],
+        },
+      ],
+      category_suggestion: 'Physiotherapy',
+      document_tags: ['invoice', 'PHYSIOTHERAPY'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2024-01-15',
+      appointment_suggestion: { date: '2024-01-15', type: 'Physiotherapy' },
+    },
+    'BloodTest_2024-01-15.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: ['Blood Work'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2024-01-15',
+      appointment_suggestion: null,
+    },
+    'StMarysHospital_2024-06-15.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [{ name: 'St Marys Hospital', company_registration_number: null, addresses: [] }],
+      category_suggestion: null,
+      document_tags: ['clinic:St Marys Hospital'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2024-06-15',
+      appointment_suggestion: null,
+    },
+    'DrSmith_intl_phone_2024-03-10.pdf': {
+      contact_suggestions: [
+        {
+          name: 'Dr Smith',
+          phone: '+1 (555) 123-4567',
+          email: null,
+          role: 'doctor',
+        },
+      ],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2024-03-10',
+      appointment_suggestion: null,
+    },
+    'no-date-physio.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-03-09',
+      appointment_suggestion: null,
+    },
+    'no-date-no-filename.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: todayStr(),
+      appointment_suggestion: null,
+    },
+    'two-page-scanned.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: ['Scan'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: todayStr(),
+      appointment_suggestion: null,
+    },
+    'sample.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: todayStr(),
+      appointment_suggestion: null,
+    },
+  };
+
+  function extractionForFilename(filename) {
+    const base = filename ? filename.split('/').pop().split('\\').pop() : '';
+    return (
+      EXTRACTION_MAP[base] || {
+        contact_suggestions: [],
+        clinic_suggestions: [],
+        category_suggestion: null,
+        document_tags: [],
+        auto_tags: [],
+        doctor_candidates: [],
+        activity_date: todayStr(),
+        appointment_suggestion: null,
+      }
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // OCR event simulation
+  // ------------------------------------------------------------------
+  const ocrListeners = [];
+  const callbackRegistry = {};
+
+  function simulateOcr(docId) {
+    let page = 0;
+    const total = 2;
+    const interval = setInterval(() => {
+      page++;
+      const payload = { document_id: docId, current_page: page, total_pages: total };
+      ocrListeners.forEach((cb) => {
+        try {
+          cb({ payload });
+        } catch (_) {}
+      });
+      if (page >= total) clearInterval(interval);
+    }, 600);
+  }
+
+  // ------------------------------------------------------------------
+  // Command handlers
+  // ------------------------------------------------------------------
+  function handleInvoke(cmd, args) {
+    const state = loadState();
+
+    // Auth
+    if (cmd === 'auth_is_locked') return Promise.resolve(false);
+    if (cmd === 'auth_unlock') return Promise.resolve(null);
+    if (cmd === 'auth_lock') return Promise.resolve(null);
+    if (cmd === 'auth_has_password') return Promise.resolve(true);
+    if (cmd === 'auth_list_users') return Promise.resolve([]);
+    if (cmd === 'auth_set_password') return Promise.resolve(null);
+    if (cmd === 'auth_switch_user') return Promise.resolve(null);
+
+    // Settings
+    if (cmd === 'settings_get') return Promise.resolve({});
+    if (cmd === 'settings_set') return Promise.resolve(null);
+
+    // Stats
+    if (cmd === 'stats_summary') {
+      return Promise.resolve({
+        total_documents: state.documents.length,
+        total_contacts: state.contacts.length,
+        total_clinics: state.clinics.length,
+        total_appointments: state.appointments.length,
+      });
+    }
+
+    // Search
+    if (cmd === 'search_query') return Promise.resolve([]);
+
+    // ------------------------------------------------------------------
+    // Documents
+    // ------------------------------------------------------------------
+    if (cmd === 'documents_list') {
+      const { page = 1, limit = 50 } = args || {};
+      const offset = (page - 1) * limit;
+      const docs = state.documents.filter((d) => !d._deleted);
+      return Promise.resolve(docs.slice(offset, offset + limit));
+    }
+
+    if (cmd === 'documents_upload') {
+      const filename = args?.filePath || args?.file_path || args?.filename || args?.file_name || 'unknown.pdf';
+      const ext = extractionForFilename(filename);
+      const doc = {
+        id: uid(),
+        filename,
+        file_path: `/tmp/${filename}`,
+        title: filename.replace(/\.pdf$/i, ''),
+        mime_type: 'application/pdf',
+        tags: [],
+        category_id: null,
+        category_name: null,
+        clinic_id: null,
+        clinic_name: null,
+        activity_date: ext.activity_date,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        _extraction: ext,
+        _deleted: false,
+      };
+      state.documents.push(doc);
+      saveState(state);
+
+      const base = filename.split('/').pop().split('\\').pop();
+      if (base === 'two-page-scanned.pdf') {
+        setTimeout(() => simulateOcr(doc.id), 100);
+      }
+
+      return Promise.resolve(doc);
+    }
+
+    if (cmd === 'documents_run_extraction') {
+      const docId = args?.id || args?.document_id || args?.documentId;
+      const doc = state.documents.find((d) => d.id === docId);
+      const ext = doc ? doc._extraction || extractionForFilename(doc.filename) : {};
+      return Promise.resolve(ext);
+    }
+
+    if (cmd === 'documents_get_extraction_status') {
+      const docId = args?.document_id || args?.documentId;
+      const doc = state.documents.find((d) => d.id === docId);
+      const suggestions = doc ? doc._extraction || extractionForFilename(doc.filename) : {};
+      return Promise.resolve({ status: 'done', suggestions });
+    }
+
+    if (cmd === 'documents_get') {
+      const docId = args?.document_id || args?.documentId || args?.id;
+      const doc = state.documents.find((d) => d.id === docId);
+      return doc ? Promise.resolve(doc) : Promise.reject(new Error('Document not found'));
+    }
+
+    if (cmd === 'documents_update') {
+      const docId = args?.document_id || args?.documentId || args?.id;
+      const idx = state.documents.findIndex((d) => d.id === docId);
+      if (idx >= 0) {
+        const normalized = { ...args };
+        if ('activityDate' in normalized) { normalized.activity_date = normalized.activityDate; delete normalized.activityDate; }
+        if ('clinicId' in normalized) { normalized.clinic_id = normalized.clinicId; delete normalized.clinicId; }
+        if ('categoryId' in normalized) { normalized.category_id = normalized.categoryId; delete normalized.categoryId; }
+        state.documents[idx] = { ...state.documents[idx], ...normalized, id: docId, updated_at: nowIso() };
+        saveState(state);
+        return Promise.resolve(state.documents[idx]);
+      }
+      return Promise.reject(new Error('Document not found'));
+    }
+
+    if (cmd === 'documents_tags_set') {
+      const docId = args?.document_id || args?.documentId;
+      const tags = args?.tags || [];
+      const idx = state.documents.findIndex((d) => d.id === docId);
+      if (idx >= 0) {
+        state.documents[idx].tags = tags;
+        state.documents[idx].updated_at = nowIso();
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'documents_delete') {
+      const docId = args?.document_id || args?.documentId || args?.id;
+      const idx = state.documents.findIndex((d) => d.id === docId);
+      if (idx >= 0) {
+        state.documents[idx]._deleted = true;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'documents_set_clinic') {
+      const docId = args?.document_id || args?.documentId;
+      const clinicId = args?.clinic_id || args?.clinicId;
+      const clinicName = args?.clinicName || args?.clinic_name;
+      const idx = state.documents.findIndex((d) => d.id === docId);
+      if (idx >= 0) {
+        let clinic = state.clinics.find((c) => c.id === clinicId);
+        if (!clinic && clinicName) {
+          clinic = state.clinics.find((c) => !c._deleted && c.name === clinicName);
+        }
+        state.documents[idx].clinic_id = clinic ? clinic.id : clinicId || null;
+        state.documents[idx].clinic_name = clinic ? clinic.name : clinicName || null;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'documents_link_contact') return Promise.resolve(null);
+    if (cmd === 'documents_link_clinic') return Promise.resolve(null);
+    if (cmd === 'link_document_to_appointment') return Promise.resolve(null);
+    if (cmd === 'unlink_document_from_appointment') return Promise.resolve(null);
+    if (cmd === 'links_create') return Promise.resolve(null);
+    if (cmd === 'links_delete') return Promise.resolve(null);
+    if (cmd === 'links_list_for_document') return Promise.resolve([]);
+    if (cmd === 'links_list_for_appointment') return Promise.resolve([]);
+
+    if (cmd === 'links_score_candidates') return Promise.resolve([]);
+    if (cmd === 'notes_for_entity') return Promise.resolve([]);
+
+    if (cmd === 'appointments_suggest_from_document') {
+      const docId = args?.id || args?.document_id || args?.documentId;
+      const doc = state.documents.find((d) => d.id === docId);
+      const ext = doc ? doc._extraction || extractionForFilename(doc.filename) : null;
+      const apptSug = ext ? ext.appointment_suggestion : null;
+      if (!apptSug) return Promise.resolve(null);
+      const contacts = ext.contact_suggestions || [];
+      const clinics = ext.clinic_suggestions || [];
+      return Promise.resolve({
+        appt_date: apptSug.date,
+        title: `${apptSug.type} Appointment`,
+        doctor_name: contacts.length > 0 ? contacts[0].name : null,
+        specialty: apptSug.type || null,
+        clinic_name: clinics.length > 0 ? clinics[0].name : null,
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // Contacts
+    // ------------------------------------------------------------------
+    if (cmd === 'contacts_list') {
+      const role = args?.role;
+      let contacts = state.contacts.filter((c) => !c._deleted);
+      if (role) contacts = contacts.filter((c) => c.role === role);
+      return Promise.resolve(contacts);
+    }
+
+    if (cmd === 'contacts_create') {
+      const input = args?.input || args;
+      const contact = {
+        id: uid(),
+        name: input?.name || '',
+        phone: input?.phone || null,
+        email: input?.email || null,
+        role: input?.role || 'other',
+        clinic_id: input?.clinic_id || input?.clinicId || null,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        _deleted: false,
+      };
+      state.contacts.push(contact);
+      saveState(state);
+      return Promise.resolve(contact);
+    }
+
+    if (cmd === 'contacts_create_with_clinic') {
+      const clinicData = args?.clinic;
+      let clinicId = null;
+      if (clinicData) {
+        const existing = state.clinics.find(
+          (c) => c.name.toLowerCase() === (clinicData.name || '').toLowerCase()
+        );
+        if (existing) {
+          clinicId = existing.id;
+        } else {
+          const clinic = {
+            id: uid(),
+            name: clinicData.name || '',
+            company_registration_number: clinicData.company_registration_number ?? clinicData.crn ?? null,
+            phone: clinicData.phone || null,
+            addresses: clinicData.addresses || [],
+            linked_contacts: [],
+            created_at: nowIso(),
+            updated_at: nowIso(),
+            _deleted: false,
+          };
+          state.clinics.push(clinic);
+          clinicId = clinic.id;
+        }
+      }
+      const contact = {
+        id: uid(),
+        name: args?.name || '',
+        phone: args?.phone || null,
+        email: args?.email || null,
+        role: args?.role || 'other',
+        clinic_id: clinicId,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        _deleted: false,
+      };
+      state.contacts.push(contact);
+      saveState(state);
+      return Promise.resolve({ contact, clinic_id: clinicId });
+    }
+
+    if (cmd === 'contacts_get') {
+      const id = args?.contact_id || args?.contactId || args?.id;
+      const contact = state.contacts.find((c) => c.id === id);
+      return contact ? Promise.resolve(contact) : Promise.reject(new Error('Contact not found'));
+    }
+
+    if (cmd === 'contacts_update') {
+      const id = args?.contact_id || args?.contactId || args?.id;
+      const idx = state.contacts.findIndex((c) => c.id === id);
+      if (idx >= 0) {
+        state.contacts[idx] = { ...state.contacts[idx], ...args, id, updated_at: nowIso() };
+        saveState(state);
+        return Promise.resolve(state.contacts[idx]);
+      }
+      return Promise.reject(new Error('Contact not found'));
+    }
+
+    if (cmd === 'contacts_delete') {
+      const id = args?.contact_id || args?.contactId || args?.id;
+      const idx = state.contacts.findIndex((c) => c.id === id);
+      if (idx >= 0) {
+        state.contacts[idx]._deleted = true;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'find_duplicate_contacts') {
+      // UI sends { userId, contactId, threshold } — look up contact by id, then find same-name others
+      const contactId = args?.contactId || args?.contact_id;
+      if (contactId) {
+        const target = state.contacts.find((c) => c.id === contactId);
+        if (!target) return Promise.resolve([]);
+        const name = target.name.toLowerCase();
+        const dupes = state.contacts.filter(
+          (c) => !c._deleted && c.id !== contactId && c.name.toLowerCase() === name
+        );
+        return Promise.resolve(dupes);
+      }
+      // fallback: legacy name-based lookup
+      const name = (args?.name || '').toLowerCase();
+      return Promise.resolve(state.contacts.filter((c) => !c._deleted && c.name.toLowerCase() === name));
+    }
+
+    if (cmd === 'merge_contacts') {
+      const keepId = args?.keep_id || args?.keepId;
+      const mergeId = args?.merge_id || args?.mergeId;
+      const mergeIdx = state.contacts.findIndex((c) => c.id === mergeId);
+      if (mergeIdx >= 0) {
+        state.contacts[mergeIdx]._deleted = true;
+      }
+      const kept = state.contacts.find((c) => c.id === keepId);
+      saveState(state);
+      return Promise.resolve(kept || null);
+    }
+
+    // ------------------------------------------------------------------
+    // Clinics
+    // ------------------------------------------------------------------
+    if (cmd === 'clinics_list') {
+      const clinics = state.clinics.filter((c) => !c._deleted);
+      return Promise.resolve(clinics);
+    }
+
+    if (cmd === 'clinics_list_with_contacts') {
+      const clinics = state.clinics
+        .filter((c) => !c._deleted)
+        .map((c) => ({
+          ...c,
+          linked_contacts: (c.linked_contacts || []).map((cid) => {
+            const contact = state.contacts.find((ct) => ct.id === cid);
+            return contact ? { id: contact.id, name: contact.name, role: contact.role } : null;
+          }).filter(Boolean),
+        }));
+      return Promise.resolve(clinics);
+    }
+
+    if (cmd === 'clinics_get') {
+      const id = args?.clinic_id || args?.clinicId || args?.id;
+      const clinic = state.clinics.find((c) => c.id === id);
+      return clinic ? Promise.resolve(clinic) : Promise.reject(new Error('Clinic not found'));
+    }
+
+    if (cmd === 'clinics_create') {
+      const clinic = {
+        id: uid(),
+        name: args?.name || '',
+        company_registration_number: args?.company_registration_number ?? args?.crn ?? null,
+        phone: args?.phone || null,
+        addresses: args?.addresses || [],
+        linked_contacts: [],
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        _deleted: false,
+      };
+      state.clinics.push(clinic);
+      saveState(state);
+      return Promise.resolve(clinic);
+    }
+
+    if (cmd === 'clinics_update') {
+      const id = args?.clinic_id || args?.clinicId || args?.id;
+      const idx = state.clinics.findIndex((c) => c.id === id);
+      if (idx >= 0) {
+        state.clinics[idx] = { ...state.clinics[idx], ...args, id, updated_at: nowIso() };
+        saveState(state);
+        return Promise.resolve(state.clinics[idx]);
+      }
+      return Promise.reject(new Error('Clinic not found'));
+    }
+
+    if (cmd === 'clinics_delete') {
+      const id = args?.clinic_id || args?.clinicId || args?.id;
+      const idx = state.clinics.findIndex((c) => c.id === id);
+      if (idx >= 0) {
+        state.clinics[idx]._deleted = true;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'clinics_create_if_not_exists') {
+      const input = args?.input || args;
+      const name = input?.name || '';
+      const existing = state.clinics.find(
+        (c) => !c._deleted && c.name.toLowerCase() === name.toLowerCase()
+      );
+      if (existing) return Promise.resolve(existing);
+      const clinic = {
+        id: uid(),
+        name,
+        company_registration_number: input?.company_registration_number ?? input?.crn ?? null,
+        phone: input?.phone || null,
+        addresses: input?.addresses || [],
+        linked_contacts: [],
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        _deleted: false,
+      };
+      state.clinics.push(clinic);
+      saveState(state);
+      return Promise.resolve(clinic);
+    }
+
+    if (cmd === 'clinics_link_contact') return Promise.resolve(null);
+    if (cmd === 'clinics_get_linked_contacts') return Promise.resolve([]);
+    if (cmd === 'clinics_get_linked_documents') return Promise.resolve([]);
+
+    if (cmd === 'clinic_addresses_list') {
+      const id = args?.clinic_id || args?.clinicId;
+      const clinic = state.clinics.find((c) => c.id === id);
+      return Promise.resolve(clinic ? clinic.addresses || [] : []);
+    }
+
+    // ------------------------------------------------------------------
+    // Appointments
+    // ------------------------------------------------------------------
+    if (cmd === 'appointments_list') {
+      const appts = state.appointments.filter((a) => !a._deleted);
+      return Promise.resolve(appts);
+    }
+
+    if (cmd === 'appointments_create') {
+      const input = args?.input || args;
+      const appt = {
+        id: uid(),
+        title: input?.title || '',
+        appt_date: input?.appt_date || input?.date || todayStr(),
+        date: input?.appt_date || input?.date || todayStr(),
+        doctor_name: input?.doctor_name || input?.doctorName || null,
+        clinic_name: input?.clinic_name || input?.clinicName || null,
+        specialty: input?.specialty || null,
+        notes: input?.notes || null,
+        status: input?.status || 'completed',
+        contact_ids: input?.contact_ids || input?.contactIds || [],
+        document_ids: input?.document_ids || [],
+        duration_min: input?.duration_min || 0,
+        location: input?.location || null,
+        reminder_min: input?.reminder_min || 0,
+        recurrence_series_id: null,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        _deleted: false,
+      };
+      state.appointments.push(appt);
+      saveState(state);
+      return Promise.resolve(appt);
+    }
+
+    if (cmd === 'appointments_get') {
+      const id = args?.appointment_id || args?.appointmentId || args?.id;
+      const appt = state.appointments.find((a) => a.id === id);
+      return appt ? Promise.resolve(appt) : Promise.reject(new Error('Appointment not found'));
+    }
+
+    if (cmd === 'appointments_update') {
+      const id = args?.appointment_id || args?.appointmentId || args?.id;
+      const idx = state.appointments.findIndex((a) => a.id === id);
+      if (idx >= 0) {
+        state.appointments[idx] = { ...state.appointments[idx], ...args, id, updated_at: nowIso() };
+        saveState(state);
+        return Promise.resolve(state.appointments[idx]);
+      }
+      return Promise.reject(new Error('Appointment not found'));
+    }
+
+    if (cmd === 'appointments_delete') {
+      const id = args?.appointment_id || args?.appointmentId || args?.id;
+      const idx = state.appointments.findIndex((a) => a.id === id);
+      if (idx >= 0) {
+        state.appointments[idx]._deleted = true;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'appointment_link_contact') {
+      const apptId = args?.appointment_id || args?.appointmentId;
+      const contactId = args?.contact_id || args?.contactId;
+      const idx = state.appointments.findIndex((a) => a.id === apptId);
+      if (idx >= 0) {
+        const ids = state.appointments[idx].contact_ids || [];
+        if (!ids.includes(contactId)) {
+          state.appointments[idx].contact_ids = [...ids, contactId];
+          saveState(state);
+        }
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'appointment_unlink_contact') {
+      const apptId = args?.appointment_id || args?.appointmentId;
+      const contactId = args?.contact_id || args?.contactId;
+      const idx = state.appointments.findIndex((a) => a.id === apptId);
+      if (idx >= 0) {
+        state.appointments[idx].contact_ids = (state.appointments[idx].contact_ids || []).filter(
+          (id) => id !== contactId
+        );
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    // ------------------------------------------------------------------
+    // Notes
+    // ------------------------------------------------------------------
+    if (cmd === 'notes_list') {
+      return Promise.resolve(state.notes.filter((n) => !n._deleted));
+    }
+
+    if (cmd === 'notes_get') {
+      const id = args?.note_id || args?.noteId || args?.id;
+      const note = state.notes.find((n) => n.id === id);
+      return note ? Promise.resolve(note) : Promise.reject(new Error('Note not found'));
+    }
+
+    if (cmd === 'notes_create') {
+      const note = {
+        id: uid(),
+        title: args?.title || '',
+        content: args?.content || '',
+        tags: args?.tags || [],
+        pinned: false,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        _deleted: false,
+      };
+      state.notes.push(note);
+      saveState(state);
+      return Promise.resolve(note);
+    }
+
+    if (cmd === 'notes_update') {
+      const id = args?.note_id || args?.noteId || args?.id;
+      const idx = state.notes.findIndex((n) => n.id === id);
+      if (idx >= 0) {
+        state.notes[idx] = { ...state.notes[idx], ...args, id, updated_at: nowIso() };
+        saveState(state);
+        return Promise.resolve(state.notes[idx]);
+      }
+      return Promise.reject(new Error('Note not found'));
+    }
+
+    if (cmd === 'notes_delete') {
+      const id = args?.note_id || args?.noteId || args?.id;
+      const idx = state.notes.findIndex((n) => n.id === id);
+      if (idx >= 0) {
+        state.notes[idx]._deleted = true;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'notes_pin') {
+      const id = args?.note_id || args?.noteId || args?.id;
+      const pinned = args?.pinned !== undefined ? args.pinned : true;
+      const idx = state.notes.findIndex((n) => n.id === id);
+      if (idx >= 0) {
+        state.notes[idx].pinned = pinned;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'notes_tags_set') {
+      const id = args?.note_id || args?.noteId;
+      const tags = args?.tags || [];
+      const idx = state.notes.findIndex((n) => n.id === id);
+      if (idx >= 0) {
+        state.notes[idx].tags = tags;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    // ------------------------------------------------------------------
+    // Categories
+    // ------------------------------------------------------------------
+    if (cmd === 'categories_list') {
+      return Promise.resolve(state.categories.filter((c) => !c._deleted));
+    }
+
+    if (cmd === 'categories_create') {
+      const cat = {
+        id: uid(),
+        name: args?.name || '',
+        color: args?.color || '#6366f1',
+        created_at: nowIso(),
+        _deleted: false,
+      };
+      state.categories.push(cat);
+      saveState(state);
+      return Promise.resolve(cat);
+    }
+
+    if (cmd === 'categories_create_if_not_exists') {
+      const name = args?.name || '';
+      const existing = state.categories.find(
+        (c) => !c._deleted && c.name.toLowerCase() === name.toLowerCase()
+      );
+      if (existing) return Promise.resolve(existing);
+      const cat = {
+        id: uid(),
+        name,
+        color: args?.color || '#6366f1',
+        created_at: nowIso(),
+        _deleted: false,
+      };
+      state.categories.push(cat);
+      saveState(state);
+      return Promise.resolve(cat);
+    }
+
+    if (cmd === 'categories_update') {
+      const id = args?.category_id || args?.categoryId || args?.id;
+      const idx = state.categories.findIndex((c) => c.id === id);
+      if (idx >= 0) {
+        state.categories[idx] = { ...state.categories[idx], ...args, id };
+        saveState(state);
+        return Promise.resolve(state.categories[idx]);
+      }
+      return Promise.reject(new Error('Category not found'));
+    }
+
+    if (cmd === 'categories_assign_document' || cmd === 'assign_category_to_document') {
+      const docId = args?.document_id || args?.documentId;
+      const catId = args?.category_id || args?.categoryId;
+      const idx = state.documents.findIndex((d) => d.id === docId);
+      if (idx >= 0) {
+        const cat = state.categories.find((c) => c.id === catId);
+        state.documents[idx].category_id = catId;
+        state.documents[idx].category_name = cat ? cat.name : null;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'unassign_category_from_document') {
+      const docId = args?.document_id || args?.documentId;
+      const idx = state.documents.findIndex((d) => d.id === docId);
+      if (idx >= 0) {
+        state.documents[idx].category_id = null;
+        state.documents[idx].category_name = null;
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'categories_for_document') {
+      const docId = args?.document_id || args?.documentId;
+      const doc = state.documents.find((d) => d.id === docId);
+      if (doc && doc.category_id) {
+        const cat = state.categories.find((c) => c.id === doc.category_id);
+        return Promise.resolve(cat || null);
+      }
+      return Promise.resolve(null);
+    }
+
+    // ------------------------------------------------------------------
+    // Trash
+    // ------------------------------------------------------------------
+    if (cmd === 'trash_list') {
+      return Promise.resolve(state.trash || []);
+    }
+
+    if (cmd === 'trash_restore') {
+      const id = args?.id;
+      state.trash = (state.trash || []).filter((t) => t.id !== id);
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'trash_hard_delete') {
+      const id = args?.id;
+      state.trash = (state.trash || []).filter((t) => t.id !== id);
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'trash_empty') {
+      state.trash = [];
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    // Unknown command — log and resolve null
+    console.warn('[tauri-mock] Unknown command:', cmd, args);
+    return Promise.resolve(null);
+  }
+
+  // ------------------------------------------------------------------
+  // transformCallback registry (needed for plugin:event|listen)
+  // ------------------------------------------------------------------
+  let callbackId = 1;
+
+  function transformCallback(callback, once) {
+    const id = callbackId++;
+    callbackRegistry[id] = once
+      ? (...args) => {
+          delete callbackRegistry[id];
+          callback(...args);
+        }
+      : callback;
+    return id;
+  }
+
+  // ------------------------------------------------------------------
+  // Main invoke override
+  // ------------------------------------------------------------------
+  function invoke(cmd, args, _options) {
+    // Tauri v2 passes args wrapped: { __tauriModule, message: { cmd, data } }
+    // but from frontend code it's usually invoke('cmd', { key: value })
+    // Handle both shapes.
+    let realCmd = cmd;
+    let realArgs = args || {};
+
+    // plugin:event|listen / plugin:event|unlisten
+    if (cmd === 'plugin:event|listen') {
+      const { event, handler } = realArgs;
+      if (event === 'ocr_progress' && callbackRegistry[handler]) {
+        ocrListeners.push(callbackRegistry[handler]);
+      }
+      return Promise.resolve(1);
+    }
+    if (cmd === 'plugin:event|unlisten') {
+      return Promise.resolve(null);
+    }
+
+    return handleInvoke(realCmd, realArgs);
+  }
+
+  // ------------------------------------------------------------------
+  // Install __TAURI_INTERNALS__
+  // ------------------------------------------------------------------
+  window.__TAURI_INTERNALS__ = {
+    invoke,
+    transformCallback,
+    convertFileSrc: (src) => src,
+    metadata: {
+      currentWindow: { label: 'main' },
+      currentWebview: { label: 'main' },
+    },
+    isTauri: true,
+  };
+
+  // Required by @tauri-apps/api/event _unlisten() — line 43 of event.js
+  window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+    unregisterListener: () => {},
+  };
+
+  // Also expose the helper the frontend may use directly
+  window.__TAURI__ = {
+    core: { invoke },
+    event: {
+      listen: (event, handler) => {
+        if (event === 'ocr_progress') ocrListeners.push(handler);
+        return Promise.resolve(() => {});
+      },
+      unlisten: () => Promise.resolve(),
+      emit: () => Promise.resolve(),
+      once: () => Promise.resolve(() => {}),
+    },
+    convertFileSrc: (src) => src,
+  };
+})();
