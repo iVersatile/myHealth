@@ -47,7 +47,7 @@ describe('DoctorSuggestionBanner', () => {
       <DoctorSuggestionBanner candidates={[makeSuggestion('Dr. John Doe')]} onAccept={vi.fn()} onDismiss={vi.fn()} />,
     )
     await waitFor(() => expect(screen.getByText(/Dr\. John Doe/)).toBeTruthy())
-    expect(screen.getByRole('button', { name: /create/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /add to contacts/i })).toBeTruthy()
     expect(screen.getByRole('button', { name: /dismiss/i })).toBeTruthy()
   })
 
@@ -87,8 +87,8 @@ describe('DoctorSuggestionBanner', () => {
     render(
       <DoctorSuggestionBanner candidates={[suggestion]} onAccept={onAccept} onDismiss={vi.fn()} />,
     )
-    await waitFor(() => screen.getByRole('button', { name: /create/i }))
-    await userEvent.click(screen.getByRole('button', { name: /create/i }))
+    await waitFor(() => screen.getByRole('button', { name: /add to contacts/i }))
+    await userEvent.click(screen.getByRole('button', { name: /add to contacts/i }))
     expect(onAccept).toHaveBeenCalledWith(suggestion)
   })
 
