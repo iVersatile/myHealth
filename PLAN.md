@@ -7,8 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase 35 complete. All E2E specs green. Committed and pushed.
-Next: Phase 36 — Advanced Search Filters. Task 36.1 — Backend: extend documents_search with filter params.
+Phase 36 complete. Next: Task 37.1 — F3.4 drag-to-reorder categories.
 ```
 
 ---
@@ -242,24 +241,28 @@ These elements likely don't exist in the UI (not a testid naming issue).
 
 ### Sprint 36
 
-▶ [ ] **36.1 — Backend: extend `documents_search` with filter params**
+[x] **36.1 — Backend: extend `documents_search` with filter params**
    - Add optional params: `date_from: Option<String>`, `date_to: Option<String>`, `category_ids: Option<Vec<i64>>`
    - Extend SQL WHERE with BETWEEN and JOIN on `document_categories`
    - Done when: `cargo test` passes with new filter tests
+   - Status: ALREADY IMPLEMENTED — `documents_search_filtered` command exists, registered, 4 tests green
 
-[ ] **36.2 — Frontend: advanced search panel UI**
+[x] **36.2 — Frontend: advanced search panel UI**
    - Collapsible filter panel below search bar in document list
    - Date-range pickers + multi-select category chips
    - Debounce 300 ms then re-invoke search on change
    - Done when: `npx tsc --noEmit` passes; manual smoke shows filtered results
+   - Status: ALREADY IMPLEMENTED — DocumentList.tsx has full filter panel, tsc clean
 
-[ ] **36.3 — Unit + E2E tests**
+[x] **36.3 — Unit + E2E tests**
    - Unit: mock invoke, assert filter params passed correctly
    - E2E: upload 2 docs with different dates → filter → only correct doc visible
    - Done when: all tests pass
+   - Status: 18/18 unit tests pass; 3/3 E2E (TC-FILTER-01/02/03) pass
 
-[ ] **36.4 — Pre-commit checks + commit**
+[x] **36.4 — Pre-commit checks + commit**
    - `feat: advanced search filters (date range, category combo)`
+   - Status: tsc clean, no Rust changes, test commit pushed — CI running
 
 ---
 
@@ -271,7 +274,7 @@ These elements likely don't exist in the UI (not a testid naming issue).
 
 ### Sprint 37
 
-[ ] **37.1 — F3.4: drag-to-reorder categories**
+▶ [ ] **37.1 — F3.4: drag-to-reorder categories**
    - Verify `@dnd-kit/sortable` is already in `package.json`; add if missing
    - On drop: invoke `categories_reorder` (new Rust command) with new order array
    - Done when: drag reorder persists across app restarts
