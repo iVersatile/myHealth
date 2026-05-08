@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Task 38.5 complete. Next: Task 38.6 — Pre-commit checks + commit.
+Task 38.6 complete. Phase 38 done. Next: Phase 39 — Cross-Document Content Search & Timeline Grouping.
 ```
 
 ---
@@ -341,7 +341,7 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - Frontend: render `DocumentDetailClient` with `extracted_text` → section visible; without → hidden
    - Done when: `npx vitest run` + `cargo test` pass
 
-▶ [ ] **38.6 — Pre-commit checks + commit**
+[x] **38.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: surface extracted_text, Notes auto-tag, FTS5 full-content search (Gap 1)`
@@ -360,7 +360,7 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
 
 ### Sprint 39
 
-[ ] **39.1 — Rust command `documents_content_search`**
+▶ [ ] **39.1 — Rust command `documents_content_search`**
    - Input: `query: String`
    - SQL: FTS5 snippet on `extracted_text` JOIN documents; ORDER BY `activity_date ASC`
    - Return: `Vec<ContentSearchResult>` — `{id, title, activity_date, snippet, provider_tag}`
