@@ -29,6 +29,7 @@ export default function ViewMedicationPage() {
     if (!loading && medications.length > 0) {
       const found = medications.find((m) => m.id === id) ?? null
       if (found) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMedication(found)
         setName(found.name)
         setDosage(found.dosage ?? '')

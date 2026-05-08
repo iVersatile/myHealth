@@ -28,6 +28,7 @@ export default function ViewSymptomPage() {
     if (!loading && symptoms.length > 0) {
       const found = symptoms.find((s) => s.id === id) ?? null
       if (found) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSymptom(found)
         setName(found.name)
         if (found.severity != null) {

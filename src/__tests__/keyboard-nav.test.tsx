@@ -56,6 +56,8 @@ describe('Keyboard navigation — Sidebar (G-12)', () => {
       'Clinics',
       'Timeline',
       'Content Search',
+      'Symptoms',
+      'Medications',
       'Categories',
       'Settings',
       'Trash',
