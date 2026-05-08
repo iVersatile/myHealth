@@ -1370,6 +1370,22 @@ pub async fn documents_run_extraction(
                 ],
             )?;
         }
+
+        // Propagate extracted_text into FTS5 so content search finds this document
+        if let Ok(doc) = load_doc(conn, &id) {
+            let body = doc.notes.as_deref().unwrap_or("").to_string();
+            upsert_search_index(
+                conn,
+                "document",
+                &doc.id,
+                &doc.filename,
+                &body,
+                &doc.tags.join(","),
+                "",
+                "",
+                doc.extracted_text.as_deref().unwrap_or(""),
+            );
+        }
     }
 
     Ok(ExtractionSuggestions {

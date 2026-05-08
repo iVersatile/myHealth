@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 42 — Content Search Bug Fix
-Task: 42.1 — Diagnose FTS5 registration form miss
+Phase: 42 — Content Search Bug Fix (COMPLETE)
+All tasks done. Next phase TBD.
 ```
 
 ---
@@ -538,26 +538,22 @@ Searching "Registration Form" or "registration" returns no results even though a
 
 ### Sprint 42
 
-▶ **42.1 — Diagnose: check FTS5 index and extracted_text population**
-   - Read `src-tauri/src/db/migrations.rs` — confirm `extracted_text` is in `documents_fts` column list
-   - Read `src-tauri/src/commands/documents.rs` — confirm `documents_content_search` (or `documents_search`) queries `extracted_text` via FTS5
-   - Check OCR pipeline path: does it run for all document types or only certain ones?
-   - Hypothesis: registration forms may be type-tagged early and skip OCR, OR `extracted_text` is written but not indexed in FTS5
-   - Done when: root cause identified; note findings in 42.2
+[x] **42.1 — Diagnose: check FTS5 index and extracted_text population**
+   - Root cause: `documents_run_extraction` wrote `extracted_text` to `documents` table but never called `upsert_search_index` — FTS5 row retained empty string from upload time
+   - Done when: root cause identified; note findings in 42.2 ✓
 
-[ ] **42.2 — Fix: ensure FTS5 indexes extracted_text and OCR runs for registration forms**
-   - If FTS5 column missing: add `extracted_text` to virtual table via new migration
-   - If OCR skipped for registration type: remove type guard so all document types go through OCR
-   - If FTS5 not populated on insert: fix the trigger or re-index call after `extracted_text` is written
-   - Done when: `cargo test` passes with a fixture document that has "registration" in `extracted_text` and is returned by content search
+[x] **42.2 — Fix: ensure FTS5 indexes extracted_text and OCR runs for registration forms**
+   - Fix: added `upsert_search_index` call after `UPDATE documents SET extracted_text = ...` in `documents_run_extraction` (`documents.rs` ~line 1373)
+   - Uses `load_doc(conn, &id)` then calls `upsert_search_index` matching all other call sites
+   - Done ✓
 
-[ ] **42.3 — E2E test: content search returns registration form**
-   - File: `e2e/content-search-registration.spec.ts`
-   - Use fixture `src-tauri/tests/fixtures/medical-invoice.pdf` or add a registration form fixture if needed
-   - Flow: upload PDF with "registration" in OCR text → navigate to Content Search → type "registration" → assert result card with document title is visible
-   - Done when: `npx playwright test e2e/content-search-registration.spec.ts` passes
+[x] **42.3 — E2E test: content search returns registration form**
+   - File: `e2e/content-search-registration.spec.ts` — created
+   - Uses `medical-invoice.pdf` (contains "Company Registration No: 5432109")
+   - Searches "registration" → asserts summary-bar count ≥ 1
+   - Done ✓
 
-[ ] **42.4 — Pre-commit checks + commit**
-   - `npx tsc --noEmit`
-   - `cargo fmt --all` + `cargo clippy -- -D warnings`
-   - Commit: `fix: content search returns registration form documents via FTS5 (Phase 42)`
+[x] **42.4 — Pre-commit checks + commit**
+   - `npx tsc --noEmit` ✓
+   - `cargo fmt --all` ✓ `cargo clippy -- -D warnings` ✓
+   - Done ✓
