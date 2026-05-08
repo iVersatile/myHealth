@@ -452,6 +452,25 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 24 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "CREATE TABLE IF NOT EXISTS entity_links (
+               id         TEXT PRIMARY KEY,
+               from_type  TEXT NOT NULL,
+               from_id    TEXT NOT NULL,
+               to_type    TEXT NOT NULL,
+               to_id      TEXT NOT NULL,
+               created_at TEXT NOT NULL,
+               UNIQUE(from_type, from_id, to_type, to_id)
+             );
+             CREATE INDEX IF NOT EXISTS idx_entity_links_from
+               ON entity_links(from_type, from_id);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [24])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -478,7 +497,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 23);
+        assert_eq!(version, 24);
     }
 
     #[test]
@@ -492,7 +511,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 23);
+        assert_eq!(version, 24);
     }
 
     #[test]

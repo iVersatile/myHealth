@@ -49,6 +49,10 @@ use commands::documents::{
     documents_run_extraction, documents_search_filtered, documents_set_clinic, documents_tags_set,
     documents_update, documents_upload,
 };
+use commands::entity_links::{
+    links_for_medication, links_for_symptom, medication_link, medication_unlink, symptom_link,
+    symptom_unlink,
+};
 use commands::export::{export_pdf_bundle, export_pdf_summary_bytes, export_save_bytes};
 use commands::links::{
     get_appointment_links, get_document_links, link_document_to_appointment, links_create,
@@ -280,12 +284,18 @@ pub fn run() {
             symptoms_update,
             symptoms_delete,
             symptoms_hard_delete,
+            symptom_link,
+            symptom_unlink,
+            links_for_symptom,
             medications_list,
             medications_get,
             medications_create,
             medications_update,
             medications_delete,
             medications_hard_delete,
+            medication_link,
+            medication_unlink,
+            links_for_medication,
             trash_list,
             trash_restore,
             trash_hard_delete,

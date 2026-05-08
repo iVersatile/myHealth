@@ -8,7 +8,7 @@
 
 ```
 Phase: 44 — Symptom and Medication Entities
-Task:  44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications
+Task:  44.4 — Rust: FTS5 indexing for symptoms and medications
 ```
 
 ---
@@ -646,12 +646,12 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Register all in `lib.rs`
    - Done when: `cargo test` passes for all medication commands
 
-▶ **44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications**
+[x] **44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications**
    - Check if `note_links` pattern can be extended or add a generic `entity_links (id, from_type, from_id, to_type, to_id, created_at)` table
    - Commands: `symptom_link`, `symptom_unlink`, `links_for_symptom`, `medication_link`, `medication_unlink`, `links_for_medication`
    - Done when: link/unlink round-trip tests pass
 
-[ ] **44.4 — Rust: FTS5 indexing for symptoms and medications**
+▶ **44.4 — Rust: FTS5 indexing for symptoms and medications**
    - After create/update of symptom: call `upsert_search_index(conn, id, 'symptom', name + " " + notes)`
    - After create/update of medication: call `upsert_search_index(conn, id, 'medication', name + " " + notes + " " + dosage)`
    - After soft-delete: call `upsert_search_index` with empty body (or delete row from `search_index`)
