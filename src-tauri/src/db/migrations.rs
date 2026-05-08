@@ -390,6 +390,26 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 21 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "CREATE TABLE IF NOT EXISTS document_entities (
+               id          TEXT    PRIMARY KEY,
+               document_id TEXT    NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+               entity_type TEXT    NOT NULL CHECK(entity_type IN ('medication','diagnosis','lab_value','referral')),
+               name        TEXT    NOT NULL,
+               value       TEXT,
+               unit        TEXT,
+               raw_text    TEXT    NOT NULL,
+               created_at  TEXT    NOT NULL
+             );
+             CREATE INDEX IF NOT EXISTS idx_document_entities_document_id
+               ON document_entities(document_id);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [21])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -416,7 +436,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 20);
+        assert_eq!(version, 21);
     }
 
     #[test]
@@ -430,7 +450,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 20);
+        assert_eq!(version, 21);
     }
 
     #[test]
@@ -1685,5 +1705,67 @@ mod tests {
             )
             .unwrap();
         assert_eq!(is_deleted, 0);
+    }
+
+    // ── v21: document_entities table ─────────────────────────────────────────
+
+    #[test]
+    fn v21_document_entities_table_exists() {
+        let conn = migrated_conn();
+        // Insert a document first
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, \
+             category, created_at, updated_at, is_deleted) \
+             VALUES ('doc-v21-1','test.pdf','/tmp/test.pdf','application/pdf',1,'other', \
+             '2026-01-01','2026-01-01',0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO document_entities (id, document_id, entity_type, name, raw_text, created_at) \
+             VALUES ('ent-1', 'doc-v21-1', 'medication', 'Aspirin', '75mg Aspirin daily', '2026-01-01')",
+            [],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_entities WHERE document_id = 'doc-v21-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn v21_document_entities_cascade_delete() {
+        let conn = migrated_conn();
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, \
+             category, created_at, updated_at, is_deleted) \
+             VALUES ('doc-v21-2','cascade.pdf','/tmp/cascade.pdf','application/pdf',1,'other', \
+             '2026-01-01','2026-01-01',0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO document_entities (id, document_id, entity_type, name, raw_text, created_at) \
+             VALUES ('ent-2', 'doc-v21-2', 'diagnosis', 'Hypertension', 'essential hypertension', '2026-01-01')",
+            [],
+        )
+        .unwrap();
+        conn.execute("DELETE FROM documents WHERE id = 'doc-v21-2'", [])
+            .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_entities WHERE id = 'ent-2'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "entities must cascade-delete when document deleted"
+        );
     }
 }
