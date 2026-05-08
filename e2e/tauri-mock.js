@@ -93,6 +93,11 @@
       doctor_candidates: [],
       activity_date: '2024-01-15',
       appointment_suggestion: { date: '2024-01-15', type: 'Physiotherapy' },
+      extracted_text: 'Invoice from Hartfield Physiotherapy Clinic\nDate: 15 January 2024\nPatient: Test Patient\nTreatment: Physiotherapy session\nAmount due: £85.00',
+      entities: [
+        { entity_type: 'medication', name: 'Ibuprofen', value: null, unit: null, raw_text: 'Ibuprofen 400mg' },
+        { entity_type: 'diagnosis', name: 'Musculoskeletal pain', value: null, unit: null, raw_text: 'Musculoskeletal pain' },
+      ],
     },
     'BloodTest_2024-01-15.pdf': {
       contact_suggestions: [],
@@ -271,9 +276,20 @@
         clinic_id: null,
         clinic_name: null,
         activity_date: ext.activity_date,
+        extracted_text: ext.extracted_text || null,
         created_at: nowIso(),
         updated_at: nowIso(),
         _extraction: ext,
+        _entities: (ext.entities || []).map((e, i) => ({
+          id: uid() + i,
+          document_id: '',
+          entity_type: e.entity_type,
+          name: e.name,
+          value: e.value || null,
+          unit: e.unit || null,
+          raw_text: e.raw_text,
+          created_at: nowIso(),
+        })),
         _deleted: false,
       };
       state.documents.push(doc);
@@ -338,7 +354,15 @@
       const docId = args?.document_id || args?.documentId || args?.id;
       const idx = state.documents.findIndex((d) => d.id === docId);
       if (idx >= 0) {
-        state.documents[idx]._deleted = true;
+        const doc = state.documents[idx];
+        doc._deleted = true;
+        if (!state.trash) state.trash = [];
+        state.trash.push({
+          entity_type: 'document',
+          id: doc.id,
+          display_name: doc.title || doc.filename || 'Untitled',
+          deleted_at: nowIso(),
+        });
         saveState(state);
       }
       return Promise.resolve(null);
@@ -778,7 +802,10 @@
     // Categories
     // ------------------------------------------------------------------
     if (cmd === 'categories_list') {
-      return Promise.resolve(state.categories.filter((c) => !c._deleted));
+      const includeArchived = args?.includeArchived === true;
+      return Promise.resolve(
+        state.categories.filter((c) => !c._deleted && (includeArchived || !c.is_archived))
+      );
     }
 
     if (cmd === 'categories_create') {
@@ -799,7 +826,7 @@
       const existing = state.categories.find(
         (c) => !c._deleted && c.name.toLowerCase() === name.toLowerCase()
       );
-      if (existing) return Promise.resolve(existing);
+      if (existing) return Promise.resolve(existing.id);
       const cat = {
         id: uid(),
         name,
@@ -809,7 +836,7 @@
       };
       state.categories.push(cat);
       saveState(state);
-      return Promise.resolve(cat);
+      return Promise.resolve(cat.id);
     }
 
     if (cmd === 'categories_update') {
@@ -876,7 +903,12 @@
 
     if (cmd === 'trash_restore') {
       const id = args?.id;
-      state.trash = (state.trash || []).filter((t) => t.id !== id);
+      const entityType = args?.entityType || args?.entity_type;
+      state.trash = (state.trash || []).filter((t) => !(t.id === id && t.entity_type === entityType));
+      if (entityType === 'document') {
+        const docIdx = state.documents.findIndex((d) => d.id === id);
+        if (docIdx >= 0) state.documents[docIdx]._deleted = false;
+      }
       saveState(state);
       return Promise.resolve(null);
     }
@@ -912,6 +944,46 @@
       const total = docs.length;
       const items = docs.slice(page * limit, page * limit + limit);
       return Promise.resolve({ items, total });
+    }
+
+    if (cmd === 'documents_content_search') {
+      const query = (args?.query || '').toLowerCase();
+      const matches = state.documents.filter(
+        (d) => !d._deleted && d.extracted_text && d.extracted_text.toLowerCase().includes(query)
+      );
+      const results = matches.map((d) => {
+        const idx = d.extracted_text.toLowerCase().indexOf(query);
+        const start = Math.max(0, idx - 40);
+        const end = Math.min(d.extracted_text.length, idx + query.length + 40);
+        const snippet =
+          d.extracted_text.slice(start, idx) +
+          '<mark>' + d.extracted_text.slice(idx, idx + query.length) + '</mark>' +
+          d.extracted_text.slice(idx + query.length, end);
+        return {
+          id: d.id,
+          title: d.title || d.filename,
+          activity_date: d.activity_date || null,
+          snippet,
+          provider_tag: null,
+        };
+      });
+      const dates = matches.map((d) => d.activity_date).filter(Boolean).sort();
+      return Promise.resolve({
+        results,
+        summary: {
+          first_date: dates[0] || null,
+          last_date: dates[dates.length - 1] || null,
+          doc_count: results.length,
+          unique_providers: 0,
+        },
+      });
+    }
+
+    if (cmd === 'document_entities_get') {
+      const docId = args?.document_id || args?.documentId;
+      const doc = state.documents.find((d) => d.id === docId);
+      const entities = (doc?._entities || []).map((e) => ({ ...e, document_id: docId }));
+      return Promise.resolve(entities);
     }
 
     // Unknown command — log and resolve null
@@ -955,6 +1027,12 @@
     }
     if (cmd === 'plugin:event|unlisten') {
       return Promise.resolve(null);
+    }
+
+    // Auto-accept all dialog confirmations in E2E tests
+    // plugin-dialog's confirm() calls plugin:dialog|message and checks result === okLabel ('Ok')
+    if (cmd === 'plugin:dialog|confirm' || cmd === 'plugin:dialog|message' || cmd === 'plugin:dialog|ask') {
+      return Promise.resolve('Ok');
     }
 
     return handleInvoke(realCmd, realArgs);

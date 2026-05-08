@@ -672,7 +672,7 @@ export default function DocumentDetailClient() {
           {doc.extracted_text && (
             <>
               <hr className="my-4 border-[var(--color-border)]" />
-              <details className="mb-4">
+              <details className="mb-4" data-testid="detail-extracted-text">
                 <summary className="cursor-pointer text-[var(--text-sm)] font-medium text-[var(--color-text)]">
                   Extracted Text
                 </summary>
@@ -693,7 +693,7 @@ export default function DocumentDetailClient() {
             return (
               <>
                 <hr className="my-4 border-[var(--color-border)]" />
-                <div className="mb-4">
+                <div className="mb-4" data-testid="detail-extracted-info">
                   <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
                     Extracted Info
                   </p>

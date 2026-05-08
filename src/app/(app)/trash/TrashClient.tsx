@@ -115,6 +115,7 @@ export function TrashClient() {
         {!isEmpty && (
           <button
             onClick={() => setConfirmEmpty(true)}
+            data-testid="trash-empty-btn"
             className="px-4 py-2 rounded-[var(--radius-md)] border border-[var(--color-danger)] text-[var(--color-danger)] text-sm font-medium hover:bg-[var(--color-danger)]/10 transition-colors"
           >
             Empty Trash
@@ -188,6 +189,7 @@ export function TrashClient() {
                       <button
                         onClick={() => void handleRestore(item)}
                         disabled={busy}
+                        data-testid="trash-restore-btn"
                         className="px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] disabled:opacity-50 transition-colors"
                       >
                         Restore
@@ -195,6 +197,7 @@ export function TrashClient() {
                       <button
                         onClick={() => void handleHardDelete(item)}
                         disabled={busy}
+                        data-testid="trash-delete-permanently-btn"
                         className="px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-danger)] text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 disabled:opacity-50 transition-colors"
                       >
                         Delete Permanently

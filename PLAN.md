@@ -7,7 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Task 40.6 complete. Next: Task 40.7 — Pre-commit checks + commit.
+Phase: 41 — E2E Gap Closing
+Task:  41.7 — E2E spec: Gap 6 — Auto-archive show/hide toggle
 ```
 
 ---
@@ -431,7 +432,91 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - Frontend: render with entities → section visible and grouped; empty → hidden
    - Done when: `npx vitest run` + `cargo test` pass
 
-▶ **40.7 — Pre-commit checks + commit**
+[x] **40.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: structured entity extraction from all documents (Gap 3)`
+
+---
+
+## Phase 41 — E2E Gap Closing
+
+**Goal:** Add E2E test coverage for the six uncovered areas identified in the post-Phase-40 gap survey. After this phase every implemented feature has at least one passing E2E spec.
+
+**Gap inventory:**
+
+| # | Area | Missing coverage | Testids needed |
+|---|------|-----------------|----------------|
+| G1 | Extracted Text section | No E2E for `<details>` section visible after upload | `detail-extracted-text` on `<details>` element |
+| G2 | Content Search | No E2E for `content-search-input` → `summary-bar` flow | Already have testids |
+| G3 | Extracted Info section | No E2E for "Extracted Info" visible after upload | `detail-extracted-info` on container |
+| G4 | Trash flows | No E2E for restore / delete-permanently / empty-trash | `trash-restore-btn`, `trash-delete-permanently-btn`, `trash-empty-btn` |
+| G5 | Category multi-select filter | No E2E for filtering by category combination | `advanced-filter-category` or existing chip testids |
+| G6 | Auto-archive toggle | No E2E for "Show archived" toggle on categories page | `show-archived-toggle` |
+
+**Done when:** All 6 gaps have at least one passing E2E spec; `npx playwright test` exits 0; CI green.
+
+### Sprint 41
+
+[x] **41.1 — Add missing testids to UI components**
+   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`:
+     - Add `data-testid="detail-extracted-text"` to the `<details>` element for Extracted Text (around line 672)
+     - Add `data-testid="detail-extracted-info"` to the Extracted Info container `<div>` (around line 686)
+   - `src/app/(app)/trash/page.tsx` or `TrashClient.tsx`:
+     - Add `data-testid="trash-restore-btn"` to Restore button
+     - Add `data-testid="trash-delete-permanently-btn"` to Delete Permanently button
+     - Add `data-testid="trash-empty-btn"` to Empty Trash button
+   - Done when: `npx tsc --noEmit` passes; testids visible in DOM
+
+[x] **41.2 — E2E spec: Gap 1 — Extracted Text section**
+   - File: `e2e/gap1-extracted-text.spec.ts`
+   - Upload `medical-invoice.pdf` (has OCR text) → navigate to document detail
+   - Assert `detail-extracted-text` element is in DOM (section rendered)
+   - Assert `<summary>` text is "Extracted Text"
+   - Done when: `npx playwright test e2e/gap1-extracted-text.spec.ts` passes
+
+[x] **41.3 — E2E spec: Gap 3 — Extracted Info section**
+   - File: `e2e/gap3-extracted-info.spec.ts`
+   - Upload `medical-invoice.pdf` → navigate to detail
+   - Assert `detail-extracted-info` is visible (entities extracted)
+   - Assert at least one group heading ("Medications" | "Conditions" | "Lab Results" | "Referrals") is visible
+   - Done when: `npx playwright test e2e/gap3-extracted-info.spec.ts` passes
+
+[x] **41.4 — E2E spec: Gap 2 — Content Search**
+   - File: `e2e/gap2-content-search.spec.ts`
+   - Upload `medical-invoice.pdf` and `BloodTest_2024-01-15.pdf`
+   - Navigate to Content Search (main nav link or `/content-search`)
+   - Type shared keyword (e.g. "Dr" or "2024") into `content-search-input`
+   - Assert `summary-bar` shows doc count ≥ 1
+   - Assert at least one result card is visible
+   - Done when: `npx playwright test e2e/gap2-content-search.spec.ts` passes
+
+[x] **41.5 — E2E spec: Gap 4 — Trash flows**
+   - File: `e2e/trash-flows.spec.ts`
+   - **TC-TRASH-01 (restore):** Upload doc → delete → navigate to `/trash` → click `trash-restore-btn` → doc back in document list
+   - **TC-TRASH-02 (delete permanently):** Upload doc → delete → trash → `trash-delete-permanently-btn` → doc gone from trash
+   - **TC-TRASH-03 (empty trash):** Upload 2 docs → delete both → trash → `trash-empty-btn` → trash is empty
+   - Done when: all 3 TCs pass
+
+[x] **41.6 — E2E spec: Gap 5 — Category multi-select filter**
+   - File: `e2e/gap5-category-filter.spec.ts`
+   - Upload doc A, assign category "Cardiology"
+   - Upload doc B, assign category "Neurology"
+   - Open advanced filter panel → select "Cardiology" chip
+   - Assert only doc A is visible; doc B absent
+   - Clear filter → both visible again
+   - Done when: `npx playwright test e2e/gap5-category-filter.spec.ts` passes
+
+▶ **41.7 — E2E spec: Gap 6 — Auto-archive show/hide toggle**
+   - File: `e2e/gap6-auto-archive.spec.ts`
+   - Create a category with 0 documents (or rely on existing auto-archive logic)
+   - Navigate to `/clinics` or `/categories` page; assert archived category hidden by default
+   - Click `show-archived-toggle`; assert archived category now visible
+   - Add `data-testid="show-archived-toggle"` if missing (check `src/app/(app)/clinics/page.tsx`)
+   - Done when: `npx playwright test e2e/gap6-auto-archive.spec.ts` passes
+
+[ ] **41.8 — Full suite run + pre-commit checks + commit**
+   - `npx playwright test` — all pass, exit 0
+   - `npx tsc --noEmit`
+   - Push to `origin/develop`; confirm CI green
+   - Commit: `test: E2E gap closing — Extracted Text, Extracted Info, Content Search, Trash, category filter, auto-archive (Phase 41)`
