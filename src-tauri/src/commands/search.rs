@@ -155,6 +155,109 @@ fn row_to_result(row: &rusqlite::Row<'_>) -> rusqlite::Result<SearchResult> {
     })
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContentSearchResult {
+    pub id: String,
+    pub title: String,
+    pub activity_date: Option<String>,
+    pub snippet: String,
+    pub provider_tag: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContentSearchSummary {
+    pub first_date: Option<String>,
+    pub last_date: Option<String>,
+    pub doc_count: u32,
+    pub unique_providers: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContentSearchResponse {
+    pub results: Vec<ContentSearchResult>,
+    pub summary: ContentSearchSummary,
+}
+
+fn content_search_inner(
+    conn: &Connection,
+    query: &str,
+) -> Result<ContentSearchResponse, CommandError> {
+    let empty = || ContentSearchResponse {
+        results: vec![],
+        summary: ContentSearchSummary {
+            first_date: None,
+            last_date: None,
+            doc_count: 0,
+            unique_providers: 0,
+        },
+    };
+
+    let query = query.trim();
+    if query.is_empty() {
+        return Ok(empty());
+    }
+
+    let fts_query = build_fts_query(query);
+    if fts_query.is_empty() {
+        return Ok(empty());
+    }
+
+    let fts_expr = format!("extracted_text : {fts_query}");
+
+    let sql = "SELECT d.id, d.filename, d.activity_date, \
+               snippet(search_index, 7, '<mark>', '</mark>', '…', 20), \
+               (SELECT tag FROM document_tags WHERE document_id = d.id AND tag LIKE 'dr:%' LIMIT 1) \
+               FROM search_index \
+               JOIN documents d ON d.id = search_index.entity_id \
+               WHERE search_index MATCH ?1 \
+               AND search_index.entity_type = 'document' \
+               AND d.is_deleted = 0 \
+               ORDER BY d.activity_date ASC NULLS LAST";
+
+    let mut stmt = conn.prepare(sql)?;
+    let results: Vec<ContentSearchResult> = stmt
+        .query_map([&fts_expr], |row| {
+            Ok(ContentSearchResult {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                activity_date: row.get(2)?,
+                snippet: row.get(3)?,
+                provider_tag: row.get(4)?,
+            })
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    let doc_count = results.len() as u32;
+    let first_date = results.first().and_then(|r| r.activity_date.clone());
+    let last_date = results.last().and_then(|r| r.activity_date.clone());
+    let unique_providers = results
+        .iter()
+        .filter_map(|r| r.provider_tag.as_deref())
+        .collect::<std::collections::HashSet<_>>()
+        .len() as u32;
+
+    Ok(ContentSearchResponse {
+        results,
+        summary: ContentSearchSummary {
+            first_date,
+            last_date,
+            doc_count,
+            unique_providers,
+        },
+    })
+}
+
+#[tauri::command]
+pub fn documents_content_search(
+    query: String,
+    state: State<'_, AppState>,
+) -> Result<ContentSearchResponse, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    content_search_inner(conn, &query)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -626,5 +729,163 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].entity_id, "d1");
+    }
+
+    fn insert_document(conn: &Connection, id: &str, filename: &str, activity_date: Option<&str>) {
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, is_deleted, activity_date)
+             VALUES (?1, ?2, '', 'application/pdf', 0, 'other', 0, ?3)",
+            rusqlite::params![id, filename, activity_date],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn content_search_returns_matching_docs_in_date_order() {
+        let conn = open_test_db();
+
+        insert_document(&conn, "d1", "Invoice Jan", Some("2026-01-15"));
+        insert_document(&conn, "d2", "Invoice Mar", Some("2026-03-10"));
+        insert_document(&conn, "d3", "Receipt May", Some("2026-05-01"));
+
+        upsert_search_index(
+            &conn,
+            "document",
+            "d1",
+            "Invoice Jan",
+            "",
+            "",
+            "",
+            "",
+            "blood pressure reading was elevated",
+        );
+        upsert_search_index(
+            &conn,
+            "document",
+            "d2",
+            "Invoice Mar",
+            "",
+            "",
+            "",
+            "",
+            "blood pressure normal today",
+        );
+        upsert_search_index(
+            &conn,
+            "document",
+            "d3",
+            "Receipt May",
+            "",
+            "",
+            "",
+            "",
+            "routine check-up visit",
+        );
+
+        let resp = content_search_inner(&conn, "blood").unwrap();
+        assert_eq!(resp.results.len(), 2);
+        assert_eq!(resp.results[0].id, "d1");
+        assert_eq!(resp.results[1].id, "d2");
+        assert_eq!(resp.summary.doc_count, 2);
+        assert_eq!(resp.summary.first_date.as_deref(), Some("2026-01-15"));
+        assert_eq!(resp.summary.last_date.as_deref(), Some("2026-03-10"));
+    }
+
+    #[test]
+    fn content_search_empty_query_returns_empty() {
+        let conn = open_test_db();
+        let resp = content_search_inner(&conn, "   ").unwrap();
+        assert!(resp.results.is_empty());
+        assert_eq!(resp.summary.doc_count, 0);
+    }
+
+    #[test]
+    fn content_search_excludes_deleted_docs() {
+        let conn = open_test_db();
+
+        insert_document(&conn, "d1", "Active Doc", Some("2026-01-10"));
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, is_deleted, activity_date)
+             VALUES ('d2', 'Deleted Doc', '', 'application/pdf', 0, 'other', 1, '2026-02-10')",
+            [],
+        )
+        .unwrap();
+
+        upsert_search_index(
+            &conn,
+            "document",
+            "d1",
+            "Active Doc",
+            "",
+            "",
+            "",
+            "",
+            "cholesterol levels high",
+        );
+        upsert_search_index(
+            &conn,
+            "document",
+            "d2",
+            "Deleted Doc",
+            "",
+            "",
+            "",
+            "",
+            "cholesterol check routine",
+        );
+
+        let resp = content_search_inner(&conn, "cholesterol").unwrap();
+        assert_eq!(resp.results.len(), 1);
+        assert_eq!(resp.results[0].id, "d1");
+    }
+
+    #[test]
+    fn content_search_snippet_contains_mark() {
+        let conn = open_test_db();
+
+        insert_document(&conn, "d1", "Lab Report", Some("2026-04-01"));
+        upsert_search_index(
+            &conn,
+            "document",
+            "d1",
+            "Lab Report",
+            "",
+            "",
+            "",
+            "",
+            "glucose level was high this month",
+        );
+
+        let resp = content_search_inner(&conn, "glucose").unwrap();
+        assert_eq!(resp.results.len(), 1);
+        assert!(
+            resp.results[0].snippet.contains("<mark>"),
+            "snippet must contain <mark>"
+        );
+    }
+
+    #[test]
+    fn content_search_does_not_match_body_field() {
+        let conn = open_test_db();
+
+        insert_document(&conn, "d1", "Doc", Some("2026-01-01"));
+        // term only in body, NOT extracted_text
+        upsert_search_index(
+            &conn,
+            "document",
+            "d1",
+            "Doc",
+            "hemoglobin reading normal",
+            "",
+            "",
+            "",
+            "",
+        );
+
+        let resp = content_search_inner(&conn, "hemoglobin").unwrap();
+        assert!(
+            resp.results.is_empty(),
+            "column-scoped query must not match body"
+        );
     }
 }

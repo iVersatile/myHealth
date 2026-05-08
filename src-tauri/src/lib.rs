@@ -66,7 +66,7 @@ use commands::outlook::{
 };
 use commands::recurrence::{recurrence_create, recurrence_delete_series};
 use commands::reminders::{conn_fire_due, reminders_cancel, reminders_schedule};
-use commands::search::search_query;
+use commands::search::{documents_content_search, search_query};
 use commands::settings::{
     settings_get, settings_get_data_dir, settings_set, settings_wipe_all_data,
 };
@@ -224,6 +224,7 @@ pub fn run() {
             merge_contacts,
             documents_link_contact,
             search_query,
+            documents_content_search,
             settings_get,
             settings_set,
             settings_get_data_dir,
