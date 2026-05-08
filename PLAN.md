@@ -8,7 +8,7 @@
 
 ```
 Phase: 43 — Notes UX (Option B)
-Task:  43.3 — OCR prefill toggle in NoteEditorClient
+Task:  43.4 — Linked notes panel on DocumentDetailClient
 ```
 
 ---
@@ -590,14 +590,12 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Editor's existing `links_for_note` load shows the chip automatically on arrival
    - Done when: creating a note from DocumentDetail auto-links it; chip visible in editor ✓
 
-▶ **43.3 — OCR prefill toggle in NoteEditorClient**
-   - When `linkedDocumentId` present and document has non-empty `extracted_text`:
-     - Show "Start from extracted text?" toggle (default OFF)
-     - When toggled ON: set initial editor content to `extracted_text` (one-time copy, no live sync)
-   - Call `invoke('documents_get', { id: linkedDocumentId })` to fetch `extracted_text`
-   - Done when: toggle visible when extracted_text available; toggling ON populates editor content
+[x] **43.3 — OCR prefill toggle in NoteEditorClient**
+   - Added `linkedDocumentId` searchParam read; fetches `extracted_text` from already-loaded `docs`
+   - Toggle renders when `linkedDocExtractedText` non-null; ON → `editor.commands.setContent(...)` + auto-save
+   - Done when: toggle visible when extracted_text available; toggling ON populates editor content ✓
 
-[ ] **43.4 — Linked notes panel on DocumentDetailClient**
+▶ **43.4 — Linked notes panel on DocumentDetailClient**
    - Below the "Quick Note" field, add a "Notes" section
    - Load: `invoke('notes_for_entity', { entityType: 'document', entityId: id })`
    - Render each note as a card with title, snippet (first 80 chars of content), created_at

@@ -59,6 +59,7 @@ export default function NoteEditorClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const id = searchParams.get('id') ?? ''
+  const linkedDocumentId = searchParams.get('linkedDocumentId')
 
   const { getNote, saveNote, deleteNote, pinNote, setNoteTags } = useNotes()
   const { message: toastMessage, show: showToast } = useToast()
@@ -71,6 +72,8 @@ export default function NoteEditorClient() {
   const [lastSaved, setLastSaved] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [linkedDocExtractedText, setLinkedDocExtractedText] = useState<string | null>(null)
+  const [ocrPrefillOn, setOcrPrefillOn] = useState(false)
 
   const [links, setLinks] = useState<NoteLinkDto[]>([])
   const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -137,6 +140,12 @@ export default function NoteEditorClient() {
         setDocuments(docs.filter((d) => !d.is_deleted))
         setLinks(lnks)
         setVersions(vers)
+        if (linkedDocumentId) {
+          const linkedDoc = docs.find((d) => d.id === linkedDocumentId)
+          if (linkedDoc?.extracted_text) {
+            setLinkedDocExtractedText(linkedDoc.extracted_text)
+          }
+        }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       }
@@ -351,6 +360,35 @@ export default function NoteEditorClient() {
           </button>
         </div>
       </div>
+
+      {/* OCR prefill toggle — shown only when linked doc has extracted text */}
+      {linkedDocExtractedText && (
+        <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+          <label className="flex items-center gap-2 cursor-pointer select-none text-[var(--text-sm)] text-[var(--color-text-muted)]">
+            <span>Start from extracted text?</span>
+            <button
+              role="switch"
+              aria-checked={ocrPrefillOn}
+              onClick={() => {
+                if (!ocrPrefillOn && editor) {
+                  editor.commands.setContent(`<p>${linkedDocExtractedText.replace(/\n/g, '</p><p>')}</p>`)
+                  void triggerSave()
+                }
+                setOcrPrefillOn((v) => !v)
+              }}
+              className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-[var(--duration-fast)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+                ocrPrefillOn ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border)]'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-[var(--duration-fast)] ${
+                  ocrPrefillOn ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </label>
+        </div>
+      )}
 
       {/* Rich-text editor */}
       <div className="min-h-64 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 mb-6 prose prose-sm max-w-none focus-within:border-[var(--color-accent)] transition-colors">
