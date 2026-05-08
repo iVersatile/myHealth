@@ -2,7 +2,6 @@ pub mod category;
 pub mod clinic;
 pub mod contact;
 pub mod doctor;
-#[allow(dead_code)]
 pub mod entities;
 pub mod ocr;
 pub mod pdf;

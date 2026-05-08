@@ -1350,6 +1350,26 @@ pub async fn documents_run_extraction(
                 id
             ],
         )?;
+
+        let entities = crate::extraction::entities::extract_entities(&result.text);
+        let now = Utc::now().to_rfc3339();
+        for entity in entities {
+            conn.execute(
+                "INSERT OR IGNORE INTO document_entities \
+                 (id, document_id, entity_type, name, value, unit, raw_text, created_at) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    entity.id,
+                    id,
+                    entity.entity_type.as_str(),
+                    entity.name,
+                    entity.value,
+                    entity.unit,
+                    entity.raw_text,
+                    now,
+                ],
+            )?;
+        }
     }
 
     Ok(ExtractionSuggestions {
