@@ -188,10 +188,15 @@ pub fn auto_extract_tags(
         "summary",
         "discharge",
     ];
+    let mut has_type_tag = false;
     for &kw in TYPE_KEYWORDS {
         if text_has_word(&lower, kw) && !tags_contains_ci(&tags, kw) {
             tags.push(kw.to_string());
+            has_type_tag = true;
         }
+    }
+    if !has_type_tag {
+        tags.push("Notes".to_string());
     }
 
     const SPECIALTY_MAP: &[(&[&str], &str)] = &[
@@ -325,6 +330,24 @@ mod tests {
         assert!(
             !tags.contains(&"bill".to_string()),
             "false positive; tags: {tags:?}"
+        );
+    }
+
+    #[test]
+    fn auto_tags_notes_fallback_when_no_type_tag() {
+        let tags = auto_extract_tags("GP consultation notes from today's visit", &[], None);
+        assert!(
+            tags.contains(&"Notes".to_string()),
+            "expected Notes fallback; tags: {tags:?}"
+        );
+    }
+
+    #[test]
+    fn auto_tags_no_notes_fallback_when_type_tag_present() {
+        let tags = auto_extract_tags("INVOICE for physiotherapy consultation", &[], None);
+        assert!(
+            !tags.contains(&"Notes".to_string()),
+            "unexpected Notes tag when type tag present; tags: {tags:?}"
         );
     }
 

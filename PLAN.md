@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Task 38.4 complete. Next: Task 38.5 — Unit tests for extracted_text UI and Notes auto-tag.
+Task 38.5 complete. Next: Task 38.6 — Pre-commit checks + commit.
 ```
 
 ---
@@ -336,12 +336,12 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - Show `doc.extracted_text` inside; hide section entirely if `extracted_text` is null/empty
    - Done when: `npx tsc --noEmit` passes; document with OCR text shows the section
 
-▶ [ ] **38.5 — Unit tests**
+[x] **38.5 — Unit tests**
    - Rust: auto-tag logic → doc with/without type tag → assert "Notes" added or not
    - Frontend: render `DocumentDetailClient` with `extracted_text` → section visible; without → hidden
    - Done when: `npx vitest run` + `cargo test` pass
 
-[ ] **38.6 — Pre-commit checks + commit**
+▶ [ ] **38.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: surface extracted_text, Notes auto-tag, FTS5 full-content search (Gap 1)`

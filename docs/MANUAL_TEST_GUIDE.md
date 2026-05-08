@@ -23,6 +23,22 @@ npm run tauri:dev
 
 Wait for the app window to open (~30–60s first run, ~10s subsequent).
 
+### Testing a Release Build (.dmg)
+
+If testing a downloaded `.dmg` instead of `tauri:dev`, macOS Gatekeeper will block the app on first launch. Remove the quarantine flag before opening:
+
+```bash
+xattr -cr /Applications/myHealth.app
+```
+
+If still blocked, register the app with Gatekeeper explicitly:
+
+```bash
+spctl --add /Applications/myHealth.app
+```
+
+After either command, double-click the app normally — no "cannot be opened" dialog will appear.
+
 ### Seed Data
 
 Before running tests, create the following baseline data:
