@@ -54,6 +54,8 @@ function setupInvoke(docOverrides = {}) {
     if (cmd === 'document_entities_get') return Promise.resolve([])
     if (cmd === 'symptoms_for_entity') return Promise.resolve([])
     if (cmd === 'medications_for_entity') return Promise.resolve([])
+    if (cmd === 'symptoms_list') return Promise.resolve([])
+    if (cmd === 'medications_list') return Promise.resolve([])
     return Promise.resolve(undefined)
   })
 }
