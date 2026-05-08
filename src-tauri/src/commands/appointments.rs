@@ -312,6 +312,7 @@ pub fn appointments_create(
         "",
         "",
         "",
+        "",
     );
     Ok(appt)
 }
@@ -381,6 +382,7 @@ pub fn appointments_update(
         &appt.id,
         &appt.title,
         &body,
+        "",
         "",
         "",
         "",

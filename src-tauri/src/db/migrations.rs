@@ -370,6 +370,26 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 20 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "DROP TABLE IF EXISTS search_index;
+             CREATE VIRTUAL TABLE search_index USING fts5(
+               entity_type,
+               entity_id,
+               title,
+               body,
+               tags,
+               extracted_metadata,
+               category_name,
+               extracted_text,
+               tokenize = 'porter unicode61'
+             );",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [20])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -396,7 +416,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 19);
+        assert_eq!(version, 20);
     }
 
     #[test]
@@ -410,7 +430,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 19);
+        assert_eq!(version, 20);
     }
 
     #[test]

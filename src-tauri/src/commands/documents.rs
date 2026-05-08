@@ -270,6 +270,7 @@ pub fn documents_upload(
         &doc.tags.join(","),
         "",
         "",
+        doc.extracted_text.as_deref().unwrap_or(""),
     );
     Ok(doc)
 }
@@ -309,6 +310,7 @@ pub fn documents_update(
         &doc.tags.join(","),
         "",
         "",
+        doc.extracted_text.as_deref().unwrap_or(""),
     );
     Ok(doc)
 }
@@ -360,6 +362,7 @@ pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), C
             &doc.tags.join(","),
             "",
             "",
+            doc.extracted_text.as_deref().unwrap_or(""),
         );
     }
     Ok(())
@@ -430,6 +433,7 @@ pub fn documents_tags_set(
             &doc.tags.join(","),
             "",
             "",
+            doc.extracted_text.as_deref().unwrap_or(""),
         );
     }
 
