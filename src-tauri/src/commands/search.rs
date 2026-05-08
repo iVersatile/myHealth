@@ -157,11 +157,10 @@ fn row_to_result(row: &rusqlite::Row<'_>) -> rusqlite::Result<SearchResult> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ContentSearchResult {
+    pub entity_type: String,
     pub id: String,
     pub title: String,
-    pub activity_date: Option<String>,
     pub snippet: String,
-    pub provider_tag: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -202,48 +201,35 @@ fn content_search_inner(
         return Ok(empty());
     }
 
-    let fts_expr = format!("extracted_text : {fts_query}");
-
-    let sql = "SELECT d.id, d.filename, d.activity_date, \
-               snippet(search_index, 7, '<mark>', '</mark>', '…', 20), \
-               (SELECT tag FROM document_tags WHERE document_id = d.id AND tag LIKE 'dr:%' LIMIT 1) \
+    let sql = "SELECT entity_type, entity_id, title, \
+               snippet(search_index, 3, '<mark>', '</mark>', '…', 20) \
                FROM search_index \
-               JOIN documents d ON d.id = search_index.entity_id \
                WHERE search_index MATCH ?1 \
-               AND search_index.entity_type = 'document' \
-               AND d.is_deleted = 0 \
-               ORDER BY d.activity_date ASC NULLS LAST";
+               ORDER BY rank \
+               LIMIT 50";
 
     let mut stmt = conn.prepare(sql)?;
     let results: Vec<ContentSearchResult> = stmt
-        .query_map([&fts_expr], |row| {
+        .query_map([&fts_query], |row| {
             Ok(ContentSearchResult {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                activity_date: row.get(2)?,
+                entity_type: row.get(0)?,
+                id: row.get(1)?,
+                title: row.get(2)?,
                 snippet: row.get(3)?,
-                provider_tag: row.get(4)?,
             })
         })?
         .filter_map(|r| r.ok())
         .collect();
 
     let doc_count = results.len() as u32;
-    let first_date = results.first().and_then(|r| r.activity_date.clone());
-    let last_date = results.last().and_then(|r| r.activity_date.clone());
-    let unique_providers = results
-        .iter()
-        .filter_map(|r| r.provider_tag.as_deref())
-        .collect::<std::collections::HashSet<_>>()
-        .len() as u32;
 
     Ok(ContentSearchResponse {
         results,
         summary: ContentSearchSummary {
-            first_date,
-            last_date,
+            first_date: None,
+            last_date: None,
             doc_count,
-            unique_providers,
+            unique_providers: 0,
         },
     })
 }
@@ -741,54 +727,49 @@ mod tests {
     }
 
     #[test]
-    fn content_search_returns_matching_docs_in_date_order() {
+    fn content_search_returns_matching_entities() {
         let conn = open_test_db();
-
-        insert_document(&conn, "d1", "Invoice Jan", Some("2026-01-15"));
-        insert_document(&conn, "d2", "Invoice Mar", Some("2026-03-10"));
-        insert_document(&conn, "d3", "Receipt May", Some("2026-05-01"));
 
         upsert_search_index(
             &conn,
             "document",
             "d1",
             "Invoice Jan",
-            "",
-            "",
-            "",
-            "",
             "blood pressure reading was elevated",
+            "",
+            "",
+            "",
+            "",
         );
         upsert_search_index(
             &conn,
             "document",
             "d2",
             "Invoice Mar",
-            "",
-            "",
-            "",
-            "",
             "blood pressure normal today",
+            "",
+            "",
+            "",
+            "",
         );
         upsert_search_index(
             &conn,
             "document",
             "d3",
             "Receipt May",
-            "",
-            "",
-            "",
-            "",
             "routine check-up visit",
+            "",
+            "",
+            "",
+            "",
         );
 
         let resp = content_search_inner(&conn, "blood").unwrap();
         assert_eq!(resp.results.len(), 2);
-        assert_eq!(resp.results[0].id, "d1");
-        assert_eq!(resp.results[1].id, "d2");
         assert_eq!(resp.summary.doc_count, 2);
-        assert_eq!(resp.summary.first_date.as_deref(), Some("2026-01-15"));
-        assert_eq!(resp.summary.last_date.as_deref(), Some("2026-03-10"));
+        let ids: Vec<&str> = resp.results.iter().map(|r| r.id.as_str()).collect();
+        assert!(ids.contains(&"d1"));
+        assert!(ids.contains(&"d2"));
     }
 
     #[test]
@@ -800,60 +781,57 @@ mod tests {
     }
 
     #[test]
-    fn content_search_excludes_deleted_docs() {
+    fn content_search_returns_all_matched_entities_regardless_of_type() {
         let conn = open_test_db();
-
-        insert_document(&conn, "d1", "Active Doc", Some("2026-01-10"));
-        conn.execute(
-            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, is_deleted, activity_date)
-             VALUES ('d2', 'Deleted Doc', '', 'application/pdf', 0, 'other', 1, '2026-02-10')",
-            [],
-        )
-        .unwrap();
 
         upsert_search_index(
             &conn,
             "document",
             "d1",
-            "Active Doc",
-            "",
-            "",
-            "",
-            "",
+            "Doc One",
             "cholesterol levels high",
+            "",
+            "",
+            "",
+            "",
         );
         upsert_search_index(
             &conn,
-            "document",
-            "d2",
-            "Deleted Doc",
-            "",
-            "",
-            "",
-            "",
+            "symptom",
+            "s1",
+            "High Cholesterol",
             "cholesterol check routine",
+            "",
+            "",
+            "",
+            "",
         );
 
         let resp = content_search_inner(&conn, "cholesterol").unwrap();
-        assert_eq!(resp.results.len(), 1);
-        assert_eq!(resp.results[0].id, "d1");
+        assert_eq!(resp.results.len(), 2);
+        let types: Vec<&str> = resp
+            .results
+            .iter()
+            .map(|r| r.entity_type.as_str())
+            .collect();
+        assert!(types.contains(&"document"));
+        assert!(types.contains(&"symptom"));
     }
 
     #[test]
     fn content_search_snippet_contains_mark() {
         let conn = open_test_db();
 
-        insert_document(&conn, "d1", "Lab Report", Some("2026-04-01"));
         upsert_search_index(
             &conn,
             "document",
             "d1",
             "Lab Report",
-            "",
-            "",
-            "",
-            "",
             "glucose level was high this month",
+            "",
+            "",
+            "",
+            "",
         );
 
         let resp = content_search_inner(&conn, "glucose").unwrap();
@@ -865,27 +843,24 @@ mod tests {
     }
 
     #[test]
-    fn content_search_does_not_match_body_field() {
+    fn content_search_returns_symptom_in_results() {
         let conn = open_test_db();
 
-        insert_document(&conn, "d1", "Doc", Some("2026-01-01"));
-        // term only in body, NOT extracted_text
         upsert_search_index(
             &conn,
-            "document",
-            "d1",
-            "Doc",
-            "hemoglobin reading normal",
+            "symptom",
+            "sym-1",
+            "Migraine",
+            "severe headache with light sensitivity",
             "",
             "",
             "",
             "",
         );
 
-        let resp = content_search_inner(&conn, "hemoglobin").unwrap();
-        assert!(
-            resp.results.is_empty(),
-            "column-scoped query must not match body"
-        );
+        let resp = content_search_inner(&conn, "headache").unwrap();
+        assert_eq!(resp.results.len(), 1);
+        assert_eq!(resp.results[0].id, "sym-1");
+        assert_eq!(resp.results[0].entity_type, "symptom");
     }
 }
