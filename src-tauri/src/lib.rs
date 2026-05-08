@@ -55,6 +55,10 @@ use commands::links::{
     links_delete, links_list_for_appointment, links_list_for_document, links_score_candidates,
     unlink_document_from_appointment,
 };
+use commands::medications::{
+    medications_create, medications_delete, medications_get, medications_hard_delete,
+    medications_list, medications_update,
+};
 use commands::notes::{
     links_for_note, note_link, note_unlink, note_version_restore, note_versions_list, notes_create,
     notes_delete, notes_for_entity, notes_get, notes_hard_delete, notes_list, notes_pin,
@@ -276,6 +280,12 @@ pub fn run() {
             symptoms_update,
             symptoms_delete,
             symptoms_hard_delete,
+            medications_list,
+            medications_get,
+            medications_create,
+            medications_update,
+            medications_delete,
+            medications_hard_delete,
             trash_list,
             trash_restore,
             trash_hard_delete,

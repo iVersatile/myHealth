@@ -8,7 +8,7 @@
 
 ```
 Phase: 44 — Symptom and Medication Entities
-Task:  44.2 — Rust: medications table + CRUD commands
+Task:  44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications
 ```
 
 ---
@@ -640,13 +640,13 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Register all in `lib.rs`
    - Done when: `cargo test` passes for all symptom commands
 
-▶ **44.2 — Rust: medications table + CRUD commands**
+[x] **44.2 — Rust: medications table + CRUD commands**
    - Migration: `CREATE TABLE IF NOT EXISTS medications (id TEXT PRIMARY KEY, name TEXT NOT NULL, dosage TEXT, frequency TEXT, start_date TEXT, end_date TEXT, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
    - Commands: `medications_list`, `medications_get`, `medications_create`, `medications_update`, `medications_delete` (soft), `medications_hard_delete`
    - Register all in `lib.rs`
    - Done when: `cargo test` passes for all medication commands
 
-[ ] **44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications**
+▶ **44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications**
    - Check if `note_links` pattern can be extended or add a generic `entity_links (id, from_type, from_id, to_type, to_id, created_at)` table
    - Commands: `symptom_link`, `symptom_unlink`, `links_for_symptom`, `medication_link`, `medication_unlink`, `links_for_medication`
    - Done when: link/unlink round-trip tests pass

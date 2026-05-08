@@ -44,6 +44,7 @@ pub mod contacts;
 pub mod documents;
 pub mod export;
 pub mod links;
+pub mod medications;
 pub mod notes;
 pub mod outlook;
 pub mod recurrence;

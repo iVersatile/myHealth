@@ -430,6 +430,28 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 23 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "CREATE TABLE IF NOT EXISTS medications (
+               id         TEXT PRIMARY KEY,
+               name       TEXT NOT NULL,
+               dosage     TEXT,
+               frequency  TEXT,
+               start_date TEXT,
+               end_date   TEXT,
+               notes      TEXT,
+               deleted_at TEXT,
+               created_at TEXT NOT NULL,
+               updated_at TEXT NOT NULL
+             );
+             CREATE INDEX IF NOT EXISTS idx_medications_deleted_at
+               ON medications(deleted_at);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [23])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -456,7 +478,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 22);
+        assert_eq!(version, 23);
     }
 
     #[test]
@@ -470,7 +492,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 22);
+        assert_eq!(version, 23);
     }
 
     #[test]
