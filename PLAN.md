@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 44 — Symptom and Medication Entities
-Task:  44.8 — Frontend: link symptoms/medications to documents and appointments
+Phase: 45 — Unified Content Search
+Task:  45.1 — Rust: expand content_search command to include all entity types
 ```
 
 ---
@@ -676,19 +676,19 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Nav: add "Medications" link to sidebar nav
    - Done when: user can create, view, edit, soft-delete a medication
 
-▶ **44.8 — Frontend: link symptoms/medications to documents and appointments**
+[x] **44.8 — Frontend: link symptoms/medications to documents and appointments**
    - DocumentDetailClient: "Link Symptom" and "Link Medication" buttons → searchable dropdown → `symptom_link` / `medication_link`
    - AppointmentDetailClient: same pattern
    - Render linked chips; unlink on ✕
    - Done when: symptom and medication chips appear on document and appointment detail pages
 
-[ ] **44.9 — Unit tests for Symptoms + Medications frontend**
+[x] **44.9 — Unit tests for Symptoms + Medications frontend**
    - `src/app/(app)/symptoms/__tests__/symptoms-crud.test.tsx`
    - `src/app/(app)/medications/__tests__/medications-crud.test.tsx`
    - Mock `invoke`; assert list renders; assert create calls correct command; assert delete softly removes from list
    - Done when: `npx vitest run` passes
 
-[ ] **44.10 — E2E spec + pre-commit + commit**
+[x] **44.10 — E2E spec + pre-commit + commit**
    - `e2e/symptoms-medications.spec.ts`
      - TC-SYM-01: create symptom "Headache" severity 7 → appears in list
      - TC-MED-01: create medication "Ibuprofen 400mg" → appears in list
@@ -706,7 +706,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
 
 ### Sprint 45
 
-[ ] **45.1 — Rust: expand `content_search` command to include all entity types**
+▶ **45.1 — Rust: expand `content_search` command to include all entity types**
    - `src-tauri/src/commands/search.rs` (or wherever `content_search` lives)
    - Change FTS5 query: remove any `entity_type = 'document'` filter; return all matching rows
    - Return `entity_type` field in each result row
