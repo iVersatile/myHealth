@@ -11,6 +11,13 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     coverage: {
       provider: "v8",
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        'e2e/**',
+        // Rich-text editor: requires ProseMirror/Tiptap DOM env not supported in jsdom
+        '**/*NoteEditorClient*',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,
