@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/contacts', label: 'Contacts' },
   { href: '/clinics', label: 'Clinics' },
   { href: '/timeline', label: 'Timeline' },
+  { href: '/content-search', label: 'Content Search' },
   { href: '/categories', label: 'Categories' },
 ] as const
 

@@ -46,7 +46,7 @@ describe('Keyboard navigation — Sidebar (G-12)', () => {
 
     // Expected focusable labels in tab order:
     // Dashboard, Documents, Appointments, Notes, Contacts, Clinics, Timeline,
-    // Categories, Settings, Trash, Lock
+    // Content Search, Categories, Settings, Trash, Lock
     const expectedLabels = [
       'Dashboard',
       'Documents',
@@ -55,6 +55,7 @@ describe('Keyboard navigation — Sidebar (G-12)', () => {
       'Contacts',
       'Clinics',
       'Timeline',
+      'Content Search',
       'Categories',
       'Settings',
       'Trash',

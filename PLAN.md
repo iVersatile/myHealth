@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Task 38.6 complete. Phase 38 done. Next: Phase 39 — Cross-Document Content Search & Timeline Grouping.
+Task 39.3 complete. Next: 39.4 — Pre-commit checks + commit.
 ```
 
 ---
@@ -360,25 +360,25 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
 
 ### Sprint 39
 
-▶ [ ] **39.1 — Rust command `documents_content_search`**
+[x] **39.1 — Rust command `documents_content_search`**
    - Input: `query: String`
    - SQL: FTS5 snippet on `extracted_text` JOIN documents; ORDER BY `activity_date ASC`
    - Return: `Vec<ContentSearchResult>` — `{id, title, activity_date, snippet, provider_tag}`
    - Plus `ContentSearchSummary` — `{first_date, last_date, doc_count, unique_providers}`
    - Done when: `cargo test` passes with fixture docs
 
-[ ] **39.2 — Frontend: Content Search page / panel**
+[x] **39.2 — Frontend: Content Search page / panel**
    - Route or slide-over panel; search input → `invoke('documents_content_search', { query })`
    - Summary bar + vertical timeline list of result cards
    - Each card: title, date, provider, highlighted snippet, link to document detail
    - Done when: `npx tsc --noEmit` passes; manual smoke shows grouped timeline
 
-[ ] **39.3 — Unit + E2E tests**
+[x] **39.3 — Unit + E2E tests**
    - Unit: mock invoke; assert summary bar values; assert cards in date order
    - E2E: upload 2 docs with "hypertension" in OCR text at different dates → search → 2 cards chronological → summary count 2
    - Done when: all tests pass
 
-[ ] **39.4 — Pre-commit checks + commit**
+▶ [ ] **39.4 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: cross-document content search with timeline grouping (Gap 2)`
