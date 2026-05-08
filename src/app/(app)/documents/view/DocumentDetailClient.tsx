@@ -11,6 +11,17 @@ import type { Appointment } from '../../../../store/appointmentsStore'
 import { useToast } from '../../../../hooks/useToast'
 import { Toast } from '../../../../components/shared/Toast'
 
+interface DocumentEntity {
+  id: string
+  document_id: string
+  entity_type: string
+  name: string
+  value: string | null
+  unit: string | null
+  raw_text: string
+  created_at: string
+}
+
 interface DocumentLink {
   id: string
   document_id: string
@@ -82,14 +93,14 @@ export default function DocumentDetailClient() {
   const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([])
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   const [linkedNotes, setLinkedNotes] = useState<Array<{ id: string; title: string }>>([])
-
+  const [entities, setEntities] = useState<DocumentEntity[]>([])
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetched, catRows, assignedIds, existingLinks, appts, scored, fetchedNotes] = await Promise.all([
+        const [fetched, catRows, assignedIds, existingLinks, appts, scored, fetchedNotes, fetchedEntities] = await Promise.all([
           invoke<Document>('documents_get', { id }),
           invoke<
             Array<{
@@ -106,6 +117,7 @@ export default function DocumentDetailClient() {
           invoke<Appointment[]>('appointments_list', { month: null, status: null }),
           invoke<LinkSuggestion[]>('links_score_candidates', { documentId: id }),
           invoke<Array<{ id: string; title: string }>>('notes_for_entity', { entityType: 'document', entityId: id }),
+          invoke<DocumentEntity[]>('document_entities_get', { documentId: id }),
         ])
         setDoc(fetched)
         setTags(fetched.tags)
@@ -131,6 +143,7 @@ export default function DocumentDetailClient() {
         setAllAppointments(appts)
         setSuggestions(scored)
         setLinkedNotes(fetchedNotes)
+        setEntities(fetchedEntities)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -669,6 +682,48 @@ export default function DocumentDetailClient() {
               </details>
             </>
           )}
+
+          {entities.length > 0 && (() => {
+            const groups: Array<{ label: string; type: string }> = [
+              { label: 'Medications', type: 'medication' },
+              { label: 'Conditions', type: 'diagnosis' },
+              { label: 'Lab Results', type: 'lab_value' },
+              { label: 'Referrals', type: 'referral' },
+            ]
+            return (
+              <>
+                <hr className="my-4 border-[var(--color-border)]" />
+                <div className="mb-4">
+                  <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                    Extracted Info
+                  </p>
+                  {groups.map(({ label, type }) => {
+                    const group = entities.filter((e) => e.entity_type === type)
+                    if (group.length === 0) return null
+                    return (
+                      <div key={type} className="mb-3">
+                        <p className="mb-1 text-[var(--text-xs)] font-medium text-[var(--color-text-secondary)]">
+                          {label}
+                        </p>
+                        <ul className="flex flex-col gap-1">
+                          {group.map((e) => (
+                            <li key={e.id} className="text-[var(--text-xs)] text-[var(--color-text)]">
+                              {e.name}
+                              {e.value && (
+                                <span className="text-[var(--color-text-secondary)]">
+                                  {' '}— {e.value}{e.unit ? ` ${e.unit}` : ''}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()}
 
           <hr className="my-4 border-[var(--color-border)]" />
 

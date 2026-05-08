@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Task 40.2 complete. Next: Task 40.3 — Wire entity extraction into OCR pipeline.
+Task 40.6 complete. Next: Task 40.7 — Pre-commit checks + commit.
 ```
 
 ---
@@ -410,28 +410,28 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - Conservative — prefer false negatives; empty result is fine
    - Done when: `cargo test` passes with fixture texts for each entity type
 
-▶ **40.3 — Wire extraction into OCR pipeline for ALL document types**
+[x] **40.3 — Wire extraction into OCR pipeline for ALL document types**
    - After `extracted_text` written to `documents`, call entity extraction → INSERT into `document_entities`
    - Done when: uploading any PDF with recognisable text populates `document_entities`
 
-[ ] **40.4 — Rust command `document_entities_get`**
+[x] **40.4 — Rust command `document_entities_get`**
    - Input: `document_id: i64`
    - Return: `Vec<DocumentEntity>` grouped by `entity_type`
    - Done when: `cargo test` passes
 
-[ ] **40.5 — Surface entities in document detail UI**
+[x] **40.5 — Surface entities in document detail UI**
    - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
    - On mount, invoke `document_entities_get`; if non-empty render "Extracted Info" section
    - Group by type: Medications, Conditions, Lab Results, Referrals
    - Hide section entirely when entity list is empty
    - Done when: `npx tsc --noEmit` passes; manual smoke shows entities on GP notes upload
 
-[ ] **40.6 — Unit tests**
+[x] **40.6 — Unit tests**
    - Rust: entity extraction positive + negative cases per pattern type
    - Frontend: render with entities → section visible and grouped; empty → hidden
    - Done when: `npx vitest run` + `cargo test` pass
 
-[ ] **40.7 — Pre-commit checks + commit**
+▶ **40.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: structured entity extraction from all documents (Gap 3)`
