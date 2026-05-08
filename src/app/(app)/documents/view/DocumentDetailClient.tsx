@@ -729,6 +729,14 @@ export default function DocumentDetailClient() {
 
           <button
             type="button"
+            onClick={() => router.push(`/notes/new?linkedDocumentId=${id}`)}
+            className="mb-2 w-full rounded-[var(--radius-md)] border border-[var(--color-primary)] py-1.5 text-[var(--text-sm)] text-[var(--color-primary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
+          >
+            + Add Note
+          </button>
+
+          <button
+            type="button"
             onClick={() => void handleDelete()}
             className="w-full rounded-[var(--radius-md)] border border-[var(--color-danger)] py-1.5 text-[var(--text-sm)] text-[var(--color-danger)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
           >

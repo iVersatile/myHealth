@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 42 — Content Search Bug Fix (COMPLETE)
-All tasks done. Next phase TBD.
+Phase: 43 — Notes UX (Option B)
+Task:  43.3 — OCR prefill toggle in NoteEditorClient
 ```
 
 ---
@@ -66,7 +66,16 @@ All tasks done. Next phase TBD.
 | Cross-document content search + timeline grouping + summary | Gap 2 | HIGH | Medium |
 | Structured entity extraction (medications, diagnoses, lab values, referrals) — universal | Gap 3 | HIGH | Medium |
 
-**v1.4+ (future)**
+**v1.4 (Phases 43–45)**
+
+| Feature | Source | Priority | Effort |
+|---------|--------|----------|--------|
+| Notes UX — Option B (create-from-context, OCR prefill, linked notes panel, empty-state onboarding) | Manual test feedback 2026-05-08 | HIGH | Medium |
+| Symptom entity (CRUD + linking + FTS5) | Manual test feedback 2026-05-08 | HIGH | Medium |
+| Medication entity (CRUD + linking + FTS5) | Manual test feedback 2026-05-08 | HIGH | Medium |
+| Unified content search: documents + notes + symptoms + medications | Manual test feedback 2026-05-08 | HIGH | Small |
+
+**v1.5+ (future)**
 
 | Feature | Source | Priority | Effort |
 |---------|--------|----------|--------|
@@ -557,3 +566,175 @@ Searching "Registration Form" or "registration" returns no results even though a
    - `npx tsc --noEmit` ✓
    - `cargo fmt --all` ✓ `cargo clippy -- -D warnings` ✓
    - Done ✓
+
+---
+
+## Phase 43 — Notes UX (Option B): Create-from-Context, OCR Prefill, Linked Notes Panel
+
+**Goal:** Fix UX gaps in the existing Notes entity (Option B model — many-to-many links).  
+Keep `documents.notes` plain-text field as a short "quick note" annotation; the richer linked Notes entity handles journal/clinical notes.  
+New affordances: "Add Note" button on DocumentDetail that creates a linked note and optionally prefills from OCR extracted_text; linked notes panel on detail pages; empty-state onboarding.
+
+**Done when:** User can create a note directly from a document detail page, optionally prefilling from OCR text; linked notes appear in a panel on that page; Notes list page shows onboarding empty state with a "Create your first note" CTA.
+
+### Sprint 43
+
+[x] **43.1 — "Add Note" button on DocumentDetail (linked, OCR prefill)**
+   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
+   - Add "Add Note" button in the header actions area (near existing "Edit" / "Delete")
+   - On click: `router.push('/notes/new?linkedDocumentId=<id>')`
+   - Done when: button renders; clicking navigates to `/notes/new` with correct query param
+
+[x] **43.2 — NoteEditorClient: accept `linkedDocumentId` query param and auto-link**
+   - Created `src/app/(app)/notes/new/page.tsx` — reads `linkedDocumentId`, calls `createNote()`, calls `invoke('note_link', ...)`, redirects to editor
+   - Editor's existing `links_for_note` load shows the chip automatically on arrival
+   - Done when: creating a note from DocumentDetail auto-links it; chip visible in editor ✓
+
+▶ **43.3 — OCR prefill toggle in NoteEditorClient**
+   - When `linkedDocumentId` present and document has non-empty `extracted_text`:
+     - Show "Start from extracted text?" toggle (default OFF)
+     - When toggled ON: set initial editor content to `extracted_text` (one-time copy, no live sync)
+   - Call `invoke('documents_get', { id: linkedDocumentId })` to fetch `extracted_text`
+   - Done when: toggle visible when extracted_text available; toggling ON populates editor content
+
+[ ] **43.4 — Linked notes panel on DocumentDetailClient**
+   - Below the "Quick Note" field, add a "Notes" section
+   - Load: `invoke('notes_for_entity', { entityType: 'document', entityId: id })`
+   - Render each note as a card with title, snippet (first 80 chars of content), created_at
+   - Each card links to `/notes/view/<noteId>`
+   - Show "No linked notes yet" empty state with "Add Note" link
+   - Done when: panel renders linked notes; clicking a card navigates to note editor
+
+[ ] **43.5 — Linked notes panel on AppointmentDetailClient**
+   - Mirror task 43.4 for `src/app/(app)/appointments/view/AppointmentDetailClient.tsx`
+   - `notes_for_entity` call already present (line 85) — wire result into a rendered panel
+   - Done when: appointment detail shows linked notes panel identical in structure to document detail
+
+[ ] **43.6 — Notes list page: empty-state onboarding**
+   - `src/app/(app)/notes/page.tsx` (or NoteListClient equivalent)
+   - When `notes_list` returns empty array: render full-page onboarding empty state
+   - Content: "No notes yet — start capturing clinical observations, symptoms, or follow-up thoughts."
+   - CTA button: "Create your first note" → navigates to `/notes/new`
+   - Done when: fresh vault with no notes shows onboarding state; button navigates correctly
+
+[ ] **43.7 — Unit tests + E2E spec + pre-commit + commit**
+   - Unit: `src/app/(app)/notes/__tests__/note-ocr-prefill.test.tsx` — mock `invoke`; assert toggle renders when extracted_text present; assert editor content set on toggle
+   - E2E: `e2e/notes-ux.spec.ts`
+     - TC-NOTES-01: upload doc → document detail → "Add Note" → verify note linked to doc
+     - TC-NOTES-02: new note from doc with extracted_text → toggle on → editor contains OCR text
+     - TC-NOTES-03: empty notes list → onboarding CTA visible → click → /notes/new
+   - `npx tsc --noEmit` ✓
+   - Commit: `feat: Notes UX — create-from-context, OCR prefill, linked panels, empty-state (Phase 43)`
+
+---
+
+## Phase 44 — Symptom and Medication Entities (CRUD + Linking + FTS5)
+
+**Goal:** Add two new first-class entities — Symptom and Medication — each with full CRUD, bi-directional linking to documents/appointments/notes, and FTS5 indexing so they appear in content search results.
+
+**Done when:** User can log symptoms and medications; each can be linked to documents or appointments; both appear in content search results; Rust tests + frontend unit tests + E2E pass.
+
+### Sprint 44
+
+**44.1 — Rust: symptoms table + CRUD commands**
+   - Migration: `CREATE TABLE IF NOT EXISTS symptoms (id TEXT PRIMARY KEY, name TEXT NOT NULL, severity INTEGER CHECK(severity BETWEEN 1 AND 10), onset_date TEXT, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
+   - Commands: `symptoms_list`, `symptoms_get`, `symptoms_create`, `symptoms_update`, `symptoms_delete` (soft), `symptoms_hard_delete`
+   - Register all in `lib.rs`
+   - Done when: `cargo test` passes for all symptom commands
+
+[ ] **44.2 — Rust: medications table + CRUD commands**
+   - Migration: `CREATE TABLE IF NOT EXISTS medications (id TEXT PRIMARY KEY, name TEXT NOT NULL, dosage TEXT, frequency TEXT, start_date TEXT, end_date TEXT, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
+   - Commands: `medications_list`, `medications_get`, `medications_create`, `medications_update`, `medications_delete` (soft), `medications_hard_delete`
+   - Register all in `lib.rs`
+   - Done when: `cargo test` passes for all medication commands
+
+[ ] **44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications**
+   - Check if `note_links` pattern can be extended or add a generic `entity_links (id, from_type, from_id, to_type, to_id, created_at)` table
+   - Commands: `symptom_link`, `symptom_unlink`, `links_for_symptom`, `medication_link`, `medication_unlink`, `links_for_medication`
+   - Done when: link/unlink round-trip tests pass
+
+[ ] **44.4 — Rust: FTS5 indexing for symptoms and medications**
+   - After create/update of symptom: call `upsert_search_index(conn, id, 'symptom', name + " " + notes)`
+   - After create/update of medication: call `upsert_search_index(conn, id, 'medication', name + " " + notes + " " + dosage)`
+   - After soft-delete: call `upsert_search_index` with empty body (or delete row from `search_index`)
+   - Done when: `SELECT * FROM search_index WHERE entity_type='symptom'` returns rows after symptom creation
+
+[ ] **44.5 — Rust: cargo fmt + clippy + tests**
+   - `cargo fmt --all` ✓
+   - `cargo clippy -- -D warnings` ✓
+   - `cargo test --all` ✓
+   - Done when: all Rust checks green
+
+[ ] **44.6 — Frontend: Symptoms list + create/edit pages**
+   - `src/app/(app)/symptoms/page.tsx` — list view with `symptoms_list`; empty-state "Log your first symptom"
+   - `src/app/(app)/symptoms/new/page.tsx` and `/symptoms/view/[id]/page.tsx` — create/edit form
+   - Fields: name (required), severity (1–10 slider), onset_date (date picker), notes (textarea)
+   - Nav: add "Symptoms" link to sidebar nav
+   - Done when: user can create, view, edit, soft-delete a symptom
+
+[ ] **44.7 — Frontend: Medications list + create/edit pages**
+   - Mirror task 44.6 for medications
+   - Fields: name (required), dosage, frequency, start_date, end_date, notes
+   - Nav: add "Medications" link to sidebar nav
+   - Done when: user can create, view, edit, soft-delete a medication
+
+[ ] **44.8 — Frontend: link symptoms/medications to documents and appointments**
+   - DocumentDetailClient: "Link Symptom" and "Link Medication" buttons → searchable dropdown → `symptom_link` / `medication_link`
+   - AppointmentDetailClient: same pattern
+   - Render linked chips; unlink on ✕
+   - Done when: symptom and medication chips appear on document and appointment detail pages
+
+[ ] **44.9 — Unit tests for Symptoms + Medications frontend**
+   - `src/app/(app)/symptoms/__tests__/symptoms-crud.test.tsx`
+   - `src/app/(app)/medications/__tests__/medications-crud.test.tsx`
+   - Mock `invoke`; assert list renders; assert create calls correct command; assert delete softly removes from list
+   - Done when: `npx vitest run` passes
+
+[ ] **44.10 — E2E spec + pre-commit + commit**
+   - `e2e/symptoms-medications.spec.ts`
+     - TC-SYM-01: create symptom "Headache" severity 7 → appears in list
+     - TC-MED-01: create medication "Ibuprofen 400mg" → appears in list
+     - TC-LINK-01: link symptom to a document → chip visible on document detail
+   - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
+   - Commit: `feat: Symptom and Medication entities — CRUD, linking, FTS5 (Phase 44)`
+
+---
+
+## Phase 45 — Unified Content Search: Documents + Notes + Symptoms + Medications
+
+**Goal:** Expand the content search page (`/content-search`) to return results from all four entity types, grouped by type in the results list, with type-labelled cards that navigate to the correct detail page.
+
+**Done when:** Searching a term returns matching documents, notes, symptoms, and medications; each result card shows the entity type label and links to the correct page; summary bar shows total count across all types.
+
+### Sprint 45
+
+[ ] **45.1 — Rust: expand `content_search` command to include all entity types**
+   - `src-tauri/src/commands/search.rs` (or wherever `content_search` lives)
+   - Change FTS5 query: remove any `entity_type = 'document'` filter; return all matching rows
+   - Return `entity_type` field in each result row
+   - Done when: `cargo test` includes a test that a symptom indexed in `search_index` is returned by `content_search`
+
+[ ] **45.2 — Frontend: update ContentSearchClient to handle multi-type results**
+   - `src/app/(app)/content-search/` — update result rendering
+   - Each result card: show coloured type badge (`Document` / `Note` / `Symptom` / `Medication`)
+   - Link per type: documents → `/documents/view/<id>`, notes → `/notes/view/<id>`, symptoms → `/symptoms/view/<id>`, medications → `/medications/view/<id>`
+   - Group results by entity_type with section headers, or sort by relevance with inline type badge
+   - Done when: searching "ibuprofen" returns medication card; searching "headache" returns symptom card
+
+[ ] **45.3 — Frontend: summary bar shows breakdown by type**
+   - `data-testid="summary-bar"` — update text to e.g. "4 results — 2 Documents, 1 Note, 1 Medication"
+   - Done when: summary bar reflects multi-type counts
+
+[ ] **45.4 — Unit test: multi-type result rendering**
+   - `src/app/(app)/content-search/__tests__/content-search-multi-type.test.tsx`
+   - Mock `invoke('content_search')` returning one result per entity type
+   - Assert 4 cards render; assert type badges present; assert correct hrefs
+   - Done when: `npx vitest run` passes
+
+[ ] **45.5 — E2E spec + pre-commit + commit**
+   - `e2e/content-search-multi-type.spec.ts`
+     - Create note "Annual checkup notes" → search "checkup" → note card visible
+     - Create symptom "Migraine" → search "migraine" → symptom card visible
+     - Create medication "Amoxicillin" → search "amoxicillin" → medication card visible
+   - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
+   - Commit: `feat: unified content search — documents + notes + symptoms + medications (Phase 45)`
