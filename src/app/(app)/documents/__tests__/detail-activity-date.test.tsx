@@ -134,6 +134,10 @@ describe('DocumentDetailClient — activity_date editing (V3-F5)', () => {
       if (cmd === 'links_score_candidates') return Promise.resolve([])
       if (cmd === 'notes_for_entity') return Promise.resolve([])
       if (cmd === 'document_entities_get') return Promise.resolve([])
+      if (cmd === 'symptoms_for_entity') return Promise.resolve([])
+      if (cmd === 'medications_for_entity') return Promise.resolve([])
+      if (cmd === 'symptoms_list') return Promise.resolve([])
+      if (cmd === 'medications_list') return Promise.resolve([])
       return Promise.resolve(undefined)
     })
 

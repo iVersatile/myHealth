@@ -80,9 +80,17 @@ export default function NotesPage() {
       )}
 
       {!loading && notes.length === 0 && (
-        <div className="text-center py-16 text-[var(--color-text-muted)]">
-          <p className="text-lg mb-2">No notes yet</p>
-          <p className="text-sm">Create your first note to get started.</p>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="mb-2 text-[var(--text-base)] font-medium text-[var(--color-text)]">No notes yet</p>
+          <p className="mb-6 max-w-sm text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+            Start capturing clinical observations, symptoms, or follow-up thoughts.
+          </p>
+          <button
+            onClick={() => router.push('/notes/new')}
+            className="px-5 py-2 rounded-[var(--radius-md)] bg-[var(--color-accent)] text-white text-[var(--text-sm)] font-medium hover:opacity-90 transition-opacity"
+          >
+            Create your first note
+          </button>
         </div>
       )}
 
