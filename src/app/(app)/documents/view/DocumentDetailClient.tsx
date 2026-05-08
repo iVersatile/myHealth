@@ -8,6 +8,7 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { Document, CATEGORY_LABELS } from '../../../../store/documentsStore'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 import type { Appointment } from '../../../../store/appointmentsStore'
+import type { Note } from '../../../../store/notesStore'
 import { useToast } from '../../../../hooks/useToast'
 import { Toast } from '../../../../components/shared/Toast'
 
@@ -45,6 +46,30 @@ interface Clinic {
   phone: string | null
   created_at: string
   company_registration_number: string | null
+}
+
+interface Symptom {
+  id: string
+  name: string
+  severity: number | null
+  onset_date: string | null
+  notes: string | null
+  deleted_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface Medication {
+  id: string
+  name: string
+  dosage: string | null
+  frequency: string | null
+  start_date: string | null
+  end_date: string | null
+  notes: string | null
+  deleted_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 function formatBytes(bytes: number): string {
@@ -92,15 +117,23 @@ export default function DocumentDetailClient() {
 
   const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([])
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
-  const [linkedNotes, setLinkedNotes] = useState<Array<{ id: string; title: string }>>([])
+  const [linkedNotes, setLinkedNotes] = useState<Note[]>([])
   const [entities, setEntities] = useState<DocumentEntity[]>([])
+
+  const [linkedSymptoms, setLinkedSymptoms] = useState<Symptom[]>([])
+  const [allSymptoms, setAllSymptoms] = useState<Symptom[]>([])
+  const [selectedSymptomId, setSelectedSymptomId] = useState('')
+
+  const [linkedMedications, setLinkedMedications] = useState<Medication[]>([])
+  const [allMedications, setAllMedications] = useState<Medication[]>([])
+  const [selectedMedicationId, setSelectedMedicationId] = useState('')
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetched, catRows, assignedIds, existingLinks, appts, scored, fetchedNotes, fetchedEntities] = await Promise.all([
+        const [fetched, catRows, assignedIds, existingLinks, appts, scored, fetchedNotes, fetchedEntities, fetchedSymptoms, fetchedMedications, allSym, allMed] = await Promise.all([
           invoke<Document>('documents_get', { id }),
           invoke<
             Array<{
@@ -116,8 +149,12 @@ export default function DocumentDetailClient() {
           invoke<DocumentLink[]>('links_list_for_document', { documentId: id }),
           invoke<Appointment[]>('appointments_list', { month: null, status: null }),
           invoke<LinkSuggestion[]>('links_score_candidates', { documentId: id }),
-          invoke<Array<{ id: string; title: string }>>('notes_for_entity', { entityType: 'document', entityId: id }),
+          invoke<Note[]>('notes_for_entity', { entityType: 'document', entityId: id }),
           invoke<DocumentEntity[]>('document_entities_get', { documentId: id }),
+          invoke<Symptom[]>('symptoms_for_entity', { entityType: 'document', entityId: id }),
+          invoke<Medication[]>('medications_for_entity', { entityType: 'document', entityId: id }),
+          invoke<Symptom[]>('symptoms_list'),
+          invoke<Medication[]>('medications_list'),
         ])
         setDoc(fetched)
         setTags(fetched.tags)
@@ -144,6 +181,10 @@ export default function DocumentDetailClient() {
         setSuggestions(scored)
         setLinkedNotes(fetchedNotes)
         setEntities(fetchedEntities)
+        setLinkedSymptoms(fetchedSymptoms)
+        setLinkedMedications(fetchedMedications)
+        setAllSymptoms(allSym.filter((s) => !s.deleted_at))
+        setAllMedications(allMed.filter((m) => !m.deleted_at))
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -271,6 +312,50 @@ export default function DocumentDetailClient() {
     try {
       await invoke('links_delete', { id: linkId })
       setLinks((prev) => prev.filter((l) => l.id !== linkId))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function handleLinkSymptom() {
+    if (!doc || !selectedSymptomId) return
+    try {
+      await invoke('symptom_link', { symptomId: selectedSymptomId, toType: 'document', toId: doc.id })
+      const refreshed = await invoke<Symptom[]>('symptoms_for_entity', { entityType: 'document', entityId: doc.id })
+      setLinkedSymptoms(refreshed)
+      setSelectedSymptomId('')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function handleUnlinkSymptom(symptomId: string) {
+    if (!doc) return
+    try {
+      await invoke('symptom_unlink', { symptomId, toType: 'document', toId: doc.id })
+      setLinkedSymptoms((prev) => prev.filter((s) => s.id !== symptomId))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function handleLinkMedication() {
+    if (!doc || !selectedMedicationId) return
+    try {
+      await invoke('medication_link', { medicationId: selectedMedicationId, toType: 'document', toId: doc.id })
+      const refreshed = await invoke<Medication[]>('medications_for_entity', { entityType: 'document', entityId: doc.id })
+      setLinkedMedications(refreshed)
+      setSelectedMedicationId('')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function handleUnlinkMedication(medicationId: string) {
+    if (!doc) return
+    try {
+      await invoke('medication_unlink', { medicationId, toType: 'document', toId: doc.id })
+      setLinkedMedications((prev) => prev.filter((m) => m.id !== medicationId))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     }
@@ -517,6 +602,114 @@ export default function DocumentDetailClient() {
             })()}
           </div>
 
+          <div className="mb-4">
+            <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+              Linked Symptoms
+            </p>
+            {linkedSymptoms.length > 0 && (
+              <ul className="mb-2 flex flex-col gap-1">
+                {linkedSymptoms.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between gap-1">
+                    <span className="truncate text-[var(--text-xs)] text-[var(--color-text)]">
+                      {s.name}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Unlink symptom"
+                      onClick={() => void handleUnlinkSymptom(s.id)}
+                      className="shrink-0 text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {(() => {
+              const linkedIds = new Set(linkedSymptoms.map((s) => s.id))
+              const unlinkable = allSymptoms.filter((s) => !linkedIds.has(s.id))
+              if (unlinkable.length === 0) return null
+              return (
+                <div className="flex gap-1">
+                  <select
+                    value={selectedSymptomId}
+                    onChange={(e) => setSelectedSymptomId(e.target.value)}
+                    className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                  >
+                    <option value="">Select symptom…</option>
+                    {unlinkable.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!selectedSymptomId}
+                    onClick={() => void handleLinkSymptom()}
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-sunken)]"
+                  >
+                    Link
+                  </button>
+                </div>
+              )
+            })()}
+          </div>
+
+          <div className="mb-4">
+            <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+              Linked Medications
+            </p>
+            {linkedMedications.length > 0 && (
+              <ul className="mb-2 flex flex-col gap-1">
+                {linkedMedications.map((m) => (
+                  <li key={m.id} className="flex items-center justify-between gap-1">
+                    <span className="truncate text-[var(--text-xs)] text-[var(--color-text)]">
+                      {m.name}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Unlink medication"
+                      onClick={() => void handleUnlinkMedication(m.id)}
+                      className="shrink-0 text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {(() => {
+              const linkedIds = new Set(linkedMedications.map((m) => m.id))
+              const unlinkable = allMedications.filter((m) => !linkedIds.has(m.id))
+              if (unlinkable.length === 0) return null
+              return (
+                <div className="flex gap-1">
+                  <select
+                    value={selectedMedicationId}
+                    onChange={(e) => setSelectedMedicationId(e.target.value)}
+                    className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                  >
+                    <option value="">Select medication…</option>
+                    {unlinkable.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!selectedMedicationId}
+                    onClick={() => void handleLinkMedication()}
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-sunken)]"
+                  >
+                    Link
+                  </button>
+                </div>
+              )
+            })()}
+          </div>
+
           {(() => {
             const linkedIds = new Set(links.map((l) => l.appointment_id))
             const visible = suggestions.filter(
@@ -650,21 +843,46 @@ export default function DocumentDetailClient() {
               Linked Notes
             </p>
             {linkedNotes.length === 0 ? (
-              <p className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">
-                No notes linked yet.
-              </p>
+              <div>
+                <p className="mb-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                  No linked notes yet.
+                </p>
+                <Link
+                  href={`/notes/new?linkedDocumentId=${id}`}
+                  className="text-[var(--text-xs)] text-[var(--color-primary)] hover:underline"
+                >
+                  + Add Note
+                </Link>
+              </div>
             ) : (
-              <ul className="flex flex-col gap-1">
-                {linkedNotes.map((note) => (
-                  <li key={note.id}>
-                    <Link
-                      href={`/notes/view?id=${note.id}`}
-                      className="truncate text-[var(--text-xs)] text-[var(--color-accent)] hover:underline"
-                    >
-                      {note.title || 'Untitled'}
-                    </Link>
-                  </li>
-                ))}
+              <ul className="flex flex-col gap-2">
+                {linkedNotes.map((note) => {
+                  const snippet = (note.content ?? '')
+                    .replace(/<[^>]+>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .slice(0, 80)
+                  return (
+                    <li key={note.id}>
+                      <Link
+                        href={`/notes/view?id=${note.id}`}
+                        className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 hover:border-[var(--color-primary)] transition-colors duration-[var(--duration-fast)]"
+                      >
+                        <p className="truncate text-[var(--text-xs)] font-medium text-[var(--color-text)]">
+                          {note.title || 'Untitled'}
+                        </p>
+                        {snippet && (
+                          <p className="mt-0.5 line-clamp-2 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                            {snippet}
+                          </p>
+                        )}
+                        <p className="mt-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                          {new Date(note.created_at).toLocaleDateString()}
+                        </p>
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>

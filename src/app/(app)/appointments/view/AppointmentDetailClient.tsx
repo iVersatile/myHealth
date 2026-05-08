@@ -9,6 +9,7 @@ import { CATEGORY_LABELS } from '../../../../store/documentsStore'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 import { AppointmentForm } from '../../../../components/appointments/AppointmentForm'
 import { AppointmentInput } from '../../../../hooks/useAppointments'
+import type { Note } from '../../../../store/notesStore'
 
 interface LinkedDocument {
   document_id: string
@@ -17,6 +18,30 @@ interface LinkedDocument {
   document_date: string | null
   score: number
   created_at: string
+}
+
+interface Symptom {
+  id: string
+  name: string
+  severity: number | null
+  onset_date: string | null
+  notes: string | null
+  deleted_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface Medication {
+  id: string
+  name: string
+  dosage: string | null
+  frequency: string | null
+  start_date: string | null
+  end_date: string | null
+  notes: string | null
+  deleted_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 function formatDate(iso: string): string {
@@ -48,7 +73,15 @@ export default function AppointmentDetailClient() {
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
 
-  const [linkedNotes, setLinkedNotes] = useState<Array<{ id: string; title: string }>>([])
+  const [linkedNotes, setLinkedNotes] = useState<Note[]>([])
+
+  const [linkedSymptoms, setLinkedSymptoms] = useState<Symptom[]>([])
+  const [allSymptoms, setAllSymptoms] = useState<Symptom[]>([])
+  const [selectedSymptomId, setSelectedSymptomId] = useState('')
+
+  const [linkedMedications, setLinkedMedications] = useState<Medication[]>([])
+  const [allMedications, setAllMedications] = useState<Medication[]>([])
+  const [selectedMedicationId, setSelectedMedicationId] = useState('')
 
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -76,18 +109,26 @@ export default function AppointmentDetailClient() {
       setLoading(true)
       setError(null)
       try {
-        const [fetchedAppt, fetchedLinks, catRows, assignedIds, fetchedTags, fetchedNotes] = await Promise.all([
+        const [fetchedAppt, fetchedLinks, catRows, assignedIds, fetchedTags, fetchedNotes, fetchedSymptoms, fetchedMedications, allSym, allMed] = await Promise.all([
           invoke<Appointment>('appointments_get', { id }),
           invoke<LinkedDocument[]>('get_appointment_links', { userId: '', appointmentId: id }),
           invoke<Array<{ id: string; name: string; parent_id: string | null; color_hex: string; is_system: boolean; sort_order: number }>>('categories_list'),
           invoke<string[]>('categories_for_appointment', { appointmentId: id }),
           invoke<string[]>('appointment_tags_get', { appointmentId: id }),
-          invoke<Array<{ id: string; title: string }>>('notes_for_entity', { entityType: 'appointment', entityId: id }),
+          invoke<Note[]>('notes_for_entity', { entityType: 'appointment', entityId: id }),
+          invoke<Symptom[]>('symptoms_for_entity', { entityType: 'appointment', entityId: id }),
+          invoke<Medication[]>('medications_for_entity', { entityType: 'appointment', entityId: id }),
+          invoke<Symptom[]>('symptoms_list'),
+          invoke<Medication[]>('medications_list'),
         ])
         setAppt(fetchedAppt)
         setLinkedDocs(fetchedLinks)
         setSavedTags(fetchedTags)
         setLinkedNotes(fetchedNotes)
+        setLinkedSymptoms(fetchedSymptoms)
+        setLinkedMedications(fetchedMedications)
+        setAllSymptoms(allSym.filter((s) => !s.deleted_at))
+        setAllMedications(allMed.filter((m) => !m.deleted_at))
         setAllCategories(catRows.map(r => ({
           id: r.id,
           name: r.name,
@@ -105,6 +146,48 @@ export default function AppointmentDetailClient() {
     }
     void load()
   }, [id])
+
+  async function handleLinkSymptom() {
+    if (!selectedSymptomId) return
+    try {
+      await invoke('symptom_link', { symptomId: selectedSymptomId, toType: 'appointment', toId: id })
+      const refreshed = await invoke<Symptom[]>('symptoms_for_entity', { entityType: 'appointment', entityId: id })
+      setLinkedSymptoms(refreshed)
+      setSelectedSymptomId('')
+    } catch (e) {
+      setError(String(e))
+    }
+  }
+
+  async function handleUnlinkSymptom(symptomId: string) {
+    try {
+      await invoke('symptom_unlink', { symptomId, toType: 'appointment', toId: id })
+      setLinkedSymptoms((prev) => prev.filter((s) => s.id !== symptomId))
+    } catch (e) {
+      setError(String(e))
+    }
+  }
+
+  async function handleLinkMedication() {
+    if (!selectedMedicationId) return
+    try {
+      await invoke('medication_link', { medicationId: selectedMedicationId, toType: 'appointment', toId: id })
+      const refreshed = await invoke<Medication[]>('medications_for_entity', { entityType: 'appointment', entityId: id })
+      setLinkedMedications(refreshed)
+      setSelectedMedicationId('')
+    } catch (e) {
+      setError(String(e))
+    }
+  }
+
+  async function handleUnlinkMedication(medicationId: string) {
+    try {
+      await invoke('medication_unlink', { medicationId, toType: 'appointment', toId: id })
+      setLinkedMedications((prev) => prev.filter((m) => m.id !== medicationId))
+    } catch (e) {
+      setError(String(e))
+    }
+  }
 
   async function handleUnlink(documentId: string) {
     setUnlinking(documentId)
@@ -512,24 +595,163 @@ export default function AppointmentDetailClient() {
             </span>
           )}
         </h2>
-        {linkedNotes.length === 0 ? (
-          <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">
-            No notes linked yet. Open a note and link it to this appointment.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {linkedNotes.map((note) => (
-              <li key={note.id}>
-                <Link
-                  href={`/notes/view?id=${note.id}`}
-                  className="block rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-[var(--text-sm)] font-medium text-[var(--color-accent)] hover:underline"
+        <div className="mb-4">
+          {linkedNotes.length === 0 ? (
+            <div>
+              <p className="mb-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                No linked notes yet.
+              </p>
+              <Link
+                href={`/notes/new?linkedAppointmentId=${id}`}
+                className="text-[var(--text-xs)] text-[var(--color-primary)] hover:underline"
+              >
+                + Add Note
+              </Link>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {linkedNotes.map((note) => {
+                const snippet = (note.content ?? '')
+                  .replace(/<[^>]+>/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                  .slice(0, 80)
+                return (
+                  <li key={note.id}>
+                    <Link
+                      href={`/notes/view?id=${note.id}`}
+                      className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 hover:border-[var(--color-primary)] transition-colors duration-[var(--duration-fast)]"
+                    >
+                      <p className="truncate text-[var(--text-xs)] font-medium text-[var(--color-text)]">
+                        {note.title || 'Untitled'}
+                      </p>
+                      {snippet && (
+                        <p className="mt-0.5 line-clamp-2 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                          {snippet}
+                        </p>
+                      )}
+                      <p className="mt-1 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                        {new Date(note.created_at).toLocaleDateString()}
+                      </p>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* Linked symptoms */}
+      <section aria-label="Linked symptoms">
+        <h2 className="mb-3 text-[var(--text-lg)] font-semibold text-[var(--color-text)]">
+          Linked Symptoms
+          {linkedSymptoms.length > 0 && (
+            <span className="ml-2 text-[var(--text-sm)] font-normal text-[var(--color-text-secondary)]">
+              ({linkedSymptoms.length})
+            </span>
+          )}
+        </h2>
+        {linkedSymptoms.length > 0 && (
+          <ul className="mb-2 flex flex-col gap-1">
+            {linkedSymptoms.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-1">
+                <span className="truncate text-[var(--text-sm)] text-[var(--color-text)]">{s.name}</span>
+                <button
+                  type="button"
+                  aria-label="Unlink symptom"
+                  onClick={() => void handleUnlinkSymptom(s.id)}
+                  className="shrink-0 text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]"
                 >
-                  {note.title || 'Untitled'}
-                </Link>
+                  ✕
+                </button>
               </li>
             ))}
           </ul>
         )}
+        {(() => {
+          const linkedIds = new Set(linkedSymptoms.map((s) => s.id))
+          const unlinkable = allSymptoms.filter((s) => !linkedIds.has(s.id))
+          if (unlinkable.length === 0) return null
+          return (
+            <div className="flex gap-1">
+              <select
+                value={selectedSymptomId}
+                onChange={(e) => setSelectedSymptomId(e.target.value)}
+                className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+              >
+                <option value="">Select symptom…</option>
+                {unlinkable.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!selectedSymptomId}
+                onClick={() => void handleLinkSymptom()}
+                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-sunken)]"
+              >
+                Link
+              </button>
+            </div>
+          )
+        })()}
+      </section>
+
+      {/* Linked medications */}
+      <section aria-label="Linked medications">
+        <h2 className="mb-3 text-[var(--text-lg)] font-semibold text-[var(--color-text)]">
+          Linked Medications
+          {linkedMedications.length > 0 && (
+            <span className="ml-2 text-[var(--text-sm)] font-normal text-[var(--color-text-secondary)]">
+              ({linkedMedications.length})
+            </span>
+          )}
+        </h2>
+        {linkedMedications.length > 0 && (
+          <ul className="mb-2 flex flex-col gap-1">
+            {linkedMedications.map((m) => (
+              <li key={m.id} className="flex items-center justify-between gap-1">
+                <span className="truncate text-[var(--text-sm)] text-[var(--color-text)]">{m.name}</span>
+                <button
+                  type="button"
+                  aria-label="Unlink medication"
+                  onClick={() => void handleUnlinkMedication(m.id)}
+                  className="shrink-0 text-[var(--text-xs)] text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {(() => {
+          const linkedIds = new Set(linkedMedications.map((m) => m.id))
+          const unlinkable = allMedications.filter((m) => !linkedIds.has(m.id))
+          if (unlinkable.length === 0) return null
+          return (
+            <div className="flex gap-1">
+              <select
+                value={selectedMedicationId}
+                onChange={(e) => setSelectedMedicationId(e.target.value)}
+                className="min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+              >
+                <option value="">Select medication…</option>
+                {unlinkable.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!selectedMedicationId}
+                onClick={() => void handleLinkMedication()}
+                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-[var(--text-xs)] text-[var(--color-text)] disabled:opacity-40 hover:bg-[var(--color-surface-sunken)]"
+              >
+                Link
+              </button>
+            </div>
+          )
+        })()}
       </section>
 
       {/* Linked documents */}
