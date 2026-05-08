@@ -21,6 +21,9 @@
       notes: [],
       categories: [],
       trash: [],
+      symptoms: [],
+      medications: [],
+      entity_links: [],
     };
   }
 
@@ -984,6 +987,178 @@
       const doc = state.documents.find((d) => d.id === docId);
       const entities = (doc?._entities || []).map((e) => ({ ...e, document_id: docId }));
       return Promise.resolve(entities);
+    }
+
+    // ------------------------------------------------------------------
+    // Symptoms
+    // ------------------------------------------------------------------
+    if (cmd === 'symptoms_list') {
+      return Promise.resolve(state.symptoms.filter((s) => !s.deleted_at));
+    }
+
+    if (cmd === 'symptoms_create') {
+      const input = args?.input || args;
+      const s = {
+        id: uid(),
+        name: input?.name || '',
+        severity: input?.severity ?? null,
+        onset_date: input?.onset_date || null,
+        notes: input?.notes || null,
+        deleted_at: null,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+      };
+      if (!state.symptoms) state.symptoms = [];
+      state.symptoms.push(s);
+      saveState(state);
+      return Promise.resolve(s);
+    }
+
+    if (cmd === 'symptoms_get') {
+      const id = args?.id;
+      const s = (state.symptoms || []).find((x) => x.id === id);
+      return s ? Promise.resolve(s) : Promise.reject(new Error('Symptom not found'));
+    }
+
+    if (cmd === 'symptoms_update') {
+      const id = args?.id;
+      const input = args?.input || {};
+      const idx = (state.symptoms || []).findIndex((x) => x.id === id);
+      if (idx >= 0) {
+        state.symptoms[idx] = { ...state.symptoms[idx], ...input, id, updated_at: nowIso() };
+        saveState(state);
+        return Promise.resolve(state.symptoms[idx]);
+      }
+      return Promise.reject(new Error('Symptom not found'));
+    }
+
+    if (cmd === 'symptoms_delete') {
+      const id = args?.id;
+      const idx = (state.symptoms || []).findIndex((x) => x.id === id);
+      if (idx >= 0) {
+        state.symptoms[idx].deleted_at = nowIso();
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'symptoms_for_entity') {
+      const { entityType, entityId } = args || {};
+      const links = (state.entity_links || []).filter(
+        (l) => l.from_type === 'symptom' && l.to_type === entityType && l.to_id === entityId
+      );
+      const ids = links.map((l) => l.from_id);
+      const result = (state.symptoms || []).filter((s) => ids.includes(s.id) && !s.deleted_at);
+      return Promise.resolve(result);
+    }
+
+    if (cmd === 'symptom_link') {
+      const { symptomId, toType, toId } = args || {};
+      if (!state.entity_links) state.entity_links = [];
+      const already = state.entity_links.find(
+        (l) => l.from_type === 'symptom' && l.from_id === symptomId && l.to_type === toType && l.to_id === toId
+      );
+      if (!already) {
+        state.entity_links.push({ id: uid(), from_type: 'symptom', from_id: symptomId, to_type: toType, to_id: toId });
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'symptom_unlink') {
+      const { symptomId, toType, toId } = args || {};
+      state.entity_links = (state.entity_links || []).filter(
+        (l) => !(l.from_type === 'symptom' && l.from_id === symptomId && l.to_type === toType && l.to_id === toId)
+      );
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    // ------------------------------------------------------------------
+    // Medications
+    // ------------------------------------------------------------------
+    if (cmd === 'medications_list') {
+      return Promise.resolve((state.medications || []).filter((m) => !m.deleted_at));
+    }
+
+    if (cmd === 'medications_create') {
+      const input = args?.input || args;
+      const m = {
+        id: uid(),
+        name: input?.name || '',
+        dosage: input?.dosage || null,
+        frequency: input?.frequency || null,
+        start_date: input?.start_date || null,
+        end_date: input?.end_date || null,
+        notes: input?.notes || null,
+        deleted_at: null,
+        created_at: nowIso(),
+        updated_at: nowIso(),
+      };
+      if (!state.medications) state.medications = [];
+      state.medications.push(m);
+      saveState(state);
+      return Promise.resolve(m);
+    }
+
+    if (cmd === 'medications_get') {
+      const id = args?.id;
+      const m = (state.medications || []).find((x) => x.id === id);
+      return m ? Promise.resolve(m) : Promise.reject(new Error('Medication not found'));
+    }
+
+    if (cmd === 'medications_update') {
+      const id = args?.id;
+      const input = args?.input || {};
+      const idx = (state.medications || []).findIndex((x) => x.id === id);
+      if (idx >= 0) {
+        state.medications[idx] = { ...state.medications[idx], ...input, id, updated_at: nowIso() };
+        saveState(state);
+        return Promise.resolve(state.medications[idx]);
+      }
+      return Promise.reject(new Error('Medication not found'));
+    }
+
+    if (cmd === 'medications_delete') {
+      const id = args?.id;
+      const idx = (state.medications || []).findIndex((x) => x.id === id);
+      if (idx >= 0) {
+        state.medications[idx].deleted_at = nowIso();
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'medications_for_entity') {
+      const { entityType, entityId } = args || {};
+      const links = (state.entity_links || []).filter(
+        (l) => l.from_type === 'medication' && l.to_type === entityType && l.to_id === entityId
+      );
+      const ids = links.map((l) => l.from_id);
+      const result = (state.medications || []).filter((m) => ids.includes(m.id) && !m.deleted_at);
+      return Promise.resolve(result);
+    }
+
+    if (cmd === 'medication_link') {
+      const { medicationId, toType, toId } = args || {};
+      if (!state.entity_links) state.entity_links = [];
+      const already = state.entity_links.find(
+        (l) => l.from_type === 'medication' && l.from_id === medicationId && l.to_type === toType && l.to_id === toId
+      );
+      if (!already) {
+        state.entity_links.push({ id: uid(), from_type: 'medication', from_id: medicationId, to_type: toType, to_id: toId });
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'medication_unlink') {
+      const { medicationId, toType, toId } = args || {};
+      state.entity_links = (state.entity_links || []).filter(
+        (l) => !(l.from_type === 'medication' && l.from_id === medicationId && l.to_type === toType && l.to_id === toId)
+      );
+      saveState(state);
+      return Promise.resolve(null);
     }
 
     // Unknown command — log and resolve null

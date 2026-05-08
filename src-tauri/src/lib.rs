@@ -50,8 +50,8 @@ use commands::documents::{
     documents_update, documents_upload,
 };
 use commands::entity_links::{
-    links_for_medication, links_for_symptom, medication_link, medication_unlink, symptom_link,
-    symptom_unlink,
+    links_for_medication, links_for_symptom, medication_link, medication_unlink,
+    medications_for_entity, symptom_link, symptom_unlink, symptoms_for_entity,
 };
 use commands::export::{export_pdf_bundle, export_pdf_summary_bytes, export_save_bytes};
 use commands::links::{
@@ -287,6 +287,7 @@ pub fn run() {
             symptom_link,
             symptom_unlink,
             links_for_symptom,
+            symptoms_for_entity,
             medications_list,
             medications_get,
             medications_create,
@@ -296,6 +297,7 @@ pub fn run() {
             medication_link,
             medication_unlink,
             links_for_medication,
+            medications_for_entity,
             trash_list,
             trash_restore,
             trash_hard_delete,

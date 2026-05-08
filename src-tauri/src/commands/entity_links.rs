@@ -1,3 +1,5 @@
+use crate::commands::medications::Medication;
+use crate::commands::symptoms::Symptom;
 use crate::commands::AppState;
 use crate::commands::{CommandContext, CommandError};
 use rusqlite::params;
@@ -145,6 +147,70 @@ pub fn links_for_medication(
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     list_links(conn, "medication", &medication_id)
+}
+
+#[tauri::command]
+pub fn symptoms_for_entity(
+    entity_type: String,
+    entity_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<Symptom>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let mut stmt = conn.prepare(
+        "SELECT s.id, s.name, s.severity, s.onset_date, s.notes, s.deleted_at, s.created_at, s.updated_at
+         FROM symptoms s
+         INNER JOIN entity_links el ON el.from_type = 'symptom' AND el.from_id = s.id
+         WHERE el.to_type = ?1 AND el.to_id = ?2
+         ORDER BY el.created_at ASC",
+    )?;
+    let rows = stmt.query_map(params![entity_type, entity_id], |row| {
+        Ok(Symptom {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            severity: row.get(2)?,
+            onset_date: row.get(3)?,
+            notes: row.get(4)?,
+            deleted_at: row.get(5)?,
+            created_at: row.get(6)?,
+            updated_at: row.get(7)?,
+        })
+    })?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(CommandError::from)
+}
+
+#[tauri::command]
+pub fn medications_for_entity(
+    entity_type: String,
+    entity_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<Medication>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let mut stmt = conn.prepare(
+        "SELECT m.id, m.name, m.dosage, m.frequency, m.start_date, m.end_date, m.notes, m.deleted_at, m.created_at, m.updated_at
+         FROM medications m
+         INNER JOIN entity_links el ON el.from_type = 'medication' AND el.from_id = m.id
+         WHERE el.to_type = ?1 AND el.to_id = ?2
+         ORDER BY el.created_at ASC",
+    )?;
+    let rows = stmt.query_map(params![entity_type, entity_id], |row| {
+        Ok(Medication {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            dosage: row.get(2)?,
+            frequency: row.get(3)?,
+            start_date: row.get(4)?,
+            end_date: row.get(5)?,
+            notes: row.get(6)?,
+            deleted_at: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
+        })
+    })?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(CommandError::from)
 }
 
 #[cfg(test)]
