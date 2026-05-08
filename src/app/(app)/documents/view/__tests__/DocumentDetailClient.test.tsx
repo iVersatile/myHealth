@@ -943,3 +943,310 @@ describe('DocumentDetailClient — extracted text section', () => {
     expect(screen.queryByText('Extracted Text')).toBeNull()
   })
 })
+
+const makeSymptom = (overrides = {}) => ({
+  id: 'sym-1',
+  name: 'Headache',
+  severity: null,
+  onset_date: null,
+  notes: null,
+  deleted_at: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+})
+
+const makeMedication = (overrides = {}) => ({
+  id: 'med-1',
+  name: 'Ibuprofen',
+  dosage: null,
+  frequency: null,
+  start_date: null,
+  end_date: null,
+  notes: null,
+  deleted_at: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+})
+
+function setupInvokeWithSymptoms(symptoms = [makeSymptom()], linkedSymptoms: typeof symptoms = []) {
+  mockInvoke.mockImplementation((cmd: string) => {
+    if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+    if (cmd === 'categories_list') return Promise.resolve([])
+    if (cmd === 'categories_for_document') return Promise.resolve([])
+    if (cmd === 'links_list_for_document') return Promise.resolve([])
+    if (cmd === 'appointments_list') return Promise.resolve([])
+    if (cmd === 'links_score_candidates') return Promise.resolve([])
+    if (cmd === 'notes_for_entity') return Promise.resolve([])
+    if (cmd === 'document_entities_get') return Promise.resolve([])
+    if (cmd === 'symptoms_for_entity') return Promise.resolve(linkedSymptoms)
+    if (cmd === 'medications_for_entity') return Promise.resolve([])
+    if (cmd === 'symptoms_list') return Promise.resolve(symptoms)
+    if (cmd === 'medications_list') return Promise.resolve([])
+    return Promise.resolve(undefined)
+  })
+}
+
+function setupInvokeWithMedications(medications = [makeMedication()], linkedMedications: typeof medications = []) {
+  mockInvoke.mockImplementation((cmd: string) => {
+    if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+    if (cmd === 'categories_list') return Promise.resolve([])
+    if (cmd === 'categories_for_document') return Promise.resolve([])
+    if (cmd === 'links_list_for_document') return Promise.resolve([])
+    if (cmd === 'appointments_list') return Promise.resolve([])
+    if (cmd === 'links_score_candidates') return Promise.resolve([])
+    if (cmd === 'notes_for_entity') return Promise.resolve([])
+    if (cmd === 'document_entities_get') return Promise.resolve([])
+    if (cmd === 'symptoms_for_entity') return Promise.resolve([])
+    if (cmd === 'medications_for_entity') return Promise.resolve(linkedMedications)
+    if (cmd === 'symptoms_list') return Promise.resolve([])
+    if (cmd === 'medications_list') return Promise.resolve(medications)
+    return Promise.resolve(undefined)
+  })
+}
+
+describe('DocumentDetailClient — symptom linking', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+    mockConfirm.mockResolvedValue(false)
+  })
+
+  it('shows symptom select when unlinkable symptoms exist', async () => {
+    setupInvokeWithSymptoms()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Select symptom…')).toBeTruthy()
+    expect(screen.getByText('Headache')).toBeTruthy()
+  })
+
+  it('calls symptom_link with correct args on Link click', async () => {
+    setupInvokeWithSymptoms()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const select = screen.getByText('Select symptom…').closest('select')!
+    fireEvent.change(select, { target: { value: 'sym-1' } })
+
+    const linkBtn = screen.getAllByRole('button', { name: 'Link' }).find(
+      (b) => b.closest('div')?.querySelector('select')
+    )!
+    fireEvent.click(linkBtn)
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('symptom_link', {
+        symptomId: 'sym-1',
+        toType: 'document',
+        toId: 'doc-1',
+      })
+    )
+  })
+
+  it('shows linked symptom name and unlink button', async () => {
+    setupInvokeWithSymptoms([makeSymptom({ id: 'sym-2', name: 'Fatigue' })], [makeSymptom({ id: 'sym-2', name: 'Fatigue' })])
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Fatigue')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Unlink symptom' })).toBeTruthy()
+  })
+
+  it('calls symptom_unlink when ✕ button clicked', async () => {
+    setupInvokeWithSymptoms(
+      [makeSymptom({ id: 'sym-1', name: 'Headache' })],
+      [makeSymptom({ id: 'sym-1', name: 'Headache' })]
+    )
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    mockInvoke.mockResolvedValueOnce(undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink symptom' }))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('symptom_unlink', {
+        symptomId: 'sym-1',
+        toType: 'document',
+        toId: 'doc-1',
+      })
+    )
+  })
+})
+
+describe('DocumentDetailClient — medication linking', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+    mockConfirm.mockResolvedValue(false)
+  })
+
+  it('shows medication select when unlinkable medications exist', async () => {
+    setupInvokeWithMedications()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Select medication…')).toBeTruthy()
+    expect(screen.getByText('Ibuprofen')).toBeTruthy()
+  })
+
+  it('calls medication_link with correct args on Link click', async () => {
+    setupInvokeWithMedications()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const select = screen.getByText('Select medication…').closest('select')!
+    fireEvent.change(select, { target: { value: 'med-1' } })
+
+    const linkBtn = screen.getAllByRole('button', { name: 'Link' }).find(
+      (b) => b.closest('div')?.querySelector('select')
+    )!
+    fireEvent.click(linkBtn)
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('medication_link', {
+        medicationId: 'med-1',
+        toType: 'document',
+        toId: 'doc-1',
+      })
+    )
+  })
+
+  it('shows linked medication name and unlink button', async () => {
+    setupInvokeWithMedications(
+      [makeMedication({ id: 'med-2', name: 'Aspirin' })],
+      [makeMedication({ id: 'med-2', name: 'Aspirin' })]
+    )
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Aspirin')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Unlink medication' })).toBeTruthy()
+  })
+
+  it('calls medication_unlink when ✕ button clicked', async () => {
+    setupInvokeWithMedications(
+      [makeMedication({ id: 'med-1', name: 'Ibuprofen' })],
+      [makeMedication({ id: 'med-1', name: 'Ibuprofen' })]
+    )
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    mockInvoke.mockResolvedValueOnce(undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink medication' }))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('medication_unlink', {
+        medicationId: 'med-1',
+        toType: 'document',
+        toId: 'doc-1',
+      })
+    )
+  })
+})
+
+describe('DocumentDetailClient — symptom error paths', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+    mockConfirm.mockResolvedValue(false)
+  })
+
+  it('shows error when symptom_link rejects', async () => {
+    setupInvokeWithSymptoms()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const select = screen.getByText('Select symptom…').closest('select')!
+    fireEvent.change(select, { target: { value: 'sym-1' } })
+
+    mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('sym link failed')))
+    const linkBtn = screen.getAllByRole('button', { name: 'Link' }).find(
+      (b) => b.closest('div')?.querySelector('select')
+    )!
+    fireEvent.click(linkBtn)
+
+    await waitFor(() => expect(screen.getByText('sym link failed')).toBeTruthy())
+  })
+
+  it('shows error when symptom_unlink rejects', async () => {
+    setupInvokeWithSymptoms([makeSymptom()], [makeSymptom()])
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('sym unlink failed')))
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink symptom' }))
+
+    await waitFor(() => expect(screen.getByText('sym unlink failed')).toBeTruthy())
+  })
+})
+
+describe('DocumentDetailClient — medication error paths', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+    mockConfirm.mockResolvedValue(false)
+  })
+
+  it('shows error when medication_link rejects', async () => {
+    setupInvokeWithMedications()
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    const select = screen.getByText('Select medication…').closest('select')!
+    fireEvent.change(select, { target: { value: 'med-1' } })
+
+    mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('link failed')))
+    const linkBtn = screen.getAllByRole('button', { name: 'Link' }).find(
+      (b) => b.closest('div')?.querySelector('select')
+    )!
+    fireEvent.click(linkBtn)
+
+    await waitFor(() => expect(screen.getByText('link failed')).toBeTruthy())
+  })
+
+  it('shows error when medication_unlink rejects', async () => {
+    setupInvokeWithMedications([makeMedication()], [makeMedication()])
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+
+    mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('unlink failed')))
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink medication' }))
+
+    await waitFor(() => expect(screen.getByText('unlink failed')).toBeTruthy())
+  })
+})
+
+describe('DocumentDetailClient — uncovered branches', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+    mockConfirm.mockResolvedValue(false)
+    setupInvoke()
+  })
+
+  it('updates notes state when textarea value changes', async () => {
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    const textarea = screen.getByPlaceholderText('Add notes…')
+    fireEvent.change(textarea, { target: { value: 'new note text' } })
+    expect((textarea as HTMLTextAreaElement).value).toBe('new note text')
+  })
+
+  it('navigates to new note page when + Add Note clicked', async () => {
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: '+ Add Note' }))
+    expect(mockRouterPush).toHaveBeenCalledWith('/notes/new?linkedDocumentId=doc-1')
+  })
+
+  it('calls documents_get_file_url when Open in Finder clicked', async () => {
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    fireEvent.click(screen.getByText('↓ Open in Finder'))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('documents_get_file_url', { id: 'doc-1' })
+    )
+  })
+})
