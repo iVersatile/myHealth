@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 41 — E2E Gap Closing
-Task:  41.7 — E2E spec: Gap 6 — Auto-archive show/hide toggle
+Phase: 42 — Content Search Bug Fix
+Task: 42.1 — Diagnose FTS5 registration form miss
 ```
 
 ---
@@ -507,7 +507,7 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - Clear filter → both visible again
    - Done when: `npx playwright test e2e/gap5-category-filter.spec.ts` passes
 
-▶ **41.7 — E2E spec: Gap 6 — Auto-archive show/hide toggle**
+[x] **41.7 — E2E spec: Gap 6 — Auto-archive show/hide toggle**
    - File: `e2e/gap6-auto-archive.spec.ts`
    - Create a category with 0 documents (or rely on existing auto-archive logic)
    - Navigate to `/clinics` or `/categories` page; assert archived category hidden by default
@@ -515,8 +515,49 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - Add `data-testid="show-archived-toggle"` if missing (check `src/app/(app)/clinics/page.tsx`)
    - Done when: `npx playwright test e2e/gap6-auto-archive.spec.ts` passes
 
-[ ] **41.8 — Full suite run + pre-commit checks + commit**
+[x] **41.8 — Full suite run + pre-commit checks + commit**
    - `npx playwright test` — all pass, exit 0
    - `npx tsc --noEmit`
    - Push to `origin/develop`; confirm CI green
    - Commit: `test: E2E gap closing — Extracted Text, Extracted Info, Content Search, Trash, category filter, auto-archive (Phase 41)`
+
+---
+
+## Phase 42 — Content Search Bug Fix: Registration Form Not Returned
+
+**Manual test feedback (2026-05-08):**
+Searching "Registration Form" or "registration" returns no results even though a registration form PDF was uploaded.
+
+**Expected:** FTS5 content search returns the registration form document when queried with "registration".
+
+**Root cause hypothesis:** FTS5 `documents_fts` may not cover `extracted_text`, or `extracted_text` is NULL for registration form documents (OCR pipeline may not run / may fail silently for this document type).
+
+**Done when:**
+- Searching "registration" returns the registration form document
+- E2E test passes: upload registration form PDF → content search "registration" → result card visible
+
+### Sprint 42
+
+▶ **42.1 — Diagnose: check FTS5 index and extracted_text population**
+   - Read `src-tauri/src/db/migrations.rs` — confirm `extracted_text` is in `documents_fts` column list
+   - Read `src-tauri/src/commands/documents.rs` — confirm `documents_content_search` (or `documents_search`) queries `extracted_text` via FTS5
+   - Check OCR pipeline path: does it run for all document types or only certain ones?
+   - Hypothesis: registration forms may be type-tagged early and skip OCR, OR `extracted_text` is written but not indexed in FTS5
+   - Done when: root cause identified; note findings in 42.2
+
+[ ] **42.2 — Fix: ensure FTS5 indexes extracted_text and OCR runs for registration forms**
+   - If FTS5 column missing: add `extracted_text` to virtual table via new migration
+   - If OCR skipped for registration type: remove type guard so all document types go through OCR
+   - If FTS5 not populated on insert: fix the trigger or re-index call after `extracted_text` is written
+   - Done when: `cargo test` passes with a fixture document that has "registration" in `extracted_text` and is returned by content search
+
+[ ] **42.3 — E2E test: content search returns registration form**
+   - File: `e2e/content-search-registration.spec.ts`
+   - Use fixture `src-tauri/tests/fixtures/medical-invoice.pdf` or add a registration form fixture if needed
+   - Flow: upload PDF with "registration" in OCR text → navigate to Content Search → type "registration" → assert result card with document title is visible
+   - Done when: `npx playwright test e2e/content-search-registration.spec.ts` passes
+
+[ ] **42.4 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `fix: content search returns registration form documents via FTS5 (Phase 42)`
