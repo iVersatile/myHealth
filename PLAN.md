@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Task 39.3 complete. Next: 39.4 — Pre-commit checks + commit.
+Task 40.2 complete. Next: Task 40.3 — Wire entity extraction into OCR pipeline.
 ```
 
 ---
@@ -378,7 +378,7 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - E2E: upload 2 docs with "hypertension" in OCR text at different dates → search → 2 cards chronological → summary count 2
    - Done when: all tests pass
 
-▶ [ ] **39.4 — Pre-commit checks + commit**
+[x] **39.4 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: cross-document content search with timeline grouping (Gap 2)`
@@ -397,11 +397,11 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
 
 ### Sprint 40
 
-[ ] **40.1 — DB migration: `document_entities` table**
+[x] **40.1 — DB migration: `document_entities` table**
    - Columns: `id, document_id, entity_type (medication|diagnosis|lab_value|referral), name, value, unit, raw_text, created_at`
    - Done when: migration runs cleanly; `cargo test` passes
 
-[ ] **40.2 — Rust entity extraction module (regex-based, conservative)**
+[x] **40.2 — Rust entity extraction module (regex-based, conservative)**
    - New module `src-tauri/src/extraction/entities.rs`
    - Medication: `Lisinopril 10mg`, `metformin 500 mg` patterns
    - Diagnosis: after "Diagnosis:", "Assessment:", "Impression:" labels
@@ -410,7 +410,7 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
    - Conservative — prefer false negatives; empty result is fine
    - Done when: `cargo test` passes with fixture texts for each entity type
 
-[ ] **40.3 — Wire extraction into OCR pipeline for ALL document types**
+▶ **40.3 — Wire extraction into OCR pipeline for ALL document types**
    - After `extracted_text` written to `documents`, call entity extraction → INSERT into `document_entities`
    - Done when: uploading any PDF with recognisable text populates `document_entities`
 
