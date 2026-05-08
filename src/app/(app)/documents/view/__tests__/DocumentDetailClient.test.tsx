@@ -855,3 +855,26 @@ describe('DocumentDetailClient — unlink error path', () => {
     )
   })
 })
+
+describe('DocumentDetailClient — extracted text section', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockRouterPush.mockClear()
+  })
+
+  it('shows Extracted Text section when extracted_text is present', async () => {
+    setupInvoke({ extracted_text: 'Invoice total: £120.00\nDate: 01 Jan 2026' })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByText('Extracted Text')).toBeTruthy()
+    expect(screen.getByText(/Invoice total/)).toBeTruthy()
+  })
+
+  it('hides Extracted Text section when extracted_text is null', async () => {
+    setupInvoke({ extracted_text: null })
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.queryByText('Extracted Text')).toBeNull()
+  })
+})

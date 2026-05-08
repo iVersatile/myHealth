@@ -16,6 +16,7 @@ export interface Document {
   activity_date: string | null
   tags: string[]
   clinic_name: string | null
+  extracted_text?: string | null
 }
 
 export type DocumentCategory =

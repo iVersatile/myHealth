@@ -7,7 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Task 37.3 complete. Next: Task 38.1 — Extracted text surface.
+Task 38.4 complete. Next: Task 38.5 — Unit tests for extracted_text UI and Notes auto-tag.
 ```
 
 ---
@@ -315,28 +315,28 @@ Three interlocking features that turn raw OCR text (`extracted_text`) into searc
 
 ### Sprint 38
 
-▶ [ ] **38.1 — Verify FTS5 index covers `extracted_text`**
+[x] **38.1 — Verify FTS5 index covers `extracted_text`**
    - Read `src-tauri/src/db/migrations.rs`; find the `documents_fts` virtual table definition
    - If `extracted_text` is not in the FTS5 column list, add it in a new migration
    - Done when: `cargo test` passes and FTS search returns hits from `extracted_text`
 
-[ ] **38.2 — Extend `documents_search` to search `extracted_text`**
+[x] **38.2 — Extend `documents_search` to search `extracted_text`**
    - `src-tauri/src/commands/documents.rs` — `documents_search` command
    - Confirm the FTS match query includes `extracted_text`; update if not
    - Done when: `cargo test` with a fixture doc that has text in `extracted_text` returns it on keyword search
 
-[ ] **38.3 — Auto-tag "Notes" during extraction pipeline**
+[x] **38.3 — Auto-tag "Notes" during extraction pipeline**
    - In the Rust OCR/extraction path, after tags are resolved:
      - If no type-tag is present (not one of: invoice, registration, test-result, referral, prescription), emit tag "Notes"
    - Done when: uploading a plain GP notes PDF causes "Notes" to appear in the document's tag list without user action
 
-[ ] **38.4 — Surface `extracted_text` in document detail UI**
+[x] **38.4 — Surface `extracted_text` in document detail UI**
    - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
    - Add a collapsible `<details>` section labelled "Extracted Text" below existing metadata
    - Show `doc.extracted_text` inside; hide section entirely if `extracted_text` is null/empty
    - Done when: `npx tsc --noEmit` passes; document with OCR text shows the section
 
-[ ] **38.5 — Unit tests**
+▶ [ ] **38.5 — Unit tests**
    - Rust: auto-tag logic → doc with/without type tag → assert "Notes" added or not
    - Frontend: render `DocumentDetailClient` with `extracted_text` → section visible; without → hidden
    - Done when: `npx vitest run` + `cargo test` pass

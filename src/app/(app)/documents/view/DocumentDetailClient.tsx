@@ -656,6 +656,20 @@ export default function DocumentDetailClient() {
             )}
           </div>
 
+          {doc.extracted_text && (
+            <>
+              <hr className="my-4 border-[var(--color-border)]" />
+              <details className="mb-4">
+                <summary className="cursor-pointer text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                  Extracted Text
+                </summary>
+                <p className="mt-2 whitespace-pre-wrap text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                  {doc.extracted_text}
+                </p>
+              </details>
+            </>
+          )}
+
           <hr className="my-4 border-[var(--color-border)]" />
 
           <button
