@@ -8,7 +8,7 @@
 
 ```
 Phase: 45 — Unified Content Search
-Task:  45.1 — Rust: expand content_search command to include all entity types
+Task:  COMPLETE — all phases done
 ```
 
 ---
@@ -719,17 +719,17 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Group results by entity_type with section headers, or sort by relevance with inline type badge
    - Done when: searching "ibuprofen" returns medication card; searching "headache" returns symptom card
 
-▶ **45.3 — Frontend: summary bar shows breakdown by type**
+[x] **45.3 — Frontend: summary bar shows breakdown by type**
    - `data-testid="summary-bar"` — update text to e.g. "4 results — 2 Documents, 1 Note, 1 Medication"
    - Done when: summary bar reflects multi-type counts
 
-[ ] **45.4 — Unit test: multi-type result rendering**
+[x] **45.4 — Unit test: multi-type result rendering**
    - `src/app/(app)/content-search/__tests__/content-search-multi-type.test.tsx`
    - Mock `invoke('content_search')` returning one result per entity type
    - Assert 4 cards render; assert type badges present; assert correct hrefs
    - Done when: `npx vitest run` passes
 
-[ ] **45.5 — E2E spec + pre-commit + commit**
+[x] **45.5 — E2E spec + pre-commit + commit**
    - `e2e/content-search-multi-type.spec.ts`
      - Create note "Annual checkup notes" → search "checkup" → note card visible
      - Create symptom "Migraine" → search "migraine" → symptom card visible

@@ -951,32 +951,76 @@
 
     if (cmd === 'documents_content_search') {
       const query = (args?.query || '').toLowerCase();
-      const matches = state.documents.filter(
+      const allResults = [];
+
+      // Documents
+      const docMatches = state.documents.filter(
         (d) => !d._deleted && d.extracted_text && d.extracted_text.toLowerCase().includes(query)
       );
-      const results = matches.map((d) => {
-        const idx = d.extracted_text.toLowerCase().indexOf(query);
+      for (const d of docMatches) {
+        const text = d.extracted_text;
+        const idx = text.toLowerCase().indexOf(query);
         const start = Math.max(0, idx - 40);
-        const end = Math.min(d.extracted_text.length, idx + query.length + 40);
+        const end = Math.min(text.length, idx + query.length + 40);
         const snippet =
-          d.extracted_text.slice(start, idx) +
-          '<mark>' + d.extracted_text.slice(idx, idx + query.length) + '</mark>' +
-          d.extracted_text.slice(idx + query.length, end);
-        return {
-          id: d.id,
-          title: d.title || d.filename,
-          activity_date: d.activity_date || null,
-          snippet,
-          provider_tag: null,
-        };
-      });
-      const dates = matches.map((d) => d.activity_date).filter(Boolean).sort();
+          text.slice(start, idx) +
+          '<mark>' + text.slice(idx, idx + query.length) + '</mark>' +
+          text.slice(idx + query.length, end);
+        allResults.push({ entity_type: 'document', id: d.id, title: d.title || d.filename, snippet });
+      }
+
+      // Notes
+      for (const n of (state.notes || [])) {
+        if (n._deleted) continue;
+        const fullText = (n.title || '') + ' ' + (n.content || '');
+        if (!fullText.toLowerCase().includes(query)) continue;
+        const idx = fullText.toLowerCase().indexOf(query);
+        const start = Math.max(0, idx - 40);
+        const end = Math.min(fullText.length, idx + query.length + 40);
+        const snippet =
+          fullText.slice(start, idx) +
+          '<mark>' + fullText.slice(idx, idx + query.length) + '</mark>' +
+          fullText.slice(idx + query.length, end);
+        allResults.push({ entity_type: 'note', id: n.id, title: n.title || 'Untitled Note', snippet });
+      }
+
+      // Symptoms
+      for (const s of (state.symptoms || [])) {
+        if (s.deleted_at) continue;
+        const fullText = (s.name || '') + (s.notes ? ' ' + s.notes : '');
+        if (!fullText.toLowerCase().includes(query)) continue;
+        const idx = fullText.toLowerCase().indexOf(query);
+        const start = Math.max(0, idx - 40);
+        const end = Math.min(fullText.length, idx + query.length + 40);
+        const snippet =
+          fullText.slice(start, idx) +
+          '<mark>' + fullText.slice(idx, idx + query.length) + '</mark>' +
+          fullText.slice(idx + query.length, end);
+        allResults.push({ entity_type: 'symptom', id: s.id, title: s.name, snippet });
+      }
+
+      // Medications
+      for (const m of (state.medications || [])) {
+        if (m.deleted_at) continue;
+        const fullText = (m.name || '') + (m.notes ? ' ' + m.notes : '');
+        if (!fullText.toLowerCase().includes(query)) continue;
+        const idx = fullText.toLowerCase().indexOf(query);
+        const start = Math.max(0, idx - 40);
+        const end = Math.min(fullText.length, idx + query.length + 40);
+        const snippet =
+          fullText.slice(start, idx) +
+          '<mark>' + fullText.slice(idx, idx + query.length) + '</mark>' +
+          fullText.slice(idx + query.length, end);
+        allResults.push({ entity_type: 'medication', id: m.id, title: m.name, snippet });
+      }
+
+      const dates = docMatches.map((d) => d.activity_date).filter(Boolean).sort();
       return Promise.resolve({
-        results,
+        results: allResults,
         summary: {
           first_date: dates[0] || null,
           last_date: dates[dates.length - 1] || null,
-          doc_count: results.length,
+          doc_count: allResults.length,
           unique_providers: 0,
         },
       });
