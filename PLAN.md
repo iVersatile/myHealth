@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 43 — Notes UX (Option B)
-Task:  43.4 — Linked notes panel on DocumentDetailClient
+Phase: 44 — Symptom and Medication Entities
+Task:  44.2 — Rust: medications table + CRUD commands
 ```
 
 ---
@@ -595,7 +595,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Toggle renders when `linkedDocExtractedText` non-null; ON → `editor.commands.setContent(...)` + auto-save
    - Done when: toggle visible when extracted_text available; toggling ON populates editor content ✓
 
-▶ **43.4 — Linked notes panel on DocumentDetailClient**
+[x] **43.4 — Linked notes panel on DocumentDetailClient**
    - Below the "Quick Note" field, add a "Notes" section
    - Load: `invoke('notes_for_entity', { entityType: 'document', entityId: id })`
    - Render each note as a card with title, snippet (first 80 chars of content), created_at
@@ -603,19 +603,19 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Show "No linked notes yet" empty state with "Add Note" link
    - Done when: panel renders linked notes; clicking a card navigates to note editor
 
-[ ] **43.5 — Linked notes panel on AppointmentDetailClient**
+[x] **43.5 — Linked notes panel on AppointmentDetailClient**
    - Mirror task 43.4 for `src/app/(app)/appointments/view/AppointmentDetailClient.tsx`
    - `notes_for_entity` call already present (line 85) — wire result into a rendered panel
    - Done when: appointment detail shows linked notes panel identical in structure to document detail
 
-[ ] **43.6 — Notes list page: empty-state onboarding**
+[x] **43.6 — Notes list page: empty-state onboarding**
    - `src/app/(app)/notes/page.tsx` (or NoteListClient equivalent)
    - When `notes_list` returns empty array: render full-page onboarding empty state
    - Content: "No notes yet — start capturing clinical observations, symptoms, or follow-up thoughts."
    - CTA button: "Create your first note" → navigates to `/notes/new`
    - Done when: fresh vault with no notes shows onboarding state; button navigates correctly
 
-[ ] **43.7 — Unit tests + E2E spec + pre-commit + commit**
+[x] **43.7 — Unit tests + E2E spec + pre-commit + commit**
    - Unit: `src/app/(app)/notes/__tests__/note-ocr-prefill.test.tsx` — mock `invoke`; assert toggle renders when extracted_text present; assert editor content set on toggle
    - E2E: `e2e/notes-ux.spec.ts`
      - TC-NOTES-01: upload doc → document detail → "Add Note" → verify note linked to doc
@@ -634,13 +634,13 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
 
 ### Sprint 44
 
-**44.1 — Rust: symptoms table + CRUD commands**
+[x] **44.1 — Rust: symptoms table + CRUD commands**
    - Migration: `CREATE TABLE IF NOT EXISTS symptoms (id TEXT PRIMARY KEY, name TEXT NOT NULL, severity INTEGER CHECK(severity BETWEEN 1 AND 10), onset_date TEXT, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
    - Commands: `symptoms_list`, `symptoms_get`, `symptoms_create`, `symptoms_update`, `symptoms_delete` (soft), `symptoms_hard_delete`
    - Register all in `lib.rs`
    - Done when: `cargo test` passes for all symptom commands
 
-[ ] **44.2 — Rust: medications table + CRUD commands**
+▶ **44.2 — Rust: medications table + CRUD commands**
    - Migration: `CREATE TABLE IF NOT EXISTS medications (id TEXT PRIMARY KEY, name TEXT NOT NULL, dosage TEXT, frequency TEXT, start_date TEXT, end_date TEXT, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
    - Commands: `medications_list`, `medications_get`, `medications_create`, `medications_update`, `medications_delete` (soft), `medications_hard_delete`
    - Register all in `lib.rs`

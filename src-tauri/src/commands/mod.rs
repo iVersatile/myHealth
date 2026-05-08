@@ -53,6 +53,7 @@ pub mod search;
 pub mod settings;
 pub mod stats;
 pub mod summarizer;
+pub mod symptoms;
 pub mod tags;
 pub mod trash;
 
