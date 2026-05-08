@@ -4,11 +4,10 @@ import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 
 interface ContentSearchResult {
+  entity_type: string
   id: string
   title: string
-  activity_date: string | null
   snippet: string
-  provider_tag: string | null
 }
 interface ContentSearchSummary {
   first_date: string | null
@@ -21,15 +20,39 @@ interface ContentSearchResponse {
   summary: ContentSearchSummary
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+const ENTITY_LABELS: Record<string, string> = {
+  document: 'Document',
+  symptom: 'Symptom',
+  appointment: 'Appointment',
+  medication: 'Medication',
+  note: 'Note',
+  contact: 'Contact',
+  category: 'Category',
 }
 
-function providerLabel(tag: string | null): string | null {
-  if (!tag) return null
-  return tag.startsWith('dr:') ? tag.slice(3) : tag
+function entityLabel(type: string): string {
+  return ENTITY_LABELS[type] ?? type
+}
+
+function entityRoute(type: string, id: string): string {
+  switch (type) {
+    case 'document':
+      return `/documents/view?id=${id}`
+    case 'symptom':
+      return `/symptoms/view?id=${id}`
+    case 'appointment':
+      return `/appointments/view?id=${id}`
+    case 'medication':
+      return `/medications/view?id=${id}`
+    case 'note':
+      return `/notes/view?id=${id}`
+    case 'contact':
+      return '/contacts'
+    case 'category':
+      return '/categories'
+    default:
+      return '/'
+  }
 }
 
 function SnippetText({ raw }: { raw: string }) {
@@ -54,9 +77,8 @@ function SnippetText({ raw }: { raw: string }) {
 }
 
 function ResultCard({ result }: { result: ContentSearchResult }) {
-  const provider = providerLabel(result.provider_tag)
   return (
-    <Link href={`/documents/view?id=${result.id}`} className="block group no-underline">
+    <Link href={entityRoute(result.entity_type, result.id)} className="block group no-underline">
       <div className="flex gap-4">
         <div className="flex flex-col items-center">
           <div className="w-2 h-2 rounded-full mt-1.5 shrink-0 bg-[var(--color-accent)] group-hover:scale-125 transition-transform" />
@@ -64,14 +86,9 @@ function ResultCard({ result }: { result: ContentSearchResult }) {
         </div>
         <div className="pb-5 flex-1 min-w-0 rounded-md px-3 py-2 -ml-1 transition-colors group-hover:bg-[var(--color-surface-raised)]">
           <div className="flex items-start gap-3 mb-1">
-            <span className="text-xs text-[var(--color-text-muted)] shrink-0 w-24 mt-0.5">
-              {formatDate(result.activity_date)}
+            <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-tag-bg)] text-[var(--color-tag-text)] shrink-0">
+              {entityLabel(result.entity_type)}
             </span>
-            {provider && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-tag-bg)] text-[var(--color-tag-text)] shrink-0">
-                {provider}
-              </span>
-            )}
           </div>
           <p className="text-sm font-medium text-[var(--color-text)] truncate group-hover:text-[var(--color-accent)] mb-1">
             {result.title}
@@ -86,25 +103,19 @@ function ResultCard({ result }: { result: ContentSearchResult }) {
 }
 
 function SummaryBar({ summary }: { summary: ContentSearchSummary }) {
-  const items = [
-    { label: 'Documents', value: String(summary.doc_count) },
-    { label: 'First mention', value: formatDate(summary.first_date) },
-    { label: 'Last mention', value: formatDate(summary.last_date) },
-    { label: 'Providers', value: String(summary.unique_providers) },
-  ]
   return (
     <div
       data-testid="summary-bar"
       className="flex flex-wrap gap-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 mb-6"
     >
-      {items.map(({ label, value }) => (
-        <div key={label} className="flex flex-col min-w-[80px]">
-          <span className="text-[10px] uppercase tracking-widest font-semibold text-[var(--color-text-muted)]">
-            {label}
-          </span>
-          <span className="text-sm font-semibold text-[var(--color-text)] mt-0.5">{value}</span>
-        </div>
-      ))}
+      <div className="flex flex-col min-w-[80px]">
+        <span className="text-[10px] uppercase tracking-widest font-semibold text-[var(--color-text-muted)]">
+          Results
+        </span>
+        <span className="text-sm font-semibold text-[var(--color-text)] mt-0.5">
+          {summary.doc_count}
+        </span>
+      </div>
     </div>
   )
 }
@@ -184,7 +195,7 @@ export default function ContentSearchPage() {
 
       {response !== null && response.results.length === 0 && !loading && (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
-          <p className="text-lg mb-2">No documents found</p>
+          <p className="text-lg mb-2">No results found</p>
           <p className="text-sm">Try a different search term.</p>
         </div>
       )}
@@ -192,8 +203,7 @@ export default function ContentSearchPage() {
       {hasResults && (
         <div>
           <p className="text-xs text-[var(--color-text-muted)] mb-4">
-            {response.summary.doc_count} document{response.summary.doc_count !== 1 ? 's' : ''} —
-            oldest first
+            {response.summary.doc_count} result{response.summary.doc_count !== 1 ? 's' : ''}
           </p>
           {response.results.map((result) => (
             <ResultCard key={result.id} result={result} />

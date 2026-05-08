@@ -12,24 +12,22 @@ vi.mock('next/link', () => ({
 }))
 
 const RESULT_A = {
+  entity_type: 'document',
   id: 'doc-1',
   title: 'Blood Pressure Check',
-  activity_date: '2022-03-15',
   snippet: 'Patient has <mark>hypertension</mark> diagnosed.',
-  provider_tag: 'dr:Smith',
 }
 const RESULT_B = {
-  id: 'doc-2',
+  entity_type: 'symptom',
+  id: 'sym-2',
   title: 'Follow-up Visit',
-  activity_date: '2023-07-22',
   snippet: 'Ongoing <mark>hypertension</mark> management.',
-  provider_tag: null,
 }
 const SUMMARY_2 = {
-  first_date: '2022-03-15',
-  last_date: '2023-07-22',
+  first_date: null,
+  last_date: null,
   doc_count: 2,
-  unique_providers: 1,
+  unique_providers: 0,
 }
 
 describe('ContentSearchPage', () => {
@@ -64,11 +62,11 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'xyz')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText(/no documents found/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/no results found/i)).toBeTruthy())
     expect(screen.queryByTestId('summary-bar')).toBeNull()
   })
 
-  it('shows summary bar with correct values', async () => {
+  it('shows summary bar with result count', async () => {
     mockInvoke.mockResolvedValue({ results: [RESULT_A, RESULT_B], summary: SUMMARY_2 })
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
@@ -76,10 +74,9 @@ describe('ContentSearchPage', () => {
     await waitFor(() => expect(screen.getByTestId('summary-bar')).toBeTruthy())
     const bar = screen.getByTestId('summary-bar')
     expect(bar.textContent).toContain('2')
-    expect(bar.textContent).toContain('1')
   })
 
-  it('renders result cards in document order (oldest first)', async () => {
+  it('renders result cards in returned order', async () => {
     mockInvoke.mockResolvedValue({ results: [RESULT_A, RESULT_B], summary: SUMMARY_2 })
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
@@ -88,17 +85,17 @@ describe('ContentSearchPage', () => {
     const links = screen.getAllByRole('link')
     const hrefs = links.map((c) => c.getAttribute('href'))
     const idxA = hrefs.findIndex((h) => h?.includes('doc-1'))
-    const idxB = hrefs.findIndex((h) => h?.includes('doc-2'))
+    const idxB = hrefs.findIndex((h) => h?.includes('sym-2'))
     expect(idxA).toBeLessThan(idxB)
   })
 
-  it('strips dr: prefix from provider tag', async () => {
-    mockInvoke.mockResolvedValue({ results: [RESULT_A], summary: { ...SUMMARY_2, doc_count: 1, unique_providers: 1 } })
+  it('shows entity type badge on result card', async () => {
+    mockInvoke.mockResolvedValue({ results: [RESULT_A], summary: { ...SUMMARY_2, doc_count: 1 } })
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Smith')).toBeTruthy())
-    expect(screen.queryByText('dr:Smith')).toBeNull()
+    await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeTruthy())
+    expect(screen.getByText('Document')).toBeTruthy()
   })
 
   it('renders highlighted snippet without raw mark tags in DOM', async () => {
@@ -122,7 +119,7 @@ describe('ContentSearchPage', () => {
     await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeTruthy())
     const links = screen.getAllByRole('link')
     expect(links.some((l) => l.getAttribute('href')?.includes('doc-1'))).toBe(true)
-    expect(links.some((l) => l.getAttribute('href')?.includes('doc-2'))).toBe(true)
+    expect(links.some((l) => l.getAttribute('href')?.includes('sym-2'))).toBe(true)
   })
 
   it('shows error message when invoke rejects', async () => {
