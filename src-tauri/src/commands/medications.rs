@@ -1,3 +1,4 @@
+use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::AppState;
 use crate::commands::{CommandContext, CommandError};
 use rusqlite::{params, Connection};
@@ -125,7 +126,24 @@ pub fn medications_create(
             now
         ],
     )?;
-    load_medication(conn, &id)
+    let m = load_medication(conn, &id)?;
+    let body = format!(
+        "{} {}",
+        m.notes.as_deref().unwrap_or(""),
+        m.dosage.as_deref().unwrap_or("")
+    );
+    upsert_search_index(
+        conn,
+        "medication",
+        &m.id,
+        &m.name,
+        body.trim(),
+        "",
+        "",
+        "",
+        "",
+    );
+    Ok(m)
 }
 
 #[tauri::command]
@@ -159,7 +177,24 @@ pub fn medications_update(
             now
         ],
     )?;
-    load_medication(conn, &id)
+    let m = load_medication(conn, &id)?;
+    let body = format!(
+        "{} {}",
+        m.notes.as_deref().unwrap_or(""),
+        m.dosage.as_deref().unwrap_or("")
+    );
+    upsert_search_index(
+        conn,
+        "medication",
+        &m.id,
+        &m.name,
+        body.trim(),
+        "",
+        "",
+        "",
+        "",
+    );
+    Ok(m)
 }
 
 #[tauri::command]
@@ -172,6 +207,7 @@ pub fn medications_delete(id: String, state: State<'_, AppState>) -> Result<(), 
         "UPDATE medications SET deleted_at = ?2 WHERE id = ?1 AND deleted_at IS NULL",
         params![id, now],
     )?;
+    remove_from_search_index(conn, &id);
     Ok(())
 }
 

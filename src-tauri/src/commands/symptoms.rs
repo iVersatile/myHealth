@@ -1,3 +1,4 @@
+use crate::commands::search::{remove_from_search_index, upsert_search_index};
 use crate::commands::AppState;
 use crate::commands::{CommandContext, CommandError};
 use rusqlite::{params, Connection};
@@ -110,7 +111,10 @@ pub fn symptoms_create(
             now
         ],
     )?;
-    load_symptom(conn, &id)
+    let s = load_symptom(conn, &id)?;
+    let body = s.notes.as_deref().unwrap_or("");
+    upsert_search_index(conn, "symptom", &s.id, &s.name, body, "", "", "", "");
+    Ok(s)
 }
 
 #[tauri::command]
@@ -140,7 +144,10 @@ pub fn symptoms_update(
             now
         ],
     )?;
-    load_symptom(conn, &id)
+    let s = load_symptom(conn, &id)?;
+    let body = s.notes.as_deref().unwrap_or("");
+    upsert_search_index(conn, "symptom", &s.id, &s.name, body, "", "", "", "");
+    Ok(s)
 }
 
 #[tauri::command]
@@ -153,6 +160,7 @@ pub fn symptoms_delete(id: String, state: State<'_, AppState>) -> Result<(), Com
         "UPDATE symptoms SET deleted_at = ?2 WHERE id = ?1 AND deleted_at IS NULL",
         params![id, now],
     )?;
+    remove_from_search_index(conn, &id);
     Ok(())
 }
 

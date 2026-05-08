@@ -8,7 +8,7 @@
 
 ```
 Phase: 44 — Symptom and Medication Entities
-Task:  44.4 — Rust: FTS5 indexing for symptoms and medications
+Task:  44.5 — Rust: cargo fmt + clippy + tests
 ```
 
 ---
@@ -651,13 +651,13 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Commands: `symptom_link`, `symptom_unlink`, `links_for_symptom`, `medication_link`, `medication_unlink`, `links_for_medication`
    - Done when: link/unlink round-trip tests pass
 
-▶ **44.4 — Rust: FTS5 indexing for symptoms and medications**
+[x] **44.4 — Rust: FTS5 indexing for symptoms and medications**
    - After create/update of symptom: call `upsert_search_index(conn, id, 'symptom', name + " " + notes)`
    - After create/update of medication: call `upsert_search_index(conn, id, 'medication', name + " " + notes + " " + dosage)`
    - After soft-delete: call `upsert_search_index` with empty body (or delete row from `search_index`)
    - Done when: `SELECT * FROM search_index WHERE entity_type='symptom'` returns rows after symptom creation
 
-[ ] **44.5 — Rust: cargo fmt + clippy + tests**
+▶ **44.5 — Rust: cargo fmt + clippy + tests**
    - `cargo fmt --all` ✓
    - `cargo clippy -- -D warnings` ✓
    - `cargo test --all` ✓
