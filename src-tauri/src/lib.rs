@@ -44,7 +44,7 @@ use commands::contacts::{
     find_duplicate_contacts, merge_contacts,
 };
 use commands::documents::{
-    appointments_suggest_from_document, documents_delete, documents_get,
+    appointments_suggest_from_document, document_entities_get, documents_delete, documents_get,
     documents_get_extraction_status, documents_get_file_url, documents_list, documents_restore,
     documents_run_extraction, documents_search_filtered, documents_set_clinic, documents_tags_set,
     documents_update, documents_upload,
@@ -144,6 +144,7 @@ pub fn run() {
             documents_get_file_url,
             documents_get_extraction_status,
             documents_run_extraction,
+            document_entities_get,
             documents_tags_set,
             documents_set_clinic,
             appointments_suggest_from_document,

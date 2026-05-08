@@ -1384,6 +1384,48 @@ pub async fn documents_run_extraction(
 }
 
 #[derive(Debug, Serialize)]
+pub struct DocumentEntity {
+    pub id: String,
+    pub document_id: String,
+    pub entity_type: String,
+    pub name: String,
+    pub value: Option<String>,
+    pub unit: Option<String>,
+    pub raw_text: String,
+    pub created_at: String,
+}
+
+#[tauri::command]
+pub fn document_entities_get(
+    document_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<DocumentEntity>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let mut stmt = conn.prepare(
+        "SELECT id, document_id, entity_type, name, value, unit, raw_text, created_at \
+         FROM document_entities \
+         WHERE document_id = ?1 \
+         ORDER BY entity_type, created_at",
+    )?;
+    let entities = stmt
+        .query_map(rusqlite::params![document_id], |row| {
+            Ok(DocumentEntity {
+                id: row.get(0)?,
+                document_id: row.get(1)?,
+                entity_type: row.get(2)?,
+                name: row.get(3)?,
+                value: row.get(4)?,
+                unit: row.get(5)?,
+                raw_text: row.get(6)?,
+                created_at: row.get(7)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(entities)
+}
+
+#[derive(Debug, Serialize)]
 pub struct ExtractionStatus {
     pub status: String, // "done" | "pending" | "failed"
     pub text_length: usize,
