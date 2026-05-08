@@ -102,7 +102,14 @@ function ResultCard({ result }: { result: ContentSearchResult }) {
   )
 }
 
-function SummaryBar({ summary }: { summary: ContentSearchSummary }) {
+function SummaryBar({ summary, results }: { summary: ContentSearchSummary; results: ContentSearchResult[] }) {
+  const typeCounts = results.reduce<Record<string, number>>((acc, r) => {
+    acc[r.entity_type] = (acc[r.entity_type] ?? 0) + 1
+    return acc
+  }, {})
+  const breakdown = Object.entries(typeCounts)
+    .map(([type, count]) => `${count} ${count === 1 ? entityLabel(type) : entityLabel(type) + 's'}`)
+    .join(', ')
   return (
     <div
       data-testid="summary-bar"
@@ -112,8 +119,9 @@ function SummaryBar({ summary }: { summary: ContentSearchSummary }) {
         <span className="text-[10px] uppercase tracking-widest font-semibold text-[var(--color-text-muted)]">
           Results
         </span>
-        <span className="text-sm font-semibold text-[var(--color-text)] mt-0.5">
+        <span className="text-sm font-semibold text-[var(--color-text)] mt-0.5" data-testid="summary-total">
           {summary.doc_count}
+          {breakdown ? ` — ${breakdown}` : ''}
         </span>
       </div>
     </div>
@@ -191,7 +199,7 @@ export default function ContentSearchPage() {
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
-      {hasResults && <SummaryBar summary={response.summary} />}
+      {hasResults && <SummaryBar summary={response.summary} results={response.results} />}
 
       {response !== null && response.results.length === 0 && !loading && (
         <div className="text-center py-16 text-[var(--color-text-muted)]">

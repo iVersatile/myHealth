@@ -706,20 +706,20 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
 
 ### Sprint 45
 
-▶ **45.1 — Rust: expand `content_search` command to include all entity types**
+[x] **45.1 — Rust: expand `content_search` command to include all entity types**
    - `src-tauri/src/commands/search.rs` (or wherever `content_search` lives)
    - Change FTS5 query: remove any `entity_type = 'document'` filter; return all matching rows
    - Return `entity_type` field in each result row
    - Done when: `cargo test` includes a test that a symptom indexed in `search_index` is returned by `content_search`
 
-[ ] **45.2 — Frontend: update ContentSearchClient to handle multi-type results**
+[x] **45.2 — Frontend: update ContentSearchClient to handle multi-type results**
    - `src/app/(app)/content-search/` — update result rendering
    - Each result card: show coloured type badge (`Document` / `Note` / `Symptom` / `Medication`)
    - Link per type: documents → `/documents/view/<id>`, notes → `/notes/view/<id>`, symptoms → `/symptoms/view/<id>`, medications → `/medications/view/<id>`
    - Group results by entity_type with section headers, or sort by relevance with inline type badge
    - Done when: searching "ibuprofen" returns medication card; searching "headache" returns symptom card
 
-[ ] **45.3 — Frontend: summary bar shows breakdown by type**
+▶ **45.3 — Frontend: summary bar shows breakdown by type**
    - `data-testid="summary-bar"` — update text to e.g. "4 results — 2 Documents, 1 Note, 1 Medication"
    - Done when: summary bar reflects multi-type counts
 
