@@ -717,6 +717,7 @@ mod tests {
         assert_eq!(results[0].entity_id, "d1");
     }
 
+    #[allow(dead_code)]
     fn insert_document(conn: &Connection, id: &str, filename: &str, activity_date: Option<&str>) {
         conn.execute(
             "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, is_deleted, activity_date)
