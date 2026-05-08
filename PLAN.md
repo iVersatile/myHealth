@@ -8,7 +8,7 @@
 
 ```
 Phase: 44 — Symptom and Medication Entities
-Task:  44.5 — Rust: cargo fmt + clippy + tests
+Task:  44.8 — Frontend: link symptoms/medications to documents and appointments
 ```
 
 ---
@@ -657,26 +657,26 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - After soft-delete: call `upsert_search_index` with empty body (or delete row from `search_index`)
    - Done when: `SELECT * FROM search_index WHERE entity_type='symptom'` returns rows after symptom creation
 
-▶ **44.5 — Rust: cargo fmt + clippy + tests**
+[x] **44.5 — Rust: cargo fmt + clippy + tests**
    - `cargo fmt --all` ✓
    - `cargo clippy -- -D warnings` ✓
    - `cargo test --all` ✓
    - Done when: all Rust checks green
 
-[ ] **44.6 — Frontend: Symptoms list + create/edit pages**
+[x] **44.6 — Frontend: Symptoms list + create/edit pages**
    - `src/app/(app)/symptoms/page.tsx` — list view with `symptoms_list`; empty-state "Log your first symptom"
    - `src/app/(app)/symptoms/new/page.tsx` and `/symptoms/view/[id]/page.tsx` — create/edit form
    - Fields: name (required), severity (1–10 slider), onset_date (date picker), notes (textarea)
    - Nav: add "Symptoms" link to sidebar nav
    - Done when: user can create, view, edit, soft-delete a symptom
 
-[ ] **44.7 — Frontend: Medications list + create/edit pages**
+[x] **44.7 — Frontend: Medications list + create/edit pages**
    - Mirror task 44.6 for medications
    - Fields: name (required), dosage, frequency, start_date, end_date, notes
    - Nav: add "Medications" link to sidebar nav
    - Done when: user can create, view, edit, soft-delete a medication
 
-[ ] **44.8 — Frontend: link symptoms/medications to documents and appointments**
+▶ **44.8 — Frontend: link symptoms/medications to documents and appointments**
    - DocumentDetailClient: "Link Symptom" and "Link Medication" buttons → searchable dropdown → `symptom_link` / `medication_link`
    - AppointmentDetailClient: same pattern
    - Render linked chips; unlink on ✕

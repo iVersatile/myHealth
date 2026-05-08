@@ -14,6 +14,8 @@ const NAV_ITEMS = [
   { href: '/clinics', label: 'Clinics' },
   { href: '/timeline', label: 'Timeline' },
   { href: '/content-search', label: 'Content Search' },
+  { href: '/symptoms', label: 'Symptoms' },
+  { href: '/medications', label: 'Medications' },
   { href: '/categories', label: 'Categories' },
 ] as const
 
