@@ -205,3 +205,29 @@ Before writing any code for a new task:
 **Rules:**
 1. **Regex anchors change semantics silently.** `(?m)^` means start-of-line — real documents rarely start a line with a clinic name. Always test regexes against realistic mid-sentence examples.
 2. **Inline test schemas must track every `ALTER TABLE` migration.** When a new column is added via a migration, also add it to any inline `CREATE TABLE` strings in test helpers.
+
+---
+
+## Lesson 9 — Contact regex misses untitled names, role-labelled names, and non-standard UK phone formats (2026-05-09)
+
+**Symptom:** Manual test of "Upload (30Jan2023-17_52_15).pdf" revealed three contact extraction failures:
+1. "Mary Margaret MURPHY" not suggested — name has no title prefix (Dr/Prof/Mr/etc.)
+2. "GP: Vaibhav SHARMA" not suggested — label is a role keyword, not a medical title
+3. Phone "+44 (0) 203 423 7500" not correctly matched — extracted truncated
+
+**Root cause 1 — Title-only `dr_re()`:** `extract_contact_suggestions()` in `contact.rs` only iterates `dr_re()`, which requires a title prefix (`Dr`, `Prof`, `Mr`, `Mrs`, `Ms`, `Miss`, `Sir`). Names with ALLCAPS surnames but no title are invisible.
+
+**Root cause 2 — Missing role-label pattern:** No pattern exists for "GP:", "Consultant:", "Registrar:", "Physiotherapist:", "Nurse:", "Specialist:" as contact identifiers.
+
+**Root cause 3 — Partial `+44` London phone match:** `phone_re()` uses `20[\s\-]?\d{4}[\s\-]?\d{4}` after `+44 (0)`. For "203 423 7500" the "20" matches, then `\d{4}` fails ("3 42" has a space). Falls to `\d{2,4}[\s\-]?\d{3,8}` which matches "203 423" without "7500". Fix: `20[\s\-]?(?:\d{4}[\s\-]?\d{4}|\d[\s\-]?\d{3}[\s\-]?\d{4})` handles both "20 7xxx xxxx" and "203 xxx xxxx" groupings.
+
+**Fix:**
+1. Add `ALLCAPS_NAME_PATTERN`: `\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\s+[A-Z]{2,}(?:\s+[A-Z]{2,})*)\b` — requires 2+ Title-case words before ALLCAPS surname (prevents false positives like "The NHS").
+2. Add `GP_LABEL_PATTERN`: `\b(GP|Consultant|Registrar|Physiotherapist?|Nurse|Specialist):?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+[A-Z]{2,})+)`.
+3. Fix `+44` London phone branch in `phone_re()`.
+4. Extend `extract_contact_suggestions()` to iterate all three patterns with shared `seen` set (GP-label match inserts full name into `seen` to prevent allcaps_re from re-adding the same person).
+
+**Rules:**
+1. **Contact extraction must cover all name presentation styles in real medical letters:** titled (Dr/Prof), role-labelled (GP:, Consultant:), and plain name with ALLCAPS surname. Adding support for new document formats requires checking all three patterns.
+2. **Phone regex branches must be tested against format variants, not just the canonical form.** London landlines appear as "020 7xxx xxxx", "020 3xxx xxxx", "+44 20 7xxx xxxx", and "+44 (0) 203 xxx xxxx" — each variant needs a unit test.
+3. **Cross-pattern deduplication is mandatory when multiple patterns can match the same person.** Insert matched names into `seen` after each pattern so a second pattern cannot re-insert the same contact.
