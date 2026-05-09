@@ -1173,6 +1173,7 @@ pub struct ExtractionSuggestions {
     pub clinic_suggestions: Vec<ClinicSuggestionDto>,
     pub auto_tags: Vec<String>,
     pub activity_date: Option<String>,
+    pub extracted_text_preview: Option<String>,
 }
 
 #[tauri::command]
@@ -1238,6 +1239,14 @@ pub async fn documents_run_extraction(
                 &doctor_candidates,
                 activity_date.as_deref(),
             );
+            let extracted_text_preview = {
+                let trimmed = text.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.chars().take(400).collect::<String>())
+                }
+            };
             return Ok(ExtractionSuggestions {
                 doctor_candidates,
                 category_suggestion,
@@ -1246,6 +1255,7 @@ pub async fn documents_run_extraction(
                 clinic_suggestions,
                 auto_tags,
                 activity_date,
+                extracted_text_preview,
             });
         }
     }
@@ -1393,6 +1403,14 @@ pub async fn documents_run_extraction(
         }
     }
 
+    let extracted_text_preview = {
+        let trimmed = result.text.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.chars().take(400).collect::<String>())
+        }
+    };
     Ok(ExtractionSuggestions {
         doctor_candidates: result.doctor_candidates,
         category_suggestion: result.category_suggestion,
@@ -1401,6 +1419,7 @@ pub async fn documents_run_extraction(
         clinic_suggestions,
         auto_tags,
         activity_date: Some(resolved_activity_date),
+        extracted_text_preview,
     })
 }
 
