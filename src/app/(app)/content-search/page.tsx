@@ -142,12 +142,19 @@ function SummaryBar({ summary, results }: { summary: ContentSearchSummary; resul
 export default function ContentSearchPage() {
   const [query, setQuery] = useState('')
   const [activeType, setActiveType] = useState<EntityFilter>(null)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [response, setResponse] = useState<ContentSearchResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const search = useCallback(async (q: string, entityType: EntityFilter) => {
+  const search = useCallback(async (
+    q: string,
+    entityType: EntityFilter,
+    from: string,
+    to: string,
+  ) => {
     const trimmed = q.trim()
     if (!trimmed) {
       setResponse(null)
@@ -163,6 +170,8 @@ export default function ContentSearchPage() {
       const res = await invoke<ContentSearchResponse>('documents_content_search', {
         query: trimmed,
         entityTypes: entityType ? [entityType] : null,
+        dateFrom: from || null,
+        dateTo: to || null,
       })
       if (!ctrl.signal.aborted) setResponse(res)
     } catch (e) {
@@ -176,14 +185,25 @@ export default function ContentSearchPage() {
   }, [])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') void search(query, activeType)
+    if (e.key === 'Enter') void search(query, activeType, dateFrom, dateTo)
   }
 
   function handleChipClick(value: EntityFilter) {
     setActiveType(value)
-    if (query.trim()) void search(query, value)
+    if (query.trim()) void search(query, value, dateFrom, dateTo)
   }
 
+  function handleDateChange(from: string, to: string) {
+    if (query.trim()) void search(query, activeType, from, to)
+  }
+
+  function handleClearDates() {
+    setDateFrom('')
+    setDateTo('')
+    if (query.trim()) void search(query, activeType, '', '')
+  }
+
+  const hasDateFilter = dateFrom !== '' || dateTo !== ''
   const hasResults = response !== null && response.results.length > 0
 
   return (
@@ -207,7 +227,7 @@ export default function ContentSearchPage() {
         />
         <button
           type="button"
-          onClick={() => void search(query, activeType)}
+          onClick={() => void search(query, activeType, dateFrom, dateTo)}
           disabled={loading || !query.trim()}
           className="px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
         >
@@ -215,7 +235,7 @@ export default function ContentSearchPage() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6" data-testid="entity-filter-chips">
+      <div className="flex flex-wrap gap-2 mb-4" data-testid="entity-filter-chips">
         {FILTER_CHIPS.map((chip) => (
           <button
             key={chip.label}
@@ -232,6 +252,41 @@ export default function ContentSearchPage() {
             {chip.label}
           </button>
         ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 mb-6" data-testid="date-range-filter">
+        <span className="text-xs text-[var(--color-text-muted)] shrink-0">Date range:</span>
+        <input
+          type="date"
+          data-testid="date-from"
+          value={dateFrom}
+          onChange={(e) => {
+            setDateFrom(e.target.value)
+            handleDateChange(e.target.value, dateTo)
+          }}
+          className="px-2 py-1 text-xs rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+        />
+        <span className="text-xs text-[var(--color-text-muted)]">to</span>
+        <input
+          type="date"
+          data-testid="date-to"
+          value={dateTo}
+          onChange={(e) => {
+            setDateTo(e.target.value)
+            handleDateChange(dateFrom, e.target.value)
+          }}
+          className="px-2 py-1 text-xs rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+        />
+        {hasDateFilter && (
+          <button
+            type="button"
+            data-testid="clear-dates"
+            onClick={handleClearDates}
+            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent)] underline"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}

@@ -8,10 +8,10 @@
 
 ```
 Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.3 — Frontend: add date range inputs
+Task:  46.4 — Frontend: summary bar reflects filtered count
 ```
 
-▶ **46.3**
+▶ **46.4**
 
 ---
 
@@ -800,7 +800,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Pass `entity_types` to `invoke('content_search', { query, entityTypes: [...] })`
    - Done when: clicking "Document" chip re-runs search and only Document cards render
 
-[ ] **46.3 — Frontend: add date range inputs**
+[x] **46.3 — Frontend: add date range inputs**
    - Same file as 46.2
    - Add two `<input type="date">` fields: "From" and "To" (collapsible or always visible)
    - On change, re-trigger search with `dateFrom` / `dateTo` params
