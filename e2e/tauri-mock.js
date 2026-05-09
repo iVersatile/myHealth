@@ -1014,13 +1014,35 @@
         allResults.push({ entity_type: 'medication', id: m.id, title: m.name, snippet });
       }
 
+      // Apply entity-type filter
+      const entityTypes = args?.entityTypes || null;
+      let filtered = entityTypes && entityTypes.length
+        ? allResults.filter((r) => entityTypes.includes(r.entity_type))
+        : allResults;
+
+      // Apply date range filter using activity_date on documents
+      const dateFrom = args?.dateFrom || null;
+      const dateTo = args?.dateTo || null;
+      if (dateFrom || dateTo) {
+        filtered = filtered.filter((r) => {
+          const doc = r.entity_type === 'document'
+            ? state.documents.find((d) => d.id === r.id)
+            : null;
+          const dateStr = doc?.activity_date || null;
+          if (!dateStr) return true;
+          if (dateFrom && dateStr < dateFrom) return false;
+          if (dateTo && dateStr > dateTo) return false;
+          return true;
+        });
+      }
+
       const dates = docMatches.map((d) => d.activity_date).filter(Boolean).sort();
       return Promise.resolve({
-        results: allResults,
+        results: filtered,
         summary: {
           first_date: dates[0] || null,
           last_date: dates[dates.length - 1] || null,
-          doc_count: allResults.length,
+          doc_count: filtered.length,
           unique_providers: 0,
         },
       });
