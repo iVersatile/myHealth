@@ -8,10 +8,10 @@
 
 ```
 Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.7 — E2E spec + pre-commit + commit
+Task:  46.7 — COMPLETE ✅ Phase 46 fully done
 ```
 
-▶ **46.7**
+All planned phases complete. Awaiting next instructions.
 
 ---
 
@@ -829,7 +829,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Test: no filters → all entity types returned
    - Done when: `cargo test` passes
 
-[ ] **46.7 — E2E spec + pre-commit + commit**
+[x] **46.7 — E2E spec + pre-commit + commit**
    - File: `e2e/content-search-filters.spec.ts`
    - Setup: upload one document + create one note with searchable text
    - Search for term that matches both → both appear
