@@ -8,10 +8,10 @@
 
 ```
 Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.1 — Rust: extend content_search command with optional filters
+Task:  46.2 — Frontend: add entity-type filter chip row
 ```
 
-▶ **46.1**
+▶ **46.2**
 
 ---
 
@@ -784,7 +784,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Find all call sites of `upsert_search_index` (grep: `upsert_search_index`) and pass the document/entity activity_date value (or `None` for entities that have no date)
    - Done when: `cargo test` passes; `search_index` table has `activity_date` column; all existing search tests still pass
 
-[ ] **46.1 — Rust: extend `content_search` command with optional filters**
+[x] **46.1 — Rust: extend `content_search` command with optional filters**
    - File: `src-tauri/src/commands/search.rs`
    - Add optional params: `entity_types: Option<Vec<String>>`, `date_from: Option<String>`, `date_to: Option<String>`
    - If `entity_types` is non-empty, add `WHERE entity_type IN (…)` clause to FTS5 query

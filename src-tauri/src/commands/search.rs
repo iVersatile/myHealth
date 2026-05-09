@@ -181,6 +181,9 @@ pub struct ContentSearchResponse {
 fn content_search_inner(
     conn: &Connection,
     query: &str,
+    entity_types: Option<&[String]>,
+    date_from: Option<&str>,
+    date_to: Option<&str>,
 ) -> Result<ContentSearchResponse, CommandError> {
     let empty = || ContentSearchResponse {
         results: vec![],
@@ -202,16 +205,45 @@ fn content_search_inner(
         return Ok(empty());
     }
 
-    let sql = "SELECT entity_type, entity_id, title, \
-               snippet(search_index, 3, '<mark>', '</mark>', '…', 20) \
-               FROM search_index \
-               WHERE search_index MATCH ?1 \
-               ORDER BY rank \
-               LIMIT 50";
+    let mut sql = "SELECT entity_type, entity_id, title, \
+                   snippet(search_index, 3, '<mark>', '</mark>', '…', 20) \
+                   FROM search_index \
+                   WHERE search_index MATCH ?1"
+        .to_string();
+    let mut params: Vec<rusqlite::types::Value> = vec![rusqlite::types::Value::Text(fts_query)];
 
-    let mut stmt = conn.prepare(sql)?;
+    let filter_types = entity_types.filter(|t| !t.is_empty());
+    if let Some(types) = filter_types {
+        let start = params.len() + 1;
+        let placeholders: Vec<String> = (start..=(start + types.len() - 1))
+            .map(|i| format!("?{i}"))
+            .collect();
+        sql.push_str(&format!(
+            " AND entity_type IN ({})",
+            placeholders.join(", ")
+        ));
+        for t in types {
+            params.push(rusqlite::types::Value::Text(t.clone()));
+        }
+    }
+
+    if let Some(from) = date_from.filter(|s| !s.is_empty()) {
+        let idx = params.len() + 1;
+        sql.push_str(&format!(" AND activity_date >= ?{idx}"));
+        params.push(rusqlite::types::Value::Text(from.to_string()));
+    }
+
+    if let Some(to) = date_to.filter(|s| !s.is_empty()) {
+        let idx = params.len() + 1;
+        sql.push_str(&format!(" AND activity_date <= ?{idx}"));
+        params.push(rusqlite::types::Value::Text(to.to_string()));
+    }
+
+    sql.push_str(" ORDER BY rank LIMIT 50");
+
+    let mut stmt = conn.prepare(&sql)?;
     let results: Vec<ContentSearchResult> = stmt
-        .query_map([&fts_query], |row| {
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
             Ok(ContentSearchResult {
                 entity_type: row.get(0)?,
                 id: row.get(1)?,
@@ -238,11 +270,20 @@ fn content_search_inner(
 #[tauri::command]
 pub fn documents_content_search(
     query: String,
+    entity_types: Option<Vec<String>>,
+    date_from: Option<String>,
+    date_to: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<ContentSearchResponse, CommandError> {
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-    content_search_inner(conn, &query)
+    content_search_inner(
+        conn,
+        &query,
+        entity_types.as_deref(),
+        date_from.as_deref(),
+        date_to.as_deref(),
+    )
 }
 
 #[cfg(test)]
@@ -805,7 +846,7 @@ mod tests {
             "",
         );
 
-        let resp = content_search_inner(&conn, "blood").unwrap();
+        let resp = content_search_inner(&conn, "blood", None, None, None).unwrap();
         assert_eq!(resp.results.len(), 2);
         assert_eq!(resp.summary.doc_count, 2);
         let ids: Vec<&str> = resp.results.iter().map(|r| r.id.as_str()).collect();
@@ -816,7 +857,7 @@ mod tests {
     #[test]
     fn content_search_empty_query_returns_empty() {
         let conn = open_test_db();
-        let resp = content_search_inner(&conn, "   ").unwrap();
+        let resp = content_search_inner(&conn, "   ", None, None, None).unwrap();
         assert!(resp.results.is_empty());
         assert_eq!(resp.summary.doc_count, 0);
     }
@@ -850,7 +891,7 @@ mod tests {
             "",
         );
 
-        let resp = content_search_inner(&conn, "cholesterol").unwrap();
+        let resp = content_search_inner(&conn, "cholesterol", None, None, None).unwrap();
         assert_eq!(resp.results.len(), 2);
         let types: Vec<&str> = resp
             .results
@@ -878,7 +919,7 @@ mod tests {
             "",
         );
 
-        let resp = content_search_inner(&conn, "glucose").unwrap();
+        let resp = content_search_inner(&conn, "glucose", None, None, None).unwrap();
         assert_eq!(resp.results.len(), 1);
         assert!(
             resp.results[0].snippet.contains("<mark>"),
@@ -903,9 +944,98 @@ mod tests {
             "",
         );
 
-        let resp = content_search_inner(&conn, "headache").unwrap();
+        let resp = content_search_inner(&conn, "headache", None, None, None).unwrap();
         assert_eq!(resp.results.len(), 1);
         assert_eq!(resp.results[0].id, "sym-1");
         assert_eq!(resp.results[0].entity_type, "symptom");
+    }
+
+    #[test]
+    fn content_search_filters_by_entity_type() {
+        let conn = open_test_db();
+
+        upsert_search_index(
+            &conn,
+            "document",
+            "doc-1",
+            "Lab Report",
+            "fever reading today",
+            "",
+            "",
+            "",
+            "",
+            "",
+        );
+        upsert_search_index(
+            &conn,
+            "symptom",
+            "sym-1",
+            "Fever",
+            "fever symptom noted",
+            "",
+            "",
+            "",
+            "",
+            "",
+        );
+
+        let types = vec!["document".to_string()];
+        let resp = content_search_inner(&conn, "fever", Some(&types), None, None).unwrap();
+        assert_eq!(resp.results.len(), 1);
+        assert_eq!(resp.results[0].entity_type, "document");
+        assert_eq!(resp.results[0].id, "doc-1");
+    }
+
+    #[test]
+    fn content_search_filters_by_date_range() {
+        let conn = open_test_db();
+
+        upsert_search_index(
+            &conn,
+            "document",
+            "old",
+            "Old Report",
+            "ibuprofen dose low",
+            "",
+            "",
+            "",
+            "",
+            "2023-01-15",
+        );
+        upsert_search_index(
+            &conn,
+            "document",
+            "mid",
+            "Mid Report",
+            "ibuprofen dose medium",
+            "",
+            "",
+            "",
+            "",
+            "2024-06-01",
+        );
+        upsert_search_index(
+            &conn,
+            "document",
+            "new",
+            "New Report",
+            "ibuprofen dose high",
+            "",
+            "",
+            "",
+            "",
+            "2025-03-10",
+        );
+
+        let resp = content_search_inner(
+            &conn,
+            "ibuprofen",
+            None,
+            Some("2024-01-01"),
+            Some("2024-12-31"),
+        )
+        .unwrap();
+        assert_eq!(resp.results.len(), 1);
+        assert_eq!(resp.results[0].id, "mid");
     }
 }
