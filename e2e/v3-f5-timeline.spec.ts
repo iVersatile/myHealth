@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 
-const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
+const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 const NO_DATE_PHYSIO_PDF = 'src-tauri/tests/fixtures/no-date-physio.pdf'
 const NO_DATE_NO_FILENAME_PDF = 'src-tauri/tests/fixtures/no-date-no-filename.pdf'
 
@@ -8,7 +8,7 @@ test.describe('V3-F5 — Timeline Activity Date', () => {
   test('TC-V3-F5-01 — timeline entry date is the service date extracted from PDF body', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const dateField = page.getByTestId('activity-date-field')
@@ -40,7 +40,7 @@ test.describe('V3-F5 — Timeline Activity Date', () => {
   test('TC-V3-F5-04 — timeline entry description format is "{date} {SPECIALTY} with {Title} {Provider}"', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByTestId('contact-suggestion-save').click()
     await page.getByRole('button', { name: /confirm upload/i }).click()
@@ -53,7 +53,7 @@ test.describe('V3-F5 — Timeline Activity Date', () => {
   test('TC-V3-F5-05 — user can override the extracted activity date before saving', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const dateField = page.getByTestId('activity-date-field')

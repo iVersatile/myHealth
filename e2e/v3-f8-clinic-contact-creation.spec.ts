@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 
-const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
+const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 /**
  * V3-F8 Clinic Entity Redesign — E2E regression tests
@@ -14,7 +14,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
   test('TC-V3-F8-01 — accepting contact suggestion opens pre-filled ContactForm', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm|upload/i }).click()
 
@@ -37,7 +37,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm|upload/i }).click()
 
@@ -59,7 +59,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
   test('TC-V3-F8-03 — saved person contact has clinic linked via contact_clinic_id', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm|upload/i }).click()
 
@@ -88,7 +88,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm|upload/i }).click()
 
@@ -110,7 +110,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
   test('TC-V3-F8-05 — error from backend shows human-readable message, not [object Object]', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm|upload/i }).click()
 
@@ -140,7 +140,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm|upload/i }).click()
 

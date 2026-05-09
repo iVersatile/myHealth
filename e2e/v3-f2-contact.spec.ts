@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures'
 
-const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
+const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
   test('TC-V3-F2-01 — contact suggestion card shows name, UK mobile phone, and email', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const card = page.getByTestId('contact-suggestion-card')
@@ -19,7 +19,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
   test('TC-V3-F2-02 — saving contact suggestion creates a new contact', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('contact-suggestion-save').click()
@@ -36,7 +36,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
   test('TC-V3-F2-03 — UK mobile number in 07XXX XXXXXX format is extracted', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const phoneField = page.getByTestId('contact-suggestion-phone')
@@ -51,7 +51,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await expect(page.getByTestId('contact-suggestion-merge')).toBeVisible()
@@ -60,7 +60,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
   test('TC-V3-F2-05 — dismissing contact suggestion does not create contact', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('contact-suggestion-dismiss').click()

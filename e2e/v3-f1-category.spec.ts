@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures'
 
-const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
+const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('V3-F1 — Category Auto-Creation', () => {
   test('TC-V3-F1-01 — category suggestion banner shown for unknown specialty keyword', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const banner = page.getByTestId('category-suggestion-banner')
@@ -17,7 +17,7 @@ test.describe('V3-F1 — Category Auto-Creation', () => {
   test('TC-V3-F1-02 — accepting category suggestion creates the category and assigns it', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('category-suggestion-accept').click()
@@ -34,7 +34,7 @@ test.describe('V3-F1 — Category Auto-Creation', () => {
   test('TC-V3-F1-03 — dismissing category suggestion leaves document without that category', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('category-suggestion-dismiss').click()
@@ -52,7 +52,7 @@ test.describe('V3-F1 — Category Auto-Creation', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await expect(page.getByTestId('category-suggestion-banner')).not.toBeVisible()

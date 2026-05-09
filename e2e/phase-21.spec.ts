@@ -1,13 +1,13 @@
 import { test, expect } from './fixtures'
 
-const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
+const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 const NO_DATE_NO_FILENAME_PDF = 'src-tauri/tests/fixtures/no-date-no-filename.pdf'
 
 test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_date editing', () => {
   test('TC-21-01 — title tag stored without "title:" prefix on upload review', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const tagChips = page.getByTestId('tag-chip')
@@ -21,7 +21,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
   test('TC-21-02 — title tag stored without "title:" prefix after save', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm upload/i }).click()
 
@@ -44,7 +44,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
   test('TC-21-04 — "By Uploaded Date" view shows uploaded document entries', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
     await page.getByRole('button', { name: /confirm upload/i }).click()
 

@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures'
 
-const REAL_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
+const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('V3-F3 — Clinic Extraction with Company Registration Number', () => {
   test('TC-V3-F3-01 — clinic suggestion card shows name, company registration number, and all addresses', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const card = page.getByTestId('clinic-suggestion-card')
@@ -20,7 +20,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
   test('TC-V3-F3-02 — saving clinic creates record with company reg and three addresses', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('clinic-suggestion-save').click()
@@ -36,7 +36,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
   test('TC-V3-F3-03 — saved clinic and saved contact are linked together', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('contact-suggestion-save').click()
@@ -51,7 +51,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
   test('TC-V3-F3-04 — company registration number extracted from "Company Registration No: XXXXXXXX" pattern', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     const regField = page.getByTestId('clinic-suggestion-reg-number')
@@ -77,7 +77,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     })
 
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await expect(page.getByTestId('clinic-suggestion-merge')).toBeVisible()
@@ -86,7 +86,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
   test('TC-V3-F3-06 — dismissing clinic suggestion does not create clinic', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(REAL_PDF)
+    await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]')
 
     await page.getByTestId('clinic-suggestion-dismiss').click()
