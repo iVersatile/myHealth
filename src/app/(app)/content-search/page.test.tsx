@@ -95,7 +95,7 @@ describe('ContentSearchPage', () => {
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
     await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeTruthy())
-    expect(screen.getByText('Document')).toBeTruthy()
+    expect(screen.getAllByText('Document').length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders highlighted snippet without raw mark tags in DOM', async () => {
@@ -136,6 +136,6 @@ describe('ContentSearchPage', () => {
     await userEvent.type(screen.getByTestId('content-search-input'), '  hypertension  ')
     await userEvent.keyboard('{Enter}')
     await waitFor(() => expect(mockInvoke).toHaveBeenCalled())
-    expect(mockInvoke).toHaveBeenCalledWith('documents_content_search', { query: 'hypertension' })
+    expect(mockInvoke).toHaveBeenCalledWith('documents_content_search', { query: 'hypertension', entityTypes: null, dateFrom: null, dateTo: null })
   })
 })
