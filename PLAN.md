@@ -8,10 +8,10 @@
 
 ```
 Phase: 49 — Missing Notes After Document Upload: Analysis + Fix
-Task:  49.5 — Unit test: UploadDialog renders preview when present
+Task:  49.6 — Pre-commit checks + commit
 ```
 
-▶ **49.5** — Unit test: UploadDialog renders preview when present
+**49.5** — Unit test: UploadDialog renders preview when present
 
 ---
 
@@ -952,14 +952,14 @@ The raw OCR text is stored in `documents.extracted_text` and surfaced on the doc
    - **TC-OCR-02:** Upload `no-date-physio.pdf` (no preview in mock) → review step → assert `upload-extracted-text-preview` is NOT present
    - Done when: both TCs pass
 
-▶ [ ] **49.5 — Unit test: UploadDialog renders preview when present**
+[x] **49.5 — Unit test: UploadDialog renders preview when present**
    - `src/components/documents/UploadDialog.test.tsx`
    - Mock extraction result with `extracted_text_preview: 'Blood pressure: 130/85'`
    - Assert `upload-extracted-text-preview` element is in DOM
    - Assert manual notes textarea is empty (OCR content not leaked into notes)
    - Done when: `npx vitest run` passes
 
-[ ] **49.6 — Pre-commit checks + commit**
+▶ [ ] **49.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: show OCR text preview in upload review step — read-only collapsible (Phase 49)`

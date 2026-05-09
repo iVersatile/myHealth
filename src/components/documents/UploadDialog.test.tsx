@@ -30,9 +30,12 @@ const fakeDoc: Document = {
   clinic_name: null,
 }
 
+const VALID_CATEGORIES = ['diagnosis', 'lab', 'imaging', 'prescription', 'letter', 'other']
+
 function setupInvoke() {
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === 'categories_list') return Promise.resolve([])
+    if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
     if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
     if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
     if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -131,6 +134,7 @@ describe('UploadDialog', () => {
   it('shows error message in pick step when upload fails', async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.reject(new Error('disk full'))
       return Promise.resolve(undefined)
     })
@@ -159,6 +163,7 @@ describe('UploadDialog', () => {
     const docWithDate = { ...fakeDoc, document_date: '2026-03-15' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(docWithDate)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
       if (cmd === 'documents_update') return Promise.resolve(docWithDate)
@@ -179,6 +184,7 @@ describe('UploadDialog', () => {
     const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: ['Dr. House'], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -206,6 +212,7 @@ describe('UploadDialog', () => {
     const dupCandidate = { primary_contact_id: 'new-c1', contact: existingContact, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: ['Dr. House'], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -238,6 +245,7 @@ describe('UploadDialog', () => {
     const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.9, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -261,6 +269,7 @@ describe('UploadDialog', () => {
   it('shows category suggestion banner with detected label and dismisses', async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: 'prescription', document_tags: [], auto_tags: [], contact_suggestions: [] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -281,6 +290,7 @@ describe('UploadDialog', () => {
   it('Accept on category suggestion calls categories_create_if_not_exists and assigns category', async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: 'physiotherapy', document_tags: [], auto_tags: [], contact_suggestions: [] })
       if (cmd === 'categories_create_if_not_exists') return Promise.resolve('cat-physio')
@@ -315,6 +325,7 @@ describe('UploadDialog', () => {
     const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -341,6 +352,7 @@ describe('UploadDialog', () => {
     const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: null, email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -369,6 +381,7 @@ describe('UploadDialog', () => {
     const dupCandidate = { primary_contact_id: 'new-c1', contact: existingContact, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -399,6 +412,7 @@ describe('UploadDialog', () => {
     const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], contact_suggestions: [contactSugg] })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -424,6 +438,7 @@ describe('UploadDialog', () => {
     const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA', '2 Health St, Manchester, M1 1AE', '3 Physio Ave, Birmingham, B1 1BB'] }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'clinics_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [], clinic_suggestions: [clinicSugg] })
@@ -448,6 +463,7 @@ describe('UploadDialog', () => {
     const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA'] }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'clinics_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [], clinic_suggestions: [clinicSugg] })
@@ -479,6 +495,7 @@ describe('UploadDialog', () => {
     const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA'] }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'clinics_list') return Promise.resolve([])
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [contactSugg], clinic_suggestions: [clinicSugg] })
@@ -532,6 +549,7 @@ describe('UploadDialog', () => {
     let resolveExtraction!: (v: unknown) => void
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return new Promise((res) => { resolveExtraction = res })
       return Promise.resolve(undefined)
@@ -559,6 +577,7 @@ describe('UploadDialog', () => {
   it('pre-populates tags from auto_tags with case-insensitive dedup', async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({
         doctor_candidates: ['John Green'],
@@ -604,6 +623,7 @@ describe('UploadDialog', () => {
     let resolveExtraction!: (v: unknown) => void
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return new Promise((res) => { resolveExtraction = res })
       if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
@@ -629,6 +649,7 @@ describe('UploadDialog', () => {
     const contactSugg = { name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({
         doctor_candidates: [],
@@ -654,6 +675,7 @@ describe('UploadDialog', () => {
     const contactSugg = { name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({
         doctor_candidates: [],
@@ -680,6 +702,7 @@ describe('UploadDialog', () => {
   it('does not show timeline entry field when no activity_date extracted', async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
       if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
       if (cmd === 'documents_run_extraction') return Promise.resolve({
         doctor_candidates: [],
@@ -698,5 +721,38 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     expect(screen.queryByLabelText(/timeline entry/i)).toBeNull()
+  })
+
+  it('shows OCR extracted text preview block when extraction returns text', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [],
+        category_suggestion: null,
+        document_tags: [],
+        auto_tags: [],
+        contact_suggestions: [],
+        extracted_text_preview: 'Blood pressure: 130/85',
+      })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByTestId('upload-extracted-text-preview')).toBeTruthy())
+    expect(screen.getByText('Blood pressure: 130/85')).toBeTruthy()
+    const notesTextarea = screen.getByLabelText(/notes/i) as HTMLTextAreaElement
+    expect(notesTextarea.value).toBe('')
+  })
+
+  it('does not show OCR extracted text preview block when extraction returns null', async () => {
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    expect(screen.queryByTestId('upload-extracted-text-preview')).toBeNull()
   })
 })
