@@ -8,10 +8,10 @@
 
 ```
 Phase: 48 — Hardcoded Filter Tech Debt
-Task:  48.2 — Add documents_valid_categories Tauri command
+Task:  48.3 — Validate appointment statuses at IPC boundary
 ```
 
-▶ **48.2** — Add `documents_valid_categories` Tauri command; wire frontend category chips to invoke result
+▶ **48.3** — Validate appointment statuses at IPC boundary
 
 ---
 
@@ -857,7 +857,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
 
 ### Priority H1 — Backend-driven categories (medium)
 
-[ ] **48.2 — Add `documents_valid_categories` Tauri command**
+[x] **48.2 — Add `documents_valid_categories` Tauri command**
    - New command in `src-tauri/src/commands/documents.rs` (or `categories.rs`)
    - Returns `Vec<String>` — the list of all valid category names (currently hard-coded in frontend filter panel)
    - Frontend (`src/components/documents/DocumentList.tsx` or wherever category chips are built) fetches on init via `invoke('documents_valid_categories')`; replaces static array

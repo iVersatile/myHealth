@@ -585,6 +585,18 @@ pub fn categories_archive_stale(
     Ok(changes as u64)
 }
 
+#[tauri::command]
+pub fn documents_valid_categories() -> Vec<String> {
+    vec![
+        "diagnosis".into(),
+        "lab".into(),
+        "imaging".into(),
+        "prescription".into(),
+        "letter".into(),
+        "other".into(),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1332,6 +1344,14 @@ mod tests {
             )
             .unwrap();
         assert_eq!(archived, 0);
+    }
+
+    #[test]
+    fn documents_valid_categories_returns_non_empty_list() {
+        let cats = super::documents_valid_categories();
+        assert!(!cats.is_empty());
+        assert!(cats.contains(&"diagnosis".to_string()));
+        assert!(cats.contains(&"lab".to_string()));
     }
 
     #[test]

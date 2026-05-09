@@ -108,10 +108,19 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null)
+  const [docCategories, setDocCategories] = useState<string[]>(
+    DOCUMENT_CATEGORIES.filter((c) => c !== 'all')
+  )
   const unlistenRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     return () => { unlistenRef.current?.() }
+  }, [])
+
+  useEffect(() => {
+    invoke<string[]>('documents_valid_categories')
+      .then(setDocCategories)
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -281,8 +290,6 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
   const visibleContacts = contactSuggestions.filter((cs) => !dismissedContacts.has(cs.name))
   const visibleClinics = clinicSuggestions.filter((c) => !dismissedClinics.has(c.name))
-  const docCategories = DOCUMENT_CATEGORIES.filter((c) => c !== 'all')
-
   return (
     <div
       role="dialog"
@@ -795,7 +802,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                   className={fieldCls}
                 >
                   {docCategories.map((cat) => (
-                    <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                    <option key={cat} value={cat}>{CATEGORY_LABELS[cat as DocumentCategory] ?? cat}</option>
                   ))}
                 </select>
               </div>

@@ -30,8 +30,8 @@ use commands::categories::{
     categories_assign_appointment, categories_assign_document, categories_bulk_link,
     categories_create, categories_create_if_not_exists, categories_delete,
     categories_for_appointment, categories_for_document, categories_list, categories_reorder,
-    categories_unassign, categories_update, category_reorder, unassign_category_from_appointment,
-    unassign_category_from_document,
+    categories_unassign, categories_update, category_reorder, documents_valid_categories,
+    unassign_category_from_appointment, unassign_category_from_document,
 };
 use commands::clinics::{
     clinics_create, clinics_create_if_not_exists, clinics_delete, clinics_get,
@@ -205,6 +205,7 @@ pub fn run() {
             unassign_category_from_document,
             assign_category_to_appointment,
             unassign_category_from_appointment,
+            documents_valid_categories,
             calendar_list_sources,
             calendar_sync,
             calendar_toggle_source,
