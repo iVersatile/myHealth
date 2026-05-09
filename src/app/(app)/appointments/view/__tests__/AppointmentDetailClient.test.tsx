@@ -421,3 +421,175 @@ describe('AppointmentDetailClient', () => {
     )
   })
 })
+
+const makeApptSymptom = (overrides = {}) => ({
+  id: 'sym-1',
+  name: 'Headache',
+  severity: null,
+  onset_date: null,
+  notes: null,
+  deleted_at: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+})
+
+const makeApptMedication = (overrides = {}) => ({
+  id: 'med-1',
+  name: 'Ibuprofen',
+  dosage: null,
+  frequency: null,
+  start_date: null,
+  end_date: null,
+  notes: null,
+  deleted_at: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+})
+
+function setupWithSymptoms(symptoms = [makeApptSymptom()], linked: typeof symptoms = []) {
+  mockInvoke.mockImplementation((cmd: string) => {
+    if (cmd === 'appointments_get') return Promise.resolve(makeAppt())
+    if (cmd === 'get_appointment_links') return Promise.resolve([])
+    if (cmd === 'categories_list') return Promise.resolve([])
+    if (cmd === 'categories_for_appointment') return Promise.resolve([])
+    if (cmd === 'appointment_tags_get') return Promise.resolve([])
+    if (cmd === 'notes_for_entity') return Promise.resolve([])
+    if (cmd === 'symptoms_for_entity') return Promise.resolve(linked)
+    if (cmd === 'medications_for_entity') return Promise.resolve([])
+    if (cmd === 'symptoms_list') return Promise.resolve(symptoms)
+    if (cmd === 'medications_list') return Promise.resolve([])
+    return Promise.resolve(undefined)
+  })
+}
+
+function setupWithMedications(medications = [makeApptMedication()], linked: typeof medications = []) {
+  mockInvoke.mockImplementation((cmd: string) => {
+    if (cmd === 'appointments_get') return Promise.resolve(makeAppt())
+    if (cmd === 'get_appointment_links') return Promise.resolve([])
+    if (cmd === 'categories_list') return Promise.resolve([])
+    if (cmd === 'categories_for_appointment') return Promise.resolve([])
+    if (cmd === 'appointment_tags_get') return Promise.resolve([])
+    if (cmd === 'notes_for_entity') return Promise.resolve([])
+    if (cmd === 'symptoms_for_entity') return Promise.resolve([])
+    if (cmd === 'medications_for_entity') return Promise.resolve(linked)
+    if (cmd === 'symptoms_list') return Promise.resolve([])
+    if (cmd === 'medications_list') return Promise.resolve(medications)
+    return Promise.resolve(undefined)
+  })
+}
+
+describe('AppointmentDetailClient — symptom linking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows symptom select when unlinkable symptoms exist', async () => {
+    setupWithSymptoms()
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    expect(screen.getByText('Select symptom…')).toBeTruthy()
+    expect(screen.getByText('Headache')).toBeTruthy()
+  })
+
+  it('calls symptom_link with correct args on Link click', async () => {
+    setupWithSymptoms()
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+
+    const select = screen.getByText('Select symptom…').closest('select')!
+    fireEvent.change(select, { target: { value: 'sym-1' } })
+
+    const linkBtn = screen.getAllByRole('button', { name: 'Link' }).find(
+      (b) => b.closest('div')?.querySelector('select')
+    )!
+    fireEvent.click(linkBtn)
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('symptom_link', {
+        symptomId: 'sym-1',
+        toType: 'appointment',
+        toId: 'appt-1',
+      })
+    )
+  })
+
+  it('shows linked symptom and calls symptom_unlink on ✕', async () => {
+    setupWithSymptoms(
+      [makeApptSymptom({ id: 'sym-1', name: 'Headache' })],
+      [makeApptSymptom({ id: 'sym-1', name: 'Headache' })]
+    )
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    expect(screen.getByText('Headache')).toBeTruthy()
+
+    mockInvoke.mockResolvedValueOnce(undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink symptom' }))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('symptom_unlink', {
+        symptomId: 'sym-1',
+        toType: 'appointment',
+        toId: 'appt-1',
+      })
+    )
+  })
+})
+
+describe('AppointmentDetailClient — medication linking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows medication select when unlinkable medications exist', async () => {
+    setupWithMedications()
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    expect(screen.getByText('Select medication…')).toBeTruthy()
+    expect(screen.getByText('Ibuprofen')).toBeTruthy()
+  })
+
+  it('calls medication_link with correct args on Link click', async () => {
+    setupWithMedications()
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+
+    const select = screen.getByText('Select medication…').closest('select')!
+    fireEvent.change(select, { target: { value: 'med-1' } })
+
+    const linkBtn = screen.getAllByRole('button', { name: 'Link' }).find(
+      (b) => b.closest('div')?.querySelector('select')
+    )!
+    fireEvent.click(linkBtn)
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('medication_link', {
+        medicationId: 'med-1',
+        toType: 'appointment',
+        toId: 'appt-1',
+      })
+    )
+  })
+
+  it('shows linked medication and calls medication_unlink on ✕', async () => {
+    setupWithMedications(
+      [makeApptMedication({ id: 'med-1', name: 'Ibuprofen' })],
+      [makeApptMedication({ id: 'med-1', name: 'Ibuprofen' })]
+    )
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    expect(screen.getByText('Ibuprofen')).toBeTruthy()
+
+    mockInvoke.mockResolvedValueOnce(undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink medication' }))
+
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('medication_unlink', {
+        medicationId: 'med-1',
+        toType: 'appointment',
+        toId: 'appt-1',
+      })
+    )
+  })
+})
