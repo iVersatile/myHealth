@@ -41,7 +41,7 @@ interface ExtractionSuggestions {
   contact_suggestions: ContactSuggestion[]
   clinic_suggestions: ClinicSuggestion[]
   activity_date: string | null
-  extractedTextPreview: string | null
+  extracted_text_preview: string | null
 }
 
 function buildTimelineDescription(
@@ -179,7 +179,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           const actDate = suggestions.activity_date ?? null
           setActivityDate(actDate)
           setTimelineDescription(buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null))
-          setExtractedTextPreview(suggestions.extractedTextPreview ?? null)
+          setExtractedTextPreview(suggestions.extracted_text_preview ?? null)
 
           for (const tag of [...(suggestions.auto_tags ?? []), ...(suggestions.doctor_candidates ?? []), ...(suggestions.document_tags ?? [])]) {
             const lower = tag.toLowerCase()

@@ -73,6 +73,7 @@
       doctor_candidates: [],
       activity_date: '2023-03-09',
       appointment_suggestion: null,
+      extracted_text_preview: null,
     },
     'medical-invoice.pdf': {
       contact_suggestions: [
@@ -97,6 +98,7 @@
       activity_date: '2024-01-15',
       appointment_suggestion: { date: '2024-01-15', type: 'Physiotherapy' },
       extracted_text: 'Invoice from Hartfield Physiotherapy Clinic\nDate: 15 January 2024\nPatient: Test Patient\nTreatment: Physiotherapy session\nAmount due: £85.00',
+      extracted_text_preview: 'Invoice from Hartfield Physiotherapy Clinic\nDate: 15 January 2024\nPatient: Test Patient\nTreatment: Physiotherapy session\nAmount due: £85.00',
       entities: [
         { entity_type: 'medication', name: 'Ibuprofen', value: null, unit: null, raw_text: 'Ibuprofen 400mg' },
         { entity_type: 'diagnosis', name: 'Musculoskeletal pain', value: null, unit: null, raw_text: 'Musculoskeletal pain' },
@@ -111,6 +113,7 @@
       doctor_candidates: [],
       activity_date: '2024-01-15',
       appointment_suggestion: null,
+      extracted_text_preview: null,
     },
     'StMarysHospital_2024-06-15.pdf': {
       contact_suggestions: [],
@@ -121,6 +124,7 @@
       doctor_candidates: [],
       activity_date: '2024-06-15',
       appointment_suggestion: null,
+      extracted_text_preview: null,
     },
     'DrSmith_intl_phone_2024-03-10.pdf': {
       contact_suggestions: [
@@ -138,6 +142,7 @@
       doctor_candidates: [],
       activity_date: '2024-03-10',
       appointment_suggestion: null,
+      extracted_text_preview: null,
     },
     'no-date-physio.pdf': {
       contact_suggestions: [],
@@ -148,6 +153,7 @@
       doctor_candidates: [],
       activity_date: '2023-03-09',
       appointment_suggestion: null,
+      extracted_text_preview: null,
     },
     'no-date-no-filename.pdf': {
       contact_suggestions: [],
@@ -158,6 +164,7 @@
       doctor_candidates: [],
       activity_date: todayStr(),
       appointment_suggestion: null,
+      extracted_text_preview: null,
     },
     'two-page-scanned.pdf': {
       contact_suggestions: [],
@@ -168,6 +175,7 @@
       doctor_candidates: [],
       activity_date: todayStr(),
       appointment_suggestion: null,
+      extracted_text_preview: null,
     },
     'sample.pdf': {
       contact_suggestions: [],
@@ -178,6 +186,47 @@
       doctor_candidates: [],
       activity_date: todayStr(),
       appointment_suggestion: null,
+      extracted_text_preview: null,
+    },
+    // UTF-08 contact extraction edge-case fixtures
+    'allcaps-surname-2023-06-01.pdf': {
+      contact_suggestions: [
+        { name: 'Mary Margaret MURPHY', phone: null, email: null, role: 'doctor' },
+      ],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-06-01',
+      appointment_suggestion: null,
+      extracted_text_preview: null,
+    },
+    'gp-labelled-sharma-2023-06-01.pdf': {
+      contact_suggestions: [
+        { name: 'Vaibhav SHARMA', phone: null, email: null, role: 'doctor' },
+      ],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-06-01',
+      appointment_suggestion: null,
+      extracted_text_preview: null,
+    },
+    'london-203-phone-2023-06-01.pdf': {
+      contact_suggestions: [
+        { name: 'Dr Jones', phone: '+44 (0) 203 423 7500', email: null, role: 'doctor' },
+      ],
+      clinic_suggestions: [],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-06-01',
+      appointment_suggestion: null,
+      extracted_text_preview: null,
     },
   };
 
@@ -193,6 +242,7 @@
         doctor_candidates: [],
         activity_date: todayStr(),
         appointment_suggestion: null,
+        extracted_text_preview: null,
       }
     );
   }

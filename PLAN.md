@@ -8,10 +8,10 @@
 
 ```
 Phase: 49 — Missing Notes After Document Upload: Analysis + Fix
-Task:  49.3 — Update tauri-mock.js EXTRACTION_MAP with extracted_text_preview
+Task:  49.4 — E2E spec: upload-extracted-text-preview visible after upload
 ```
 
-▶ **49.3** — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`
+▶ **49.4** — E2E spec: upload-extracted-text-preview visible after upload
 
 ---
 
@@ -941,12 +941,12 @@ The raw OCR text is stored in `documents.extracted_text` and surfaced on the doc
    - Add `data-testid="upload-extracted-text-preview"` to the `<details>` element
    - Done when: `npx tsc --noEmit` passes; preview visible in upload review step when OCR text exists; hidden when absent
 
-▶ [ ] **49.3 — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`**
+[x] **49.3 — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`**
    - All entries in `EXTRACTION_MAP` that have OCR-like content: add `extracted_text_preview: 'Sample extracted text...'`
    - Entries with no extracted text: set `extracted_text_preview: null`
    - Done when: E2E tests that check for `upload-extracted-text-preview` use correct mock data
 
-[ ] **49.4 — E2E spec: upload-extracted-text-preview visible after upload**
+▶ [ ] **49.4 — E2E spec: upload-extracted-text-preview visible after upload**
    - File: `e2e/upload-ocr-preview.spec.ts`
    - **TC-OCR-01:** Upload `medical-invoice.pdf` (has `extracted_text_preview` in mock) → review step → assert `upload-extracted-text-preview` is present in DOM
    - **TC-OCR-02:** Upload `no-date-physio.pdf` (no preview in mock) → review step → assert `upload-extracted-text-preview` is NOT present
