@@ -9,6 +9,7 @@ import { useNotes } from '../../../hooks/useNotes'
 import type { Document } from '../../../store/documentsStore'
 import type { Appointment } from '../../../store/appointmentsStore'
 import type { Note } from '../../../store/notesStore'
+import { DOCTOR_ROLES } from '../../../store/contactsStore'
 import { apptToEvent } from './timeline-utils'
 import type { TimelineEvent } from './timeline-utils'
 
@@ -335,7 +336,6 @@ export default function TimelinePage() {
 
         if (cancelled) return
 
-        const DOCTOR_ROLES = new Set(['gp', 'specialist', 'dentist', 'physio'])
         const nameMap = new Map<string, string>()
         for (const c of contacts as Array<{ id: string; name: string; role: string }>) {
           if (DOCTOR_ROLES.has(c.role)) nameMap.set(c.id, c.name)

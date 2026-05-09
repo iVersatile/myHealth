@@ -11,10 +11,7 @@ import {
 } from '../../store/appointmentsStore'
 import { AppointmentInput } from '../../hooks/useAppointments'
 import { CategoryPicker, type Category } from '../categories/CategoryPicker'
-import { Contact } from '../../store/contactsStore'
-
-const DOCTOR_ROLES = new Set(['gp', 'specialist', 'dentist', 'physio'])
-const CLINIC_ROLES = new Set(['hospital', 'clinic'])
+import { Contact, DOCTOR_ROLES, CLINIC_ROLES } from '../../store/contactsStore'
 
 interface AppointmentFormProps {
   initial?: Appointment

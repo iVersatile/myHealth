@@ -7,11 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.7 — COMPLETE ✅ Phase 46 fully done
+Phase: 48 — Hardcoded Filter Tech Debt
+Task:  48.2 — Add documents_valid_categories Tauri command
 ```
 
-All planned phases complete. Awaiting next instructions.
+▶ **48.2** — Add `documents_valid_categories` Tauri command; wire frontend category chips to invoke result
 
 ---
 
@@ -838,3 +838,128 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Enter date range that excludes document → document gone
    - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
    - Commit: `feat: content search entity-type filter chips + date range (Phase 46)`
+
+---
+
+## Phase 48 — Hardcoded Filter Tech Debt
+
+**Goal:** Eliminate hard-coded filter values (roles, categories, statuses, entity labels) found during code review (2026-05-09). Prioritised H → M; LOW items deferred to v1.5+.
+
+**Done when:** All HIGH items resolved; no duplicate role arrays; category list driven by backend command; appointment status validated at IPC boundary; entity-type config centralised.
+
+### Priority H3 — Quick fix: shared role constants (30 min)
+
+[x] **48.1 — Export `DOCTOR_ROLES` / `CLINIC_ROLES` from `contactsStore.ts`**
+   - Current: `AppointmentForm.tsx:16-17` redeclares `['doctor', 'specialist', 'physio', 'dentist', 'nurse', 'other']` inline, duplicating the identical array already in `contactsStore.ts`
+   - Fix: add `export const DOCTOR_ROLES = [...]` and `export const CLINIC_ROLES = [...]` in `contactsStore.ts`; import them in `AppointmentForm.tsx` and remove the local declarations
+   - `npx tsc --noEmit` must pass
+   - Done when: no duplicate role arrays exist in the codebase (`grep -r "DOCTOR_ROLES\|doctor.*specialist.*physio" src/` shows single definition)
+
+### Priority H1 — Backend-driven categories (medium)
+
+[ ] **48.2 — Add `documents_valid_categories` Tauri command**
+   - New command in `src-tauri/src/commands/documents.rs` (or `categories.rs`)
+   - Returns `Vec<String>` — the list of all valid category names (currently hard-coded in frontend filter panel)
+   - Frontend (`src/components/documents/DocumentList.tsx` or wherever category chips are built) fetches on init via `invoke('documents_valid_categories')`; replaces static array
+   - Done when: `cargo test` includes a test asserting the command returns a non-empty list; frontend chip list is driven by the invoke result
+
+### Priority H2 — Appointment status validation at IPC boundary (medium)
+
+[ ] **48.3 — Validate appointment statuses at IPC boundary**
+   - Current: frontend uses string literals `'scheduled' | 'completed' | 'cancelled'` with no Rust-side enum check
+   - Fix: define `AppointmentStatus` enum in Rust (or use a `match` guard in the update command); return an error if an unknown status string is received
+   - TypeScript side: create `type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled'` in `src/types/appointments.ts` (or equivalent); use it wherever status is set/read
+   - Done when: passing `'bogus'` to `appointments_update` returns a Tauri error; TypeScript type is used at all call sites
+
+### Priority M1 — Centralise entity-type labels + routes (medium)
+
+[ ] **48.4 — Create `src/lib/entities.ts` entity config map**
+   - Current: entity-type labels (`'Document'`, `'Note'`, `'Symptom'`, `'Medication'`) and their route prefixes are repeated across ContentSearchClient, result cards, badge renderers, and link builders
+   - Fix: create `src/lib/entities.ts` exporting:
+     ```ts
+     export const ENTITY_CONFIG = {
+       document:   { label: 'Document',   route: '/documents/view'   },
+       note:       { label: 'Note',        route: '/notes/view'       },
+       symptom:    { label: 'Symptom',     route: '/symptoms/view'    },
+       medication: { label: 'Medication',  route: '/medications/view' },
+     } as const
+     ```
+   - Replace all inline string literals / switch blocks with lookups from `ENTITY_CONFIG`
+   - Done when: `npx tsc --noEmit` passes; no bare `'/documents/view'` strings outside `entities.ts`
+
+### Priority M2/M3 — Extraction tag / specialty constants (flag for future)
+
+[ ] **48.5 — Add TODO comments on extraction tag and specialty constant blocks**
+   - `src-tauri/src/commands/documents.rs` — tag extraction constants (type tags, specialty list)
+   - Add: `// TODO(hardcoded): move to DB config table (Phase 48 deferred to v1.5)`
+   - No functional change — just guards against silent drift
+   - Done when: TODO comments are present; no code changed
+
+[ ] **48.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `refactor: eliminate hardcoded filter values — roles, categories, statuses, entity config (Phase 48)`
+
+---
+
+## Phase 49 — Missing Notes After Document Upload: Analysis + Fix
+
+### Problem Statement
+
+Users report that notes are missing after uploading a document. Specifically, the upload dialog shows a "Notes" textarea but the saved document does not surface any OCR-extracted note content.
+
+**Root cause (confirmed 2026-05-09):**
+
+`UploadDialog.tsx` has a manual notes textarea (`const [notes, setNotes] = useState('')` at line 95; rendered at lines 862–869). This textarea is bound to manual user input only — it is **never pre-populated** from the extraction result. The `ExtractionSuggestions` struct (Rust) has no `clinical_notes` field, so OCR-extracted note content is invisible during the upload flow.
+
+The raw OCR text is stored in `documents.extracted_text` and surfaced on the document detail page (Phase 38 — "Extracted Text" collapsible section). That panel already solves the read-back problem for existing documents. The gap is in the upload-time UX: users expect the upload dialog to show them what was found in the document so they can annotate accordingly.
+
+### Fix Options
+
+| Option | Description | Effort | Trade-off |
+|--------|-------------|--------|-----------|
+| **A — Pre-fill notes textarea from extraction** | Add `clinical_notes: Option<String>` to `ExtractionSuggestions` in Rust; populate from `extracted_text` trimmed to ~400 chars; pre-fill the manual notes textarea in `UploadDialog.tsx` | Medium (Rust + frontend) | Simple; but merges OCR content and user annotation into the same field — confusing if user wants to keep them separate |
+| **B — Keep notes manual; rely on detail-page Extracted Text panel** | No change to upload flow; add a dismissible info banner in `UploadDialog` at review step: "Full extracted text will be available on the document detail page" | Small (one banner line) | Honest UX contract; no risk of OCR noise in manual notes field; detail-page panel already exists (Phase 38) |
+| **C — Read-only OCR preview in upload dialog** | Add a non-editable "OCR Preview" block in the upload review step showing the first ~300 chars of `extracted_text`; manual notes textarea remains separate | Medium (UI only; extraction already returns `extracted_text`) | Clearest separation of concerns; users can see extracted text without it polluting their notes |
+
+**Recommendation: Option C** — show a collapsible read-only "Extracted Text Preview" in the upload review step. Manual notes stay separate. This matches the pattern already used on the document detail page and avoids silently writing OCR noise into the user's own notes.
+
+### Sprint 49
+
+[ ] **49.1 — Rust: include `extracted_text_preview` in `ExtractionSuggestions`**
+   - `src-tauri/src/commands/documents.rs` — `ExtractionSuggestions` struct
+   - Add field: `extracted_text_preview: Option<String>` — first 400 chars of `extracted_text`, trimmed
+   - Populate it in the extraction command that returns `ExtractionSuggestions`
+   - Done when: `cargo test` passes; field present in JSON response
+
+[ ] **49.2 — Frontend: collapsible OCR preview in UploadDialog review step**
+   - `src/components/documents/UploadDialog.tsx`
+   - In the review step (after upload, when `ExtractionSuggestions` is shown): if `extractedTextPreview` is non-empty, render a collapsible `<details>` block
+     - `<summary>Extracted Text Preview</summary>`
+     - `<p className="text-sm text-gray-500 whitespace-pre-wrap">{extractedTextPreview}</p>`
+   - Do NOT pre-fill the notes textarea — keep manual notes separate
+   - Add `data-testid="upload-extracted-text-preview"` to the `<details>` element
+   - Done when: `npx tsc --noEmit` passes; preview visible in upload review step when OCR text exists; hidden when absent
+
+[ ] **49.3 — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`**
+   - All entries in `EXTRACTION_MAP` that have OCR-like content: add `extracted_text_preview: 'Sample extracted text...'`
+   - Entries with no extracted text: set `extracted_text_preview: null`
+   - Done when: E2E tests that check for `upload-extracted-text-preview` use correct mock data
+
+[ ] **49.4 — E2E spec: upload-extracted-text-preview visible after upload**
+   - File: `e2e/upload-ocr-preview.spec.ts`
+   - **TC-OCR-01:** Upload `medical-invoice.pdf` (has `extracted_text_preview` in mock) → review step → assert `upload-extracted-text-preview` is present in DOM
+   - **TC-OCR-02:** Upload `no-date-physio.pdf` (no preview in mock) → review step → assert `upload-extracted-text-preview` is NOT present
+   - Done when: both TCs pass
+
+[ ] **49.5 — Unit test: UploadDialog renders preview when present**
+   - `src/components/documents/UploadDialog.test.tsx`
+   - Mock extraction result with `extracted_text_preview: 'Blood pressure: 130/85'`
+   - Assert `upload-extracted-text-preview` element is in DOM
+   - Assert manual notes textarea is empty (OCR content not leaked into notes)
+   - Done when: `npx vitest run` passes
+
+[ ] **49.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: show OCR text preview in upload review step — read-only collapsible (Phase 49)`

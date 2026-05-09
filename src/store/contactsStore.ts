@@ -27,6 +27,9 @@ export const CONTACT_ROLES = [
 
 export type ContactRole = (typeof CONTACT_ROLES)[number]
 
+export const DOCTOR_ROLES: ReadonlySet<string> = new Set(['gp', 'specialist', 'dentist', 'physio'])
+export const CLINIC_ROLES: ReadonlySet<string> = new Set(['hospital'])
+
 export const ROLE_LABELS: Record<ContactRole, string> = {
   gp: 'GP',
   specialist: 'Specialist',
