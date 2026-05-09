@@ -371,7 +371,8 @@ export default function ContactsPage() {
   const highlightParam = searchParams.get('highlight')
   useEffect(() => {
     if (!highlightParam || contacts.length === 0) return
-    scrollToContact(highlightParam)
+    const t = setTimeout(() => scrollToContact(highlightParam), 0)
+    return () => clearTimeout(t)
   }, [highlightParam, contacts.length])
 
   async function handleFindDuplicates() {
