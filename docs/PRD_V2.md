@@ -492,3 +492,51 @@ The following issues were reported after manual testing of the document upload f
 **Root cause:** `extract_clinic_addresses()` uses a strict UK postcode regex (`[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}`) as the address anchor. PDFs where OCR text does not contain full valid postcodes (partial postcodes, missing space, OCR noise) yield zero matches. London-based addresses frequently use short postcode prefixes (W1, EC1, SW1) that may not render as full postcodes in OCR output.
 **Fix:** Add fallback address detection using known London/UK partial postcode prefixes and street-type keywords ("Street", "Road", "Avenue", "Lane", "Gardens", "London") when the postcode regex produces no results.
 **Task:** 31.11
+
+---
+
+### UTFv2-01 — Missing Requirement: Clinical notes not auto-extracted from PDF (2026-05-09)
+
+**Reported:** Uploading "Upload (30Jan2023-17_52_15).pdf" succeeded but the upload dialog showed no clinical notes despite the document containing Notes/Assessment/Plan sections.
+**PRD coverage before fix:** F3.1–F3.5 — no requirement for auto-extraction of notes from PDF text existed.
+**Classification:** Missing requirement (not an implementation miss).
+**Action:**
+- Added F3.6 to `docs/PRD.md`: auto-extract clinical notes from OCR text when "Notes:", "Clinical Notes:", "Assessment:", "Plan:", or "Impression:" section headers are present; pre-populate notes textarea in upload dialog.
+- Added V3-F10 implementation spec to `docs/PRD.md`.
+- UTF-07 added to `docs/PRD.md` feedback log.
+**Status:** 🔲 Planned
+
+---
+
+### UTFv2-02 — Implementation Gaps: Contact extraction misses untitled names, role-labelled names, and non-standard phone format (2026-05-09)
+
+**Reported:** Uploading "Upload (30Jan2023-17_52_15).pdf" failed to suggest:
+- "Mary Margaret MURPHY" — name with no title prefix
+- "GP: Vaibhav SHARMA" — name identified by role label rather than title
+- Phone "+44 (0) 203 423 7500" — partially matched, last segment dropped
+
+**PRD coverage:** F4.5 (contact suggestion from extracted provider name) — requirement exists but extraction implementation is incomplete.
+**Classification:** Implementation gaps (three distinct regex deficiencies).
+**Root cause:**
+1. `dr_re()` in `contact.rs` requires title prefix (Dr/Prof/Mr/etc.); ALLCAPS-surname names without titles are not matched.
+2. No role-label pattern (GP:, Consultant:, etc.) exists in `extract_contact_suggestions()`.
+3. `phone_re()` London `+44` branch `20[\s\-]?\d{4}[\s\-]?\d{4}` fails to match "203 423 7500" grouping (020-3xxx-xxxx written as 203 NNN NNNN after stripping area code prefix).
+**Action:**
+- Added F4.8 (ALLCAPS-surname extraction) and F4.9 (role-label extraction) to `docs/PRD.md`.
+- Added Lesson 9 to `docs/LESSONS_LEARNT.md`.
+- UTF-08 added to `docs/PRD.md` feedback log.
+- Code fix required in `src-tauri/src/extraction/contact.rs`: new `ALLCAPS_NAME_PATTERN`, `GP_LABEL_PATTERN`, phone regex fix.
+**Status:** 🔲 Planned
+
+---
+
+### UTFv2-03 — Implementation Gap: Clinic→Contact link navigated to 404 (2026-05-10)
+
+**Reported:** Clicking a linked contact from the Clinic edit page produced a 404 error.
+**PRD coverage:** Linked contacts are navigable from the clinic detail view — requirement exists.
+**Classification:** Implementation miss — link used `/contacts/<id>` but no dynamic `[id]` sub-route exists under `/contacts/`; the correct deep-link pattern is `?highlight=<id>`.
+**Root cause:** `ClinicEditClient.tsx` used `href={/contacts/${c.id}}` (non-existent route) instead of the query-param pattern `href={/contacts?highlight=${c.id}}` that the contacts page already supports.
+**Action:**
+- Fixed `ClinicEditClient.tsx` line 260: href → `/contacts?highlight=${c.id}`.
+- Added `useSearchParams`-based effect to `contacts/page.tsx` to call `scrollToContact()` when `?highlight` param is present on mount.
+**Status:** ✅ Fixed (2026-05-10)

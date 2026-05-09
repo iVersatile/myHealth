@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { confirm } from '@tauri-apps/plugin-dialog'
@@ -305,6 +306,7 @@ function DuplicateGroupCard({ primary, candidate, onMerge, onKeepBoth }: Duplica
 type RoleFilter = 'all' | ContactRole
 
 export default function ContactsPage() {
+  const searchParams = useSearchParams()
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -365,6 +367,12 @@ export default function ContactsPage() {
       setTimeout(() => setHighlightedId(null), 1500)
     }, 50)
   }
+
+  const highlightParam = searchParams.get('highlight')
+  useEffect(() => {
+    if (!highlightParam || contacts.length === 0) return
+    scrollToContact(highlightParam)
+  }, [highlightParam, contacts.length])
 
   async function handleFindDuplicates() {
     setScanning(true)

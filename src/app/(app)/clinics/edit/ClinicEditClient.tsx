@@ -257,7 +257,7 @@ export function ClinicEditClient() {
             {linkedContacts.map((c) => (
               <li key={c.id}>
                 <Link
-                  href={`/contacts/${c.id}`}
+                  href={`/contacts?highlight=${c.id}`}
                   className="text-sm text-[var(--color-accent)] hover:opacity-80"
                 >
                   {c.name}
