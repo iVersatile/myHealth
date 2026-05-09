@@ -8,10 +8,10 @@
 
 ```
 Phase: 49 — Missing Notes After Document Upload: Analysis + Fix
-Task:  49.4 — E2E spec: upload-extracted-text-preview visible after upload
+Task:  49.5 — Unit test: UploadDialog renders preview when present
 ```
 
-▶ **49.4** — E2E spec: upload-extracted-text-preview visible after upload
+▶ **49.5** — Unit test: UploadDialog renders preview when present
 
 ---
 
@@ -946,13 +946,13 @@ The raw OCR text is stored in `documents.extracted_text` and surfaced on the doc
    - Entries with no extracted text: set `extracted_text_preview: null`
    - Done when: E2E tests that check for `upload-extracted-text-preview` use correct mock data
 
-▶ [ ] **49.4 — E2E spec: upload-extracted-text-preview visible after upload**
+[x] **49.4 — E2E spec: upload-extracted-text-preview visible after upload**
    - File: `e2e/upload-ocr-preview.spec.ts`
    - **TC-OCR-01:** Upload `medical-invoice.pdf` (has `extracted_text_preview` in mock) → review step → assert `upload-extracted-text-preview` is present in DOM
    - **TC-OCR-02:** Upload `no-date-physio.pdf` (no preview in mock) → review step → assert `upload-extracted-text-preview` is NOT present
    - Done when: both TCs pass
 
-[ ] **49.5 — Unit test: UploadDialog renders preview when present**
+▶ [ ] **49.5 — Unit test: UploadDialog renders preview when present**
    - `src/components/documents/UploadDialog.test.tsx`
    - Mock extraction result with `extracted_text_preview: 'Blood pressure: 130/85'`
    - Assert `upload-extracted-text-preview` element is in DOM
