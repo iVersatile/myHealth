@@ -8,10 +8,10 @@
 
 ```
 Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.4 — Frontend: summary bar reflects filtered count
+Task:  46.5 — Unit tests: filter chip interactions
 ```
 
-▶ **46.4**
+▶ **46.5**
 
 ---
 
@@ -807,7 +807,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Clear button resets both fields and re-searches
    - Done when: entering a date range filters results to only entries within that range
 
-[ ] **46.4 — Frontend: summary bar reflects filtered count**
+[x] **46.4 — Frontend: summary bar reflects filtered count**
    - Update `data-testid="summary-bar"` to show filtered count
    - When filters active: "4 of 12 results — 4 Documents"
    - When no filters: original behaviour "12 results — 2 Documents, …"

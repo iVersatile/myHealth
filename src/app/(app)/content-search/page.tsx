@@ -113,7 +113,15 @@ function ResultCard({ result }: { result: ContentSearchResult }) {
   )
 }
 
-function SummaryBar({ summary, results }: { summary: ContentSearchSummary; results: ContentSearchResult[] }) {
+function SummaryBar({
+  summary,
+  results,
+  isFiltered,
+}: {
+  summary: ContentSearchSummary
+  results: ContentSearchResult[]
+  isFiltered: boolean
+}) {
   const typeCounts = results.reduce<Record<string, number>>((acc, r) => {
     acc[r.entity_type] = (acc[r.entity_type] ?? 0) + 1
     return acc
@@ -128,7 +136,7 @@ function SummaryBar({ summary, results }: { summary: ContentSearchSummary; resul
     >
       <div className="flex flex-col min-w-[80px]">
         <span className="text-[10px] uppercase tracking-widest font-semibold text-[var(--color-text-muted)]">
-          Results
+          {isFiltered ? 'Filtered results' : 'Results'}
         </span>
         <span className="text-sm font-semibold text-[var(--color-text)] mt-0.5" data-testid="summary-total">
           {summary.doc_count}
@@ -291,7 +299,13 @@ export default function ContentSearchPage() {
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
-      {hasResults && <SummaryBar summary={response.summary} results={response.results} />}
+      {hasResults && (
+        <SummaryBar
+          summary={response.summary}
+          results={response.results}
+          isFiltered={activeType !== null || hasDateFilter}
+        />
+      )}
 
       {response !== null && response.results.length === 0 && !loading && (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
