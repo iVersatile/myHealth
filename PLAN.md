@@ -8,10 +8,10 @@
 
 ```
 Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.5 — Unit tests: filter chip interactions
+Task:  46.6 — Rust unit tests: filter logic
 ```
 
-▶ **46.5**
+▶ **46.6**
 
 ---
 
@@ -813,7 +813,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - When no filters: original behaviour "12 results — 2 Documents, …"
    - Done when: summary bar text changes correctly when filters applied/cleared
 
-[ ] **46.5 — Unit tests: filter chip interactions**
+[x] **46.5 — Unit tests: filter chip interactions**
    - File: `src/app/(app)/content-search/__tests__/content-search-filters.test.tsx`
    - Mock `invoke` returning mixed-type results
    - Assert: clicking "Document" chip triggers invoke with `entityTypes: ['document']`
