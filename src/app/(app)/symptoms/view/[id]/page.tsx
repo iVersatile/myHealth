@@ -1,6 +1,8 @@
 'use client'
 
-export const dynamic = 'force-static'
+export function generateStaticParams() {
+  return []
+}
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
