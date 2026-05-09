@@ -13,6 +13,8 @@ pub struct ContactSuggestion {
 }
 
 static DR_PATTERN: OnceLock<Regex> = OnceLock::new();
+static ALLCAPS_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
+static GP_LABEL_PATTERN: OnceLock<Regex> = OnceLock::new();
 static PHONE_PATTERN: OnceLock<Regex> = OnceLock::new();
 static INTL_PHONE_PATTERN: OnceLock<Regex> = OnceLock::new();
 static EMAIL_PATTERN: OnceLock<Regex> = OnceLock::new();
@@ -31,12 +33,34 @@ fn dr_re() -> &'static Regex {
     })
 }
 
+fn allcaps_name_re() -> &'static Regex {
+    ALLCAPS_NAME_PATTERN.get_or_init(|| {
+        // Matches names like "Mary Margaret MURPHY" — 2+ Title-case words followed by
+        // one or more ALLCAPS surname tokens (≥2 chars). Requiring 2+ leading Title-case
+        // words avoids false positives on standalone acronyms or single-word headers.
+        Regex::new(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\s+[A-Z]{2,}(?:\s+[A-Z]{2,})*)\b")
+            .expect("allcaps name regex valid")
+    })
+}
+
+fn gp_label_re() -> &'static Regex {
+    GP_LABEL_PATTERN.get_or_init(|| {
+        // Matches "GP: Vaibhav SHARMA", "Consultant James BROWN", etc.
+        // Capture group 1 = the name portion after the role label.
+        Regex::new(
+            r"\b(?:GP|Consultant|Registrar|Physiotherapist?|Nurse|Specialist):?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+[A-Z]{2,})+)",
+        )
+        .expect("gp label regex valid")
+    })
+}
+
 fn phone_re() -> &'static Regex {
     PHONE_PATTERN.get_or_init(|| {
         // Covers common UK formats including parenthesised area codes, freephone,
         // non-geographic (03xx), mobiles and +44 international prefixes.
+        // London +44 branch handles both "20 XXXX XXXX" and "203 XXX XXXX" styles.
         Regex::new(
-            r"(?:\+44[\s\-]?(?:\(0\)[\s\-]?)?(?:20[\s\-]?\d{4}[\s\-]?\d{4}|\d{2,4}[\s\-]?\d{3,8})|\(?02\d\)?[\s\-]?\d{4}[\s\-]?\d{4}|\(?01[1-9]\d\)?[\s\-]?\d{3}[\s\-]?\d{4}|\(?01\d{3}\)?[\s\-]?\d{6}|07\d{3}[\s\-]?\d{6}|0(?:800|808|300|330|345|370|845|870)[\s\-]?\d{3}[\s\-]?\d{3,4})",
+            r"(?:\+44[\s\-]?(?:\(0\)[\s\-]?)?(?:20[\s\-]?(?:\d{4}[\s\-]?\d{4}|\d[\s\-]?\d{3}[\s\-]?\d{4})|\d{2,4}[\s\-]?\d{3,8})|\(?02\d\)?[\s\-]?\d{4}[\s\-]?\d{4}|\(?01[1-9]\d\)?[\s\-]?\d{3}[\s\-]?\d{4}|\(?01\d{3}\)?[\s\-]?\d{6}|07\d{3}[\s\-]?\d{6}|0(?:800|808|300|330|345|370|845|870)[\s\-]?\d{3}[\s\-]?\d{3,4})",
         )
         .expect("phone regex valid")
     })
@@ -177,7 +201,6 @@ fn specialty_near(text: &str, name_end: usize) -> Option<String> {
 /// fallback suggestion is returned using the clinic name (if detected) so the
 /// extracted contact details are not lost.
 pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
-    let re = dr_re();
     let mut seen = std::collections::HashSet::new();
     let mut suggestions: Vec<ContactSuggestion> = Vec::new();
 
@@ -186,17 +209,12 @@ pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
     let email = first_email(text);
     let address = extract_address(text);
 
-    for cap in re.captures_iter(text) {
-        let full_match = cap.get(0).unwrap();
-        let name = full_match.as_str().trim().to_string();
-
+    let mut push = |name: String, name_end: usize| {
         if !seen.insert(name.clone()) {
-            continue;
+            return;
         }
-
-        let specialty = specialty_near(text, full_match.end());
+        let specialty = specialty_near(text, name_end);
         let title = extract_title_from_name(&name);
-
         let (c, p, e, a) = if suggestions.is_empty() {
             (
                 clinic.clone(),
@@ -207,7 +225,6 @@ pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
         } else {
             (None, None, None, None)
         };
-
         suggestions.push(ContactSuggestion {
             name,
             title,
@@ -217,6 +234,28 @@ pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
             email: e,
             address: a,
         });
+    };
+
+    // Pass 1: title-prefixed names (Dr., Prof., Mr., etc.)
+    for cap in dr_re().captures_iter(text) {
+        let m = cap.get(0).unwrap();
+        push(m.as_str().trim().to_string(), m.end());
+    }
+
+    // Pass 2: role-labelled names ("GP: Vaibhav SHARMA").
+    // Pre-insert into seen so Pass 3 does not duplicate them.
+    for cap in gp_label_re().captures_iter(text) {
+        let name = cap.get(1).unwrap().as_str().trim().to_string();
+        let end = cap.get(1).unwrap().end();
+        push(name, end);
+    }
+
+    // Pass 3: ALLCAPS-surname names ("Mary Margaret MURPHY").
+    // Already-seen names from passes 1-2 are skipped automatically.
+    for cap in allcaps_name_re().captures_iter(text) {
+        let name = cap.get(1).unwrap().as_str().trim().to_string();
+        let end = cap.get(1).unwrap().end();
+        push(name, end);
     }
 
     // If no named contact was found, fall back to a clinic-level suggestion so
@@ -451,5 +490,27 @@ mod tests {
     fn detects_clinic_inline_with_the_prefix() {
         let text = "You were seen at The Riverside Clinic on 1st January.";
         assert_eq!(first_clinic(text), Some("The Riverside Clinic".to_string()));
+    }
+
+    #[test]
+    fn extracts_allcaps_surname_contact() {
+        let text = "Referred by Mary Margaret MURPHY for further assessment.";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].name, "Mary Margaret MURPHY");
+    }
+
+    #[test]
+    fn extracts_gp_labelled_contact() {
+        let text = "GP: Vaibhav SHARMA\nInstitute Of Preventative Medicine\n29 Old Gloucester Street\nLondon WC1N 3AX";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].name, "Vaibhav SHARMA");
+    }
+
+    #[test]
+    fn extracts_plus44_london_03_number() {
+        let text = "Tel +44 (0) 203 423 7500";
+        assert_eq!(first_phone(text), Some("+44 (0) 203 423 7500".to_string()));
     }
 }
