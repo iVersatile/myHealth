@@ -142,6 +142,7 @@ pub fn medications_create(
         "",
         "",
         "",
+        m.start_date.as_deref().unwrap_or(""),
     );
     Ok(m)
 }
@@ -193,6 +194,7 @@ pub fn medications_update(
         "",
         "",
         "",
+        m.start_date.as_deref().unwrap_or(""),
     );
     Ok(m)
 }

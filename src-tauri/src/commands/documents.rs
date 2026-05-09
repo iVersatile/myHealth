@@ -271,6 +271,7 @@ pub fn documents_upload(
         "",
         "",
         doc.extracted_text.as_deref().unwrap_or(""),
+        doc.activity_date.as_deref().unwrap_or(""),
     );
     Ok(doc)
 }
@@ -311,6 +312,7 @@ pub fn documents_update(
         "",
         "",
         doc.extracted_text.as_deref().unwrap_or(""),
+        doc.activity_date.as_deref().unwrap_or(""),
     );
     Ok(doc)
 }
@@ -363,6 +365,7 @@ pub fn documents_restore(state: State<'_, AppState>, id: String) -> Result<(), C
             "",
             "",
             doc.extracted_text.as_deref().unwrap_or(""),
+            doc.activity_date.as_deref().unwrap_or(""),
         );
     }
     Ok(())
@@ -434,6 +437,7 @@ pub fn documents_tags_set(
             "",
             "",
             doc.extracted_text.as_deref().unwrap_or(""),
+            doc.activity_date.as_deref().unwrap_or(""),
         );
     }
 
@@ -1384,6 +1388,7 @@ pub async fn documents_run_extraction(
                 "",
                 "",
                 doc.extracted_text.as_deref().unwrap_or(""),
+                doc.activity_date.as_deref().unwrap_or(""),
             );
         }
     }

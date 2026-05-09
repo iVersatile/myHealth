@@ -170,7 +170,7 @@ pub fn contacts_create(
         c.notes.as_deref().unwrap_or(""),
     ]
     .join(" ");
-    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "", "", "", "");
+    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "", "", "", "", "");
     Ok(c)
 }
 
@@ -271,7 +271,18 @@ pub fn contacts_create_with_clinic(
             )
             .map_err(|e| CommandError::Internal(e.to_string()))?;
 
-            upsert_search_index(&tx, "clinic", &clinic_id, clinic_name, "", "", "", "", "");
+            upsert_search_index(
+                &tx,
+                "clinic",
+                &clinic_id,
+                clinic_name,
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+            );
         }
 
         let person = tx
@@ -296,6 +307,7 @@ pub fn contacts_create_with_clinic(
             &person.id,
             &person.name,
             &body,
+            "",
             "",
             "",
             "",
@@ -402,7 +414,7 @@ pub fn contacts_update(
         c.notes.as_deref().unwrap_or(""),
     ]
     .join(" ");
-    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "", "", "", "");
+    upsert_search_index(conn, "contact", &c.id, &c.name, &body, "", "", "", "", "");
     Ok(c)
 }
 
@@ -715,6 +727,7 @@ pub fn merge_contacts(
                 &contact.id,
                 &contact.name,
                 &body,
+                "",
                 "",
                 "",
                 "",

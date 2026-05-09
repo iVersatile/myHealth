@@ -113,7 +113,18 @@ pub fn symptoms_create(
     )?;
     let s = load_symptom(conn, &id)?;
     let body = s.notes.as_deref().unwrap_or("");
-    upsert_search_index(conn, "symptom", &s.id, &s.name, body, "", "", "", "");
+    upsert_search_index(
+        conn,
+        "symptom",
+        &s.id,
+        &s.name,
+        body,
+        "",
+        "",
+        "",
+        "",
+        s.onset_date.as_deref().unwrap_or(""),
+    );
     Ok(s)
 }
 
@@ -146,7 +157,18 @@ pub fn symptoms_update(
     )?;
     let s = load_symptom(conn, &id)?;
     let body = s.notes.as_deref().unwrap_or("");
-    upsert_search_index(conn, "symptom", &s.id, &s.name, body, "", "", "", "");
+    upsert_search_index(
+        conn,
+        "symptom",
+        &s.id,
+        &s.name,
+        body,
+        "",
+        "",
+        "",
+        "",
+        s.onset_date.as_deref().unwrap_or(""),
+    );
     Ok(s)
 }
 

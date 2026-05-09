@@ -313,6 +313,7 @@ pub fn appointments_create(
         "",
         "",
         "",
+        &appt.appt_date,
     );
     Ok(appt)
 }
@@ -386,6 +387,7 @@ pub fn appointments_update(
         "",
         "",
         "",
+        &appt.appt_date,
     );
     Ok(appt)
 }

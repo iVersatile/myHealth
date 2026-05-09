@@ -147,6 +147,7 @@ pub fn notes_create(
         "",
         "",
         "",
+        "",
     );
     Ok(note)
 }
@@ -207,6 +208,7 @@ pub fn notes_update(
         &note.title,
         &strip_html(&note.content),
         &note.tags.join(","),
+        "",
         "",
         "",
         "",
@@ -300,6 +302,7 @@ pub fn notes_tags_set(
             &note.title,
             &strip_html(&note.content),
             &note.tags.join(","),
+            "",
             "",
             "",
             "",

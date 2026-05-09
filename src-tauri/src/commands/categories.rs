@@ -96,7 +96,7 @@ pub fn categories_create(
     )?;
 
     let cat = stmt.query_row(rusqlite::params![id], row_to_category)?;
-    upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "", "");
+    upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "", "", "");
     Ok(cat)
 }
 
@@ -143,7 +143,7 @@ pub fn categories_create_if_not_exists(
          VALUES (?1, ?2, NULL, '#6B7280', 0, 100, ?3)",
         rusqlite::params![id, normalised, created_at],
     )?;
-    upsert_search_index(conn, "category", &id, &normalised, "", "", "", "", "");
+    upsert_search_index(conn, "category", &id, &normalised, "", "", "", "", "", "");
     Ok(id)
 }
 
@@ -182,7 +182,7 @@ pub fn categories_update(
     )?;
 
     let cat = stmt.query_row(rusqlite::params![input.id], row_to_category)?;
-    upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "", "");
+    upsert_search_index(conn, "category", &cat.id, &cat.name, "", "", "", "", "", "");
     Ok(cat)
 }
 

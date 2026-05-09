@@ -7,9 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 45 — Unified Content Search
-Task:  COMPLETE — all phases done
+Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
+Task:  46.1 — Rust: extend content_search command with optional filters
 ```
+
+▶ **46.1**
 
 ---
 
@@ -88,6 +90,30 @@ Task:  COMPLETE — all phases done
 | Multi-user vault support | PRD_V2 Phase 3 | LOW | Large |
 
 **Coverage requirement:** ≥ 80% across all new code
+
+---
+
+## Phase 47 — CI Fix: Next.js Static Export + Dynamic Routes
+
+**Goal:** Build & Release fails on all 4 platforms because `'use client'` and `generateStaticParams()` cannot coexist in the same file. Fix by splitting each dynamic `[id]` page into a server wrapper (holds `generateStaticParams`) and a client component (holds all hooks/state).
+
+**Done when:** `next build` succeeds locally or on CI; Build & Release passes on all 4 platforms.
+
+### Sprint 47
+
+[x] **47.1 — Split medications/view/[id] into server wrapper + client component**
+   - Move all hook/state/router logic from `page.tsx` into `ViewMedicationClient.tsx` (`'use client'`)
+   - `page.tsx` becomes a server component: no `'use client'`, exports `generateStaticParams() { return [] }`, renders `<ViewMedicationClient />`
+   - Files: `src/app/(app)/medications/view/[id]/page.tsx` + new `src/app/(app)/medications/view/[id]/ViewMedicationClient.tsx`
+
+[x] **47.2 — Split symptoms/view/[id] into server wrapper + client component**
+   - Same pattern as 47.1
+   - Files: `src/app/(app)/symptoms/view/[id]/page.tsx` + new `src/app/(app)/symptoms/view/[id]/ViewSymptomClient.tsx`
+
+[x] **47.3 — Verify next build passes + commit + push + retag v1.8.0**
+   - Run `npx tsc --noEmit` (local Node 20 can do type check even if full build fails)
+   - Commit, push to develop, wait for Lint + Tests green
+   - Then retag: delete remote v1.8.0, push new tag, verify Build & Release passes all 4 platforms
 
 ---
 
@@ -736,3 +762,79 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
      - Create medication "Amoxicillin" → search "amoxicillin" → medication card visible
    - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
    - Commit: `feat: unified content search — documents + notes + symptoms + medications (Phase 45)`
+
+---
+
+## Phase 46 — Content Search Filters: Entity-Type Chips + Date Range
+
+**Goal:** Add entity-type filter chips and an optional date range picker to the `/content-search` page, and extend the `content_search` Rust command to accept these filters. This is the only genuine remaining feature gap (PRD F6.5 "Filter results by type").
+
+**Done when:** The `/content-search` page has clickable entity-type filter chips (All / Document / Note / Symptom / Medication) and an optional date range that narrow results server-side; the summary bar reflects the filtered count; all tests pass.
+
+### Sprint 46
+
+[x] **46.0 — Rust: V25 migration — add `activity_date` to `search_index` FTS5 + update `upsert_search_index`**
+   - **Blocker:** `search_index` FTS5 virtual table (created in V20) has no `activity_date` column; date filtering in 46.1 cannot be implemented without it. FTS5 tables cannot be ALTERed — must drop and recreate.
+   - File: `src-tauri/migrations/` — add V25 migration
+     - `DROP TABLE IF EXISTS search_index;`
+     - Recreate with identical columns + `activity_date TEXT` appended
+   - File: `src-tauri/src/commands/documents.rs` (or wherever `upsert_search_index` is defined)
+     - Add `activity_date: Option<&str>` as 9th parameter
+     - Update INSERT statement to include `activity_date`
+   - Find all call sites of `upsert_search_index` (grep: `upsert_search_index`) and pass the document/entity activity_date value (or `None` for entities that have no date)
+   - Done when: `cargo test` passes; `search_index` table has `activity_date` column; all existing search tests still pass
+
+[ ] **46.1 — Rust: extend `content_search` command with optional filters**
+   - File: `src-tauri/src/commands/search.rs`
+   - Add optional params: `entity_types: Option<Vec<String>>`, `date_from: Option<String>`, `date_to: Option<String>`
+   - If `entity_types` is non-empty, add `WHERE entity_type IN (…)` clause to FTS5 query
+   - If `date_from`/`date_to` provided, filter on `activity_date` column in `search_index` (added by V25 migration in 46.0)
+   - Keep backward compat: if all params None, behaviour identical to current
+   - Done when: `cargo test` includes a test asserting entity_type filter returns only matching types; date range test filters by date
+
+[ ] **46.2 — Frontend: add entity-type filter chip row**
+   - File: `src/app/(app)/content-search/page.tsx`
+   - Add chip row above results: **All** | **Document** | **Note** | **Symptom** | **Medication**
+   - Active chip highlighted; clicking changes state and re-triggers search
+   - "All" deselects all specific filters
+   - Pass `entity_types` to `invoke('content_search', { query, entityTypes: [...] })`
+   - Done when: clicking "Document" chip re-runs search and only Document cards render
+
+[ ] **46.3 — Frontend: add date range inputs**
+   - Same file as 46.2
+   - Add two `<input type="date">` fields: "From" and "To" (collapsible or always visible)
+   - On change, re-trigger search with `dateFrom` / `dateTo` params
+   - Clear button resets both fields and re-searches
+   - Done when: entering a date range filters results to only entries within that range
+
+[ ] **46.4 — Frontend: summary bar reflects filtered count**
+   - Update `data-testid="summary-bar"` to show filtered count
+   - When filters active: "4 of 12 results — 4 Documents"
+   - When no filters: original behaviour "12 results — 2 Documents, …"
+   - Done when: summary bar text changes correctly when filters applied/cleared
+
+[ ] **46.5 — Unit tests: filter chip interactions**
+   - File: `src/app/(app)/content-search/__tests__/content-search-filters.test.tsx`
+   - Mock `invoke` returning mixed-type results
+   - Assert: clicking "Document" chip triggers invoke with `entityTypes: ['document']`
+   - Assert: date range inputs trigger invoke with `dateFrom`/`dateTo`
+   - Assert: "All" chip clears entity filters
+   - Assert: summary bar shows filtered count
+   - Done when: `npx vitest run` passes
+
+[ ] **46.6 — Rust unit tests: filter logic**
+   - File: `src-tauri/src/commands/search.rs` (or adjacent test module)
+   - Test: `entity_types = ['document']` filters out notes/symptoms/medications
+   - Test: `date_from = '2024-01-01', date_to = '2024-12-31'` excludes entries outside range
+   - Test: no filters → all entity types returned
+   - Done when: `cargo test` passes
+
+[ ] **46.7 — E2E spec + pre-commit + commit**
+   - File: `e2e/content-search-filters.spec.ts`
+   - Setup: upload one document + create one note with searchable text
+   - Search for term that matches both → both appear
+   - Click "Document" chip → only document card visible; note card gone
+   - Click "All" → both reappear
+   - Enter date range that excludes document → document gone
+   - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
+   - Commit: `feat: content search entity-type filter chips + date range (Phase 46)`

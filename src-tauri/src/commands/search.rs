@@ -46,12 +46,13 @@ pub fn upsert_search_index(
     extracted_metadata: &str,
     category_name: &str,
     extracted_text: &str,
+    activity_date: &str,
 ) {
     let _ = conn.execute("DELETE FROM search_index WHERE entity_id = ?", [entity_id]);
     let _ = conn.execute(
-        "INSERT INTO search_index (entity_type, entity_id, title, body, tags, extracted_metadata, category_name, extracted_text)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        rusqlite::params![entity_type, entity_id, title, body, tags, extracted_metadata, category_name, extracted_text],
+        "INSERT INTO search_index (entity_type, entity_id, title, body, tags, extracted_metadata, category_name, extracted_text, activity_date)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        rusqlite::params![entity_type, entity_id, title, body, tags, extracted_metadata, category_name, extracted_text, activity_date],
     );
 }
 
@@ -304,6 +305,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         let count: i64 = conn
             .query_row(
@@ -318,8 +320,30 @@ mod tests {
     #[test]
     fn upsert_replaces_existing_row() {
         let conn = open_test_db();
-        upsert_search_index(&conn, "note", "n1", "Old Title", "old body", "", "", "", "");
-        upsert_search_index(&conn, "note", "n1", "New Title", "new body", "", "", "", "");
+        upsert_search_index(
+            &conn,
+            "note",
+            "n1",
+            "Old Title",
+            "old body",
+            "",
+            "",
+            "",
+            "",
+            "",
+        );
+        upsert_search_index(
+            &conn,
+            "note",
+            "n1",
+            "New Title",
+            "new body",
+            "",
+            "",
+            "",
+            "",
+            "",
+        );
         let title: String = conn
             .query_row(
                 "SELECT title FROM search_index WHERE entity_id='n1'",
@@ -333,7 +357,7 @@ mod tests {
     #[test]
     fn remove_deletes_row() {
         let conn = open_test_db();
-        upsert_search_index(&conn, "note", "n1", "Title", "body", "", "", "", "");
+        upsert_search_index(&conn, "note", "n1", "Title", "body", "", "", "", "", "");
         remove_from_search_index(&conn, "n1");
         let count: i64 = conn
             .query_row(
@@ -364,6 +388,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         upsert_search_index(
             &conn,
@@ -372,6 +397,7 @@ mod tests {
             "Daily Journal",
             "feeling good today",
             "diary",
+            "",
             "",
             "",
             "",
@@ -409,6 +435,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
 
         let fts_query = build_fts_query("presc");
@@ -441,6 +468,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         let tags_str: String = conn
             .query_row(
@@ -470,6 +498,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         upsert_search_index(
             &conn,
@@ -477,6 +506,7 @@ mod tests {
             "a1",
             "Blood Appointment",
             "blood draw scheduled",
+            "",
             "",
             "",
             "",
@@ -516,6 +546,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         let fts_query = build_fts_query("blood");
         let mut stmt = conn
@@ -546,6 +577,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         let fts_query = build_fts_query("blood");
         let mut stmt = conn
@@ -570,7 +602,7 @@ mod tests {
     #[test]
     fn upsert_with_empty_tags_gives_empty_vec() {
         let conn = open_test_db();
-        upsert_search_index(&conn, "note", "n1", "Title", "body", "", "", "", "");
+        upsert_search_index(&conn, "note", "n1", "Title", "body", "", "", "", "", "");
         let fts_query = build_fts_query("body");
         let mut stmt = conn
             .prepare(
@@ -601,6 +633,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         upsert_search_index(
             &conn,
@@ -608,6 +641,7 @@ mod tests {
             "n2",
             "Blood Only",
             "just blood here",
+            "",
             "",
             "",
             "",
@@ -643,6 +677,7 @@ mod tests {
             "medical",
             r#"{"ocr_text": "blood type O positive", "confidence": 0.95}"#,
             "Lab Results",
+            "",
             "",
         );
 
@@ -686,6 +721,7 @@ mod tests {
             "",
             "",
             "patient diagnosed with hypertension",
+            "",
         );
         upsert_search_index(
             &conn,
@@ -697,6 +733,7 @@ mod tests {
             "",
             "",
             "routine check-up visit",
+            "",
         );
 
         let fts_query = build_fts_query("hypertension");
@@ -741,6 +778,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         upsert_search_index(
             &conn,
@@ -752,6 +790,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         upsert_search_index(
             &conn,
@@ -759,6 +798,7 @@ mod tests {
             "d3",
             "Receipt May",
             "routine check-up visit",
+            "",
             "",
             "",
             "",
@@ -795,6 +835,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
         upsert_search_index(
             &conn,
@@ -802,6 +843,7 @@ mod tests {
             "s1",
             "High Cholesterol",
             "cholesterol check routine",
+            "",
             "",
             "",
             "",
@@ -833,6 +875,7 @@ mod tests {
             "",
             "",
             "",
+            "",
         );
 
         let resp = content_search_inner(&conn, "glucose").unwrap();
@@ -853,6 +896,7 @@ mod tests {
             "sym-1",
             "Migraine",
             "severe headache with light sensitivity",
+            "",
             "",
             "",
             "",
