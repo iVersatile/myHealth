@@ -41,6 +41,7 @@ interface ExtractionSuggestions {
   contact_suggestions: ContactSuggestion[]
   clinic_suggestions: ClinicSuggestion[]
   activity_date: string | null
+  extractedTextPreview: string | null
 }
 
 function buildTimelineDescription(
@@ -108,6 +109,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null)
+  const [extractedTextPreview, setExtractedTextPreview] = useState<string | null>(null)
   const [docCategories, setDocCategories] = useState<string[]>(
     DOCUMENT_CATEGORIES.filter((c) => c !== 'all')
   )
@@ -177,6 +179,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           const actDate = suggestions.activity_date ?? null
           setActivityDate(actDate)
           setTimelineDescription(buildTimelineDescription(actDate, suggestions.contact_suggestions[0] ?? null))
+          setExtractedTextPreview(suggestions.extractedTextPreview ?? null)
 
           for (const tag of [...(suggestions.auto_tags ?? []), ...(suggestions.doctor_candidates ?? []), ...(suggestions.document_tags ?? [])]) {
             const lower = tag.toLowerCase()
@@ -879,6 +882,20 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                   className={`resize-none ${fieldCls}`}
                 />
               </div>
+
+              {extractedTextPreview && (
+                <details
+                  data-testid="upload-extracted-text-preview"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2"
+                >
+                  <summary className="cursor-pointer text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                    Extracted Text Preview
+                  </summary>
+                  <p className="mt-2 text-sm text-[var(--color-text-secondary)] whitespace-pre-wrap">
+                    {extractedTextPreview}
+                  </p>
+                </details>
+              )}
 
               {confirmError && (
                 <p className="rounded-[var(--radius-md)] border border-[var(--color-danger)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-danger)]">

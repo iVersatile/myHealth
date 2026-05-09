@@ -7,11 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 48 — Hardcoded Filter Tech Debt
-Task:  48.6 — Pre-commit checks + commit
+Phase: 49 — Missing Notes After Document Upload: Analysis + Fix
+Task:  49.3 — Update tauri-mock.js EXTRACTION_MAP with extracted_text_preview
 ```
 
-▶ **48.6** — Pre-commit checks + commit
+▶ **49.3** — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`
 
 ---
 
@@ -895,7 +895,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - No functional change — just guards against silent drift
    - Done when: TODO comments are present; no code changed
 
-▶ [ ] **48.6 — Pre-commit checks + commit**
+[x] **48.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `refactor: eliminate hardcoded filter values — roles, categories, statuses, entity config (Phase 48)`
@@ -926,13 +926,13 @@ The raw OCR text is stored in `documents.extracted_text` and surfaced on the doc
 
 ### Sprint 49
 
-[ ] **49.1 — Rust: include `extracted_text_preview` in `ExtractionSuggestions`**
+[x] **49.1 — Rust: include `extracted_text_preview` in `ExtractionSuggestions`**
    - `src-tauri/src/commands/documents.rs` — `ExtractionSuggestions` struct
    - Add field: `extracted_text_preview: Option<String>` — first 400 chars of `extracted_text`, trimmed
    - Populate it in the extraction command that returns `ExtractionSuggestions`
    - Done when: `cargo test` passes; field present in JSON response
 
-[ ] **49.2 — Frontend: collapsible OCR preview in UploadDialog review step**
+[x] **49.2 — Frontend: collapsible OCR preview in UploadDialog review step**
    - `src/components/documents/UploadDialog.tsx`
    - In the review step (after upload, when `ExtractionSuggestions` is shown): if `extractedTextPreview` is non-empty, render a collapsible `<details>` block
      - `<summary>Extracted Text Preview</summary>`
@@ -941,7 +941,7 @@ The raw OCR text is stored in `documents.extracted_text` and surfaced on the doc
    - Add `data-testid="upload-extracted-text-preview"` to the `<details>` element
    - Done when: `npx tsc --noEmit` passes; preview visible in upload review step when OCR text exists; hidden when absent
 
-[ ] **49.3 — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`**
+▶ [ ] **49.3 — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`**
    - All entries in `EXTRACTION_MAP` that have OCR-like content: add `extracted_text_preview: 'Sample extracted text...'`
    - Entries with no extracted text: set `extracted_text_preview: null`
    - Done when: E2E tests that check for `upload-extracted-text-preview` use correct mock data
