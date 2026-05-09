@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { Document, CATEGORY_LABELS } from '../../../../store/documentsStore'
+import { ENTITY_CONFIG } from '../../../../lib/entities'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 import type { Appointment } from '../../../../store/appointmentsStore'
 import type { Note } from '../../../../store/notesStore'
@@ -865,7 +866,7 @@ export default function DocumentDetailClient() {
                   return (
                     <li key={note.id}>
                       <Link
-                        href={`/notes/view?id=${note.id}`}
+                        href={`${ENTITY_CONFIG.note.route}?id=${note.id}`}
                         className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 hover:border-[var(--color-primary)] transition-colors duration-[var(--duration-fast)]"
                       >
                         <p className="truncate text-[var(--text-xs)] font-medium text-[var(--color-text)]">

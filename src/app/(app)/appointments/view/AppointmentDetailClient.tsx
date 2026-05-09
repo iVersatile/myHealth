@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { Appointment, STATUS_LABELS } from '../../../../store/appointmentsStore'
+import { ENTITY_CONFIG } from '../../../../lib/entities'
 import { CATEGORY_LABELS } from '../../../../store/documentsStore'
 import { CategoryPicker, type Category } from '../../../../components/categories/CategoryPicker'
 import { AppointmentForm } from '../../../../components/appointments/AppointmentForm'
@@ -619,7 +620,7 @@ export default function AppointmentDetailClient() {
                 return (
                   <li key={note.id}>
                     <Link
-                      href={`/notes/view?id=${note.id}`}
+                      href={`${ENTITY_CONFIG.note.route}?id=${note.id}`}
                       className="block rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 hover:border-[var(--color-primary)] transition-colors duration-[var(--duration-fast)]"
                     >
                       <p className="truncate text-[var(--text-xs)] font-medium text-[var(--color-text)]">
@@ -778,7 +779,7 @@ export default function AppointmentDetailClient() {
               >
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={`/documents/view?id=${doc.document_id}`}
+                    href={`${ENTITY_CONFIG.document.route}?id=${doc.document_id}`}
                     className="truncate text-[var(--text-sm)] font-medium text-[var(--color-accent)] hover:underline"
                   >
                     {doc.filename}

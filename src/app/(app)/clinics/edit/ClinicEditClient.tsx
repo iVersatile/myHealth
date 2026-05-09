@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { AddressList, type Address } from '@/components/shared/AddressList'
+import { ENTITY_CONFIG } from '../../../../lib/entities'
 
 interface Clinic {
   id: string
@@ -279,7 +280,7 @@ export function ClinicEditClient() {
             {linkedDocuments.map((d) => (
               <li key={d.id}>
                 <Link
-                  href={`/documents/view/${d.id}`}
+                  href={`${ENTITY_CONFIG.document.route}?id=${d.id}`}
                   className="text-sm text-[var(--color-accent)] hover:opacity-80"
                 >
                   {d.filename}

@@ -8,10 +8,10 @@
 
 ```
 Phase: 48 — Hardcoded Filter Tech Debt
-Task:  48.3 — Validate appointment statuses at IPC boundary
+Task:  48.6 — Pre-commit checks + commit
 ```
 
-▶ **48.3** — Validate appointment statuses at IPC boundary
+▶ **48.6** — Pre-commit checks + commit
 
 ---
 
@@ -865,7 +865,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
 
 ### Priority H2 — Appointment status validation at IPC boundary (medium)
 
-[ ] **48.3 — Validate appointment statuses at IPC boundary**
+[x] **48.3 — Validate appointment statuses at IPC boundary**
    - Current: frontend uses string literals `'scheduled' | 'completed' | 'cancelled'` with no Rust-side enum check
    - Fix: define `AppointmentStatus` enum in Rust (or use a `match` guard in the update command); return an error if an unknown status string is received
    - TypeScript side: create `type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled'` in `src/types/appointments.ts` (or equivalent); use it wherever status is set/read
@@ -873,7 +873,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
 
 ### Priority M1 — Centralise entity-type labels + routes (medium)
 
-[ ] **48.4 — Create `src/lib/entities.ts` entity config map**
+[x] **48.4 — Create `src/lib/entities.ts` entity config map**
    - Current: entity-type labels (`'Document'`, `'Note'`, `'Symptom'`, `'Medication'`) and their route prefixes are repeated across ContentSearchClient, result cards, badge renderers, and link builders
    - Fix: create `src/lib/entities.ts` exporting:
      ```ts
@@ -889,13 +889,13 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
 
 ### Priority M2/M3 — Extraction tag / specialty constants (flag for future)
 
-[ ] **48.5 — Add TODO comments on extraction tag and specialty constant blocks**
+[x] **48.5 — Add TODO comments on extraction tag and specialty constant blocks**
    - `src-tauri/src/commands/documents.rs` — tag extraction constants (type tags, specialty list)
    - Add: `// TODO(hardcoded): move to DB config table (Phase 48 deferred to v1.5)`
    - No functional change — just guards against silent drift
    - Done when: TODO comments are present; no code changed
 
-[ ] **48.6 — Pre-commit checks + commit**
+▶ [ ] **48.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `refactor: eliminate hardcoded filter values — roles, categories, statuses, entity config (Phase 48)`

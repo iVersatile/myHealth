@@ -7,6 +7,7 @@ pub fn suggest_category(text: &str) -> Option<String> {
     let lower = text.to_lowercase();
     let split = (lower.len() as f64 * 0.6) as usize;
 
+    // TODO(hardcoded): move to DB config table (Phase 48 deferred to v1.5)
     let mapping: &[(&[&str], &str)] = &[
         (
             &["gastroenterolog", "colonoscopy", "crohn"],
@@ -160,6 +161,7 @@ pub fn extract_document_tags(text: &str) -> Vec<String> {
     let lower = text.to_lowercase();
     let mut tags: Vec<String> = Vec::new();
 
+    // TODO(hardcoded): move to DB config table (Phase 48 deferred to v1.5)
     let specialty_tags: &[(&[&str], &str)] = &[
         (&["gastroenterolog"], "gastroenterology"),
         (&["cardiol"], "cardiology"),
@@ -188,6 +190,7 @@ pub fn extract_document_tags(text: &str) -> Vec<String> {
         }
     }
 
+    // TODO(hardcoded): move to DB config table (Phase 48 deferred to v1.5)
     let invoice_keywords = [
         "invoice",
         "bill\n",

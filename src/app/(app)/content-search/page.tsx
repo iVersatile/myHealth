@@ -2,6 +2,7 @@
 import { useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
+import { ENTITY_CONFIG, type EntityType } from '../../../lib/entities'
 
 const FILTER_CHIPS = [
   { label: 'All', value: null },
@@ -31,39 +32,18 @@ interface ContentSearchResponse {
   summary: ContentSearchSummary
 }
 
-const ENTITY_LABELS: Record<string, string> = {
-  document: 'Document',
-  symptom: 'Symptom',
-  appointment: 'Appointment',
-  medication: 'Medication',
-  note: 'Note',
-  contact: 'Contact',
-  category: 'Category',
-}
+const EXTRA_LABELS: Record<string, string> = { contact: 'Contact', category: 'Category' }
 
 function entityLabel(type: string): string {
-  return ENTITY_LABELS[type] ?? type
+  return ENTITY_CONFIG[type as EntityType]?.label ?? EXTRA_LABELS[type] ?? type
 }
 
 function entityRoute(type: string, id: string): string {
-  switch (type) {
-    case 'document':
-      return `/documents/view?id=${id}`
-    case 'symptom':
-      return `/symptoms/view?id=${id}`
-    case 'appointment':
-      return `/appointments/view?id=${id}`
-    case 'medication':
-      return `/medications/view?id=${id}`
-    case 'note':
-      return `/notes/view?id=${id}`
-    case 'contact':
-      return '/contacts'
-    case 'category':
-      return '/categories'
-    default:
-      return '/'
-  }
+  const config = ENTITY_CONFIG[type as EntityType]
+  if (config) return `${config.route}?id=${id}`
+  if (type === 'contact') return '/contacts'
+  if (type === 'category') return '/categories'
+  return '/'
 }
 
 function SnippetText({ raw }: { raw: string }) {

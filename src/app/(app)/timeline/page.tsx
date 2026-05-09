@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { useDocuments } from '../../../hooks/useDocuments'
+import { ENTITY_CONFIG } from '../../../lib/entities'
 import { useAppointments } from '../../../hooks/useAppointments'
 import { useNotes } from '../../../hooks/useNotes'
 import type { Document } from '../../../store/documentsStore'
@@ -77,7 +78,7 @@ function docToEvent(d: Document): TimelineEvent {
     title: buildDocTitle(d),
     subtitle: d.category.charAt(0).toUpperCase() + d.category.slice(1),
     badge,
-    href: `/documents/view?id=${d.id}`,
+    href: `${ENTITY_CONFIG.document.route}?id=${d.id}`,
   }
 }
 
@@ -92,7 +93,7 @@ function docToUploadEvent(d: Document): TimelineEvent {
     title: `Uploaded: ${d.filename}`,
     subtitle: d.category.charAt(0).toUpperCase() + d.category.slice(1),
     badge,
-    href: `/documents/view?id=${d.id}`,
+    href: `${ENTITY_CONFIG.document.route}?id=${d.id}`,
   }
 }
 
@@ -106,7 +107,7 @@ function noteToEvent(n: Note): TimelineEvent {
     title: n.title || 'Untitled note',
     subtitle: n.tags.length > 0 ? n.tags.join(', ') : null,
     badge: '📝',
-    href: `/notes/view?id=${n.id}`,
+    href: `${ENTITY_CONFIG.note.route}?id=${n.id}`,
   }
 }
 

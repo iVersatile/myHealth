@@ -7,6 +7,7 @@ import type { Appointment } from '../../../store/appointmentsStore'
 import type { Document } from '../../../store/documentsStore'
 import type { Note } from '../../../store/notesStore'
 import { formatApptDate, docTypeLabel, formatBytes, stripHtml } from '../../../lib/formatting'
+import { ENTITY_CONFIG } from '../../../lib/entities'
 
 interface Stats {
   total_documents: number
@@ -166,7 +167,7 @@ export default function DashboardPage() {
             {recentDocs.map(doc => (
               <Link
                 key={doc.id}
-                href={`/documents/view?id=${doc.id}`}
+                href={`${ENTITY_CONFIG.document.route}?id=${doc.id}`}
                 style={{ textDecoration: 'none' }}
               >
                 <div
@@ -226,7 +227,7 @@ export default function DashboardPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {pinnedNotes.map(note => (
-              <Link key={note.id} href={`/notes/view?id=${note.id}`} style={{ textDecoration: 'none' }}>
+              <Link key={note.id} href={`${ENTITY_CONFIG.note.route}?id=${note.id}`} style={{ textDecoration: 'none' }}>
                 <div
                   style={{
                     background: 'var(--color-surface)',
