@@ -8,10 +8,10 @@
 
 ```
 Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.2 — Frontend: add entity-type filter chip row
+Task:  46.3 — Frontend: add date range inputs
 ```
 
-▶ **46.2**
+▶ **46.3**
 
 ---
 
@@ -792,7 +792,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Keep backward compat: if all params None, behaviour identical to current
    - Done when: `cargo test` includes a test asserting entity_type filter returns only matching types; date range test filters by date
 
-[ ] **46.2 — Frontend: add entity-type filter chip row**
+[x] **46.2 — Frontend: add entity-type filter chip row**
    - File: `src/app/(app)/content-search/page.tsx`
    - Add chip row above results: **All** | **Document** | **Note** | **Symptom** | **Medication**
    - Active chip highlighted; clicking changes state and re-triggers search

@@ -3,6 +3,17 @@ import { useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 
+const FILTER_CHIPS = [
+  { label: 'All', value: null },
+  { label: 'Document', value: 'document' },
+  { label: 'Note', value: 'note' },
+  { label: 'Symptom', value: 'symptom' },
+  { label: 'Medication', value: 'medication' },
+  { label: 'Appointment', value: 'appointment' },
+] as const
+
+type EntityFilter = (typeof FILTER_CHIPS)[number]['value']
+
 interface ContentSearchResult {
   entity_type: string
   id: string
@@ -130,12 +141,13 @@ function SummaryBar({ summary, results }: { summary: ContentSearchSummary; resul
 
 export default function ContentSearchPage() {
   const [query, setQuery] = useState('')
+  const [activeType, setActiveType] = useState<EntityFilter>(null)
   const [response, setResponse] = useState<ContentSearchResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const search = useCallback(async (q: string) => {
+  const search = useCallback(async (q: string, entityType: EntityFilter) => {
     const trimmed = q.trim()
     if (!trimmed) {
       setResponse(null)
@@ -150,6 +162,7 @@ export default function ContentSearchPage() {
     try {
       const res = await invoke<ContentSearchResponse>('documents_content_search', {
         query: trimmed,
+        entityTypes: entityType ? [entityType] : null,
       })
       if (!ctrl.signal.aborted) setResponse(res)
     } catch (e) {
@@ -163,7 +176,12 @@ export default function ContentSearchPage() {
   }, [])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') void search(query)
+    if (e.key === 'Enter') void search(query, activeType)
+  }
+
+  function handleChipClick(value: EntityFilter) {
+    setActiveType(value)
+    if (query.trim()) void search(query, value)
   }
 
   const hasResults = response !== null && response.results.length > 0
@@ -177,7 +195,7 @@ export default function ContentSearchPage() {
         Search extracted text across all your documents.
       </p>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-4">
         <input
           type="search"
           data-testid="content-search-input"
@@ -189,12 +207,31 @@ export default function ContentSearchPage() {
         />
         <button
           type="button"
-          onClick={() => void search(query)}
+          onClick={() => void search(query, activeType)}
           disabled={loading || !query.trim()}
           className="px-4 py-2.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
         >
           {loading ? 'Searching…' : 'Search'}
         </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-6" data-testid="entity-filter-chips">
+        {FILTER_CHIPS.map((chip) => (
+          <button
+            key={chip.label}
+            type="button"
+            data-testid={`chip-${chip.label.toLowerCase()}`}
+            onClick={() => handleChipClick(chip.value)}
+            className={[
+              'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
+              activeType === chip.value
+                ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]',
+            ].join(' ')}
+          >
+            {chip.label}
+          </button>
+        ))}
       </div>
 
       {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
