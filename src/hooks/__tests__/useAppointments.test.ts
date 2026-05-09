@@ -203,6 +203,44 @@ describe('useAppointments', () => {
     expect(result.current.appointments[0]?.contact_ids).toEqual([])
   })
 
+  it('linkContact calls invoke and upserts appointment', async () => {
+    const { useAppointments } = await import('../useAppointments')
+    const appt = makeAppt({ id: 'a1', contact_ids: [] })
+    mockInvoke.mockResolvedValueOnce([appt])
+    const updated = makeAppt({ id: 'a1', contact_ids: ['c1'] })
+    mockInvoke.mockResolvedValueOnce(undefined)
+    mockInvoke.mockResolvedValueOnce(updated)
+
+    const { result } = renderHook(() => useAppointments())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.linkContact('a1', 'c1')
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('appointment_link_contact', { appointmentId: 'a1', contactId: 'c1' })
+    expect(result.current.appointments.find((a) => a.id === 'a1')?.contact_ids).toEqual(['c1'])
+  })
+
+  it('unlinkContact calls invoke and upserts appointment', async () => {
+    const { useAppointments } = await import('../useAppointments')
+    const appt = makeAppt({ id: 'a1', contact_ids: ['c1'] })
+    mockInvoke.mockResolvedValueOnce([appt])
+    const updated = makeAppt({ id: 'a1', contact_ids: [] })
+    mockInvoke.mockResolvedValueOnce(undefined)
+    mockInvoke.mockResolvedValueOnce(updated)
+
+    const { result } = renderHook(() => useAppointments())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.unlinkContact('a1', 'c1')
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('appointment_unlink_contact', { appointmentId: 'a1', contactId: 'c1' })
+    expect(result.current.appointments.find((a) => a.id === 'a1')?.contact_ids).toEqual([])
+  })
+
   it('preserves contact_ids after updateAppointment', async () => {
     const { useAppointments } = await import('../useAppointments')
     const original = makeAppt({ id: 'a1', contact_ids: ['c1'] })

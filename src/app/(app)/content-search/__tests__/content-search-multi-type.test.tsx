@@ -64,4 +64,24 @@ describe('ContentSearchPage — multi-type results', () => {
     expect(bar.textContent).toContain('4')
     expect(bar.textContent).toMatch(/Document|Note|Symptom|Medication/)
   })
+
+  it('links appointment, contact, category, and unknown types correctly', async () => {
+    const extended = [
+      { entity_type: 'appointment', id: 'appt-5', title: 'Checkup', snippet: 'appt' },
+      { entity_type: 'contact',     id: 'c-6',    title: 'Dr Smith', snippet: 'contact' },
+      { entity_type: 'category',    id: 'cat-7',  title: 'Cardiology', snippet: 'cat' },
+      { entity_type: 'unknown',     id: 'u-8',    title: 'Mystery',   snippet: 'unknown' },
+    ]
+    mockInvoke.mockResolvedValueOnce({ results: extended, summary: SUMMARY })
+    render(<ContentSearchPage />)
+    await userEvent.type(screen.getByTestId('content-search-input'), 'test')
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => expect(screen.getByText('Checkup')).toBeTruthy())
+    const links = screen.getAllByRole('link')
+    const hrefs = links.map((l) => l.getAttribute('href') ?? '')
+    expect(hrefs.some((h) => h.includes('/appointments/view') && h.includes('appt-5'))).toBe(true)
+    expect(hrefs.some((h) => h === '/contacts')).toBe(true)
+    expect(hrefs.some((h) => h === '/categories')).toBe(true)
+    expect(hrefs.some((h) => h === '/')).toBe(true)
+  })
 })

@@ -17,6 +17,8 @@ export default defineConfig({
         'e2e/**',
         // Rich-text editor: requires ProseMirror/Tiptap DOM env not supported in jsdom
         '**/*NoteEditorClient*',
+        // Navigation shell — no business logic to cover
+        '**/components/layout/Sidebar*',
       ],
       thresholds: {
         lines: 80,
