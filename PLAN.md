@@ -8,10 +8,10 @@
 
 ```
 Phase: 46 — Content Search Filters: Entity-Type Chips + Date Range
-Task:  46.6 — Rust unit tests: filter logic
+Task:  46.7 — E2E spec + pre-commit + commit
 ```
 
-▶ **46.6**
+▶ **46.7**
 
 ---
 
@@ -822,7 +822,7 @@ New affordances: "Add Note" button on DocumentDetail that creates a linked note 
    - Assert: summary bar shows filtered count
    - Done when: `npx vitest run` passes
 
-[ ] **46.6 — Rust unit tests: filter logic**
+[x] **46.6 — Rust unit tests: filter logic**
    - File: `src-tauri/src/commands/search.rs` (or adjacent test module)
    - Test: `entity_types = ['document']` filters out notes/symptoms/medications
    - Test: `date_from = '2024-01-01', date_to = '2024-12-31'` excludes entries outside range
