@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { invoke } from '@tauri-apps/api/core'
 import { useNotes } from '../../../../hooks/useNotes'
+import { ENTITY_CONFIG } from '../../../../lib/entities'
 
 export default function NewNotePage() {
   const router = useRouter()
@@ -27,8 +28,8 @@ export default function NewNotePage() {
         })
       }
       const dest = linkedDocumentId
-        ? `/notes/view?id=${note.id}&linkedDocumentId=${linkedDocumentId}`
-        : `/notes/view?id=${note.id}`
+        ? `${ENTITY_CONFIG.note.route}?id=${note.id}&linkedDocumentId=${linkedDocumentId}`
+        : `${ENTITY_CONFIG.note.route}?id=${note.id}`
       router.replace(dest)
     }
 

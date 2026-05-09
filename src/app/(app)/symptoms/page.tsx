@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useSymptoms, type Symptom } from '../../../hooks/useSymptoms'
+import { ENTITY_CONFIG } from '../../../lib/entities'
 
 function severityLabel(n: number): string {
   if (n <= 3) return 'Mild'
@@ -86,7 +87,7 @@ export default function SymptomsPage() {
       {symptoms.length > 0 && (
         <div className="flex flex-col gap-2">
           {symptoms.map((s) => (
-            <SymptomCard key={s.id} symptom={s} onClick={() => router.push(`/symptoms/view/${s.id}`)} />
+            <SymptomCard key={s.id} symptom={s} onClick={() => router.push(`${ENTITY_CONFIG.symptom.route}/${s.id}`)} />
           ))}
         </div>
       )}

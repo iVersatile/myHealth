@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Document } from '../../store/documentsStore'
+import { ENTITY_CONFIG } from '../../lib/entities'
 
 interface DocumentCardProps {
   document: Document
@@ -82,7 +83,7 @@ export function DocumentCard({ document: doc, onDelete }: DocumentCardProps) {
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-2">
         <Link
-          href={`/documents/view?id=${doc.id}`}
+          href={`${ENTITY_CONFIG.document.route}?id=${doc.id}`}
           className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-[var(--text-sm)] text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
         >
           View / Edit

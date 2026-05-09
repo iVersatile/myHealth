@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useMedications, type Medication } from '../../../hooks/useMedications'
+import { ENTITY_CONFIG } from '../../../lib/entities'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -73,7 +74,7 @@ export default function MedicationsPage() {
       {medications.length > 0 && (
         <div className="flex flex-col gap-2">
           {medications.map((m) => (
-            <MedicationCard key={m.id} medication={m} onClick={() => router.push(`/medications/view/${m.id}`)} />
+            <MedicationCard key={m.id} medication={m} onClick={() => router.push(`${ENTITY_CONFIG.medication.route}/${m.id}`)} />
           ))}
         </div>
       )}

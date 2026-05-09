@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useNotes } from '../../../hooks/useNotes'
+import { ENTITY_CONFIG } from '../../../lib/entities'
 import { Note } from '../../../store/notesStore'
 
 function formatDate(iso: string): string {
@@ -54,11 +55,11 @@ export default function NotesPage() {
 
   async function handleNew() {
     const note = await createNote()
-    router.push(`/notes/view?id=${note.id}`)
+    router.push(`${ENTITY_CONFIG.note.route}?id=${note.id}`)
   }
 
   function openNote(id: string) {
-    router.push(`/notes/view?id=${id}`)
+    router.push(`${ENTITY_CONFIG.note.route}?id=${id}`)
   }
 
   return (
