@@ -7,8 +7,7 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 49 — Missing Notes After Document Upload: Analysis + Fix
-Task:  49.6 — Pre-commit checks + commit
+Phase: 49 — COMPLETE
 ```
 
 **49.5** — Unit test: UploadDialog renders preview when present
@@ -959,7 +958,7 @@ The raw OCR text is stored in `documents.extracted_text` and surfaced on the doc
    - Assert manual notes textarea is empty (OCR content not leaked into notes)
    - Done when: `npx vitest run` passes
 
-▶ [ ] **49.6 — Pre-commit checks + commit**
+[x] **49.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: show OCR text preview in upload review step — read-only collapsible (Phase 49)`
