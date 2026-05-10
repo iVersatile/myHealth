@@ -96,27 +96,34 @@ fn load_doc(conn: &rusqlite::Connection, id: &str) -> Result<Document, CommandEr
              document_date, activity_date, extracted_metadata, extracted_text, clinic_name \
              FROM documents WHERE id = ?",
     )?;
-    let mut doc = stmt.query_row([id], |row| {
-        Ok(Document {
-            id: row.get(0)?,
-            filename: row.get(1)?,
-            file_path: row.get(2)?,
-            mime_type: row.get(3)?,
-            file_size_bytes: row.get(4)?,
-            category: row.get(5)?,
-            thumbnail_path: row.get(6)?,
-            notes: row.get(7)?,
-            created_at: row.get(8)?,
-            updated_at: row.get(9)?,
-            is_deleted: row.get::<_, i64>(10)? != 0,
-            document_date: row.get(11)?,
-            activity_date: row.get(12)?,
-            extracted_metadata: row.get(13)?,
-            extracted_text: row.get(14)?,
-            tags: vec![],
-            clinic_name: row.get(15)?,
+    let mut doc = stmt
+        .query_row([id], |row| {
+            Ok(Document {
+                id: row.get(0)?,
+                filename: row.get(1)?,
+                file_path: row.get(2)?,
+                mime_type: row.get(3)?,
+                file_size_bytes: row.get(4)?,
+                category: row.get(5)?,
+                thumbnail_path: row.get(6)?,
+                notes: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+                is_deleted: row.get::<_, i64>(10)? != 0,
+                document_date: row.get(11)?,
+                activity_date: row.get(12)?,
+                extracted_metadata: row.get(13)?,
+                extracted_text: row.get(14)?,
+                tags: vec![],
+                clinic_name: row.get(15)?,
+            })
         })
-    })?;
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => {
+                CommandError::NotFound(format!("document {id} not found"))
+            }
+            other => CommandError::Internal(other.to_string()),
+        })?;
     doc.tags = fetch_tags(conn, id);
     Ok(doc)
 }
@@ -1144,6 +1151,115 @@ mod tests {
         assert_eq!(s.appt_date, "2024-03-15");
         assert!(!s.title.is_empty());
     }
+
+    fn report_test_conn() -> Connection {
+        let conn = test_conn();
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS appointments (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                doctor_name TEXT,
+                clinic_name TEXT,
+                specialty TEXT,
+                appt_date TEXT NOT NULL,
+                duration_min INTEGER NOT NULL DEFAULT 60,
+                location TEXT,
+                notes TEXT,
+                status TEXT NOT NULL DEFAULT 'scheduled',
+                reminder_min INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                is_deleted BOOLEAN NOT NULL DEFAULT 0,
+                recurrence_series_id TEXT
+            );
+            CREATE TABLE IF NOT EXISTS appointment_documents (
+                appointment_id TEXT NOT NULL,
+                document_id TEXT NOT NULL,
+                PRIMARY KEY (appointment_id, document_id)
+            );
+            CREATE TABLE IF NOT EXISTS document_entities (
+                id TEXT PRIMARY KEY,
+                document_id TEXT NOT NULL,
+                entity_type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                value TEXT,
+                unit TEXT,
+                raw_text TEXT NOT NULL DEFAULT '',
+                created_at DATETIME NOT NULL
+            );",
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn export_report_returns_basic_fields() {
+        let conn = report_test_conn();
+        insert_doc(&conn, "rep-1", "lab", false);
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE documents SET document_date = '2024-06-01', clinic_name = 'City Clinic', notes = 'Fasting required', updated_at = ?1 WHERE id = 'rep-1'",
+            rusqlite::params![now],
+        )
+        .unwrap();
+        let report = assemble_report(&conn, "rep-1").unwrap();
+        assert_eq!(report.document_id, "rep-1");
+        assert_eq!(report.document_date.as_deref(), Some("2024-06-01"));
+        assert_eq!(report.clinic_name.as_deref(), Some("City Clinic"));
+        assert_eq!(report.notes.as_deref(), Some("Fasting required"));
+        assert_eq!(report.category, "lab");
+    }
+
+    #[test]
+    fn export_report_returns_not_found_for_missing_doc() {
+        let conn = report_test_conn();
+        let err = assemble_report(&conn, "missing").unwrap_err();
+        assert!(matches!(err, CommandError::NotFound(_)));
+    }
+
+    #[test]
+    fn export_report_ocr_excerpt_truncated_to_500_chars() {
+        let conn = report_test_conn();
+        insert_doc(&conn, "rep-ocr", "lab", false);
+        let long_text = "a".repeat(1000);
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "UPDATE documents SET extracted_text = ?1, updated_at = ?2 WHERE id = 'rep-ocr'",
+            rusqlite::params![long_text, now],
+        )
+        .unwrap();
+        let report = assemble_report(&conn, "rep-ocr").unwrap();
+        assert_eq!(report.ocr_excerpt.as_ref().map(|s| s.len()), Some(500));
+    }
+
+    #[test]
+    fn export_report_includes_linked_appointments() {
+        let conn = report_test_conn();
+        insert_doc(&conn, "rep-appt", "diagnosis", false);
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, status, duration_min, reminder_min, created_at, updated_at) VALUES ('appt-1', 'Cardiology', '2024-06-01', 'completed', 30, 0, ?1, ?1)",
+            rusqlite::params![now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO appointment_documents (appointment_id, document_id) VALUES ('appt-1', 'rep-appt')",
+            [],
+        )
+        .unwrap();
+        let report = assemble_report(&conn, "rep-appt").unwrap();
+        assert_eq!(report.appointments.len(), 1);
+        assert_eq!(report.appointments[0].id, "appt-1");
+        assert_eq!(report.appointments[0].title, "Cardiology");
+    }
+
+    #[test]
+    fn export_report_entities_empty_when_none() {
+        let conn = report_test_conn();
+        insert_doc(&conn, "rep-ent0", "lab", false);
+        let report = assemble_report(&conn, "rep-ent0").unwrap();
+        assert!(report.entities.is_empty());
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1611,4 +1727,117 @@ fn suggest_appointment_from_doc(
         specialty,
         clinic_name,
     }))
+}
+
+// ── Phase 50: PDF report data assembly ──────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct ReportAppointment {
+    pub id: String,
+    pub title: String,
+    pub appt_date: String,
+    pub doctor_name: Option<String>,
+    pub clinic_name: Option<String>,
+    pub specialty: Option<String>,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReportData {
+    pub document_id: String,
+    pub title: String,
+    pub document_date: Option<String>,
+    pub category: String,
+    pub clinic_name: Option<String>,
+    pub notes: Option<String>,
+    pub tags: Vec<String>,
+    pub entities: Vec<DocumentEntity>,
+    pub appointments: Vec<ReportAppointment>,
+    pub ocr_excerpt: Option<String>,
+}
+
+fn fetch_linked_appointments(conn: &rusqlite::Connection, doc_id: &str) -> Vec<ReportAppointment> {
+    conn.prepare(
+        "SELECT a.id, a.title, a.appt_date, a.doctor_name, a.clinic_name, a.specialty, a.status
+         FROM appointments a
+         INNER JOIN appointment_documents ad ON ad.appointment_id = a.id
+         WHERE ad.document_id = ?1 AND a.is_deleted = 0
+         ORDER BY a.appt_date DESC",
+    )
+    .ok()
+    .and_then(|mut stmt| {
+        stmt.query_map(rusqlite::params![doc_id], |row| {
+            Ok(ReportAppointment {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                appt_date: row.get(2)?,
+                doctor_name: row.get(3)?,
+                clinic_name: row.get(4)?,
+                specialty: row.get(5)?,
+                status: row.get(6)?,
+            })
+        })
+        .ok()
+        .map(|rows| rows.filter_map(|r| r.ok()).collect())
+    })
+    .unwrap_or_default()
+}
+
+fn fetch_doc_entities(conn: &rusqlite::Connection, doc_id: &str) -> Vec<DocumentEntity> {
+    conn.prepare(
+        "SELECT id, document_id, entity_type, name, value, unit, raw_text, created_at \
+         FROM document_entities \
+         WHERE document_id = ?1 \
+         ORDER BY entity_type, created_at",
+    )
+    .ok()
+    .and_then(|mut stmt| {
+        stmt.query_map(rusqlite::params![doc_id], |row| {
+            Ok(DocumentEntity {
+                id: row.get(0)?,
+                document_id: row.get(1)?,
+                entity_type: row.get(2)?,
+                name: row.get(3)?,
+                value: row.get(4)?,
+                unit: row.get(5)?,
+                raw_text: row.get(6)?,
+                created_at: row.get(7)?,
+            })
+        })
+        .ok()
+        .map(|rows| rows.filter_map(|r| r.ok()).collect())
+    })
+    .unwrap_or_default()
+}
+
+fn assemble_report(conn: &rusqlite::Connection, doc_id: &str) -> Result<ReportData, CommandError> {
+    let doc = load_doc(conn, doc_id)?;
+    let entities = fetch_doc_entities(conn, doc_id);
+    let appointments = fetch_linked_appointments(conn, doc_id);
+    let ocr_excerpt = doc
+        .extracted_text
+        .as_deref()
+        .map(|t| t.chars().take(500).collect::<String>());
+    Ok(ReportData {
+        document_id: doc.id,
+        title: doc.filename,
+        document_date: doc.document_date,
+        category: doc.category,
+        clinic_name: doc.clinic_name,
+        notes: doc.notes,
+        tags: doc.tags,
+        entities,
+        appointments,
+        ocr_excerpt,
+    })
+}
+
+#[tauri::command]
+pub fn documents_export_report(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<ReportData, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    assemble_report(conn, &id)
 }

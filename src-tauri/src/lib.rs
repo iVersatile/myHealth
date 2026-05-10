@@ -44,10 +44,11 @@ use commands::contacts::{
     find_duplicate_contacts, merge_contacts,
 };
 use commands::documents::{
-    appointments_suggest_from_document, document_entities_get, documents_delete, documents_get,
-    documents_get_extraction_status, documents_get_file_url, documents_list, documents_restore,
-    documents_run_extraction, documents_search_filtered, documents_set_clinic, documents_tags_set,
-    documents_update, documents_upload,
+    appointments_suggest_from_document, document_entities_get, documents_delete,
+    documents_export_report, documents_get, documents_get_extraction_status,
+    documents_get_file_url, documents_list, documents_restore, documents_run_extraction,
+    documents_search_filtered, documents_set_clinic, documents_tags_set, documents_update,
+    documents_upload,
 };
 use commands::entity_links::{
     links_for_medication, links_for_symptom, medication_link, medication_unlink,
@@ -159,6 +160,7 @@ pub fn run() {
             document_entities_get,
             documents_tags_set,
             documents_set_clinic,
+            documents_export_report,
             appointments_suggest_from_document,
             documents_search_filtered,
             appointments_list,
