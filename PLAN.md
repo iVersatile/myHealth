@@ -1,4 +1,4 @@
-# myHealth — Execution Plan (v1.2 / v1.3)
+# myHealth — Execution Plan (v1.3)
 
 > **HOW TO RESUME:** Type `go` in any session. Claude will read this file, find the ▶ marker, and start executing from that exact task. No context needed — every task is self-contained.
 
@@ -7,10 +7,10 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 49 — COMPLETE
+Phase: 50 — PDF Summary Report Export
 ```
 
-**49.5** — Unit test: UploadDialog renders preview when present
+▶ **50.1** — Design PDF report structure and Rust command
 
 ---
 
@@ -30,51 +30,67 @@ Phase: 49 — COMPLETE
 
 | Feature | Source | Status |
 |---------|--------|--------|
-| F2.2–F2.5 OCR pipeline | PRD_V2 §F2 | ✅ done |
-| F3.2–F3.5 Many-to-many categories + bulk ops | PRD_V2 §F3 | ✅ done |
-| F4 Apple Calendar integration (macOS) | PRD_V2 §F4 | ✅ done |
-| F5.3–F5.4 Contact deduplication + merge | PRD_V2 §F5 | ✅ done |
-| F6 Document-appointment link scoring | PRD_V2 §F6 | ✅ done |
-| V3-F1 Category auto-creation when suggestion accepted | PRD_V3 §V3-F1 | ✅ done |
-| V3-F2 Contact auto-creation (UK phone regex + full save) | PRD_V3 §V3-F2 | ✅ done |
-| V3-F3 Clinic: CRN, multi-address, clinic↔contact link | PRD_V3 §V3-F3 | ✅ done |
-| V3-F4 Tag auto-extraction (type, provider, specialty, date) | PRD_V3 §V3-F4 | ✅ done |
-| V3-F5 Timeline tabs (Chronological, By Category, By Doctor, By Uploaded Date) | PRD_V3 §V3-F5 | ✅ done |
-| Trash / restore / permanent-delete | Phase 32 | ✅ done |
+| F2.2–F2.5 OCR pipeline | PRD_V2 §F2 | ✅ |
+| F3.2–F3.5 Many-to-many categories + bulk ops | PRD_V2 §F3 | ✅ |
+| F4 Apple Calendar integration (macOS) | PRD_V2 §F4 | ✅ |
+| F5.3–F5.4 Contact deduplication + merge | PRD_V2 §F5 | ✅ |
+| F6 Document-appointment link scoring | PRD_V2 §F6 | ✅ |
+| V3-F1 Category auto-creation when suggestion accepted | PRD_V3 §V3-F1 | ✅ |
+| V3-F2 Contact auto-creation (UK phone regex + full save) | PRD_V3 §V3-F2 | ✅ |
+| V3-F3 Clinic: CRN, multi-address, clinic↔contact link | PRD_V3 §V3-F3 | ✅ |
+| V3-F4 Tag auto-extraction (type, provider, specialty, date) | PRD_V3 §V3-F4 | ✅ |
+| V3-F5 Timeline tabs (Chronological, By Category, By Doctor, By Uploaded Date) | PRD_V3 §V3-F5 | ✅ |
+| Trash / restore / permanent-delete | Phase 32 | ✅ |
 
-**v1.2 (in progress — Phases 33–35)**
+**v1.2 (SHIPPED — Phases 33–35)**
 
-| Feature | Source | Priority | Status |
-|---------|--------|----------|--------|
-| V3-F5 Editable activity_date on document detail page | PRD_V3 §V3-F5 | MUST | ⬜ Phase 33 |
-| V3-F6 Auto-create appointment suggestion from invoice upload | PRD_V3 §V3-F6 | MUST | ⬜ Phase 34 |
-| E2E green gate (all tests passing) | — | MUST | ⬜ Phase 35 |
+| Feature | Source | Status |
+|---------|--------|--------|
+| V3-F5 Editable activity_date on document detail page | PRD_V3 §V3-F5 | ✅ Phase 33 |
+| V3-F6 Auto-create appointment suggestion from invoice upload | PRD_V3 §V3-F6 | ✅ Phase 34 |
+| E2E green gate (all tests passing) | — | ✅ Phase 35 |
 
-**v1.3 (next)**
+**v1.3a (SHIPPED — Phases 36–37)**
 
-| Feature | Source | Priority | Effort |
-|---------|--------|----------|--------|
-| Advanced search filters (date range, category combo) | PRD_V2 §F3/F6 | HIGH | Small |
-| F3.4 Drag-to-organize categories | PRD_V2 §F3 | SHOULD | Small |
-| F3.7 Auto-archive empty categories | PRD_V2 §F3 | SHOULD | Small |
-| PDF summary report export | PRD_V2 Phase 2 | MED | Medium |
+| Feature | Source | Status |
+|---------|--------|--------|
+| Advanced search filters (date range, category combo) | PRD_V2 §F3/F6 | ✅ Phase 36 |
+| F3.4 Drag-to-organize categories | PRD_V2 §F3 | ✅ Phase 37 |
+| F3.7 Auto-archive empty categories | PRD_V2 §F3 | ✅ Phase 37 |
 
-**v1.8 (planned — Phases 38–40)**
+**v1.8 Content Intelligence (SHIPPED — Phases 38–42)**
 
-| Feature | Gap | Priority | Effort |
-|---------|-----|----------|--------|
-| Surface `extracted_text` + Notes auto-tag + FTS5 content search | Gap 1 | HIGH | Small |
-| Cross-document content search + timeline grouping + summary | Gap 2 | HIGH | Medium |
-| Structured entity extraction (medications, diagnoses, lab values, referrals) — universal | Gap 3 | HIGH | Medium |
+| Feature | Source | Status |
+|---------|--------|--------|
+| Surface `extracted_text` + Notes auto-tag + FTS5 content search | Gap 1 | ✅ Phase 38 |
+| Cross-document content search + timeline grouping + summary | Gap 2 | ✅ Phase 39 |
+| Structured entity extraction (medications, diagnoses, lab values, referrals) | Gap 3 | ✅ Phase 40 |
+| E2E gap closing (6 gaps) | Phase 41 | ✅ Phase 41 |
+| FTS5 index fix: extracted_text not returning in search | Phase 42 | ✅ Phase 42 |
 
-**v1.4 (Phases 43–45)**
+**v1.4 (SHIPPED — Phases 43–49)**
 
-| Feature | Source | Priority | Effort |
-|---------|--------|----------|--------|
-| Notes UX — Option B (create-from-context, OCR prefill, linked notes panel, empty-state onboarding) | Manual test feedback 2026-05-08 | HIGH | Medium |
-| Symptom entity (CRUD + linking + FTS5) | Manual test feedback 2026-05-08 | HIGH | Medium |
-| Medication entity (CRUD + linking + FTS5) | Manual test feedback 2026-05-08 | HIGH | Medium |
-| Unified content search: documents + notes + symptoms + medications | Manual test feedback 2026-05-08 | HIGH | Small |
+| Feature | Source | Status |
+|---------|--------|--------|
+| Notes UX — create-from-context, OCR prefill, linked notes panel, empty-state | Phase 43 | ✅ Phase 43 |
+| Symptom entity (CRUD + linking + FTS5) | Phase 44 | ✅ Phase 44 |
+| Medication entity (CRUD + linking + FTS5) | Phase 44 | ✅ Phase 44 |
+| Unified content search: documents + notes + symptoms + medications | Phase 45 | ✅ Phase 45 |
+| Content search filters: entity-type chips + date range | Phase 46 | ✅ Phase 46 |
+| CI fix: Next.js static export + dynamic routes | Phase 47 | ✅ Phase 47 |
+| Hardcoded filter tech debt cleanup | Phase 48 | ✅ Phase 48 |
+| OCR text preview in upload review step | Phase 49 | ✅ Phase 49 |
+
+**v1.3b (in progress — Phases 50–62)**
+
+| Feature | Source | Priority | Effort | Status |
+|---------|--------|----------|--------|--------|
+| PDF summary report export | PRD_V2 Phase 2 | MED | Medium | ⬜ Phase 50 |
+| Batch Document Upload with Draft Entity Flow | PRD §F9 | HIGH | Large | ⬜ Phases 58–62 |
+| UX Redesign — Option A (Multi-Theme Panel Layout) | docs/frontend/redesign-design-A.md | HIGH | Large | ⬜ Phases 51–57 |
+
+> **Execution order:** 50 → 58 → 59 → 60 → 61 → 62 → 51 → 52 → 53 → 54 → 55 → 56 → 57
+> Batch upload (58–62) executes before redesign-A (51–57) despite higher phase numbers.
 
 **v1.5+ (future)**
 
@@ -87,878 +103,632 @@ Phase: 49 — COMPLETE
 | AI appointment notes summarization | PRD_V2 Phase 3 | LOW | Large |
 | Medical code tagging (ICD-10) | PRD_V2 Phase 3 | LOW | Medium |
 | Multi-user vault support | PRD_V2 Phase 3 | LOW | Large |
+| System-wide theme switcher (Calm / Coffee / Mint picker) | redesign-design-A.md §8 | LOW | Small |
 
 **Coverage requirement:** ≥ 80% across all new code
 
 ---
 
-## Phase 47 — CI Fix: Next.js Static Export + Dynamic Routes
+## Phase 50 — PDF Summary Report Export
 
-**Goal:** Build & Release fails on all 4 platforms because `'use client'` and `generateStaticParams()` cannot coexist in the same file. Fix by splitting each dynamic `[id]` page into a server wrapper (holds `generateStaticParams`) and a client component (holds all hooks/state).
+**Goal:** Generate a portable PDF summary report for a document (or set of documents) — includes metadata, extracted entities, linked appointments, and OCR text excerpt. User can export via a button on the document detail page.
 
-**Done when:** `next build` succeeds locally or on CI; Build & Release passes on all 4 platforms.
+**Done when:**
+- "Export Report" button on document detail page triggers PDF generation
+- Generated PDF contains: document title, date, category, doctor, clinic, extracted entities (medications, diagnoses, lab values), linked appointments, first 400 chars of OCR text
+- File saved to user's chosen location via Tauri file dialog
+- Unit + E2E tests pass
 
-### Sprint 47
+### Sprint 50
 
-[x] **47.1 — Split medications/view/[id] into server wrapper + client component**
-   - Move all hook/state/router logic from `page.tsx` into `ViewMedicationClient.tsx` (`'use client'`)
-   - `page.tsx` becomes a server component: no `'use client'`, exports `generateStaticParams() { return [] }`, renders `<ViewMedicationClient />`
-   - Files: `src/app/(app)/medications/view/[id]/page.tsx` + new `src/app/(app)/medications/view/[id]/ViewMedicationClient.tsx`
+[ ] **50.1 — Design report structure + Rust command `documents_export_report`**
+   - Input: `document_id: String`
+   - Fetch document metadata, entities, linked appointments from SQLite
+   - Return `ReportData` struct (title, date, category, doctor, clinic, entities grouped by type, appointments, ocr_excerpt)
+   - No PDF rendering in Rust — return data; rendering happens in frontend
+   - Done when: `cargo test` passes with fixture data; struct serialises to JSON correctly
 
-[x] **47.2 — Split symptoms/view/[id] into server wrapper + client component**
-   - Same pattern as 47.1
-   - Files: `src/app/(app)/symptoms/view/[id]/page.tsx` + new `src/app/(app)/symptoms/view/[id]/ViewSymptomClient.tsx`
+[ ] **50.2 — Frontend: PDF rendering with `@react-pdf/renderer`**
+   - Add `@react-pdf/renderer` (lightweight, no worker) — check bundle size impact
+   - If > 50KB gz impact, use dynamic import to keep page budget under 300KB
+   - Create `src/components/documents/DocumentReport.tsx` — `<Document>` + `<Page>` with sections for metadata, entities, appointments, OCR excerpt
+   - Done when: `npx tsc --noEmit` passes; PDF renders correctly in dev
 
-[x] **47.3 — Verify next build passes + commit + push + retag v1.8.0**
-   - Run `npx tsc --noEmit` (local Node 20 can do type check even if full build fails)
-   - Commit, push to develop, wait for Lint + Tests green
-   - Then retag: delete remote v1.8.0, push new tag, verify Build & Release passes all 4 platforms
+[ ] **50.3 — Wire "Export Report" button on DocumentDetailClient**
+   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
+   - Add "Export Report" button in header actions
+   - On click: `invoke('documents_export_report', { documentId })` → render PDF → trigger download via `URL.createObjectURL`
+   - Add `data-testid="export-report-btn"` to button
+   - Done when: clicking button downloads a PDF file
 
----
-
-## Phase 33 — V3-F5: Editable Activity Date on Document Detail Page
-
-**Goal:** Let users correct the auto-extracted `activity_date` directly on the document detail page.
-Backend (`documents_update`) already accepts `activity_date: Option<String>` — only frontend work needed.
-
-**Done when:** Clicking the date on a document detail page renders an editable input; saving it calls `documents_update` with the new date; the timeline immediately reflects the change.
-
-### Sprint 33
-
-[x] **33.1 — Add editable activity_date field to document detail page**
-   - `src/app/(app)/documents/view/DocumentDetailClient.tsx:407,414` — both testids already present
-   - Status: IMPLEMENTED (verified 2026-05-05)
-
-[x] **33.2 — Verify activity_date edit wiring is complete**
-   - Read `DocumentDetailClient.tsx` around lines 400–430
-   - Confirm `invoke('documents_update', { documentId, activityDate })` is wired to the Save button
-   - Confirm local state updates on success (no page reload required)
-   - If wiring is missing, add it now
-   - Done when: manual smoke test confirms date change persists after save
-
-[x] **33.3 — Unit test for activity_date edit**
-   - File: `src/app/(app)/documents/__tests__/detail-activity-date.test.tsx`
-   - Mock `invoke('documents_update')`; assert called with correct `activityDate`
-   - Assert save button disabled while loading, re-enabled on success
+[ ] **50.4 — Unit test: report data assembly**
+   - Mock `invoke('documents_export_report')` returning fixture data
+   - Assert `export-report-btn` present; assert clicking triggers download (mock URL.createObjectURL)
    - Done when: `npx vitest run` passes
 
-[x] **33.4 — E2E spec: activity_date editing**
-   - File: `e2e/v3-f5-detail.spec.ts` (new)
-   - Upload doc → navigate to detail → change activity_date → save → verify timeline Chronological shows new date
-   - Done when: `npx playwright test e2e/v3-f5-detail.spec.ts` passes
+[ ] **50.5 — E2E spec: PDF export flow**
+   - File: `e2e/pdf-export.spec.ts`
+   - Upload `medical-invoice.pdf` → navigate to document detail
+   - Assert `export-report-btn` is visible
+   - Click → assert file download triggered (Playwright download event)
+   - Done when: `npx playwright test e2e/pdf-export.spec.ts` passes
 
-[x] **33.5 — Pre-commit checks + commit**
+[ ] **50.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
-   - Commit: `feat: verify and test editable activity_date (V3-F5)`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: PDF summary report export from document detail (Phase 50)`
 
 ---
 
-## Phase 34 — V3-F6: Auto-create Appointment Suggestion from Invoice Upload
+## Phase 58 — Batch Upload: Schema Migration
 
-**Goal:** When an invoice is uploaded and extraction finds a date + provider, surface a dismissible "Create appointment?" banner (`doctor-suggestion-banner`) on the upload confirmation screen. Accepting pre-fills and opens the New Appointment dialog.
+**Goal:** Add `is_draft` column to entity tables and `batch_upload_id` to `documents`. All existing queries must exclude draft rows. No data lost on existing records.
 
-**Done when:** Banner appears when extraction yields provider name; Accept opens pre-filled appointment dialog; Dismiss hides without side effects.
+**Done when:**
+- Migration adds `is_draft BOOLEAN NOT NULL DEFAULT 0` to: `contacts`, `clinics`, `appointments`, `symptoms`, `medications`, `document_tags`
+- Migration adds `batch_upload_id TEXT` to `documents`
+- All existing list/search queries (`contacts_list`, `clinics_list`, `appointments_list`, `symptoms_list`, `medications_list`, FTS5 content search, timeline, suggestion banners) have `WHERE is_draft = 0` (or join equivalent) confirmed by grep
+- `cargo test` passes
+- `npx tsc --noEmit` passes
 
-### Sprint 34
+### Sprint 58
 
-[x] **34.1 — Rust command `appointments_suggest_from_document`**
-   - `src-tauri/src/commands/documents.rs:1393` — command implemented
-   - Registered in `src-tauri/src/lib.rs:47,149`
-   - Status: IMPLEMENTED (verified 2026-05-05)
+[ ] **58.1 — SQLite migration: add `is_draft` + `batch_upload_id` columns**
+   - Add migration in `src-tauri/src/db/migrations.rs` (next version number)
+   - `ALTER TABLE contacts ADD COLUMN is_draft BOOLEAN NOT NULL DEFAULT 0`
+   - Same for `clinics`, `appointments`, `symptoms`, `medications`
+   - `ALTER TABLE document_tags ADD COLUMN is_draft BOOLEAN NOT NULL DEFAULT 0`
+   - `ALTER TABLE documents ADD COLUMN batch_upload_id TEXT`
+   - Done when: migration runs without error on clean + existing DB
 
-[x] **34.2 — `DoctorSuggestionBanner` component**
-   - `src/components/documents/DoctorSuggestionBanner.tsx:95` — testid present, component exists
-   - Status: IMPLEMENTED (verified 2026-05-05)
-   - Note: component is in `documents/`, not `appointments/` — correct location
+[ ] **58.2 — Grep audit: find all list/search queries missing `is_draft` filter**
+   - `grep -rn 'SELECT.*FROM contacts\|SELECT.*FROM clinics\|SELECT.*FROM appointments\|SELECT.*FROM symptoms\|SELECT.*FROM medications' src-tauri/src/`
+   - Add `AND is_draft = 0` to all production list queries; exclude from FTS5 idx if entity row is draft
+   - Done when: all list commands return only non-draft rows
 
-[x] **34.3 — Verify banner wiring in upload flow**
-   - `documents/page.tsx:handleUploaded` calls `appointments_suggest_from_document` after upload
-   - Accept calls `handleApptSuggestionConfirm` → `appointments_create` + `link_document_to_appointment`
-   - Dismiss calls `setApptSuggestion(null)`
-   - `ApptSuggestionBanner` now has `data-testid="appt-suggestion-banner"`
-   - Status: IMPLEMENTED (verified 2026-05-07)
-
-[x] **34.4 — Rust unit test for `appointments_suggest_from_document`**
-   - In `#[cfg(test)]` mod in `documents.rs` (near line 1393) or `appointments.rs`
-   - Doc with provider → `Some(suggestion)`; doc without provider → `None`
+[ ] **58.3 — Rust unit tests: existing queries unaffected**
+   - Insert fixture with `is_draft = 1`; assert it does NOT appear in list results
+   - Insert fixture with `is_draft = 0`; assert it DOES appear
    - Done when: `cargo test` passes
 
-[x] **34.5 — Unit test for banner integration**
-   - Mock `invoke('appointments_suggest_from_document')` returning a suggestion
-   - Assert `doctor-suggestion-banner` visible; clicking Accept fires `onAccept`
+[ ] **58.4 — Pre-commit checks + commit**
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - `npx tsc --noEmit`
+   - Commit: `feat: schema migration — is_draft entity columns + batch_upload_id (Phase 58)`
+
+---
+
+## Phase 59 — Batch Upload: Draft Pipeline + Per-Document Transactions
+
+**Goal:** Extend the OCR upload pipeline to write entities in draft mode with per-document SQLite transactions. Failed document rolls back its own entities; other docs unaffected.
+
+**Done when:**
+- `upload_document` (or new `upload_document_batch`) Rust command wraps each document in `BEGIN … COMMIT/ROLLBACK`
+- Extracted entities saved with `is_draft = 1`; `batch_upload_id` set to the UUID for the session
+- Duplicate detection: if extracted entity matches existing (`merge_candidate_id` stored on draft row)
+- On OCR/extraction failure for a single doc: that doc + its entities rolled back; batch continues
+- `cargo test` passes with fixture covering success + per-doc failure scenarios
+
+### Sprint 59
+
+[ ] **59.1 — Per-document transaction wrapper in Rust**
+   - In `src-tauri/src/commands/documents.rs`
+   - Wrap existing entity insert calls in explicit `BEGIN` / `COMMIT` / `ROLLBACK` per document
+   - `batch_upload_id` = caller-supplied UUID (frontend generates one UUID per upload session)
+   - Done when: unit test confirms rollback on simulated OCR error leaves other docs intact
+
+[ ] **59.2 — Draft entity writes**
+   - All entity inserts (contacts, clinics, appointments, symptoms, medications, document_tags) during upload set `is_draft = 1`
+   - Single upload treated same as batch of 1 — same code path
+   - Done when: after upload, `SELECT is_draft FROM contacts WHERE …` returns 1
+
+[ ] **59.3 — Duplicate detection + `merge_candidate_id`**
+   - Before inserting draft entity, query for existing non-draft entity with same name/identifier
+   - If found: set `merge_candidate_id = <existing_entity_id>` on the draft row
+   - Done when: uploading a doc with a known doctor populates `merge_candidate_id` on the draft contact
+
+[ ] **59.4 — Rust unit tests: transaction rollback + duplicate detection**
+   - Test 1: simulate OCR failure on doc 2 of 3 → docs 1 and 3 committed; doc 2 rolled back
+   - Test 2: existing contact "Dr Smith" exists; upload new doc with "Dr Smith" → draft contact has `merge_candidate_id` set
+   - Done when: both tests pass
+
+[ ] **59.5 — Pre-commit checks + commit**
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - `npx tsc --noEmit`
+   - Commit: `feat: draft entity pipeline with per-doc transactions + duplicate detection (Phase 59)`
+
+---
+
+## Phase 60 — Batch Upload: UI (Multi-File, Folder, Drag-and-Drop)
+
+**Goal:** Extend the upload dialog to support batch selection — multi-file picker (Ctrl/Cmd+click), folder/directory select, and drag-and-drop zone. Show per-file progress and per-file error state.
+
+**Done when:**
+- Upload dialog accepts: multi-file picker, folder select, drag-and-drop zone (all three entry points)
+- Each file shows: queued → processing → done / error status in the dialog
+- Failed files show error inline; batch continues for remaining files
+- On batch complete: toast "N documents uploaded — X entities pending review"
+- `data-testid="batch-upload-zone"`, `data-testid="upload-file-row"` present
+- Unit + E2E tests pass
+
+### Sprint 60
+
+[ ] **60.1 — Multi-file + folder select in UploadDialog**
+   - `src/components/documents/UploadDialog.tsx`
+   - `<input type="file" multiple>` already exists — ensure `webkitdirectory` attribute toggleable for folder select
+   - Button group: "Select Files" | "Select Folder"
+   - `data-testid="batch-upload-zone"`
+   - Done when: selecting 3 files queues 3 rows in dialog
+
+[ ] **60.2 — Drag-and-drop zone**
+   - `onDragOver` / `onDrop` handlers on drop zone
+   - Accept `application/pdf` + `image/*`
+   - Visual: dashed border + "Drop files here" label when dragging
+   - Done when: dragging files from Finder drops them into queue
+
+[ ] **60.3 — Per-file progress row**
+   - `data-testid="upload-file-row"` per queued file
+   - States: Queued (grey) → Processing (spinner) → Done (green ✓) → Error (red ✗ + error message)
+   - Upload runs sequentially (one at a time) — no parallel OCR to avoid DB contention
+   - Done when: 3-file upload shows all 3 rows cycling through states
+
+[ ] **60.4 — Batch complete toast**
+   - On all files processed: `toast("N documents uploaded — X entities pending review")` where X = count of `is_draft = 1` entities from this `batch_upload_id`
+   - Count via new Rust command `get_draft_entity_count(batch_upload_id: String) → u32`
+   - Done when: toast fires with correct counts
+
+[ ] **60.5 — Unit + E2E tests**
+   - Unit: mock 3 invoke calls (2 success, 1 failure); assert rows show correct states; assert toast fires
+   - E2E: `e2e/batch-upload.spec.ts` — drop 2 PDFs → assert 2 rows done → assert toast with count
+   - Done when: all tests pass
+
+[ ] **60.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - Commit: `feat: batch upload UI — multi-file, folder, drag-drop, per-file progress (Phase 60)`
+
+---
+
+## Phase 61 — Batch Upload: Draft Review UI on Entity Pages
+
+**Goal:** Inline draft entity cards on Contacts, Clinics, Appointments, Symptoms, and Medications pages. Each draft row shows a DRAFT badge with Accept / Reject / (if `merge_candidate_id`) Merge actions.
+
+**Done when:**
+- Each entity list page shows draft rows above non-draft rows with visible DRAFT badge
+- Accept: flips `is_draft = 0` on entity (and its `document_tags` rows) → entity appears normally
+- Reject: soft-deletes the draft entity (same Trash flow as doc soft-delete)
+- Merge: opens merge dialog (if `merge_candidate_id` set) — user picks which fields to keep; result is one non-draft entity
+- Accepted/rejected entities removed from draft section immediately (optimistic update)
+- Unit + E2E tests pass
+
+### Sprint 61
+
+[ ] **61.1 — Rust command `get_draft_entities`**
+   - Input: `entity_type: String` ("contact" | "clinic" | "appointment" | "symptom" | "medication")
+   - Return: `Vec<DraftEntityRow>` — entity fields + `id`, `merge_candidate_id`, `batch_upload_id`, `source_document_id`
+   - Register in `lib.rs`
+   - Done when: `cargo test` passes with fixture draft rows
+
+[ ] **61.2 — Rust command `accept_draft_entity`**
+   - Input: `entity_type: String`, `entity_id: String`
+   - `UPDATE <table> SET is_draft = 0 WHERE id = ?`
+   - Also flip `is_draft = 0` on related `document_tags` rows where applicable
+   - Done when: `cargo test` confirms entity flipped to non-draft and appears in normal list query
+
+[ ] **61.3 — Rust command `reject_draft_entity`**
+   - Input: `entity_type: String`, `entity_id: String`
+   - Soft-delete: `UPDATE <table> SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?` (reuse existing Trash pattern)
+   - Done when: `cargo test` confirms entity no longer in draft or normal list
+
+[ ] **61.4 — Draft section on entity list pages**
+   - Contacts (`src/app/(app)/contacts/page.tsx`), Clinics, Appointments, Symptoms, Medications
+   - Fetch drafts via `get_draft_entities` on page load
+   - Render draft cards above normal list with DRAFT badge (amber pill)
+   - Accept button → `accept_draft_entity` → remove card optimistically
+   - Reject button → `reject_draft_entity` → remove card optimistically + toast "Draft rejected"
+   - If `merge_candidate_id` set: show "Merge" button (opens merge dialog — Phase 61.5)
+   - `data-testid="draft-entity-card"`, `data-testid="draft-accept-btn"`, `data-testid="draft-reject-btn"`
+   - Done when: draft cards appear; Accept/Reject work; page renders without TypeScript errors
+
+[ ] **61.5 — Merge dialog**
+   - `src/components/shared/MergeEntityDialog.tsx`
+   - Shows draft entity fields side-by-side with existing entity fields
+   - User picks winner per field (radio group per field)
+   - On confirm: `merge_draft_entity(entity_type, draft_id, existing_id, field_choices)` Rust command
+   - Rust: apply chosen fields to existing entity; soft-delete draft
+   - Done when: merge resolves to one non-draft entity with chosen field values
+
+[ ] **61.6 — Unit + E2E tests**
+   - Unit: mock draft list; assert DRAFT badge renders; assert Accept removes card; assert Reject fires toast
+   - E2E: `e2e/draft-review.spec.ts` — upload PDF → navigate to Contacts → assert draft card → click Accept → assert card gone → assert contact in normal list
+   - Done when: all tests pass
+
+[ ] **61.7 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: draft review UI — DRAFT badge, Accept/Reject/Merge on entity pages (Phase 61)`
+
+---
+
+## Phase 62 — Batch Upload: Full Test Suite + Coverage Gate
+
+**Goal:** Close any remaining test gaps for the draft entity pipeline. Confirm 80% coverage across all new Phase 58–61 code. CI green.
+
+**Done when:**
+- `npx vitest run --coverage` shows ≥ 80% on all new components and hooks from Phases 58–61
+- `cargo test` passes for all new Rust commands (58–61)
+- All E2E specs from Phases 60–61 pass: `npx playwright test e2e/batch-upload.spec.ts e2e/draft-review.spec.ts`
+- `npx tsc --noEmit` passes
+- CI green on develop branch
+
+### Sprint 62
+
+[ ] **62.1 — Coverage audit: identify gaps**
+   - Run `npx vitest run --coverage`; identify files < 80%
+   - Run `cargo test`; identify any untested command paths
+   - Done when: gap list known
+
+[ ] **62.2 — Fill frontend coverage gaps**
+   - Add missing unit tests for: `UploadDialog` batch mode, draft entity hooks, `MergeEntityDialog`
+   - Done when: all new frontend files ≥ 80%
+
+[ ] **62.3 — Fill Rust coverage gaps**
+   - Add missing tests for: transaction rollback edge cases, `merge_draft_entity` field-choice logic
+   - Done when: `cargo test` passes with all edge cases covered
+
+[ ] **62.4 — Full E2E run**
+   - `npx playwright test e2e/batch-upload.spec.ts e2e/draft-review.spec.ts`
+   - Fix any flaky or failing specs
+   - Done when: both specs exit 0
+
+[ ] **62.5 — Pre-commit checks + commit + CI**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Push to `origin/develop`; confirm CI green
+   - Commit: `test: batch upload full test suite — 80% coverage gate (Phase 62)`
+
+---
+
+## Phase 51 — UX Redesign A: CSS Token Foundation + Theme Scaffolding
+
+**Goal:** Lay the CSS token foundation for Option A's three themes (Calm / Coffee / Mint). Audit all existing components for hardcoded Tailwind colour classes and migrate them to `--color-*` variables. Apply `data-theme="calm"` as the Phase 1 default on `<html>`.
+
+**Reference:** `docs/frontend/redesign-design-A.md` §4
+
+**Done when:**
+- `src/styles/tokens-vault.css` exists with all three `[data-theme]` blocks
+- `<html>` has `data-theme="calm"` applied at boot (no flash)
+- Grep audit `grep -r 'text-gray\|bg-white\|border-gray' src/` returns 0 results in app routes
+- All existing pages (Dashboard, Documents, Contacts, Clinics, Notes, Timeline, Trash, Settings, Symptoms, Medications, Content Search) render correctly under the Calm theme
+- `npx tsc --noEmit` passes
+
+### Sprint 51
+
+[ ] **51.1 — Create `src/styles/tokens-vault.css` with 3 theme blocks**
+   - `[data-theme="calm"]`, `[data-theme="coffee"]`, `[data-theme="mint"]` — full variable sets per §4.1–4.3
+   - Import in `src/app/globals.css`
+   - Apply `data-theme="calm"` to `<html>` in `src/app/layout.tsx`
+   - Done when: CSS variables resolve in browser DevTools under Calm theme
+
+[ ] **51.2 — Grep audit: find all hardcoded Tailwind colour classes in app routes**
+   - Run: `grep -rn 'text-gray\|bg-white\|bg-gray\|border-gray\|text-slate\|bg-slate\|text-zinc\|text-neutral' src/app src/components`
+   - Produce a list; categorise: safe (test/story files) vs must-fix (production UI)
+   - Done when: full list documented as a comment in this task; count of must-fix items known
+
+[ ] **51.3 — Migrate hardcoded colours → CSS variables (batch 1: Documents, Dashboard, Sidebar)**
+   - Replace `text-gray-*` → `text-[var(--color-text)]` or `text-[var(--color-text-secondary)]`
+   - Replace `bg-white` → `bg-[var(--color-surface)]`
+   - Replace `border-gray-*` → `border-[var(--color-border)]`
+   - Files: `src/app/(app)/documents/`, `src/app/(app)/page.tsx`, `src/components/layout/Sidebar.tsx`
+   - Done when: `npx tsc --noEmit` passes; visual smoke on Calm theme OK
+
+[ ] **51.4 — Migrate hardcoded colours → CSS variables (batch 2: all remaining pages)**
+   - Files: Contacts, Clinics, Notes, Timeline, Trash, Settings, Symptoms, Medications, Content Search
+   - Done when: grep audit returns 0 must-fix results
+
+[ ] **51.5 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - Commit: `feat: CSS token foundation — 3 themes (Calm/Coffee/Mint), full colour audit (Phase 51)`
+
+---
+
+## Phase 52 — UX Redesign A: IconRail Component
+
+**Goal:** Build the 52px icon-only navigation rail that replaces the current 220px labeled sidebar. The existing sidebar stays but is feature-flagged off when Option A is active.
+
+**Reference:** `docs/frontend/redesign-design-A.md` §2.1, §3
+
+**Done when:**
+- `src/components/layout/IconRail.tsx` renders with correct icons, active state, tooltips
+- Every button has `aria-label`; tooltips use `role="tooltip"` + `aria-describedby`
+- `data-testid="nav-rail"` present
+- Feature flag `NEXT_PUBLIC_REDESIGN_A=true` in `.env.local` toggles between old sidebar and new rail
+- Keyboard navigation works (Tab order, Enter/Space activation)
+- Unit + E2E tests pass
+
+### Sprint 52
+
+[ ] **52.1 — Feature flag setup**
+   - Add `NEXT_PUBLIC_REDESIGN_A` env var check in layout
+   - When `true`: render `<IconRail>` (52px) instead of `<Sidebar>` (220px)
+   - When `false` (default): existing layout unchanged
+   - Done when: toggling env var switches layouts; no TypeScript errors
+
+[ ] **52.2 — `IconRail` component**
+   - `src/components/layout/IconRail.tsx`
+   - Icons: Home, Documents, Search, Contacts, Timeline, Tags, Settings (top group); Lock + Profile avatar (bottom group)
+   - Active state: amber `#F0A500` 3px left border + icon tint
+   - Tooltip: 400ms delay, right-aligned, `role="tooltip"` + `aria-describedby` on each button
+   - `aria-label` on every button
+   - `data-testid="nav-rail"`
+   - Done when: `npx tsc --noEmit` passes; visual smoke under Calm theme
+
+[ ] **52.3 — Keyboard navigation**
+   - Tab order follows visual top-to-bottom order
+   - Enter/Space activates nav item
+   - Escape closes any open tooltip
+   - Done when: full keyboard nav works without mouse
+
+[ ] **52.4 — Unit tests**
+   - `src/components/layout/__tests__/IconRail.test.tsx`
+   - Assert all nav buttons render with correct `aria-label`
+   - Assert active route applies amber border class
+   - Assert tooltip renders on hover after 400ms (mock timers)
    - Done when: `npx vitest run` passes
 
-[x] **34.6 — E2E spec: V3-F6 suggestion banner**
-   - File: `e2e/v3-f6.spec.ts` (new; `v3-f8-clinic-contact-creation.spec.ts` covers adjacent flows but not appointment creation)
-   - Upload invoice with provider → banner appears → Accept → appointment dialog pre-filled
-   - Upload doc without provider → banner does NOT appear
-   - Start `test.skip`; un-skip after 34.4 manual verification
-   - Done when: `npx playwright test e2e/v3-f6.spec.ts` passes
+[ ] **52.5 — E2E spec (basic nav)**
+   - File: `e2e/redesign-A-icon-rail.spec.ts`
+   - With `REDESIGN_A=true`: assert `nav-rail` visible; assert clicking Documents navigates to `/documents`
+   - Assert sidebar NOT rendered when flag on
+   - Done when: `npx playwright test e2e/redesign-A-icon-rail.spec.ts` passes
 
-[x] **34.7 — Pre-commit checks + commit**
+[ ] **52.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
-   - `cargo fmt --all` + `cargo clippy -- -D warnings`
-   - Commit: `feat: appointment suggestion banner from invoice upload (V3-F6)`
+   - Commit: `feat: IconRail component — 52px nav rail with tooltips, aria, keyboard nav (Phase 52)`
 
 ---
 
-## Phase 35 — E2E Green Gate
+## Phase 53 — UX Redesign A: DocumentListPanel
 
-**Goal:** All Playwright E2E specs pass in CI with zero skips on implemented features.
+**Goal:** Virtualised document list panel (300px) with filter bar, category pills, flagged-doc indicators, and row selection state.
 
-**Done when:** `npx playwright test` exits 0; CI `e2e` job green; no `test.skip` on implemented features.
-
-### Failure Bucket 1 — Strict-mode violation in upload specs
-
-**Root cause:** Selector `/save|confirm/i` matches "Save as Contact", "Save as Clinic", and "Confirm Upload" simultaneously.
-**Fix:** Change to `getByRole('button', { name: /confirm upload/i })` in all affected specs.
-
-[x] **35.1 — Fix strict-mode regex in upload E2E specs**
-   - `grep -r "save|confirm" e2e/` to find all occurrences
-   - Replace with `/confirm upload/i` or exact button role where context is ambiguous
-   - Done when: `npx playwright test --grep "upload"` passes without strict-mode errors
-
-### Failure Bucket 2 — Missing `detail-activity-date-input` / `detail-activity-date-save`
-
-**Root cause:** Document detail page lacked editable activity_date field. Fixed in Phase 33.
-
-[x] **35.2 — Verify Phase 33 testids resolve all v3-f5 E2E failures**
-   - `npx playwright test e2e/v3-f5*`
-   - Done when: all v3-f5 specs pass
-
-### Failure Bucket 3 — Missing `doctor-suggestion-banner`
-
-**Root cause:** V3-F6 not implemented. Fixed in Phase 34.
-
-[x] **35.3 — Verify Phase 34 resolves all v3-f6 E2E failures**
-   - `npx playwright test e2e/v3-f6*`
-   - Done when: all v3-f6 specs pass
-
-### Failure Bucket 4 — Missing edit button/link in appointment detail and clinic row
-
-**Root cause:** `verify-edit-entities.spec.ts` uses role selectors:
-- TC-EDIT-02: `getByRole('button', { name: /^edit$/i })` on appointment detail page
-- TC-EDIT-04: `clinicRow.getByRole('link', { name: /edit/i }).or(getByRole('button', { name: /edit/i }))` on clinic list row
-These elements likely don't exist in the UI (not a testid naming issue).
-
-[x] **35.4 — Add missing edit button to appointment detail page**
-   - Locate appointment detail component; add an "Edit" button that opens the edit dialog
-   - Done when: TC-EDIT-02 passes
-
-[x] **35.5 — Add missing edit link/button to clinic list row**
-   - Locate clinic list row component (`clinic-row` testid); add an Edit link/button
-   - Done when: TC-EDIT-04 passes
-
-### Failure Bucket 5 — Timeline selector / timing issues
-
-**Root cause:** Timeline tabs exist (4 tabs: chronological, by-category, by-doctor, by-uploaded-date) but E2E specs may have fragile selectors or missing `waitFor` calls.
-
-[x] **35.6 — Fix timeline E2E selector and timing issues**
-   - Read `e2e/v3-f5-timeline.spec.ts` and `e2e/timeline-by-doctor.spec.ts`
-   - Identify testid mismatch vs timing issue; add `waitForSelector` where needed
-   - Done when: `npx playwright test e2e/v3-f5-timeline.spec.ts e2e/timeline-by-doctor.spec.ts` passes
-
-[x] **35.7 — Full suite run + CI verification**
-   - `npx playwright test` — all pass, exit 0
-   - Push to `origin/develop`; confirm CI `e2e` job green
-   - Done when: CI green
-
-[x] **35.8 — Commit**
-   - `test: fix E2E green gate — all 5 failure buckets resolved`
-
----
-
-## Phase 36 — Advanced Search Filters
-
-**Goal:** Filter document list by date range, category combination, and document type simultaneously.
-
-**Done when:** Search panel has date-from/to pickers and multi-select category filter; results update without page reload; existing FTS5 text search still works.
-
-### Sprint 36
-
-[x] **36.1 — Backend: extend `documents_search` with filter params**
-   - Add optional params: `date_from: Option<String>`, `date_to: Option<String>`, `category_ids: Option<Vec<i64>>`
-   - Extend SQL WHERE with BETWEEN and JOIN on `document_categories`
-   - Done when: `cargo test` passes with new filter tests
-   - Status: ALREADY IMPLEMENTED — `documents_search_filtered` command exists, registered, 4 tests green
-
-[x] **36.2 — Frontend: advanced search panel UI**
-   - Collapsible filter panel below search bar in document list
-   - Date-range pickers + multi-select category chips
-   - Debounce 300 ms then re-invoke search on change
-   - Done when: `npx tsc --noEmit` passes; manual smoke shows filtered results
-   - Status: ALREADY IMPLEMENTED — DocumentList.tsx has full filter panel, tsc clean
-
-[x] **36.3 — Unit + E2E tests**
-   - Unit: mock invoke, assert filter params passed correctly
-   - E2E: upload 2 docs with different dates → filter → only correct doc visible
-   - Done when: all tests pass
-   - Status: 18/18 unit tests pass; 3/3 E2E (TC-FILTER-01/02/03) pass
-
-[x] **36.4 — Pre-commit checks + commit**
-   - `feat: advanced search filters (date range, category combo)`
-   - Status: tsc clean, no Rust changes, test commit pushed — CI running
-
----
-
-## Phase 37 — Category UX Improvements
-
-**Goal:** F3.4 drag-to-organize categories; F3.7 auto-archive empty categories.
-
-**Done when:** Categories can be reordered via drag and order persists; categories with 0 documents for >30 days are auto-archived and hidden from default view.
-
-### Sprint 37
-
-[x] **37.1 — F3.4: drag-to-reorder categories**
-   - Verify `@dnd-kit/sortable` is already in `package.json`; add if missing
-   - On drop: invoke `categories_reorder` (new Rust command) with new order array
-   - Done when: drag reorder persists across app restarts
-
-[x] **37.2 — F3.7: auto-archive empty categories**
-   - Rust: on app launch, mark categories with 0 documents as `archived_at` if created >30 days ago
-   - Frontend: hide archived from default list; add "Show archived" toggle
-   - Done when: empty category disappears from list; backdated test confirms archive logic
-
-[x] **37.3 — Tests + commit**
-   - Unit tests for archive logic; E2E for drag reorder
-   - `feat: category drag-to-organize and auto-archive (F3.4, F3.7)`
-
----
-
-## Phase 38–40 — v1.8: Document Content Intelligence
-
-### Overview
-
-Three interlocking features that turn raw OCR text (`extracted_text`) into searchable, structured, actionable information.
-
-| Gap | Feature | Description |
-|-----|---------|-------------|
-| Gap 1 | Extracted text surface + Notes auto-tag | Show `extracted_text` in document detail UI; auto-tag as "Notes" when document type is free-form clinical notes; make content searchable via FTS5 |
-| Gap 2 | Cross-document content search & timeline grouping | Search all `extracted_text` for a term (e.g. "hypertension"); group results chronologically; surface timeline + simple conclusions |
-| Gap 3 | Structured entity extraction (universal) | During every OCR pipeline pass, attempt to extract medications, diagnoses, lab values, referrals from ALL document types — empty result is acceptable |
-
----
-
-## Phase 38 — Gap 1: Surface Extracted Text + Notes Auto-Tag + FTS5 Search
-
-**Goal:** Users can read the full OCR text on the document detail page. Documents that are free-form clinical notes (not invoices, registration forms, test results, or referral letters) are auto-tagged "Notes". The `extracted_text` column is indexed and returned by existing `documents_search`.
+**Reference:** `docs/frontend/redesign-design-A.md` §2.2, §3
 
 **Done when:**
-- Document detail page shows an "Extracted Text" collapsible section with the raw OCR text
-- After upload, if no structured type tag is set (i.e. not invoice/registration/test-result/referral), the "Notes" tag is auto-applied
-- Searching "hypertension" in the document search bar returns documents whose `extracted_text` contains the word
+- `src/components/documents/DocumentListPanel.tsx` renders virtualised list via `react-virtuoso`
+- Filter bar: search input + category dropdown + date range picker
+- Flagged docs: amber `⚑` indicator + row tint
+- Selected row: `#1C2128` bg + amber 2px left border
+- `data-testid="document-list-panel"` present
+- Only rendered when `NEXT_PUBLIC_REDESIGN_A=true`
 
-### Sprint 38
+### Sprint 53
 
-[x] **38.1 — Verify FTS5 index covers `extracted_text`**
-   - Read `src-tauri/src/db/migrations.rs`; find the `documents_fts` virtual table definition
-   - If `extracted_text` is not in the FTS5 column list, add it in a new migration
-   - Done when: `cargo test` passes and FTS search returns hits from `extracted_text`
+[ ] **53.1 — `react-virtuoso` integration**
+   - Add `react-virtuoso` to `package.json` if not present
+   - `DocumentListPanel.tsx` — `<Virtuoso>` component with fixed row height 56px
+   - Row: type icon + title (1-line ellipsis) + date + category pill
+   - `data-testid="document-list-panel"`
+   - Done when: renders 1000+ items without scroll jank
 
-[x] **38.2 — Extend `documents_search` to search `extracted_text`**
-   - `src-tauri/src/commands/documents.rs` — `documents_search` command
-   - Confirm the FTS match query includes `extracted_text`; update if not
-   - Done when: `cargo test` with a fixture doc that has text in `extracted_text` returns it on keyword search
+[ ] **53.2 — Filter bar**
+   - Search input (debounced 300ms) + category dropdown + date range picker
+   - Filters invoke `documents_search_filtered` (already implemented in Phase 36)
+   - Done when: filtering by category shows only matching docs
 
-[x] **38.3 — Auto-tag "Notes" during extraction pipeline**
-   - In the Rust OCR/extraction path, after tags are resolved:
-     - If no type-tag is present (not one of: invoice, registration, test-result, referral, prescription), emit tag "Notes"
-   - Done when: uploading a plain GP notes PDF causes "Notes" to appear in the document's tag list without user action
+[ ] **53.3 — Flagged docs + selection state**
+   - Flagged: amber `⚑` + row tint `rgba(240,165,0,0.08)`
+   - Selected: `#1C2128` bg + amber 2px left border
+   - On row click: emit selected doc to parent
+   - Done when: clicking a row highlights it; parent receives doc id
 
-[x] **38.4 — Surface `extracted_text` in document detail UI**
-   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
-   - Add a collapsible `<details>` section labelled "Extracted Text" below existing metadata
-   - Show `doc.extracted_text` inside; hide section entirely if `extracted_text` is null/empty
-   - Done when: `npx tsc --noEmit` passes; document with OCR text shows the section
-
-[x] **38.5 — Unit tests**
-   - Rust: auto-tag logic → doc with/without type tag → assert "Notes" added or not
-   - Frontend: render `DocumentDetailClient` with `extracted_text` → section visible; without → hidden
-   - Done when: `npx vitest run` + `cargo test` pass
-
-[x] **38.6 — Pre-commit checks + commit**
-   - `npx tsc --noEmit`
-   - `cargo fmt --all` + `cargo clippy -- -D warnings`
-   - Commit: `feat: surface extracted_text, Notes auto-tag, FTS5 full-content search (Gap 1)`
-
----
-
-## Phase 39 — Gap 2: Cross-Document Content Search & Timeline Grouping
-
-**Goal:** A dedicated "Content Search" flow lets users search a term across all document `extracted_text` fields, see results grouped by date (chronological timeline), and read a simple auto-generated summary (e.g. "First mention: 2021-03-12 · 7 documents · 3 providers").
-
-**Done when:**
-- New "Content Search" entry point reachable from the main nav or search bar
-- Backend returns `{document_id, title, activity_date, snippet, provider}` sorted by `activity_date ASC`
-- Frontend renders a vertical timeline with one card per document (snippet + provider + date)
-- Summary bar shows: first-mention date, document count, unique provider count
-
-### Sprint 39
-
-[x] **39.1 — Rust command `documents_content_search`**
-   - Input: `query: String`
-   - SQL: FTS5 snippet on `extracted_text` JOIN documents; ORDER BY `activity_date ASC`
-   - Return: `Vec<ContentSearchResult>` — `{id, title, activity_date, snippet, provider_tag}`
-   - Plus `ContentSearchSummary` — `{first_date, last_date, doc_count, unique_providers}`
-   - Done when: `cargo test` passes with fixture docs
-
-[x] **39.2 — Frontend: Content Search page / panel**
-   - Route or slide-over panel; search input → `invoke('documents_content_search', { query })`
-   - Summary bar + vertical timeline list of result cards
-   - Each card: title, date, provider, highlighted snippet, link to document detail
-   - Done when: `npx tsc --noEmit` passes; manual smoke shows grouped timeline
-
-[x] **39.3 — Unit + E2E tests**
-   - Unit: mock invoke; assert summary bar values; assert cards in date order
-   - E2E: upload 2 docs with "hypertension" in OCR text at different dates → search → 2 cards chronological → summary count 2
+[ ] **53.4 — Unit + E2E tests**
+   - Unit: mock 50 docs; assert virtualised list renders; assert filter narrows results
+   - E2E: `e2e/redesign-A-doc-list.spec.ts` — assert `document-list-panel` visible; assert filter works
    - Done when: all tests pass
 
-[x] **39.4 — Pre-commit checks + commit**
+[ ] **53.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
-   - `cargo fmt --all` + `cargo clippy -- -D warnings`
-   - Commit: `feat: cross-document content search with timeline grouping (Gap 2)`
+   - Commit: `feat: DocumentListPanel — virtualised, filter bar, flagged indicators (Phase 53)`
 
 ---
 
-## Phase 40 — Gap 3: Structured Entity Extraction (Universal)
+## Phase 54 — UX Redesign A: DocumentPreviewPanel (pdfjs-dist spike + implementation)
 
-**Goal:** During every OCR pipeline pass, attempt to extract structured medical entities from document text. Entities: medications (name + dose), diagnoses/conditions, lab values (name + value + unit), referrals (specialty + provider). Results stored in `document_entities` table. Empty extraction is acceptable — not forced.
+**Goal:** Render PDFs in-app via pdfjs-dist with dynamic import (R-A1 mitigation). Fallback: iframe via Tauri `asset://` if dynamic import fails or exceeds bundle budget.
+
+**Reference:** `docs/frontend/redesign-design-A.md` §2.3, §7 R-A1
 
 **Done when:**
-- `document_entities` table exists (migration)
-- Extraction runs automatically after OCR for ALL document types
-- Extracted entities visible in document detail UI grouped by type
-- Empty extraction produces no UI section
+- `src/components/documents/DocumentPreviewPanel.tsx` renders PDF pages on canvas
+- pdfjs-dist loaded via dynamic import (chunk size measured and under 300KB gz)
+- Toolbar: zoom ±, rotate, page n/total, fullscreen toggle
+- Non-PDF fallback: text preview showing `extracted_text`
+- `data-testid="document-preview-panel"` present
+- Result of spike (dynamic import vs iframe) documented in `docs/LESSONS_LEARNT.md`
 
-### Sprint 40
+### Sprint 54
 
-[x] **40.1 — DB migration: `document_entities` table**
-   - Columns: `id, document_id, entity_type (medication|diagnosis|lab_value|referral), name, value, unit, raw_text, created_at`
-   - Done when: migration runs cleanly; `cargo test` passes
+[ ] **54.1 — Spike: dynamic import of pdfjs-dist — measure chunk size**
+   - `const pdfjsLib = await import('pdfjs-dist')`
+   - Set `GlobalWorkerOptions.workerSrc` to bundled worker URL
+   - Run `next build` and measure chunk size
+   - If ≤ 300KB gz: proceed with option 1 (dynamic import)
+   - If > 300KB gz: implement option 2 (iframe via Tauri `asset://`)
+   - Document result in `docs/LESSONS_LEARNT.md`
+   - Done when: decision made and documented
 
-[x] **40.2 — Rust entity extraction module (regex-based, conservative)**
-   - New module `src-tauri/src/extraction/entities.rs`
-   - Medication: `Lisinopril 10mg`, `metformin 500 mg` patterns
-   - Diagnosis: after "Diagnosis:", "Assessment:", "Impression:" labels
-   - Lab value: `HbA1c: 6.2%`, `eGFR 72 mL/min`, `BP 130/85` patterns
-   - Referral: "referred to", "referral to", "please see" patterns
-   - Conservative — prefer false negatives; empty result is fine
-   - Done when: `cargo test` passes with fixture texts for each entity type
+[ ] **54.2 — `DocumentPreviewPanel` component (chosen strategy)**
+   - `src/components/documents/DocumentPreviewPanel.tsx`
+   - Canvas-based rendering (pdfjs) OR iframe with `asset://` URL
+   - Toolbar: zoom in/out, rotate, page counter, fullscreen
+   - Non-PDF fallback: render `extracted_text` in scrollable `<pre>`
+   - `data-testid="document-preview-panel"`
+   - Done when: `npx tsc --noEmit` passes; PDF renders in dev
 
-[x] **40.3 — Wire extraction into OCR pipeline for ALL document types**
-   - After `extracted_text` written to `documents`, call entity extraction → INSERT into `document_entities`
-   - Done when: uploading any PDF with recognisable text populates `document_entities`
+[ ] **54.3 — Rust command `get_document_preview_url`**
+   - `src-tauri/src/commands/documents.rs`
+   - Input: `doc_id: String`
+   - Return: `String` — local `file://` or `asset://` path to the PDF file
+   - Register in `lib.rs`
+   - Done when: `cargo test` passes; frontend can invoke and receive a valid path
 
-[x] **40.4 — Rust command `document_entities_get`**
-   - Input: `document_id: i64`
-   - Return: `Vec<DocumentEntity>` grouped by `entity_type`
-   - Done when: `cargo test` passes
+[ ] **54.4 — Unit + E2E tests**
+   - Unit: mock invoke returning a path; assert `document-preview-panel` renders
+   - E2E: `e2e/redesign-A-pdf-preview.spec.ts` — upload PDF → select in list panel → assert preview panel visible
+   - Done when: all tests pass
 
-[x] **40.5 — Surface entities in document detail UI**
-   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
-   - On mount, invoke `document_entities_get`; if non-empty render "Extracted Info" section
-   - Group by type: Medications, Conditions, Lab Results, Referrals
-   - Hide section entirely when entity list is empty
-   - Done when: `npx tsc --noEmit` passes; manual smoke shows entities on GP notes upload
-
-[x] **40.6 — Unit tests**
-   - Rust: entity extraction positive + negative cases per pattern type
-   - Frontend: render with entities → section visible and grouped; empty → hidden
-   - Done when: `npx vitest run` + `cargo test` pass
-
-[x] **40.7 — Pre-commit checks + commit**
+[ ] **54.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
-   - Commit: `feat: structured entity extraction from all documents (Gap 3)`
+   - Commit: `feat: DocumentPreviewPanel — pdfjs-dist dynamic import, canvas render, toolbar (Phase 54)`
 
 ---
 
-## Phase 41 — E2E Gap Closing
+## Phase 55 — UX Redesign A: AiInsightsPanel + Rust Commands
 
-**Goal:** Add E2E test coverage for the six uncovered areas identified in the post-Phase-40 gap survey. After this phase every implemented feature has at least one passing E2E spec.
+**Goal:** Build the 240px AI Insights Panel with 4 sections: Summary, Flagged Lab Values, Extracted Details, Related Documents. All data from local SQLite — no cloud calls.
 
-**Gap inventory:**
+**Reference:** `docs/frontend/redesign-design-A.md` §2.4, §5
 
-| # | Area | Missing coverage | Testids needed |
-|---|------|-----------------|----------------|
-| G1 | Extracted Text section | No E2E for `<details>` section visible after upload | `detail-extracted-text` on `<details>` element |
-| G2 | Content Search | No E2E for `content-search-input` → `summary-bar` flow | Already have testids |
-| G3 | Extracted Info section | No E2E for "Extracted Info" visible after upload | `detail-extracted-info` on container |
-| G4 | Trash flows | No E2E for restore / delete-permanently / empty-trash | `trash-restore-btn`, `trash-delete-permanently-btn`, `trash-empty-btn` |
-| G5 | Category multi-select filter | No E2E for filtering by category combination | `advanced-filter-category` or existing chip testids |
-| G6 | Auto-archive toggle | No E2E for "Show archived" toggle on categories page | `show-archived-toggle` |
+**Done when:**
+- `src/components/documents/AiInsightsPanel.tsx` renders all 4 sections for selected document
+- `get_flagged_lab_values` Rust command implemented + tested
+- `get_linked_documents` Rust command implemented + tested
+- Panel collapse animation (200ms ease) works
+- `data-testid="ai-insights-panel"` present
+- `FlaggedValueBadge` component handles HIGH/LOW/BORDERLINE/NORMAL status pills
 
-**Done when:** All 6 gaps have at least one passing E2E spec; `npx playwright test` exits 0; CI green.
+### Sprint 55
 
-### Sprint 41
+[ ] **55.1 — Rust command `get_flagged_lab_values`**
+   - Input: `doc_id: String`
+   - Read `flagged_values` from `extracted_info` JSON column (already stored by Phase 40 entity extraction)
+   - Return: `Vec<FlaggedValue>` — `{name, value, unit, status: LOW|HIGH|BORDERLINE|NORMAL}`
+   - Register in `lib.rs`
+   - Done when: `cargo test` passes with fixture data
 
-[x] **41.1 — Add missing testids to UI components**
-   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`:
-     - Add `data-testid="detail-extracted-text"` to the `<details>` element for Extracted Text (around line 672)
-     - Add `data-testid="detail-extracted-info"` to the Extracted Info container `<div>` (around line 686)
-   - `src/app/(app)/trash/page.tsx` or `TrashClient.tsx`:
-     - Add `data-testid="trash-restore-btn"` to Restore button
-     - Add `data-testid="trash-delete-permanently-btn"` to Delete Permanently button
-     - Add `data-testid="trash-empty-btn"` to Empty Trash button
-   - Done when: `npx tsc --noEmit` passes; testids visible in DOM
+[ ] **55.2 — Rust command `get_linked_documents`**
+   - Input: `doc_id: String`
+   - Return docs sharing the same doctor or clinic as the input doc
+   - Return: `Vec<DocSummary>` — `{id, title, activity_date, doc_type}` max 10 items
+   - Register in `lib.rs`
+   - Done when: `cargo test` passes; docs from same doctor returned
 
-[x] **41.2 — E2E spec: Gap 1 — Extracted Text section**
-   - File: `e2e/gap1-extracted-text.spec.ts`
-   - Upload `medical-invoice.pdf` (has OCR text) → navigate to document detail
-   - Assert `detail-extracted-text` element is in DOM (section rendered)
-   - Assert `<summary>` text is "Extracted Text"
-   - Done when: `npx playwright test e2e/gap1-extracted-text.spec.ts` passes
+[ ] **55.3 — `FlaggedValueBadge` component**
+   - `src/components/shared/FlaggedValueBadge.tsx`
+   - HIGH: red `#DC2626`, LOW: amber `#D97706`, BORDERLINE: orange `#F59E0B`, NORMAL: green `#16A34A`
+   - `data-testid="flagged-status-pill"`
+   - Done when: all 4 status variants render correctly
 
-[x] **41.3 — E2E spec: Gap 3 — Extracted Info section**
-   - File: `e2e/gap3-extracted-info.spec.ts`
-   - Upload `medical-invoice.pdf` → navigate to detail
-   - Assert `detail-extracted-info` is visible (entities extracted)
-   - Assert at least one group heading ("Medications" | "Conditions" | "Lab Results" | "Referrals") is visible
-   - Done when: `npx playwright test e2e/gap3-extracted-info.spec.ts` passes
+[ ] **55.4 — `AiInsightsPanel` component**
+   - `src/components/documents/AiInsightsPanel.tsx`
+   - Section 1 — Summary: `extracted_info.summary`, truncated at 300 chars with expand toggle
+   - Section 2 — Flagged Lab Values: rows from `get_flagged_lab_values`; hide section for non-lab docs
+   - Section 3 — Extracted Details: Doctor, Clinic, Date, Category, Tags from `extracted_info`
+   - Section 4 — Related Documents: list from `get_linked_documents`, max 5 with "Show all" link
+   - Collapse: chevron button, 200ms ease slide animation
+   - `data-testid="ai-insights-panel"`
+   - Done when: all 4 sections render; collapse animation works
 
-[x] **41.4 — E2E spec: Gap 2 — Content Search**
-   - File: `e2e/gap2-content-search.spec.ts`
-   - Upload `medical-invoice.pdf` and `BloodTest_2024-01-15.pdf`
-   - Navigate to Content Search (main nav link or `/content-search`)
-   - Type shared keyword (e.g. "Dr" or "2024") into `content-search-input`
-   - Assert `summary-bar` shows doc count ≥ 1
-   - Assert at least one result card is visible
-   - Done when: `npx playwright test e2e/gap2-content-search.spec.ts` passes
+[ ] **55.5 — Unit + E2E tests**
+   - Unit: `src/components/documents/__tests__/AiInsightsPanel.test.tsx`
+     - Mock both Rust commands; assert all 4 sections render; assert HIGH badge colour
+     - Assert "Show all" navigates to filtered document list
+   - E2E: `e2e/redesign-A-ai-insights.spec.ts` — select doc → assert `ai-insights-panel` visible; assert at least one section renders
+   - Done when: all tests pass
 
-[x] **41.5 — E2E spec: Gap 4 — Trash flows**
-   - File: `e2e/trash-flows.spec.ts`
-   - **TC-TRASH-01 (restore):** Upload doc → delete → navigate to `/trash` → click `trash-restore-btn` → doc back in document list
-   - **TC-TRASH-02 (delete permanently):** Upload doc → delete → trash → `trash-delete-permanently-btn` → doc gone from trash
-   - **TC-TRASH-03 (empty trash):** Upload 2 docs → delete both → trash → `trash-empty-btn` → trash is empty
-   - Done when: all 3 TCs pass
+[ ] **55.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: AiInsightsPanel — 4 sections, FlaggedValueBadge, linked docs, Rust commands (Phase 55)`
 
-[x] **41.6 — E2E spec: Gap 5 — Category multi-select filter**
-   - File: `e2e/gap5-category-filter.spec.ts`
-   - Upload doc A, assign category "Cardiology"
-   - Upload doc B, assign category "Neurology"
-   - Open advanced filter panel → select "Cardiology" chip
-   - Assert only doc A is visible; doc B absent
-   - Clear filter → both visible again
-   - Done when: `npx playwright test e2e/gap5-category-filter.spec.ts` passes
+---
 
-[x] **41.7 — E2E spec: Gap 6 — Auto-archive show/hide toggle**
-   - File: `e2e/gap6-auto-archive.spec.ts`
-   - Create a category with 0 documents (or rely on existing auto-archive logic)
-   - Navigate to `/clinics` or `/categories` page; assert archived category hidden by default
-   - Click `show-archived-toggle`; assert archived category now visible
-   - Add `data-testid="show-archived-toggle"` if missing (check `src/app/(app)/clinics/page.tsx`)
-   - Done when: `npx playwright test e2e/gap6-auto-archive.spec.ts` passes
+## Phase 56 — UX Redesign A: VaultLayout + Responsive Behaviour
 
-[x] **41.8 — Full suite run + pre-commit checks + commit**
-   - `npx playwright test` — all pass, exit 0
+**Goal:** Wire all four panels into a CSS Grid root layout (`VaultLayout`). Auto-collapse AI panel below 1400px. Resize handle on DocumentListPanel (240–400px, persisted in localStorage).
+
+**Reference:** `docs/frontend/redesign-design-A.md` §2, §3, §7 R-A4
+
+**Done when:**
+- `src/components/layout/VaultLayout.tsx` implements 4-panel CSS Grid
+- AI panel auto-collapses below 1400px viewport width
+- DocumentList panel width resizable 240–400px; persisted in localStorage
+- All 4 `data-testid` attributes present: `nav-rail`, `document-list-panel`, `document-preview-panel`, `ai-insights-panel`
+- Layout works at 1280px minimum width
+- Feature flag `NEXT_PUBLIC_REDESIGN_A=true` gates entire layout
+
+### Sprint 56
+
+[ ] **56.1 — `VaultLayout` CSS Grid**
+   - `src/components/layout/VaultLayout.tsx`
+   - CSS Grid: `52px` rail | `var(--doc-list-width, 300px)` list | `1fr` preview | `var(--ai-panel-width, 240px)` AI
+   - Import and compose: `<IconRail>`, `<DocumentListPanel>`, `<DocumentPreviewPanel>`, `<AiInsightsPanel>`
+   - Done when: all 4 panels render side-by-side
+
+[ ] **56.2 — AI panel auto-collapse below 1400px**
+   - `ResizeObserver` on root container; when width < 1400px collapse AI panel (width → 0, toggle button visible)
+   - Collapse animation: 200ms ease as per §2.4
+   - Done when: resizing viewport to 1280px hides AI panel; toggle button restores it
+
+[ ] **56.3 — Resizable DocumentListPanel width**
+   - Drag handle between list and preview panels
+   - Clamp: 240px min, 400px max
+   - Persist in `localStorage('doc-list-width')`; restore on mount
+   - Done when: drag resize works; survives page reload
+
+[ ] **56.4 — Feature flag wiring in root layout**
+   - `src/app/(app)/layout.tsx` (or root layout)
+   - When `NEXT_PUBLIC_REDESIGN_A=true`: render `<VaultLayout>` replacing existing `<Sidebar>` + content layout
+   - When false: existing layout unchanged (no regression)
+   - Done when: toggle env var switches layouts; both work correctly
+
+[ ] **56.5 — E2E spec: layout + responsive**
+   - File: `e2e/redesign-A-vault-layout.spec.ts`
+   - TC-A-01: 1440px — all 4 panels visible
+   - TC-A-02: 1280px — AI panel collapsed, toggle button visible
+   - TC-A-03: click toggle → AI panel expands
+   - Done when: all TCs pass
+
+[ ] **56.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - Commit: `feat: VaultLayout — 4-panel CSS Grid, AI panel auto-collapse, resizable list (Phase 56)`
+
+---
+
+## Phase 57 — UX Redesign A: Full E2E Suite + Accessibility Audit
+
+**Goal:** Run the full redesign-A E2E suite (`e2e/redesign-D-bento.spec.ts` style). Run axe-core accessibility audit on VaultLayout. Fix any WCAG violations. Close any remaining gaps.
+
+**Reference:** `docs/frontend/redesign-design-A.md` §7 R-A3; `e2e/redesign-D-bento.spec.ts` (model for spec structure)
+
+**Done when:**
+- All redesign-A E2E specs pass (`npx playwright test e2e/redesign-A-*`)
+- No axe-core violations on VaultLayout at 1440px and 1280px
+- Icon-only rail passes WCAG 2.1 SC 1.3.1 and SC 2.4.6 (`aria-label` on all buttons)
+- `npx tsc --noEmit` passes
+- CI green on develop branch
+
+### Sprint 57
+
+[ ] **57.1 — Run full redesign-A E2E suite; fix failures**
+   - `npx playwright test e2e/redesign-A-*`
+   - Triage each failure: testid mismatch vs timing vs implementation gap
+   - Fix all failures
+   - Done when: all redesign-A specs exit 0
+
+[ ] **57.2 — axe-core accessibility audit**
+   - Add `@axe-core/playwright` if not present
+   - Run audit on `/documents` with `REDESIGN_A=true` at 1440px and 1280px
+   - Fix any WCAG violations (focus on aria-label, role=tooltip, colour contrast)
+   - Done when: audit returns 0 violations
+
+[ ] **57.3 — Keyboard navigation end-to-end**
+   - Tab through IconRail → DocumentListPanel → PreviewPanel → AiInsightsPanel without mouse
+   - Verify focus indicators visible at each step
+   - Done when: full keyboard flow confirmed
+
+[ ] **57.4 — Pre-commit checks + commit + CI**
    - `npx tsc --noEmit`
    - Push to `origin/develop`; confirm CI green
-   - Commit: `test: E2E gap closing — Extracted Text, Extracted Info, Content Search, Trash, category filter, auto-archive (Phase 41)`
-
----
-
-## Phase 42 — Content Search Bug Fix: Registration Form Not Returned
-
-**Manual test feedback (2026-05-08):**
-Searching "Registration Form" or "registration" returns no results even though a registration form PDF was uploaded.
-
-**Expected:** FTS5 content search returns the registration form document when queried with "registration".
-
-**Root cause hypothesis:** FTS5 `documents_fts` may not cover `extracted_text`, or `extracted_text` is NULL for registration form documents (OCR pipeline may not run / may fail silently for this document type).
-
-**Done when:**
-- Searching "registration" returns the registration form document
-- E2E test passes: upload registration form PDF → content search "registration" → result card visible
-
-### Sprint 42
-
-[x] **42.1 — Diagnose: check FTS5 index and extracted_text population**
-   - Root cause: `documents_run_extraction` wrote `extracted_text` to `documents` table but never called `upsert_search_index` — FTS5 row retained empty string from upload time
-   - Done when: root cause identified; note findings in 42.2 ✓
-
-[x] **42.2 — Fix: ensure FTS5 indexes extracted_text and OCR runs for registration forms**
-   - Fix: added `upsert_search_index` call after `UPDATE documents SET extracted_text = ...` in `documents_run_extraction` (`documents.rs` ~line 1373)
-   - Uses `load_doc(conn, &id)` then calls `upsert_search_index` matching all other call sites
-   - Done ✓
-
-[x] **42.3 — E2E test: content search returns registration form**
-   - File: `e2e/content-search-registration.spec.ts` — created
-   - Uses `medical-invoice.pdf` (contains "Company Registration No: 5432109")
-   - Searches "registration" → asserts summary-bar count ≥ 1
-   - Done ✓
-
-[x] **42.4 — Pre-commit checks + commit**
-   - `npx tsc --noEmit` ✓
-   - `cargo fmt --all` ✓ `cargo clippy -- -D warnings` ✓
-   - Done ✓
-
----
-
-## Phase 43 — Notes UX (Option B): Create-from-Context, OCR Prefill, Linked Notes Panel
-
-**Goal:** Fix UX gaps in the existing Notes entity (Option B model — many-to-many links).  
-Keep `documents.notes` plain-text field as a short "quick note" annotation; the richer linked Notes entity handles journal/clinical notes.  
-New affordances: "Add Note" button on DocumentDetail that creates a linked note and optionally prefills from OCR extracted_text; linked notes panel on detail pages; empty-state onboarding.
-
-**Done when:** User can create a note directly from a document detail page, optionally prefilling from OCR text; linked notes appear in a panel on that page; Notes list page shows onboarding empty state with a "Create your first note" CTA.
-
-### Sprint 43
-
-[x] **43.1 — "Add Note" button on DocumentDetail (linked, OCR prefill)**
-   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
-   - Add "Add Note" button in the header actions area (near existing "Edit" / "Delete")
-   - On click: `router.push('/notes/new?linkedDocumentId=<id>')`
-   - Done when: button renders; clicking navigates to `/notes/new` with correct query param
-
-[x] **43.2 — NoteEditorClient: accept `linkedDocumentId` query param and auto-link**
-   - Created `src/app/(app)/notes/new/page.tsx` — reads `linkedDocumentId`, calls `createNote()`, calls `invoke('note_link', ...)`, redirects to editor
-   - Editor's existing `links_for_note` load shows the chip automatically on arrival
-   - Done when: creating a note from DocumentDetail auto-links it; chip visible in editor ✓
-
-[x] **43.3 — OCR prefill toggle in NoteEditorClient**
-   - Added `linkedDocumentId` searchParam read; fetches `extracted_text` from already-loaded `docs`
-   - Toggle renders when `linkedDocExtractedText` non-null; ON → `editor.commands.setContent(...)` + auto-save
-   - Done when: toggle visible when extracted_text available; toggling ON populates editor content ✓
-
-[x] **43.4 — Linked notes panel on DocumentDetailClient**
-   - Below the "Quick Note" field, add a "Notes" section
-   - Load: `invoke('notes_for_entity', { entityType: 'document', entityId: id })`
-   - Render each note as a card with title, snippet (first 80 chars of content), created_at
-   - Each card links to `/notes/view/<noteId>`
-   - Show "No linked notes yet" empty state with "Add Note" link
-   - Done when: panel renders linked notes; clicking a card navigates to note editor
-
-[x] **43.5 — Linked notes panel on AppointmentDetailClient**
-   - Mirror task 43.4 for `src/app/(app)/appointments/view/AppointmentDetailClient.tsx`
-   - `notes_for_entity` call already present (line 85) — wire result into a rendered panel
-   - Done when: appointment detail shows linked notes panel identical in structure to document detail
-
-[x] **43.6 — Notes list page: empty-state onboarding**
-   - `src/app/(app)/notes/page.tsx` (or NoteListClient equivalent)
-   - When `notes_list` returns empty array: render full-page onboarding empty state
-   - Content: "No notes yet — start capturing clinical observations, symptoms, or follow-up thoughts."
-   - CTA button: "Create your first note" → navigates to `/notes/new`
-   - Done when: fresh vault with no notes shows onboarding state; button navigates correctly
-
-[x] **43.7 — Unit tests + E2E spec + pre-commit + commit**
-   - Unit: `src/app/(app)/notes/__tests__/note-ocr-prefill.test.tsx` — mock `invoke`; assert toggle renders when extracted_text present; assert editor content set on toggle
-   - E2E: `e2e/notes-ux.spec.ts`
-     - TC-NOTES-01: upload doc → document detail → "Add Note" → verify note linked to doc
-     - TC-NOTES-02: new note from doc with extracted_text → toggle on → editor contains OCR text
-     - TC-NOTES-03: empty notes list → onboarding CTA visible → click → /notes/new
-   - `npx tsc --noEmit` ✓
-   - Commit: `feat: Notes UX — create-from-context, OCR prefill, linked panels, empty-state (Phase 43)`
-
----
-
-## Phase 44 — Symptom and Medication Entities (CRUD + Linking + FTS5)
-
-**Goal:** Add two new first-class entities — Symptom and Medication — each with full CRUD, bi-directional linking to documents/appointments/notes, and FTS5 indexing so they appear in content search results.
-
-**Done when:** User can log symptoms and medications; each can be linked to documents or appointments; both appear in content search results; Rust tests + frontend unit tests + E2E pass.
-
-### Sprint 44
-
-[x] **44.1 — Rust: symptoms table + CRUD commands**
-   - Migration: `CREATE TABLE IF NOT EXISTS symptoms (id TEXT PRIMARY KEY, name TEXT NOT NULL, severity INTEGER CHECK(severity BETWEEN 1 AND 10), onset_date TEXT, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
-   - Commands: `symptoms_list`, `symptoms_get`, `symptoms_create`, `symptoms_update`, `symptoms_delete` (soft), `symptoms_hard_delete`
-   - Register all in `lib.rs`
-   - Done when: `cargo test` passes for all symptom commands
-
-[x] **44.2 — Rust: medications table + CRUD commands**
-   - Migration: `CREATE TABLE IF NOT EXISTS medications (id TEXT PRIMARY KEY, name TEXT NOT NULL, dosage TEXT, frequency TEXT, start_date TEXT, end_date TEXT, notes TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
-   - Commands: `medications_list`, `medications_get`, `medications_create`, `medications_update`, `medications_delete` (soft), `medications_hard_delete`
-   - Register all in `lib.rs`
-   - Done when: `cargo test` passes for all medication commands
-
-[x] **44.3 — Rust: entity_links table (generic) + link/unlink commands for symptoms + medications**
-   - Check if `note_links` pattern can be extended or add a generic `entity_links (id, from_type, from_id, to_type, to_id, created_at)` table
-   - Commands: `symptom_link`, `symptom_unlink`, `links_for_symptom`, `medication_link`, `medication_unlink`, `links_for_medication`
-   - Done when: link/unlink round-trip tests pass
-
-[x] **44.4 — Rust: FTS5 indexing for symptoms and medications**
-   - After create/update of symptom: call `upsert_search_index(conn, id, 'symptom', name + " " + notes)`
-   - After create/update of medication: call `upsert_search_index(conn, id, 'medication', name + " " + notes + " " + dosage)`
-   - After soft-delete: call `upsert_search_index` with empty body (or delete row from `search_index`)
-   - Done when: `SELECT * FROM search_index WHERE entity_type='symptom'` returns rows after symptom creation
-
-[x] **44.5 — Rust: cargo fmt + clippy + tests**
-   - `cargo fmt --all` ✓
-   - `cargo clippy -- -D warnings` ✓
-   - `cargo test --all` ✓
-   - Done when: all Rust checks green
-
-[x] **44.6 — Frontend: Symptoms list + create/edit pages**
-   - `src/app/(app)/symptoms/page.tsx` — list view with `symptoms_list`; empty-state "Log your first symptom"
-   - `src/app/(app)/symptoms/new/page.tsx` and `/symptoms/view/[id]/page.tsx` — create/edit form
-   - Fields: name (required), severity (1–10 slider), onset_date (date picker), notes (textarea)
-   - Nav: add "Symptoms" link to sidebar nav
-   - Done when: user can create, view, edit, soft-delete a symptom
-
-[x] **44.7 — Frontend: Medications list + create/edit pages**
-   - Mirror task 44.6 for medications
-   - Fields: name (required), dosage, frequency, start_date, end_date, notes
-   - Nav: add "Medications" link to sidebar nav
-   - Done when: user can create, view, edit, soft-delete a medication
-
-[x] **44.8 — Frontend: link symptoms/medications to documents and appointments**
-   - DocumentDetailClient: "Link Symptom" and "Link Medication" buttons → searchable dropdown → `symptom_link` / `medication_link`
-   - AppointmentDetailClient: same pattern
-   - Render linked chips; unlink on ✕
-   - Done when: symptom and medication chips appear on document and appointment detail pages
-
-[x] **44.9 — Unit tests for Symptoms + Medications frontend**
-   - `src/app/(app)/symptoms/__tests__/symptoms-crud.test.tsx`
-   - `src/app/(app)/medications/__tests__/medications-crud.test.tsx`
-   - Mock `invoke`; assert list renders; assert create calls correct command; assert delete softly removes from list
-   - Done when: `npx vitest run` passes
-
-[x] **44.10 — E2E spec + pre-commit + commit**
-   - `e2e/symptoms-medications.spec.ts`
-     - TC-SYM-01: create symptom "Headache" severity 7 → appears in list
-     - TC-MED-01: create medication "Ibuprofen 400mg" → appears in list
-     - TC-LINK-01: link symptom to a document → chip visible on document detail
-   - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
-   - Commit: `feat: Symptom and Medication entities — CRUD, linking, FTS5 (Phase 44)`
-
----
-
-## Phase 45 — Unified Content Search: Documents + Notes + Symptoms + Medications
-
-**Goal:** Expand the content search page (`/content-search`) to return results from all four entity types, grouped by type in the results list, with type-labelled cards that navigate to the correct detail page.
-
-**Done when:** Searching a term returns matching documents, notes, symptoms, and medications; each result card shows the entity type label and links to the correct page; summary bar shows total count across all types.
-
-### Sprint 45
-
-[x] **45.1 — Rust: expand `content_search` command to include all entity types**
-   - `src-tauri/src/commands/search.rs` (or wherever `content_search` lives)
-   - Change FTS5 query: remove any `entity_type = 'document'` filter; return all matching rows
-   - Return `entity_type` field in each result row
-   - Done when: `cargo test` includes a test that a symptom indexed in `search_index` is returned by `content_search`
-
-[x] **45.2 — Frontend: update ContentSearchClient to handle multi-type results**
-   - `src/app/(app)/content-search/` — update result rendering
-   - Each result card: show coloured type badge (`Document` / `Note` / `Symptom` / `Medication`)
-   - Link per type: documents → `/documents/view/<id>`, notes → `/notes/view/<id>`, symptoms → `/symptoms/view/<id>`, medications → `/medications/view/<id>`
-   - Group results by entity_type with section headers, or sort by relevance with inline type badge
-   - Done when: searching "ibuprofen" returns medication card; searching "headache" returns symptom card
-
-[x] **45.3 — Frontend: summary bar shows breakdown by type**
-   - `data-testid="summary-bar"` — update text to e.g. "4 results — 2 Documents, 1 Note, 1 Medication"
-   - Done when: summary bar reflects multi-type counts
-
-[x] **45.4 — Unit test: multi-type result rendering**
-   - `src/app/(app)/content-search/__tests__/content-search-multi-type.test.tsx`
-   - Mock `invoke('content_search')` returning one result per entity type
-   - Assert 4 cards render; assert type badges present; assert correct hrefs
-   - Done when: `npx vitest run` passes
-
-[x] **45.5 — E2E spec + pre-commit + commit**
-   - `e2e/content-search-multi-type.spec.ts`
-     - Create note "Annual checkup notes" → search "checkup" → note card visible
-     - Create symptom "Migraine" → search "migraine" → symptom card visible
-     - Create medication "Amoxicillin" → search "amoxicillin" → medication card visible
-   - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
-   - Commit: `feat: unified content search — documents + notes + symptoms + medications (Phase 45)`
-
----
-
-## Phase 46 — Content Search Filters: Entity-Type Chips + Date Range
-
-**Goal:** Add entity-type filter chips and an optional date range picker to the `/content-search` page, and extend the `content_search` Rust command to accept these filters. This is the only genuine remaining feature gap (PRD F6.5 "Filter results by type").
-
-**Done when:** The `/content-search` page has clickable entity-type filter chips (All / Document / Note / Symptom / Medication) and an optional date range that narrow results server-side; the summary bar reflects the filtered count; all tests pass.
-
-### Sprint 46
-
-[x] **46.0 — Rust: V25 migration — add `activity_date` to `search_index` FTS5 + update `upsert_search_index`**
-   - **Blocker:** `search_index` FTS5 virtual table (created in V20) has no `activity_date` column; date filtering in 46.1 cannot be implemented without it. FTS5 tables cannot be ALTERed — must drop and recreate.
-   - File: `src-tauri/migrations/` — add V25 migration
-     - `DROP TABLE IF EXISTS search_index;`
-     - Recreate with identical columns + `activity_date TEXT` appended
-   - File: `src-tauri/src/commands/documents.rs` (or wherever `upsert_search_index` is defined)
-     - Add `activity_date: Option<&str>` as 9th parameter
-     - Update INSERT statement to include `activity_date`
-   - Find all call sites of `upsert_search_index` (grep: `upsert_search_index`) and pass the document/entity activity_date value (or `None` for entities that have no date)
-   - Done when: `cargo test` passes; `search_index` table has `activity_date` column; all existing search tests still pass
-
-[x] **46.1 — Rust: extend `content_search` command with optional filters**
-   - File: `src-tauri/src/commands/search.rs`
-   - Add optional params: `entity_types: Option<Vec<String>>`, `date_from: Option<String>`, `date_to: Option<String>`
-   - If `entity_types` is non-empty, add `WHERE entity_type IN (…)` clause to FTS5 query
-   - If `date_from`/`date_to` provided, filter on `activity_date` column in `search_index` (added by V25 migration in 46.0)
-   - Keep backward compat: if all params None, behaviour identical to current
-   - Done when: `cargo test` includes a test asserting entity_type filter returns only matching types; date range test filters by date
-
-[x] **46.2 — Frontend: add entity-type filter chip row**
-   - File: `src/app/(app)/content-search/page.tsx`
-   - Add chip row above results: **All** | **Document** | **Note** | **Symptom** | **Medication**
-   - Active chip highlighted; clicking changes state and re-triggers search
-   - "All" deselects all specific filters
-   - Pass `entity_types` to `invoke('content_search', { query, entityTypes: [...] })`
-   - Done when: clicking "Document" chip re-runs search and only Document cards render
-
-[x] **46.3 — Frontend: add date range inputs**
-   - Same file as 46.2
-   - Add two `<input type="date">` fields: "From" and "To" (collapsible or always visible)
-   - On change, re-trigger search with `dateFrom` / `dateTo` params
-   - Clear button resets both fields and re-searches
-   - Done when: entering a date range filters results to only entries within that range
-
-[x] **46.4 — Frontend: summary bar reflects filtered count**
-   - Update `data-testid="summary-bar"` to show filtered count
-   - When filters active: "4 of 12 results — 4 Documents"
-   - When no filters: original behaviour "12 results — 2 Documents, …"
-   - Done when: summary bar text changes correctly when filters applied/cleared
-
-[x] **46.5 — Unit tests: filter chip interactions**
-   - File: `src/app/(app)/content-search/__tests__/content-search-filters.test.tsx`
-   - Mock `invoke` returning mixed-type results
-   - Assert: clicking "Document" chip triggers invoke with `entityTypes: ['document']`
-   - Assert: date range inputs trigger invoke with `dateFrom`/`dateTo`
-   - Assert: "All" chip clears entity filters
-   - Assert: summary bar shows filtered count
-   - Done when: `npx vitest run` passes
-
-[x] **46.6 — Rust unit tests: filter logic**
-   - File: `src-tauri/src/commands/search.rs` (or adjacent test module)
-   - Test: `entity_types = ['document']` filters out notes/symptoms/medications
-   - Test: `date_from = '2024-01-01', date_to = '2024-12-31'` excludes entries outside range
-   - Test: no filters → all entity types returned
-   - Done when: `cargo test` passes
-
-[x] **46.7 — E2E spec + pre-commit + commit**
-   - File: `e2e/content-search-filters.spec.ts`
-   - Setup: upload one document + create one note with searchable text
-   - Search for term that matches both → both appear
-   - Click "Document" chip → only document card visible; note card gone
-   - Click "All" → both reappear
-   - Enter date range that excludes document → document gone
-   - `npx tsc --noEmit` ✓, `cargo fmt` ✓, `cargo clippy` ✓
-   - Commit: `feat: content search entity-type filter chips + date range (Phase 46)`
-
----
-
-## Phase 48 — Hardcoded Filter Tech Debt
-
-**Goal:** Eliminate hard-coded filter values (roles, categories, statuses, entity labels) found during code review (2026-05-09). Prioritised H → M; LOW items deferred to v1.5+.
-
-**Done when:** All HIGH items resolved; no duplicate role arrays; category list driven by backend command; appointment status validated at IPC boundary; entity-type config centralised.
-
-### Priority H3 — Quick fix: shared role constants (30 min)
-
-[x] **48.1 — Export `DOCTOR_ROLES` / `CLINIC_ROLES` from `contactsStore.ts`**
-   - Current: `AppointmentForm.tsx:16-17` redeclares `['doctor', 'specialist', 'physio', 'dentist', 'nurse', 'other']` inline, duplicating the identical array already in `contactsStore.ts`
-   - Fix: add `export const DOCTOR_ROLES = [...]` and `export const CLINIC_ROLES = [...]` in `contactsStore.ts`; import them in `AppointmentForm.tsx` and remove the local declarations
-   - `npx tsc --noEmit` must pass
-   - Done when: no duplicate role arrays exist in the codebase (`grep -r "DOCTOR_ROLES\|doctor.*specialist.*physio" src/` shows single definition)
-
-### Priority H1 — Backend-driven categories (medium)
-
-[x] **48.2 — Add `documents_valid_categories` Tauri command**
-   - New command in `src-tauri/src/commands/documents.rs` (or `categories.rs`)
-   - Returns `Vec<String>` — the list of all valid category names (currently hard-coded in frontend filter panel)
-   - Frontend (`src/components/documents/DocumentList.tsx` or wherever category chips are built) fetches on init via `invoke('documents_valid_categories')`; replaces static array
-   - Done when: `cargo test` includes a test asserting the command returns a non-empty list; frontend chip list is driven by the invoke result
-
-### Priority H2 — Appointment status validation at IPC boundary (medium)
-
-[x] **48.3 — Validate appointment statuses at IPC boundary**
-   - Current: frontend uses string literals `'scheduled' | 'completed' | 'cancelled'` with no Rust-side enum check
-   - Fix: define `AppointmentStatus` enum in Rust (or use a `match` guard in the update command); return an error if an unknown status string is received
-   - TypeScript side: create `type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled'` in `src/types/appointments.ts` (or equivalent); use it wherever status is set/read
-   - Done when: passing `'bogus'` to `appointments_update` returns a Tauri error; TypeScript type is used at all call sites
-
-### Priority M1 — Centralise entity-type labels + routes (medium)
-
-[x] **48.4 — Create `src/lib/entities.ts` entity config map**
-   - Current: entity-type labels (`'Document'`, `'Note'`, `'Symptom'`, `'Medication'`) and their route prefixes are repeated across ContentSearchClient, result cards, badge renderers, and link builders
-   - Fix: create `src/lib/entities.ts` exporting:
-     ```ts
-     export const ENTITY_CONFIG = {
-       document:   { label: 'Document',   route: '/documents/view'   },
-       note:       { label: 'Note',        route: '/notes/view'       },
-       symptom:    { label: 'Symptom',     route: '/symptoms/view'    },
-       medication: { label: 'Medication',  route: '/medications/view' },
-     } as const
-     ```
-   - Replace all inline string literals / switch blocks with lookups from `ENTITY_CONFIG`
-   - Done when: `npx tsc --noEmit` passes; no bare `'/documents/view'` strings outside `entities.ts`
-
-### Priority M2/M3 — Extraction tag / specialty constants (flag for future)
-
-[x] **48.5 — Add TODO comments on extraction tag and specialty constant blocks**
-   - `src-tauri/src/commands/documents.rs` — tag extraction constants (type tags, specialty list)
-   - Add: `// TODO(hardcoded): move to DB config table (Phase 48 deferred to v1.5)`
-   - No functional change — just guards against silent drift
-   - Done when: TODO comments are present; no code changed
-
-[x] **48.6 — Pre-commit checks + commit**
-   - `npx tsc --noEmit`
-   - `cargo fmt --all` + `cargo clippy -- -D warnings`
-   - Commit: `refactor: eliminate hardcoded filter values — roles, categories, statuses, entity config (Phase 48)`
-
----
-
-## Phase 49 — Missing Notes After Document Upload: Analysis + Fix
-
-### Problem Statement
-
-Users report that notes are missing after uploading a document. Specifically, the upload dialog shows a "Notes" textarea but the saved document does not surface any OCR-extracted note content.
-
-**Root cause (confirmed 2026-05-09):**
-
-`UploadDialog.tsx` has a manual notes textarea (`const [notes, setNotes] = useState('')` at line 95; rendered at lines 862–869). This textarea is bound to manual user input only — it is **never pre-populated** from the extraction result. The `ExtractionSuggestions` struct (Rust) has no `clinical_notes` field, so OCR-extracted note content is invisible during the upload flow.
-
-The raw OCR text is stored in `documents.extracted_text` and surfaced on the document detail page (Phase 38 — "Extracted Text" collapsible section). That panel already solves the read-back problem for existing documents. The gap is in the upload-time UX: users expect the upload dialog to show them what was found in the document so they can annotate accordingly.
-
-### Fix Options
-
-| Option | Description | Effort | Trade-off |
-|--------|-------------|--------|-----------|
-| **A — Pre-fill notes textarea from extraction** | Add `clinical_notes: Option<String>` to `ExtractionSuggestions` in Rust; populate from `extracted_text` trimmed to ~400 chars; pre-fill the manual notes textarea in `UploadDialog.tsx` | Medium (Rust + frontend) | Simple; but merges OCR content and user annotation into the same field — confusing if user wants to keep them separate |
-| **B — Keep notes manual; rely on detail-page Extracted Text panel** | No change to upload flow; add a dismissible info banner in `UploadDialog` at review step: "Full extracted text will be available on the document detail page" | Small (one banner line) | Honest UX contract; no risk of OCR noise in manual notes field; detail-page panel already exists (Phase 38) |
-| **C — Read-only OCR preview in upload dialog** | Add a non-editable "OCR Preview" block in the upload review step showing the first ~300 chars of `extracted_text`; manual notes textarea remains separate | Medium (UI only; extraction already returns `extracted_text`) | Clearest separation of concerns; users can see extracted text without it polluting their notes |
-
-**Recommendation: Option C** — show a collapsible read-only "Extracted Text Preview" in the upload review step. Manual notes stay separate. This matches the pattern already used on the document detail page and avoids silently writing OCR noise into the user's own notes.
-
-### Sprint 49
-
-[x] **49.1 — Rust: include `extracted_text_preview` in `ExtractionSuggestions`**
-   - `src-tauri/src/commands/documents.rs` — `ExtractionSuggestions` struct
-   - Add field: `extracted_text_preview: Option<String>` — first 400 chars of `extracted_text`, trimmed
-   - Populate it in the extraction command that returns `ExtractionSuggestions`
-   - Done when: `cargo test` passes; field present in JSON response
-
-[x] **49.2 — Frontend: collapsible OCR preview in UploadDialog review step**
-   - `src/components/documents/UploadDialog.tsx`
-   - In the review step (after upload, when `ExtractionSuggestions` is shown): if `extractedTextPreview` is non-empty, render a collapsible `<details>` block
-     - `<summary>Extracted Text Preview</summary>`
-     - `<p className="text-sm text-gray-500 whitespace-pre-wrap">{extractedTextPreview}</p>`
-   - Do NOT pre-fill the notes textarea — keep manual notes separate
-   - Add `data-testid="upload-extracted-text-preview"` to the `<details>` element
-   - Done when: `npx tsc --noEmit` passes; preview visible in upload review step when OCR text exists; hidden when absent
-
-[x] **49.3 — Update `tauri-mock.js` EXTRACTION_MAP with `extracted_text_preview`**
-   - All entries in `EXTRACTION_MAP` that have OCR-like content: add `extracted_text_preview: 'Sample extracted text...'`
-   - Entries with no extracted text: set `extracted_text_preview: null`
-   - Done when: E2E tests that check for `upload-extracted-text-preview` use correct mock data
-
-[x] **49.4 — E2E spec: upload-extracted-text-preview visible after upload**
-   - File: `e2e/upload-ocr-preview.spec.ts`
-   - **TC-OCR-01:** Upload `medical-invoice.pdf` (has `extracted_text_preview` in mock) → review step → assert `upload-extracted-text-preview` is present in DOM
-   - **TC-OCR-02:** Upload `no-date-physio.pdf` (no preview in mock) → review step → assert `upload-extracted-text-preview` is NOT present
-   - Done when: both TCs pass
-
-[x] **49.5 — Unit test: UploadDialog renders preview when present**
-   - `src/components/documents/UploadDialog.test.tsx`
-   - Mock extraction result with `extracted_text_preview: 'Blood pressure: 130/85'`
-   - Assert `upload-extracted-text-preview` element is in DOM
-   - Assert manual notes textarea is empty (OCR content not leaked into notes)
-   - Done when: `npx vitest run` passes
-
-[x] **49.6 — Pre-commit checks + commit**
-   - `npx tsc --noEmit`
-   - `cargo fmt --all` + `cargo clippy -- -D warnings`
-   - Commit: `feat: show OCR text preview in upload review step — read-only collapsible (Phase 49)`
+   - Commit: `feat: Redesign-A full E2E suite + accessibility audit — all specs passing (Phase 57)`

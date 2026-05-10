@@ -1,0 +1,327 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900">
+  <defs>
+    <linearGradient id="sidebarGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0D1117;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#141B24;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="panelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A2332;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#151D2B;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="amberGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F0A500;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#F0A500;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+    <clipPath id="pdfClip">
+      <rect x="756" y="100" width="340" height="440" rx="8"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#0D1117"/>
+
+  <!-- Label -->
+  <text x="720" y="880" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#4B5563" letter-spacing="2">OPTION A — VAULT</text>
+
+  <!-- Icon-only sidebar 52px -->
+  <rect x="0" y="0" width="52" height="900" fill="url(#sidebarGrad)"/>
+  <rect x="50" y="0" width="1" height="900" fill="#1E2A3A"/>
+
+  <!-- Logo mark -->
+  <rect x="14" y="16" width="24" height="24" rx="6" fill="#F0A500"/>
+  <text x="26" y="32" text-anchor="middle" font-family="system-ui" font-size="11" font-weight="700" fill="#0D1117">H</text>
+
+  <!-- Nav icons — active: documents -->
+  <!-- Home -->
+  <rect x="10" y="62" width="32" height="32" rx="6" fill="none"/>
+  <text x="26" y="82" text-anchor="middle" font-size="16" fill="#4B5563">⌂</text>
+
+  <!-- Documents (active) -->
+  <rect x="6" y="100" width="40" height="36" rx="6" fill="#F0A500" opacity="0.15"/>
+  <rect x="6" y="100" width="3" height="36" rx="2" fill="#F0A500" filter="url(#glow)"/>
+  <text x="26" y="123" text-anchor="middle" font-size="16" fill="#F0A500">⬛</text>
+
+  <!-- Contacts -->
+  <text x="26" y="162" text-anchor="middle" font-size="16" fill="#4B5563">◎</text>
+  <!-- Clinics -->
+  <text x="26" y="202" text-anchor="middle" font-size="16" fill="#4B5563">⊕</text>
+  <!-- Notes -->
+  <text x="26" y="242" text-anchor="middle" font-size="16" fill="#4B5563">✎</text>
+  <!-- Timeline -->
+  <text x="26" y="282" text-anchor="middle" font-size="16" fill="#4B5563">◈</text>
+  <!-- Tags -->
+  <text x="26" y="322" text-anchor="middle" font-size="16" fill="#4B5563">◇</text>
+  <!-- Search -->
+  <text x="26" y="362" text-anchor="middle" font-size="16" fill="#4B5563">⌕</text>
+  <!-- Trash -->
+  <text x="26" y="402" text-anchor="middle" font-size="16" fill="#4B5563">⊘</text>
+
+  <!-- Settings at bottom -->
+  <text x="26" y="860" text-anchor="middle" font-size="16" fill="#4B5563">⚙</text>
+
+  <!-- List panel 300px -->
+  <rect x="52" y="0" width="300" height="900" fill="#111827"/>
+
+  <!-- List header -->
+  <rect x="52" y="0" width="300" height="56" fill="#0F1721"/>
+  <text x="72" y="26" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#F0A500" letter-spacing="2">DOCUMENTS</text>
+  <text x="72" y="44" font-family="system-ui, sans-serif" font-size="12" fill="#4B5563">247 records</text>
+
+  <!-- Sort/filter bar -->
+  <rect x="52" y="56" width="300" height="36" fill="#0D1117"/>
+  <rect x="64" y="66" width="120" height="16" rx="8" fill="#1E2A3A"/>
+  <text x="124" y="78" text-anchor="middle" font-family="system-ui" font-size="10" fill="#6B7280">Date ↓</text>
+  <rect x="196" y="66" width="60" height="16" rx="8" fill="#1E2A3A"/>
+  <text x="226" y="78" text-anchor="middle" font-family="system-ui" font-size="10" fill="#6B7280">Filter</text>
+  <rect x="268" y="66" width="60" height="16" rx="8" fill="#1E2A3A"/>
+  <text x="298" y="78" text-anchor="middle" font-family="system-ui" font-size="10" fill="#6B7280">+ New</text>
+
+  <!-- Document list items -->
+  <!-- Item 1 (selected) -->
+  <rect x="52" y="92" width="300" height="80" fill="#1A2332"/>
+  <rect x="52" y="92" width="3" height="80" fill="#F0A500"/>
+  <rect x="66" y="104" width="40" height="48" rx="4" fill="#0D1117"/>
+  <text x="86" y="132" text-anchor="middle" font-size="10" fill="#F0A500">PDF</text>
+  <text x="120" y="116" font-family="system-ui" font-size="12" font-weight="600" fill="#F3F4F6">Blood Test Results</text>
+  <text x="120" y="132" font-family="system-ui" font-size="11" fill="#6B7280">Dr. Sarah Chen • St. Mary's</text>
+  <text x="120" y="148" font-family="system-ui" font-size="11" fill="#4B5563">15 Mar 2024</text>
+  <rect x="300" y="108" width="36" height="16" rx="8" fill="#F0A500" opacity="0.2"/>
+  <text x="318" y="120" text-anchor="middle" font-family="system-ui" font-size="9" fill="#F0A500">Lab</text>
+
+  <!-- Item 2 -->
+  <rect x="52" y="173" width="300" height="80" fill="none"/>
+  <rect x="52" y="252" width="300" height="1" fill="#1E2A3A"/>
+  <rect x="66" y="185" width="40" height="48" rx="4" fill="#1A2332"/>
+  <text x="86" y="213" text-anchor="middle" font-size="10" fill="#6B7280">PDF</text>
+  <text x="120" y="197" font-family="system-ui" font-size="12" font-weight="500" fill="#9CA3AF">Cardiology Referral</text>
+  <text x="120" y="213" font-family="system-ui" font-size="11" fill="#4B5563">Dr. James Park • Cardiac</text>
+  <text x="120" y="229" font-family="system-ui" font-size="11" fill="#374151">08 Mar 2024</text>
+
+  <!-- Item 3 -->
+  <rect x="52" y="253" width="300" height="80" fill="none"/>
+  <rect x="52" y="332" width="300" height="1" fill="#1E2A3A"/>
+  <rect x="66" y="265" width="40" height="48" rx="4" fill="#1A2332"/>
+  <text x="86" y="293" text-anchor="middle" font-size="10" fill="#6B7280">PDF</text>
+  <text x="120" y="277" font-family="system-ui" font-size="12" font-weight="500" fill="#9CA3AF">Prescription — Lisinopril</text>
+  <text x="120" y="293" font-family="system-ui" font-size="11" fill="#4B5563">Dr. Sarah Chen</text>
+  <text x="120" y="309" font-family="system-ui" font-size="11" fill="#374151">01 Mar 2024</text>
+
+  <!-- Item 4 -->
+  <rect x="52" y="333" width="300" height="80" fill="none"/>
+  <rect x="52" y="412" width="300" height="1" fill="#1E2A3A"/>
+  <rect x="66" y="345" width="40" height="48" rx="4" fill="#1A2332"/>
+  <text x="86" y="373" text-anchor="middle" font-size="10" fill="#6B7280">PDF</text>
+  <text x="120" y="357" font-family="system-ui" font-size="12" font-weight="500" fill="#9CA3AF">X-Ray Report — Chest</text>
+  <text x="120" y="373" font-family="system-ui" font-size="11" fill="#4B5563">Radiology Dept • UCH</text>
+  <text x="120" y="389" font-family="system-ui" font-size="11" fill="#374151">22 Feb 2024</text>
+
+  <!-- Item 5 -->
+  <rect x="52" y="413" width="300" height="80" fill="none"/>
+  <rect x="52" y="492" width="300" height="1" fill="#1E2A3A"/>
+  <rect x="66" y="425" width="40" height="48" rx="4" fill="#1A2332"/>
+  <text x="86" y="453" text-anchor="middle" font-size="10" fill="#6B7280">PDF</text>
+  <text x="120" y="437" font-family="system-ui" font-size="12" font-weight="500" fill="#9CA3AF">MRI Scan — Lumbar</text>
+  <text x="120" y="453" font-family="system-ui" font-size="11" fill="#4B5563">Dr. Aisha Patel • Neuro</text>
+  <text x="120" y="469" font-family="system-ui" font-size="11" fill="#374151">14 Feb 2024</text>
+
+  <!-- More items fade -->
+  <rect x="52" y="493" width="300" height="407" fill="#111827"/>
+  <rect x="52" y="493" width="300" height="120" fill="url(#amberGlow)" opacity="0.1"/>
+
+  <!-- Detail + PDF panel area (main) -->
+  <rect x="352" y="0" width="1088" height="900" fill="#0F1721"/>
+
+  <!-- Top bar of detail -->
+  <rect x="352" y="0" width="1088" height="56" fill="#0D1117"/>
+  <rect x="352" y="55" width="1088" height="1" fill="#1E2A3A"/>
+
+  <!-- Breadcrumb -->
+  <text x="372" y="22" font-family="system-ui" font-size="11" fill="#4B5563">Documents</text>
+  <text x="440" y="22" font-family="system-ui" font-size="11" fill="#374151">›</text>
+  <text x="452" y="22" font-family="system-ui" font-size="11" fill="#9CA3AF">Blood Test Results</text>
+
+  <!-- Action buttons top right -->
+  <rect x="1260" y="14" width="70" height="28" rx="6" fill="#1E2A3A"/>
+  <text x="1295" y="32" text-anchor="middle" font-family="system-ui" font-size="12" fill="#9CA3AF">Edit</text>
+  <rect x="1340" y="14" width="80" height="28" rx="6" fill="#F0A500"/>
+  <text x="1380" y="32" text-anchor="middle" font-family="system-ui" font-size="12" font-weight="600" fill="#0D1117">Share</text>
+
+  <!-- Search bar -->
+  <rect x="700" y="14" width="280" height="28" rx="14" fill="#1A2332"/>
+  <text x="718" y="31" font-family="system-ui" font-size="12" fill="#374151">⌕  Search everything…</text>
+  <rect x="952" y="19" width="16" height="16" rx="4" fill="#1E2A3A"/>
+  <text x="960" y="31" text-anchor="middle" font-family="system-ui" font-size="9" fill="#4B5563">⌘K</text>
+
+  <!-- Document title area -->
+  <text x="372" y="88" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="#F9FAFB">Blood Test Results</text>
+  <rect x="372" y="96" width="60" height="20" rx="10" fill="#F0A500" opacity="0.2"/>
+  <text x="402" y="110" text-anchor="middle" font-family="system-ui" font-size="10" font-weight="600" fill="#F0A500">LAB</text>
+  <rect x="440" y="96" width="70" height="20" rx="10" fill="#1E2A3A"/>
+  <text x="475" y="110" text-anchor="middle" font-family="system-ui" font-size="10" fill="#6B7280">Results</text>
+
+  <!-- Meta row -->
+  <text x="372" y="128" font-family="system-ui" font-size="12" fill="#6B7280">Dr. Sarah Chen  •  St. Mary's Hospital  •  15 March 2024</text>
+
+  <!-- PDF Preview Panel -->
+  <rect x="372" y="146" width="360" height="480" rx="8" fill="#1A2332" filter="url(#shadow)"/>
+  <!-- PDF header bar -->
+  <rect x="372" y="146" width="360" height="36" rx="8 8 0 0" fill="#141B24"/>
+  <rect x="372" y="164" width="360" height="18" fill="#141B24"/>
+  <rect x="384" y="156" width="8" height="8" rx="4" fill="#374151"/>
+  <rect x="400" y="156" width="8" height="8" rx="4" fill="#374151"/>
+  <rect x="416" y="156" width="8" height="8" rx="4" fill="#374151"/>
+  <text x="542" y="167" text-anchor="middle" font-family="system-ui" font-size="10" fill="#4B5563">Blood Test Results — 15 Mar 2024.pdf</text>
+  <!-- PDF Content simulation -->
+  <rect x="388" y="192" width="328" height="420" fill="#F8F9FA" rx="4"/>
+  <!-- Hospital letterhead -->
+  <rect x="400" y="204" width="160" height="20" rx="2" fill="#E5E7EB"/>
+  <rect x="400" y="204" width="160" height="6" rx="2" fill="#D1D5DB"/>
+  <text x="404" y="214" font-family="serif" font-size="8" fill="#1F2937">St. Mary's NHS Trust</text>
+  <text x="404" y="224" font-family="serif" font-size="7" fill="#6B7280">Pathology Department</text>
+  <!-- Doc title -->
+  <rect x="400" y="234" width="316" height="2" fill="#E5E7EB"/>
+  <text x="556" y="252" text-anchor="middle" font-family="serif" font-size="11" font-weight="bold" fill="#111827">HAEMATOLOGY REPORT</text>
+  <rect x="400" y="258" width="316" height="1" fill="#E5E7EB"/>
+  <!-- Patient info -->
+  <text x="404" y="274" font-family="sans-serif" font-size="7" fill="#374151">Patient: John Smith    DOB: 12/05/1978    NHS: 432 761 9821</text>
+  <text x="404" y="286" font-family="sans-serif" font-size="7" fill="#374151">Date: 15/03/2024    Ref: Dr Sarah Chen    Spec: Haematology</text>
+  <!-- Table header -->
+  <rect x="400" y="296" width="316" height="16" fill="#F3F4F6"/>
+  <text x="410" y="308" font-family="sans-serif" font-size="7" font-weight="bold" fill="#374151">Test</text>
+  <text x="530" y="308" font-family="sans-serif" font-size="7" font-weight="bold" fill="#374151">Result</text>
+  <text x="580" y="308" font-family="sans-serif" font-size="7" font-weight="bold" fill="#374151">Range</text>
+  <text x="660" y="308" font-family="sans-serif" font-size="7" font-weight="bold" fill="#374151">Flag</text>
+  <!-- Table rows -->
+  <text x="410" y="322" font-family="sans-serif" font-size="7" fill="#374151">Haemoglobin</text>
+  <text x="530" y="322" font-family="sans-serif" font-size="7" fill="#374151">142 g/L</text>
+  <text x="580" y="322" font-family="sans-serif" font-size="7" fill="#6B7280">130-170</text>
+  <text x="660" y="322" font-family="sans-serif" font-size="7" fill="#10B981">N</text>
+  <rect x="400" y="326" width="316" height="1" fill="#F3F4F6"/>
+  <text x="410" y="340" font-family="sans-serif" font-size="7" fill="#374151">White Cell Count</text>
+  <text x="530" y="340" font-family="sans-serif" font-size="7" fill="#EF4444">11.8 10⁹/L</text>
+  <text x="580" y="340" font-family="sans-serif" font-size="7" fill="#6B7280">4.0-11.0</text>
+  <text x="660" y="340" font-family="sans-serif" font-size="7" fill="#EF4444">H</text>
+  <rect x="400" y="344" width="316" height="1" fill="#F3F4F6"/>
+  <text x="410" y="358" font-family="sans-serif" font-size="7" fill="#374151">Platelets</text>
+  <text x="530" y="358" font-family="sans-serif" font-size="7" fill="#374151">287 10⁹/L</text>
+  <text x="580" y="358" font-family="sans-serif" font-size="7" fill="#6B7280">150-400</text>
+  <text x="660" y="358" font-family="sans-serif" font-size="7" fill="#10B981">N</text>
+  <rect x="400" y="362" width="316" height="1" fill="#F3F4F6"/>
+  <text x="410" y="376" font-family="sans-serif" font-size="7" fill="#374151">Ferritin</text>
+  <text x="530" y="376" font-family="sans-serif" font-size="7" fill="#F59E0B">18 µg/L</text>
+  <text x="580" y="376" font-family="sans-serif" font-size="7" fill="#6B7280">20-300</text>
+  <text x="660" y="376" font-family="sans-serif" font-size="7" fill="#F59E0B">L</text>
+  <!-- Comment -->
+  <rect x="400" y="390" width="316" height="2" fill="#E5E7EB"/>
+  <text x="410" y="408" font-family="sans-serif" font-size="7" fill="#374151">COMMENT: Mild leukocytosis noted. Ferritin slightly low.</text>
+  <text x="410" y="420" font-family="sans-serif" font-size="7" fill="#374151">Recommend follow-up in 6 weeks. Clinical correlation advised.</text>
+  <!-- Signature area -->
+  <rect x="400" y="560" width="316" height="2" fill="#E5E7EB"/>
+  <text x="410" y="578" font-family="sans-serif" font-size="7" fill="#6B7280">Authorised by: Dr. R. Patel MBBS FRCPath</text>
+  <!-- Page number -->
+  <text x="556" y="600" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#9CA3AF">Page 1 of 2</text>
+
+  <!-- PDF page controls -->
+  <rect x="372" y="626" width="360" height="36" fill="#141B24" rx="0 0 8 8"/>
+  <text x="432" y="648" text-anchor="middle" font-family="system-ui" font-size="11" fill="#4B5563">‹</text>
+  <text x="552" y="648" text-anchor="middle" font-family="system-ui" font-size="11" fill="#6B7280">1 / 2</text>
+  <text x="672" y="648" text-anchor="middle" font-family="system-ui" font-size="11" fill="#4B5563">›</text>
+  <text x="700" y="648" text-anchor="middle" font-family="system-ui" font-size="11" fill="#4B5563">⊞</text>
+
+  <!-- AI Insights Panel -->
+  <rect x="752" y="146" width="360" height="480" rx="8" fill="#141B24" filter="url(#shadow)"/>
+  <!-- Panel header -->
+  <rect x="752" y="146" width="360" height="44" fill="#0D1117" rx="8 8 0 0"/>
+  <rect x="752" y="172" width="360" height="18" fill="#0D1117"/>
+  <!-- Amber AI badge -->
+  <rect x="768" y="158" width="72" height="20" rx="10" fill="#F0A500" opacity="0.2"/>
+  <rect x="772" y="162" width="8" height="8" rx="4" fill="#F0A500"/>
+  <text x="798" y="172" font-family="system-ui" font-size="10" font-weight="600" fill="#F0A500">AI Insights</text>
+  <!-- Tab bar -->
+  <text x="868" y="172" font-family="system-ui" font-size="10" fill="#4B5563">Metadata</text>
+  <text x="938" y="172" font-family="system-ui" font-size="10" fill="#4B5563">Timeline</text>
+
+  <!-- AI Summary block -->
+  <rect x="764" y="200" width="336" height="80" rx="6" fill="#1A2332"/>
+  <rect x="764" y="200" width="3" height="80" rx="2" fill="#F0A500"/>
+  <text x="776" y="218" font-family="system-ui" font-size="11" font-weight="600" fill="#F3F4F6">Summary</text>
+  <text x="776" y="236" font-family="system-ui" font-size="10" fill="#9CA3AF">Routine haematology panel. WBC mildly elevated</text>
+  <text x="776" y="252" font-family="system-ui" font-size="10" fill="#9CA3AF">at 11.8 (ref 4-11). Ferritin low at 18 µg/L.</text>
+  <text x="776" y="268" font-family="system-ui" font-size="10" fill="#9CA3AF">Follow-up recommended in 6 weeks.</text>
+
+  <!-- Flags -->
+  <text x="768" y="300" font-family="system-ui" font-size="11" font-weight="600" fill="#F3F4F6">Abnormal Values</text>
+  <rect x="768" y="308" width="160" height="32" rx="6" fill="#EF444420"/>
+  <text x="780" y="322" font-family="system-ui" font-size="10" font-weight="600" fill="#EF4444">↑ WBC</text>
+  <text x="780" y="336" font-family="system-ui" font-size="9" fill="#EF4444">11.8 (ref 4-11)</text>
+  <rect x="940" y="308" width="148" height="32" rx="6" fill="#F59E0B20"/>
+  <text x="952" y="322" font-family="system-ui" font-size="10" font-weight="600" fill="#F59E0B">↓ Ferritin</text>
+  <text x="952" y="336" font-family="system-ui" font-size="9" fill="#F59E0B">18 µg/L (ref 20-300)</text>
+
+  <!-- Extracted metadata -->
+  <text x="768" y="364" font-family="system-ui" font-size="11" font-weight="600" fill="#F3F4F6">Extracted Details</text>
+  <rect x="768" y="372" width="336" height="108" rx="6" fill="#0F1721"/>
+  <!-- Rows -->
+  <text x="780" y="390" font-family="system-ui" font-size="10" fill="#6B7280">Doctor</text>
+  <text x="900" y="390" font-family="system-ui" font-size="10" fill="#D1D5DB">Dr. Sarah Chen</text>
+  <rect x="780" y="396" width="316" height="1" fill="#1E2A3A"/>
+  <text x="780" y="414" font-family="system-ui" font-size="10" fill="#6B7280">Clinic</text>
+  <text x="900" y="414" font-family="system-ui" font-size="10" fill="#D1D5DB">St. Mary's Hospital</text>
+  <rect x="780" y="420" width="316" height="1" fill="#1E2A3A"/>
+  <text x="780" y="438" font-family="system-ui" font-size="10" fill="#6B7280">Date</text>
+  <text x="900" y="438" font-family="system-ui" font-size="10" fill="#D1D5DB">15 March 2024</text>
+  <rect x="780" y="444" width="316" height="1" fill="#1E2A3A"/>
+  <text x="780" y="462" font-family="system-ui" font-size="10" fill="#6B7280">Tags</text>
+  <rect x="900" y="450" width="50" height="18" rx="9" fill="#F0A50020"/>
+  <text x="925" y="463" text-anchor="middle" font-family="system-ui" font-size="9" fill="#F0A500">Lab</text>
+  <rect x="958" y="450" width="60" height="18" rx="9" fill="#1E2A3A"/>
+  <text x="988" y="463" text-anchor="middle" font-family="system-ui" font-size="9" fill="#6B7280">Blood</text>
+  <rect x="780" y="468" width="316" height="1" fill="#1E2A3A"/>
+  <text x="780" y="486" font-family="system-ui" font-size="10" fill="#6B7280">Category</text>
+  <text x="900" y="486" font-family="system-ui" font-size="10" fill="#D1D5DB">Lab Results</text>
+
+  <!-- Related docs -->
+  <text x="768" y="502" font-family="system-ui" font-size="11" font-weight="600" fill="#F3F4F6">Related Documents</text>
+  <rect x="768" y="510" width="160" height="48" rx="6" fill="#1A2332"/>
+  <text x="780" y="528" font-family="system-ui" font-size="10" fill="#9CA3AF">Prescription</text>
+  <text x="780" y="544" font-family="system-ui" font-size="9" fill="#4B5563">Dr. Chen — 01 Mar</text>
+  <rect x="936" y="510" width="160" height="48" rx="6" fill="#1A2332"/>
+  <text x="948" y="528" font-family="system-ui" font-size="10" fill="#9CA3AF">Cardiology Ref.</text>
+  <text x="948" y="544" font-family="system-ui" font-size="9" fill="#4B5563">Dr. Park — 08 Mar</text>
+
+  <!-- Activity/Notes panel below -->
+  <rect x="372" y="646" width="740" height="206" fill="#111827" rx="8"/>
+  <rect x="384" y="660" width="100" height="20" rx="4" fill="#1A2332"/>
+  <text x="434" y="674" text-anchor="middle" font-family="system-ui" font-size="11" fill="#9CA3AF">Activity</text>
+  <!-- Timeline entries -->
+  <rect x="392" y="688" width="8" height="8" rx="4" fill="#F0A500"/>
+  <rect x="396" y="696" width="1" height="40" fill="#1E2A3A"/>
+  <text x="412" y="698" font-family="system-ui" font-size="11" fill="#9CA3AF">You uploaded this document</text>
+  <text x="412" y="712" font-family="system-ui" font-size="10" fill="#4B5563">16 Mar 2024 · 09:42</text>
+  <rect x="392" y="738" width="8" height="8" rx="4" fill="#1E2A3A"/>
+  <rect x="396" y="746" width="1" height="40" fill="#1E2A3A"/>
+  <text x="412" y="748" font-family="system-ui" font-size="11" fill="#9CA3AF">AI extracted 6 metadata fields</text>
+  <text x="412" y="762" font-family="system-ui" font-size="10" fill="#4B5563">16 Mar 2024 · 09:43</text>
+  <rect x="392" y="788" width="8" height="8" rx="4" fill="#1E2A3A"/>
+  <text x="412" y="798" font-family="system-ui" font-size="11" fill="#9CA3AF">Tagged as "Lab" by you</text>
+  <text x="412" y="812" font-family="system-ui" font-size="10" fill="#4B5563">16 Mar 2024 · 10:05</text>
+
+  <!-- Design direction label box -->
+  <rect x="1120" y="646" width="300" height="206" rx="8" fill="#1A2332" opacity="0.8"/>
+  <text x="1270" y="684" text-anchor="middle" font-family="system-ui" font-size="13" font-weight="700" fill="#F0A500">VAULT</text>
+  <text x="1270" y="706" text-anchor="middle" font-family="system-ui" font-size="10" fill="#6B7280">Dark Encrypted Health Record</text>
+  <rect x="1150" y="718" width="240" height="1" fill="#1E2A3A"/>
+  <text x="1160" y="740" font-family="system-ui" font-size="10" fill="#4B5563">• Dark mode (#0D1117 bg)</text>
+  <text x="1160" y="758" font-family="system-ui" font-size="10" fill="#4B5563">• Icon-only 52px sidebar</text>
+  <text x="1160" y="776" font-family="system-ui" font-size="10" fill="#4B5563">• PDF + AI panel side by side</text>
+  <text x="1160" y="794" font-family="system-ui" font-size="10" fill="#4B5563">• Amber #F0A500 accent</text>
+  <text x="1160" y="812" font-family="system-ui" font-size="10" fill="#4B5563">• Master-detail layout</text>
+  <text x="1160" y="830" font-family="system-ui" font-size="10" fill="#4B5563">• AI insights inline</text>
+</svg>

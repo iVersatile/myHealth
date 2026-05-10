@@ -248,6 +248,107 @@ On-device LLM (llama.cpp, Mistral 7B Q4 or Phi-3 Mini) to enhance tag and entity
 
 ---
 
+## 4. F9 — Batch Document Upload with Draft Entity Flow (v1.5)
+
+### Overview
+
+Users upload multiple documents at once (or single documents via the same pipeline). Every extracted entity — tags, appointments, contacts, clinics, symptoms, medications — is saved as a *draft* requiring explicit human acceptance before promotion to main data. Failed documents roll back independently; other documents in the batch are unaffected.
+
+### User Story
+
+> "As a user with a backlog of medical documents, I want to upload 30 PDFs at once and have the app extract all entities automatically, then review and accept or reject each on my own schedule — without extraction blocking my workflow."
+
+---
+
+### F9.1 — Batch Upload UI
+
+- Multi-file picker (Ctrl/Cmd+click multi-select)
+- Folder / directory select
+- Drag-and-drop zone accepting multiple files simultaneously
+- Per-file progress indicator: `Queued → Processing → Done / Failed`
+- Failed files display error inline; remaining files continue uninterrupted
+- `data-testid="batch-upload-zone"`
+
+---
+
+### F9.2 — Draft Entity Schema
+
+**New column on entity tables:**
+
+| Table | New column |
+|-------|-----------|
+| `contacts` | `is_draft BOOLEAN NOT NULL DEFAULT 0` |
+| `clinics` | `is_draft BOOLEAN NOT NULL DEFAULT 0` |
+| `appointments` | `is_draft BOOLEAN NOT NULL DEFAULT 0` |
+| `symptoms` | `is_draft BOOLEAN NOT NULL DEFAULT 0` |
+| `medications` | `is_draft BOOLEAN NOT NULL DEFAULT 0` |
+| `document_tags` (join) | `is_draft BOOLEAN NOT NULL DEFAULT 0` |
+
+Tag label rows in the `tags` table are **not** flagged — the tag label may already exist; the *association* (`document_tags` row) is what is draft.
+
+**New column on `documents` table:**
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `batch_upload_id` | `TEXT` | UUID generated per upload session; single upload = batch of 1 |
+
+All existing rows default to `is_draft = 0` — no regression. Migration via `ALTER TABLE ... ADD COLUMN`.
+
+---
+
+### F9.3 — Draft Entity Pipeline (Upload)
+
+- After OCR + extraction, all entities saved with `is_draft = TRUE`
+- Applies to **both** single upload and batch upload (same code path)
+- **Per-document transaction:** `BEGIN TRANSACTION` before saving document + entities; `ROLLBACK` on any OCR or extraction failure for that document; other documents in the batch are unaffected
+- **Duplicate handling:** if extracted entity closely matches an existing non-draft entity (same name / phone / CRN match), create the draft entity and set `merge_candidate_id = <existing entity id>`; do not auto-merge
+- `batch_upload_id` UUID stamped on all documents in the same upload session
+
+---
+
+### F9.4 — Draft Entity Review UI
+
+Draft items appear **inline** on each existing entity page:
+
+- Contacts, Clinics, Appointments, Symptoms, Medications pages
+- Draft items: dashed border + **DRAFT** badge, listed in a "Drafts" subsection above main list
+- Count banner at page top: _"3 draft items awaiting review"_ (hidden when zero drafts)
+- Tags: draft associations shown on document detail page with **DRAFT** badge per tag chip
+
+**Per-entity actions:**
+
+| Action | Behaviour |
+|--------|-----------|
+| **Accept** | `UPDATE SET is_draft = 0` — promotes entity to main data |
+| **Reject** | Soft-delete (same as existing Trash flow; recoverable) |
+| **Merge** | Shown when `merge_candidate_id` set — absorbs draft into existing record; draft row deleted |
+
+---
+
+### F9.5 — Non-regression Constraints
+
+- All existing queries filter `WHERE is_draft = 0` (or `is_draft IS NULL`) by default
+- Draft entities excluded from: document list, timeline, content search (FTS5), calendar, all aggregates
+- Draft entities do **not** appear in suggestion banners (DoctorSuggestionBanner, ApptSuggestionBanner)
+- Trash / soft-delete flow unchanged for non-draft entities
+
+---
+
+### Acceptance Criteria
+
+| # | Scenario | Expected |
+|---|----------|----------|
+| AC-1 | Select 5 PDFs → batch upload | All 5 extracted; all entities appear with DRAFT badge on entity pages |
+| AC-2 | Simulate 1 OCR failure in batch of 5 | Failed doc absent; 4 committed with drafts; no orphan entities from failed doc |
+| AC-3 | Accept draft contact | Contact appears normally in Contacts list; no DRAFT badge |
+| AC-4 | Reject draft appointment | Appointment soft-deleted; visible in Trash |
+| AC-5 | Merge draft contact with merge_candidate | Draft absorbed; no duplicate in Contacts |
+| AC-6 | Search / timeline with pending drafts | Draft entities absent from all results |
+| AC-7 | Single upload | Same draft flow; `is_draft = 1` on all extracted entities |
+| E2E | `e2e/batch-upload.spec.ts` | All ACs covered |
+
+---
+
 ## 5. Phase 46 Detail — Content Search Filters
 
 > **PRD reference:** F7.6, F7.7, F7.8 above
