@@ -368,7 +368,7 @@ export default function ContactsPage() {
     }, 50)
   }
 
-  const highlightParam = searchParams.get('highlight')
+  const highlightParam = searchParams?.get('highlight') ?? null
   useEffect(() => {
     if (!highlightParam || contacts.length === 0) return
     const t = setTimeout(() => scrollToContact(highlightParam), 0)
