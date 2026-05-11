@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 55
-Task: 55.5 — Unit + E2E tests for AiInsightsPanel
+Phase: 56
+Task: 56.1 — VaultLayout CSS Grid
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -639,14 +639,14 @@ Task: 55.5 — Unit + E2E tests for AiInsightsPanel
    - `data-testid="ai-insights-panel"`
    - Done when: all 4 sections render; collapse animation works
 
-▶ **55.5 — Unit + E2E tests**
+[x] **55.5 — Unit + E2E tests**
    - Unit: `src/components/documents/__tests__/AiInsightsPanel.test.tsx`
      - Mock both Rust commands; assert all 4 sections render; assert HIGH badge colour
      - Assert "Show all" navigates to filtered document list
    - E2E: `e2e/redesign-A-ai-insights.spec.ts` — select doc → assert `ai-insights-panel` visible; assert at least one section renders
    - Done when: all tests pass
 
-[ ] **55.6 — Pre-commit checks + commit**
+[x] **55.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: AiInsightsPanel — 4 sections, FlaggedValueBadge, linked docs, Rust commands (Phase 55)`
@@ -669,7 +669,7 @@ Task: 55.5 — Unit + E2E tests for AiInsightsPanel
 
 ### Sprint 56
 
-[ ] **56.1 — `VaultLayout` CSS Grid**
+▶ **56.1 — `VaultLayout` CSS Grid**
    - `src/components/layout/VaultLayout.tsx`
    - CSS Grid: `52px` rail | `var(--doc-list-width, 300px)` list | `1fr` preview | `var(--ai-panel-width, 240px)` AI
    - Import and compose: `<IconRail>`, `<DocumentListPanel>`, `<DocumentPreviewPanel>`, `<AiInsightsPanel>`
