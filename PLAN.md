@@ -8,10 +8,10 @@
 
 ```
 Phase: 60
-Task: 60.5 — Unit + E2E tests
+Task: 60.6 — Pre-commit checks + commit
 ```
 
-▶ **60.5 — Unit + E2E tests**
+▶ **60.6 — Pre-commit checks + commit**
 
 ---
 
@@ -283,7 +283,7 @@ Task: 60.5 — Unit + E2E tests
    - E2E: `e2e/batch-upload.spec.ts` — drop 2 PDFs → assert 2 rows done → assert toast with count
    - Done when: all tests pass
 
-▶ [ ] **60.6 — Pre-commit checks + commit**
+[x] **60.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: batch upload UI — multi-file, folder, drag-drop, per-file progress (Phase 60)`
 
