@@ -6,6 +6,8 @@ import { listen } from '@tauri-apps/api/event'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Document, DocumentCategory, DOCUMENT_CATEGORIES, CATEGORY_LABELS } from '../../store/documentsStore'
 import { CategoryPicker, Category } from '../categories/CategoryPicker'
+import { useToast } from '../../hooks/useToast'
+import { Toast } from '../shared/Toast'
 
 interface UploadDialogProps {
   onClose: () => void
@@ -125,6 +127,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [batchMode, setBatchMode] = useState(false)
   const [batchUploadId, setBatchUploadId] = useState<string | null>(null)
   const [batchDocIds, setBatchDocIds] = useState<string[]>([])
+  const { message: toastMessage, show: showToast } = useToast(4000)
   const unlistenRef = useRef<(() => void) | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
@@ -257,6 +260,16 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
     }
     setBatchDocIds(collectedIds)
     setBatchUploadId(uploadId)
+    const n = collectedIds.length
+    if (n > 0) {
+      try {
+        const pending = await invoke<number>('get_pending_review_count')
+        const entitiesMsg = pending > 0 ? ` — ${pending} entities pending review` : ''
+        showToast(`${n} document${n !== 1 ? 's' : ''} uploaded${entitiesMsg}`)
+      } catch {
+        showToast(`${n} document${n !== 1 ? 's' : ''} uploaded`)
+      }
+    }
   }
 
   function handlePaths(paths: string[]) {
@@ -1083,6 +1096,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           </div>
         )}
       </div>
+      <Toast message={toastMessage} />
     </div>
   )
 }

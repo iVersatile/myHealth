@@ -2239,3 +2239,18 @@ pub fn documents_export_report(
     let conn = CommandContext::new(&guard)?.conn;
     assemble_report(conn, &id)
 }
+
+#[tauri::command]
+pub fn get_pending_review_count(state: State<'_, AppState>) -> Result<u32, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let count: u32 = conn.query_row(
+        "SELECT \
+           (SELECT COUNT(*) FROM contacts WHERE is_draft = 1) + \
+           (SELECT COUNT(*) FROM clinics  WHERE is_draft = 1) + \
+           (SELECT COUNT(*) FROM document_tags WHERE is_draft = 1)",
+        [],
+        |row| row.get(0),
+    )?;
+    Ok(count)
+}
