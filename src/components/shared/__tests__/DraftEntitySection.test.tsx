@@ -249,7 +249,7 @@ describe('DraftEntitySection', () => {
     })
     render(<DraftEntitySection entityType="contact" />)
     await waitFor(() => screen.getAllByTestId('draft-reject-btn'))
-    await userEvent.click(screen.getAllByTestId('draft-reject-btn')[0])
+    await userEvent.click(screen.getAllByTestId('draft-reject-btn')[0]!)
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith('reject_draft_entity', { entityType: 'contact', id: 'd1' })
     })
