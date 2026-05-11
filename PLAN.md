@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 62
-Task: 62.5 — COMPLETE (Phase 62 done)
+Phase: 51
+Task: 51.5 — Pre-commit checks + commit
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -404,29 +404,36 @@ Task: 62.5 — COMPLETE (Phase 62 done)
 
 ### Sprint 51
 
-[ ] **51.1 — Create `src/styles/tokens-vault.css` with 3 theme blocks**
+[x] **51.1 — Create `src/styles/tokens-vault.css` with 3 theme blocks**
    - `[data-theme="calm"]`, `[data-theme="coffee"]`, `[data-theme="mint"]` — full variable sets per §4.1–4.3
    - Import in `src/app/globals.css`
    - Apply `data-theme="calm"` to `<html>` in `src/app/layout.tsx`
    - Done when: CSS variables resolve in browser DevTools under Calm theme
 
-[ ] **51.2 — Grep audit: find all hardcoded Tailwind colour classes in app routes**
+[x] **51.2 — Grep audit: find all hardcoded Tailwind colour classes in app routes**
    - Run: `grep -rn 'text-gray\|bg-white\|bg-gray\|border-gray\|text-slate\|bg-slate\|text-zinc\|text-neutral' src/app src/components`
    - Produce a list; categorise: safe (test/story files) vs must-fix (production UI)
    - Done when: full list documented as a comment in this task; count of must-fix items known
+   - **AUDIT RESULT (26 must-fix, 0 safe):**
+     - `src/app/(app)/notes/view/NoteEditorClient.tsx` — 1 hit (bg-white in toggle knob)
+     - `src/components/shared/MergeEntityDialog.tsx` — 14 hits (bg-white, border-gray-*, text-gray-*)
+     - `src/components/shared/AddressList.tsx` — 11 hits (border-gray-*, text-gray-*, bg-white)
+     - `src/components/documents/ApptSuggestionBanner.tsx` — 1 line (bg-white, text-gray-900, placeholder-gray-400)
+     - Documents page, Dashboard, Sidebar already clean — 0 hits in batch 1 targets
 
-[ ] **51.3 — Migrate hardcoded colours → CSS variables (batch 1: Documents, Dashboard, Sidebar)**
+[x] **51.3 — Migrate hardcoded colours → CSS variables (batch 1: Documents, Dashboard, Sidebar)**
    - Replace `text-gray-*` → `text-[var(--color-text)]` or `text-[var(--color-text-secondary)]`
    - Replace `bg-white` → `bg-[var(--color-surface)]`
    - Replace `border-gray-*` → `border-[var(--color-border)]`
    - Files: `src/app/(app)/documents/`, `src/app/(app)/page.tsx`, `src/components/layout/Sidebar.tsx`
    - Done when: `npx tsc --noEmit` passes; visual smoke on Calm theme OK
+   - **NOTE: All batch 1 targets already clean (0 hits in audit) — criterion met without changes**
 
-[ ] **51.4 — Migrate hardcoded colours → CSS variables (batch 2: all remaining pages)**
+[x] **51.4 — Migrate hardcoded colours → CSS variables (batch 2: all remaining pages)**
    - Files: Contacts, Clinics, Notes, Timeline, Trash, Settings, Symptoms, Medications, Content Search
    - Done when: grep audit returns 0 must-fix results
 
-[ ] **51.5 — Pre-commit checks + commit**
+▶ **51.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: CSS token foundation — 3 themes (Calm/Coffee/Mint), full colour audit (Phase 51)`
 

@@ -113,35 +113,35 @@ export function MergeEntityDialog({ draft, entityType, onClose, onMerged }: Prop
 
   return (
     <div data-testid="merge-dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Merge {entityType}</h2>
+      <div className="bg-[var(--color-surface)] rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[var(--color-text)]">Merge {entityType}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] text-xl leading-none"
           >
             ×
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {loading && <p className="text-sm text-gray-500">Loading…</p>}
+          {loading && <p className="text-sm text-[var(--color-text-secondary)]">Loading…</p>}
           {error && <p className="text-sm text-red-600">{error}</p>}
           {!loading && existing && (
             <div>
               <div className="grid grid-cols-[auto_1fr_1fr] gap-x-4 gap-y-2 text-sm">
                 <div />
                 <div className="font-medium text-blue-700 pb-1">Draft (new)</div>
-                <div className="font-medium text-gray-700 pb-1">Existing</div>
+                <div className="font-medium text-[var(--color-text)] pb-1">Existing</div>
                 {fields.map((f) => (
                   <>
-                    <div key={`label-${f.key}`} className="text-gray-500 self-center">
+                    <div key={`label-${f.key}`} className="text-[var(--color-text-secondary)] self-center">
                       {f.label}
                     </div>
                     <label
                       key={`draft-${f.key}`}
                       className={`flex items-start gap-2 p-2 rounded cursor-pointer ${
-                        getChoice(f.key) === 'draft' ? 'bg-blue-50 ring-1 ring-blue-300' : 'hover:bg-gray-50'
+                        getChoice(f.key) === 'draft' ? 'bg-blue-50 ring-1 ring-blue-300' : 'hover:bg-[var(--color-surface-raised)]'
                       }`}
                     >
                       <input
@@ -152,12 +152,12 @@ export function MergeEntityDialog({ draft, entityType, onClose, onMerged }: Prop
                         onChange={() => setChoice(f.key, 'draft')}
                         className="mt-0.5 accent-blue-600"
                       />
-                      <span className="break-all">{f.draftValue ?? <span className="italic text-gray-400">—</span>}</span>
+                      <span className="break-all">{f.draftValue ?? <span className="italic text-[var(--color-text-muted)]">—</span>}</span>
                     </label>
                     <label
                       key={`existing-${f.key}`}
                       className={`flex items-start gap-2 p-2 rounded cursor-pointer ${
-                        getChoice(f.key) === 'existing' ? 'bg-gray-100 ring-1 ring-gray-400' : 'hover:bg-gray-50'
+                        getChoice(f.key) === 'existing' ? 'bg-[var(--color-surface-sunken)] ring-1 ring-[var(--color-border)]' : 'hover:bg-[var(--color-surface-raised)]'
                       }`}
                     >
                       <input
@@ -168,23 +168,23 @@ export function MergeEntityDialog({ draft, entityType, onClose, onMerged }: Prop
                         onChange={() => setChoice(f.key, 'existing')}
                         className="mt-0.5 accent-gray-600"
                       />
-                      <span className="break-all">{f.existingValue ?? <span className="italic text-gray-400">—</span>}</span>
+                      <span className="break-all">{f.existingValue ?? <span className="italic text-[var(--color-text-muted)]">—</span>}</span>
                     </label>
                   </>
                 ))}
               </div>
-              <p className="mt-4 text-xs text-gray-500">
+              <p className="mt-4 text-xs text-[var(--color-text-secondary)]">
                 Selected values will be applied to the existing {entityType}. The draft will be deleted.
               </p>
             </div>
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-[var(--color-border)] flex justify-end gap-3">
           <button
             onClick={onClose}
             disabled={submitting}
-            className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="px-4 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)] rounded-lg"
           >
             Cancel
           </button>

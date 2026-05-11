@@ -62,7 +62,7 @@ export function ApptSuggestionBanner({ suggestion, onConfirm, onDismiss, isLoadi
             onChange={(e) => { setDoctorName(e.target.value); setNoDoctor(false) }}
             disabled={noDoctor || isLoading}
             placeholder="Doctor name (optional)"
-            className="block w-full rounded border border-blue-200 bg-white px-2 py-1 text-xs text-gray-900 placeholder-gray-400 disabled:bg-gray-100 disabled:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="block w-full rounded border border-blue-200 bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text)] placeholder-[var(--color-text-muted)] disabled:bg-[var(--color-surface-sunken)] disabled:text-[var(--color-text-disabled)] focus:outline-none focus:ring-1 focus:ring-blue-400"
           />
           <label className="flex items-center gap-1.5 text-xs text-blue-700 cursor-pointer select-none">
             <input

@@ -77,7 +77,7 @@ interface AddressFieldsProps {
 }
 
 function AddressFields({ form, onChange }: AddressFieldsProps) {
-  const input = 'w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400'
+  const input = 'w-full rounded border border-[var(--color-border)] px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400'
   return (
     <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2">
@@ -241,7 +241,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
   return (
     <div className="space-y-2">
       {addresses.map(addr => (
-        <div key={addr.id} className="rounded border border-gray-200 bg-white p-3">
+        <div key={addr.id} className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
           {editId === addr.id ? (
             <div className="space-y-2">
               <AddressFields
@@ -258,7 +258,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
                 </button>
                 <button
                   onClick={cancelEdit}
-                  className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                  className="rounded border border-[var(--color-border)] px-3 py-1 text-sm hover:bg-[var(--color-surface-raised)]"
                 >
                   Cancel
                 </button>
@@ -268,7 +268,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
             <div className="flex items-start justify-between gap-2">
               <div className="text-sm">
                 {addr.label && (
-                  <div className="font-medium text-gray-700">{addr.label}</div>
+                  <div className="font-medium text-[var(--color-text)]">{addr.label}</div>
                 )}
                 <div>{addr.line1}</div>
                 {addr.line2 && <div>{addr.line2}</div>}
@@ -276,7 +276,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
                   <div>{[addr.city, addr.postcode].filter(Boolean).join(', ')}</div>
                 )}
                 {addr.country && addr.country !== 'GB' && (
-                  <div className="text-gray-500">{addr.country}</div>
+                  <div className="text-[var(--color-text-secondary)]">{addr.country}</div>
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
@@ -284,7 +284,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
                   onClick={() => handleSetPrimary(addr.id)}
                   disabled={saving || addr.is_primary}
                   title={addr.is_primary ? 'Primary address' : 'Set as primary'}
-                  className={`rounded p-1 text-base leading-none ${addr.is_primary ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'} disabled:cursor-default`}
+                  className={`rounded p-1 text-base leading-none ${addr.is_primary ? 'text-yellow-500' : 'text-[var(--color-text-disabled)] hover:text-yellow-400'} disabled:cursor-default`}
                 >
                   ★
                 </button>
@@ -292,7 +292,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
                   onClick={() => startEdit(addr)}
                   disabled={saving}
                   title="Edit"
-                  className="rounded p-1 text-sm text-gray-400 hover:text-blue-600 disabled:opacity-50"
+                  className="rounded p-1 text-sm text-[var(--color-text-muted)] hover:text-blue-600 disabled:opacity-50"
                 >
                   ✎
                 </button>
@@ -300,7 +300,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
                   onClick={() => handleDelete(addr.id)}
                   disabled={saving}
                   title="Delete"
-                  className="rounded p-1 text-sm text-gray-400 hover:text-red-600 disabled:opacity-50"
+                  className="rounded p-1 text-sm text-[var(--color-text-muted)] hover:text-red-600 disabled:opacity-50"
                 >
                   ✕
                 </button>
@@ -326,7 +326,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
             </button>
             <button
               onClick={cancelAdd}
-              className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+              className="rounded border border-[var(--color-border)] px-3 py-1 text-sm hover:bg-[var(--color-surface-raised)]"
             >
               Cancel
             </button>
@@ -335,7 +335,7 @@ export function AddressList({ addresses, entityId, entityType, onChanged }: Addr
       ) : (
         <button
           onClick={startAdd}
-          className="rounded border border-dashed border-gray-300 px-3 py-1.5 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600"
+          className="rounded border border-dashed border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:border-blue-400 hover:text-blue-600"
         >
           + Add address
         </button>

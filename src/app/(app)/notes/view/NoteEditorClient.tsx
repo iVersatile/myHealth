@@ -381,7 +381,7 @@ export default function NoteEditorClient() {
               }`}
             >
               <span
-                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-[var(--duration-fast)] ${
+                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-[var(--color-surface)] shadow transition-transform duration-[var(--duration-fast)] ${
                   ocrPrefillOn ? 'translate-x-4' : 'translate-x-0'
                 }`}
               />
