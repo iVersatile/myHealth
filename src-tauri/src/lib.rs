@@ -48,7 +48,7 @@ use commands::documents::{
     documents_export_report, documents_get, documents_get_extraction_status,
     documents_get_file_url, documents_list, documents_restore, documents_run_extraction,
     documents_search_filtered, documents_set_clinic, documents_tags_set, documents_update,
-    documents_upload,
+    documents_upload, documents_upload_batch,
 };
 use commands::entity_links::{
     links_for_medication, links_for_symptom, medication_link, medication_unlink,
@@ -151,6 +151,7 @@ pub fn run() {
             documents_list,
             documents_get,
             documents_upload,
+            documents_upload_batch,
             documents_update,
             documents_delete,
             documents_restore,

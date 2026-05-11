@@ -283,6 +283,150 @@ pub fn documents_upload(
     Ok(doc)
 }
 
+#[derive(Debug, Serialize)]
+pub struct BatchUploadResult {
+    pub file_path: String,
+    pub document_id: Option<String>,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub async fn documents_upload_batch(
+    state: State<'_, AppState>,
+    file_paths: Vec<String>,
+    category: String,
+    batch_upload_id: String,
+    notes: Option<String>,
+) -> Result<Vec<BatchUploadResult>, CommandError> {
+    validate_category(&category)?;
+
+    let mut results: Vec<BatchUploadResult> = Vec::with_capacity(file_paths.len());
+
+    for file_path in file_paths {
+        let result = upload_one_document(
+            &state,
+            &file_path,
+            &category,
+            &batch_upload_id,
+            notes.as_deref(),
+        );
+        match result {
+            Ok(doc_id) => results.push(BatchUploadResult {
+                file_path,
+                document_id: Some(doc_id),
+                error: None,
+            }),
+            Err(e) => results.push(BatchUploadResult {
+                file_path,
+                document_id: None,
+                error: Some(e.to_string()),
+            }),
+        }
+    }
+
+    Ok(results)
+}
+
+fn upload_one_document(
+    state: &AppState,
+    file_path: &str,
+    category: &str,
+    batch_upload_id: &str,
+    notes: Option<&str>,
+) -> Result<String, CommandError> {
+    let src = std::path::Path::new(file_path);
+    if !src.exists() {
+        return Err(CommandError::Internal(format!(
+            "file not found: {file_path}"
+        )));
+    }
+
+    let ext = src
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_string();
+    let filename = src
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("document")
+        .to_string();
+    let mime = mime_from_ext(&ext).to_string();
+    let file_size = fs::metadata(src)
+        .map_err(|e| CommandError::Internal(e.to_string()))?
+        .len() as i64;
+
+    let stem = src
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&filename);
+    let parsed = parse_filename(stem);
+    let document_date: Option<String> = parsed
+        .document_date
+        .map(|d| d.format("%Y-%m-%d").to_string());
+
+    let id = Uuid::new_v4().to_string();
+    let dest_dir = storage_dir()?.join(&id);
+    fs::create_dir_all(&dest_dir).map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    let dest_filename = if ext.is_empty() {
+        "original".to_string()
+    } else {
+        format!("original.{ext}")
+    };
+    let dest_path = dest_dir.join(&dest_filename);
+    fs::copy(src, &dest_path).map_err(|e| CommandError::Internal(e.to_string()))?;
+    let dest_str = dest_path
+        .to_str()
+        .ok_or(CommandError::Internal("invalid path encoding".to_string()))?
+        .to_string();
+
+    let now = Utc::now().to_rfc3339();
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    conn.execute("BEGIN EXCLUSIVE", [])?;
+    let tx_result = (|| -> Result<(), CommandError> {
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              thumbnail_path, notes, document_date, batch_upload_id, created_at, updated_at, is_deleted) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, ?7, ?8, ?9, ?10, ?10, 0)",
+            rusqlite::params![
+                id,
+                filename,
+                dest_str,
+                mime,
+                file_size,
+                category,
+                notes,
+                document_date,
+                batch_upload_id,
+                now,
+            ],
+        )?;
+        for tag in &parsed.tags {
+            conn.execute(
+                "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
+                rusqlite::params![id, tag],
+            )?;
+        }
+        Ok(())
+    })();
+
+    match tx_result {
+        Ok(()) => {
+            conn.execute("COMMIT", [])?;
+            Ok(id)
+        }
+        Err(e) => {
+            let _ = conn.execute("ROLLBACK", []);
+            let _ = fs::remove_dir_all(&dest_dir);
+            Err(e)
+        }
+    }
+}
+
 #[tauri::command]
 pub fn documents_update(
     state: State<'_, AppState>,
@@ -651,7 +795,8 @@ mod tests {
                 extracted_metadata TEXT,
                 extracted_text  TEXT,
                 extraction_status TEXT,
-                clinic_name     TEXT
+                clinic_name     TEXT,
+                batch_upload_id TEXT
             );
             CREATE TABLE document_tags (
                 document_id TEXT NOT NULL,
@@ -1259,6 +1404,68 @@ mod tests {
         insert_doc(&conn, "rep-ent0", "lab", false);
         let report = assemble_report(&conn, "rep-ent0").unwrap();
         assert!(report.entities.is_empty());
+    }
+
+    // ── batch upload rollback ──────────────────────────────────────────────────
+
+    fn insert_batch_doc(conn: &Connection, id: &str, category: &str, batch_upload_id: &str) {
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              batch_upload_id, created_at, updated_at, is_deleted) \
+             VALUES (?1, 'test.pdf', '/tmp/test.pdf', 'application/pdf', 1024, ?2, ?3, ?4, ?4, 0)",
+            rusqlite::params![id, category, batch_upload_id, now],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn rollback_leaves_other_committed_docs_intact() {
+        let conn = test_conn();
+        let batch_id = "batch-test-001";
+
+        // Transaction 1: succeeds — doc-ok should survive.
+        conn.execute("BEGIN EXCLUSIVE", []).unwrap();
+        conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              batch_upload_id, created_at, updated_at, is_deleted) \
+             VALUES ('doc-ok', 'a.pdf', '/tmp/a.pdf', 'application/pdf', 512, 'lab', ?1, \
+                     '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', 0)",
+            rusqlite::params![batch_id],
+        )
+        .unwrap();
+        conn.execute("COMMIT", []).unwrap();
+
+        // Transaction 2: fails via duplicate PK — should roll back cleanly.
+        conn.execute("BEGIN EXCLUSIVE", []).unwrap();
+        let dup_result = conn.execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              batch_upload_id, created_at, updated_at, is_deleted) \
+             VALUES ('doc-ok', 'b.pdf', '/tmp/b.pdf', 'application/pdf', 512, 'lab', ?1, \
+                     '2024-01-01T00:00:00Z', '2024-01-01T00:00:00Z', 0)",
+            rusqlite::params![batch_id],
+        );
+        assert!(dup_result.is_err(), "duplicate PK insert must fail");
+        conn.execute("ROLLBACK", []).unwrap();
+
+        // doc-ok committed in transaction 1 must still be present.
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM documents WHERE id = 'doc-ok'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "doc-ok must survive after transaction 2 rollback");
+
+        // No second row must exist.
+        let total: i64 = conn
+            .query_row("SELECT COUNT(*) FROM documents", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(total, 1, "only one document row must exist in total");
     }
 }
 
