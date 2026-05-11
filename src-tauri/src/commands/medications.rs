@@ -74,7 +74,7 @@ pub fn medications_list(state: State<'_, AppState>) -> Result<Vec<Medication>, C
     let mut stmt = conn.prepare(
         "SELECT id, name, dosage, frequency, start_date, end_date, notes,
                 deleted_at, created_at, updated_at
-         FROM medications WHERE deleted_at IS NULL ORDER BY created_at DESC",
+         FROM medications WHERE deleted_at IS NULL AND is_draft = 0 ORDER BY created_at DESC",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok(Medication {
@@ -339,5 +339,45 @@ mod tests {
             .collect();
         assert!(ids.contains(&id_active));
         assert!(!ids.contains(&id_deleted));
+    }
+
+    #[test]
+    fn draft_medication_excluded_from_list() {
+        let conn = test_conn();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO medications (id, name, is_draft, created_at, updated_at) VALUES (?1, 'Draft Med', 1, ?2, ?3)",
+            params![id, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM medications WHERE deleted_at IS NULL AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn confirmed_medication_included_in_list() {
+        let conn = test_conn();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO medications (id, name, is_draft, created_at, updated_at) VALUES (?1, 'Real Med', 0, ?2, ?3)",
+            params![id, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM medications WHERE deleted_at IS NULL AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
     }
 }

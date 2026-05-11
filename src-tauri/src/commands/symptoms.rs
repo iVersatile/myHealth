@@ -64,7 +64,7 @@ pub fn symptoms_list(state: State<'_, AppState>) -> Result<Vec<Symptom>, Command
     let conn = CommandContext::new(&guard)?.conn;
     let mut stmt = conn.prepare(
         "SELECT id, name, severity, onset_date, notes, deleted_at, created_at, updated_at
-         FROM symptoms WHERE deleted_at IS NULL ORDER BY created_at DESC",
+         FROM symptoms WHERE deleted_at IS NULL AND is_draft = 0 ORDER BY created_at DESC",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok(Symptom {
@@ -284,5 +284,45 @@ mod tests {
             params![id, "Pain", 11_i64, now, now],
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn draft_symptom_excluded_from_list() {
+        let conn = test_conn();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO symptoms (id, name, is_draft, created_at, updated_at) VALUES (?1, 'Draft Ache', 1, ?2, ?3)",
+            params![id, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM symptoms WHERE deleted_at IS NULL AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn confirmed_symptom_included_in_list() {
+        let conn = test_conn();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO symptoms (id, name, is_draft, created_at, updated_at) VALUES (?1, 'Real Ache', 0, ?2, ?3)",
+            params![id, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM symptoms WHERE deleted_at IS NULL AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
     }
 }

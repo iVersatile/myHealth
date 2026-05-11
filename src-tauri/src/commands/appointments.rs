@@ -141,7 +141,7 @@ pub fn appointments_list(
         "SELECT id, title, doctor_name, clinic_name, specialty, appt_date,
                 duration_min, location, notes, status, reminder_min, created_at, updated_at,
                 recurrence_series_id
-         FROM appointments WHERE is_deleted = 0",
+         FROM appointments WHERE is_deleted = 0 AND is_draft = 0",
     );
     if month.is_some() {
         sql.push_str(" AND strftime('%Y-%m', appt_date) = ?1");
@@ -199,7 +199,7 @@ pub fn appointments_list_upcoming(
                     duration_min, location, notes, status, reminder_min, created_at, updated_at,
                     recurrence_series_id
              FROM appointments
-             WHERE is_deleted = 0
+             WHERE is_deleted = 0 AND is_draft = 0
                AND status = 'scheduled'
                AND appt_date >= ?1
                AND appt_date <= ?2
@@ -895,5 +895,53 @@ mod tests {
             )
             .unwrap();
         assert_eq!(rows, 0);
+    }
+
+    fn open_migrations_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::migrations::run(&conn).unwrap();
+        conn
+    }
+
+    #[test]
+    fn draft_appointment_excluded_from_list() {
+        let conn = open_migrations_db();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, duration_min, reminder_min, is_draft, created_at, updated_at) \
+             VALUES (?1, 'Draft Appt', ?2, 30, 60, 1, ?3, ?4)",
+            rusqlite::params![id, now, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointments WHERE is_deleted = 0 AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn confirmed_appointment_included_in_list() {
+        let conn = open_migrations_db();
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO appointments (id, title, appt_date, duration_min, reminder_min, is_draft, created_at, updated_at) \
+             VALUES (?1, 'Real Appt', ?2, 30, 60, 0, ?3, ?4)",
+            rusqlite::params![id, now, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointments WHERE is_deleted = 0 AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
     }
 }

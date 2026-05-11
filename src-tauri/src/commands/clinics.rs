@@ -91,7 +91,7 @@ pub fn clinics_list(state: State<'_, AppState>) -> Result<Vec<Clinic>, CommandEr
     let conn = CommandContext::new(&guard)?.conn;
 
     let mut stmt = conn.prepare(&format!(
-        "{SELECT_CLINIC} WHERE is_deleted = 0 ORDER BY name ASC"
+        "{SELECT_CLINIC} WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name ASC"
     ))?;
     let rows = stmt.query_map([], row_to_clinic)?;
     rows.collect::<Result<Vec<_>, _>>()
@@ -1096,5 +1096,45 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM contacts", [], |r| r.get(0))
             .unwrap();
         assert_eq!(contact_count, 0);
+    }
+
+    #[test]
+    fn draft_clinic_excluded_from_list() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO clinics (id, name, is_draft, created_at) VALUES (?, 'Draft Clinic', 1, ?)",
+            rusqlite::params![id, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinics WHERE is_deleted = 0 AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn confirmed_clinic_included_in_list() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO clinics (id, name, is_draft, created_at) VALUES (?, 'Real Clinic', 0, ?)",
+            rusqlite::params![id, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM clinics WHERE is_deleted = 0 AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
     }
 }

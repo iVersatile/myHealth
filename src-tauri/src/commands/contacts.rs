@@ -83,7 +83,7 @@ pub fn contacts_list(
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
                  created_at, updated_at, title, contact_clinic_id FROM contacts \
-                 WHERE is_deleted = 0 AND role = ? ORDER BY name",
+                 WHERE is_deleted = 0 AND is_draft = 0 AND role = ? ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([r], row_to_contact)?
@@ -94,7 +94,7 @@ pub fn contacts_list(
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
                  created_at, updated_at, title, contact_clinic_id FROM contacts \
-                 WHERE is_deleted = 0 ORDER BY name",
+                 WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
             .query_map([], row_to_contact)?
@@ -581,7 +581,8 @@ pub fn find_duplicate_contacts(
 
     let mut stmt = conn.prepare(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title, contact_clinic_id FROM contacts ORDER BY name",
+             created_at, updated_at, title, contact_clinic_id FROM contacts \
+             WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name",
     )?;
     let contacts: Vec<Contact> = stmt
         .query_map([], row_to_contact)?
@@ -759,7 +760,8 @@ pub fn find_similar_contact(name: &str, conn: &rusqlite::Connection) -> Option<C
     let mut stmt = conn
         .prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title, contact_clinic_id FROM contacts ORDER BY name",
+             created_at, updated_at, title, contact_clinic_id FROM contacts \
+             WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name",
         )
         .ok()?;
 
@@ -1323,5 +1325,45 @@ mod tests {
         assert_eq!(c.phone.as_deref(), Some("+1 (555) 123-4567"));
         assert_eq!(c.email.as_deref(), Some("sarah@example.com"));
         assert_eq!(c.title.as_deref(), Some("Dr."));
+    }
+
+    #[test]
+    fn draft_contact_excluded_from_list() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, is_draft, created_at, updated_at) VALUES (?, 'Draft Doc', 'gp', 1, ?, ?)",
+            rusqlite::params![id, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM contacts WHERE is_deleted = 0 AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn confirmed_contact_included_in_list() {
+        let conn = open_test_db();
+        let id = Uuid::new_v4().to_string();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, is_draft, created_at, updated_at) VALUES (?, 'Real Doc', 'gp', 0, ?, ?)",
+            rusqlite::params![id, now, now],
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM contacts WHERE is_deleted = 0 AND is_draft = 0",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
     }
 }
