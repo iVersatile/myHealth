@@ -14,6 +14,7 @@ import { LinkSuggestionBanner } from '../../../components/documents/LinkSuggesti
 import { ApptSuggestionBanner } from '../../../components/documents/ApptSuggestionBanner'
 import type { AppointmentSuggestion } from '../../../components/documents/ApptSuggestionBanner'
 import { ContactForm } from '../../../components/contacts/ContactForm'
+import { DocumentPreviewPanel } from '../../../components/documents/DocumentPreviewPanel'
 import { useDocumentsStore } from '../../../store/documentsStore'
 import { useContacts } from '../../../hooks/useContacts'
 import { useAppointmentsStore } from '../../../store/appointmentsStore'
@@ -40,6 +41,7 @@ export default function DocumentsPage() {
   } | null>(null)
   const [apptSuggestionLoading, setApptSuggestionLoading] = useState(false)
   const [pendingClinicSuggestions, setPendingClinicSuggestions] = useState<ClinicSuggestion[]>([])
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null)
   const documents = useDocumentsStore(s => s.documents)
   const total = useDocumentsStore(s => s.total)
   const setDocuments = useDocumentsStore(s => s.setDocuments)
@@ -231,7 +233,19 @@ export default function DocumentsPage() {
         </div>
       )}
 
-      <DocumentList />
+      <div className="flex gap-4">
+        <div className="min-w-0 flex-1" data-testid="document-list-panel">
+          <DocumentList
+            onPreview={setPreviewDoc}
+            previewDocId={previewDoc?.id}
+          />
+        </div>
+        {previewDoc && (
+          <div className="w-[420px] shrink-0" data-testid="document-preview-panel-wrapper">
+            <DocumentPreviewPanel document={previewDoc} />
+          </div>
+        )}
+      </div>
 
       {uploadOpen && (
         <UploadDialog

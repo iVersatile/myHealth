@@ -32,19 +32,26 @@ interface RowData {
   selectedIds: string[]
   toggleSelect: (id: string) => void
   deleteDocument: (id: string) => void
+  onPreview?: (doc: Document) => void
+  previewDocId?: string
 }
 
 function DocRow({ index, style, data }: ListChildComponentProps<RowData>) {
-  const { docs, selectedIds, toggleSelect, deleteDocument } = data
+  const { docs, selectedIds, toggleSelect, deleteDocument, onPreview, previewDocId } = data
   const doc = docs[index]
   if (!doc) return null
+  const isPreviewActive = previewDocId === doc.id
   return (
-    <div style={style} className="flex items-start gap-3 pb-3">
+    <div
+      style={style}
+      className={`flex items-start gap-3 pb-3 ${onPreview ? 'cursor-pointer' : ''} ${isPreviewActive ? 'rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)]' : ''}`}
+      onClick={() => onPreview?.(doc)}
+    >
       <input
         type="checkbox"
         aria-label={`Select ${doc.filename}`}
         checked={selectedIds.includes(doc.id)}
-        onChange={() => toggleSelect(doc.id)}
+        onChange={(e) => { e.stopPropagation(); toggleSelect(doc.id) }}
         className="mt-4 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)]"
       />
       <div className="min-w-0 flex-1">
@@ -54,7 +61,13 @@ function DocRow({ index, style, data }: ListChildComponentProps<RowData>) {
   )
 }
 
-export function DocumentList() {
+export function DocumentList({
+  onPreview,
+  previewDocId,
+}: {
+  onPreview?: (doc: Document) => void
+  previewDocId?: string
+} = {}) {
   const {
     documents,
     total,
@@ -291,26 +304,33 @@ export function DocumentList() {
               itemCount={displayDocs.length}
               itemSize={ITEM_HEIGHT}
               width="100%"
-              itemData={{ docs: displayDocs, selectedIds, toggleSelect, deleteDocument }}
+              itemData={{ docs: displayDocs, selectedIds, toggleSelect, deleteDocument, onPreview, previewDocId }}
             >
               {DocRow}
             </FixedSizeList>
           ) : (
             <ul className="flex flex-col gap-3">
-              {displayDocs.map((doc) => (
-                <li key={doc.id} className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    aria-label={`Select ${doc.filename}`}
-                    checked={selectedIds.includes(doc.id)}
-                    onChange={() => toggleSelect(doc.id)}
-                    className="mt-4 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <DocumentCard document={doc} onDelete={deleteDocument} />
-                  </div>
-                </li>
-              ))}
+              {displayDocs.map((doc) => {
+                const isPreviewActive = previewDocId === doc.id
+                return (
+                  <li
+                    key={doc.id}
+                    className={`flex items-start gap-3 ${onPreview ? 'cursor-pointer' : ''} ${isPreviewActive ? 'rounded-[var(--radius-md)] bg-[var(--color-surface-sunken)]' : ''}`}
+                    onClick={() => onPreview?.(doc)}
+                  >
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${doc.filename}`}
+                      checked={selectedIds.includes(doc.id)}
+                      onChange={(e) => { e.stopPropagation(); toggleSelect(doc.id) }}
+                      className="mt-4 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <DocumentCard document={doc} onDelete={deleteDocument} />
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </>
