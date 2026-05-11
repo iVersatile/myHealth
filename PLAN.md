@@ -8,7 +8,7 @@
 
 ```
 Phase: 61
-Task: 61.7 — Pre-commit checks + commit
+Task: Phase 62 — Batch Upload: Full Test Suite + Coverage Gate
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -343,7 +343,7 @@ Task: 61.7 — Pre-commit checks + commit
    - E2E: `e2e/draft-review.spec.ts` — upload PDF → navigate to Contacts → assert draft card → click Accept → assert card gone → assert contact in normal list
    - Done when: all tests pass
 
-▶ **61.7 — Pre-commit checks + commit**
+[x] **61.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: draft review UI — DRAFT badge, Accept/Reject/Merge on entity pages (Phase 61)`
@@ -363,7 +363,7 @@ Task: 61.7 — Pre-commit checks + commit
 
 ### Sprint 62
 
-[ ] **62.1 — Coverage audit: identify gaps**
+▶ **62.1 — Coverage audit: identify gaps**
    - Run `npx vitest run --coverage`; identify files < 80%
    - Run `cargo test`; identify any untested command paths
    - Done when: gap list known
