@@ -8,7 +8,7 @@
 
 ```
 Phase: 61
-Task: 61.4 — Draft section on entity list pages
+Task: 61.5 — Merge dialog
 ```
 
 ▶ **61.4 — Draft section on entity list pages**
@@ -320,7 +320,7 @@ Task: 61.4 — Draft section on entity list pages
    - Soft-delete: `UPDATE <table> SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?` (reuse existing Trash pattern)
    - Done when: `cargo test` confirms entity no longer in draft or normal list
 
-▶ **61.4 — Draft section on entity list pages**
+[x] **61.4 — Draft section on entity list pages**
    - Contacts (`src/app/(app)/contacts/page.tsx`), Clinics, Appointments, Symptoms, Medications
    - Fetch drafts via `get_draft_entities` on page load
    - Render draft cards above normal list with DRAFT badge (amber pill)
@@ -330,7 +330,7 @@ Task: 61.4 — Draft section on entity list pages
    - `data-testid="draft-entity-card"`, `data-testid="draft-accept-btn"`, `data-testid="draft-reject-btn"`
    - Done when: draft cards appear; Accept/Reject work; page renders without TypeScript errors
 
-[ ] **61.5 — Merge dialog**
+▶ **61.5 — Merge dialog**
    - `src/components/shared/MergeEntityDialog.tsx`
    - Shows draft entity fields side-by-side with existing entity fields
    - User picks winner per field (radio group per field)

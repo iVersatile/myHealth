@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useSymptoms, type Symptom } from '../../../hooks/useSymptoms'
 import { ENTITY_CONFIG } from '../../../lib/entities'
+import { DraftEntitySection } from '../../../components/shared/DraftEntitySection'
 
 function severityLabel(n: number): string {
   if (n <= 3) return 'Mild'
@@ -62,6 +63,8 @@ export default function SymptomsPage() {
           + Log Symptom
         </button>
       </div>
+
+      <DraftEntitySection entityType="symptom" />
 
       {error && <p className="mb-4 text-sm text-[var(--color-danger)]">{error}</p>}
 

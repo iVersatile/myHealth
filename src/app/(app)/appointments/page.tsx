@@ -10,6 +10,7 @@ import { Appointment, AppointmentStatus } from '../../../store/appointmentsStore
 import { IPC } from '../../../lib/ipc'
 import { useToast } from '../../../hooks/useToast'
 import { Toast } from '../../../components/shared/Toast'
+import { DraftEntitySection } from '../../../components/shared/DraftEntitySection'
 
 type FilterValue = AppointmentStatus | 'all'
 
@@ -179,6 +180,8 @@ export default function AppointmentsPage() {
           </div>
         )}
       </div>
+
+      <DraftEntitySection entityType="appointment" />
 
       {/* ICS feedback */}
       {icsMessage && (

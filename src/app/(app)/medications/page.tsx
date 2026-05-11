@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useMedications, type Medication } from '../../../hooks/useMedications'
 import { ENTITY_CONFIG } from '../../../lib/entities'
+import { DraftEntitySection } from '../../../components/shared/DraftEntitySection'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -49,6 +50,8 @@ export default function MedicationsPage() {
           + Add Medication
         </button>
       </div>
+
+      <DraftEntitySection entityType="medication" />
 
       {error && <p className="mb-4 text-sm text-[var(--color-danger)]">{error}</p>}
 

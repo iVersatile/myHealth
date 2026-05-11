@@ -11,6 +11,7 @@ import { ContactForm } from '../../../components/contacts/ContactForm'
 import { AddressList, type Address } from '../../../components/shared/AddressList'
 import { useToast } from '../../../hooks/useToast'
 import { Toast } from '../../../components/shared/Toast'
+import { DraftEntitySection } from '../../../components/shared/DraftEntitySection'
 
 interface Clinic {
   id: string
@@ -465,6 +466,7 @@ export default function ContactsPage() {
         </div>
       ) : (
         <>
+          <DraftEntitySection entityType="contact" />
           <div className="flex flex-wrap gap-2 mb-4">
             {chips.map(({ value, label }) => (
               <button
