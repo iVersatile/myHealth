@@ -8,7 +8,7 @@
 
 ```
 Phase: 62
-Task: 62.4 — Full E2E run
+Task: 62.5 — COMPLETE (Phase 62 done)
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -376,12 +376,12 @@ Task: 62.4 — Full E2E run
    - Add missing tests for: transaction rollback edge cases, `merge_draft_entity` field-choice logic
    - Done when: `cargo test` passes with all edge cases covered
 
-▶ **62.4 — Full E2E run**
+[x] **62.4 — Full E2E run**
    - `npx playwright test e2e/batch-upload.spec.ts e2e/draft-review.spec.ts`
    - Fix any flaky or failing specs
    - Done when: both specs exit 0
 
-[ ] **62.5 — Pre-commit checks + commit + CI**
+[x] **62.5 — Pre-commit checks + commit + CI**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Push to `origin/develop`; confirm CI green
