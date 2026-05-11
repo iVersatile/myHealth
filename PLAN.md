@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 51
-Task: 51.5 — Pre-commit checks + commit
+Phase: 53
+Task: 53.1 — react-virtuoso integration
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -433,7 +433,7 @@ Task: 51.5 — Pre-commit checks + commit
    - Files: Contacts, Clinics, Notes, Timeline, Trash, Settings, Symptoms, Medications, Content Search
    - Done when: grep audit returns 0 must-fix results
 
-▶ **51.5 — Pre-commit checks + commit**
+[x] **51.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: CSS token foundation — 3 themes (Calm/Coffee/Mint), full colour audit (Phase 51)`
 
@@ -455,13 +455,13 @@ Task: 51.5 — Pre-commit checks + commit
 
 ### Sprint 52
 
-[ ] **52.1 — Feature flag setup**
+[x] **52.1 — Feature flag setup**
    - Add `NEXT_PUBLIC_REDESIGN_A` env var check in layout
    - When `true`: render `<IconRail>` (52px) instead of `<Sidebar>` (220px)
    - When `false` (default): existing layout unchanged
    - Done when: toggling env var switches layouts; no TypeScript errors
 
-[ ] **52.2 — `IconRail` component**
+[x] **52.2 — `IconRail` component**
    - `src/components/layout/IconRail.tsx`
    - Icons: Home, Documents, Search, Contacts, Timeline, Tags, Settings (top group); Lock + Profile avatar (bottom group)
    - Active state: amber `#F0A500` 3px left border + icon tint
@@ -470,26 +470,26 @@ Task: 51.5 — Pre-commit checks + commit
    - `data-testid="nav-rail"`
    - Done when: `npx tsc --noEmit` passes; visual smoke under Calm theme
 
-[ ] **52.3 — Keyboard navigation**
+[x] **52.3 — Keyboard navigation**
    - Tab order follows visual top-to-bottom order
    - Enter/Space activates nav item
    - Escape closes any open tooltip
    - Done when: full keyboard nav works without mouse
 
-[ ] **52.4 — Unit tests**
+[x] **52.4 — Unit tests**
    - `src/components/layout/__tests__/IconRail.test.tsx`
    - Assert all nav buttons render with correct `aria-label`
    - Assert active route applies amber border class
    - Assert tooltip renders on hover after 400ms (mock timers)
    - Done when: `npx vitest run` passes
 
-[ ] **52.5 — E2E spec (basic nav)**
+[x] **52.5 — E2E spec (basic nav)**
    - File: `e2e/redesign-A-icon-rail.spec.ts`
    - With `REDESIGN_A=true`: assert `nav-rail` visible; assert clicking Documents navigates to `/documents`
    - Assert sidebar NOT rendered when flag on
    - Done when: `npx playwright test e2e/redesign-A-icon-rail.spec.ts` passes
 
-[ ] **52.6 — Pre-commit checks + commit**
+[x] **52.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: IconRail component — 52px nav rail with tooltips, aria, keyboard nav (Phase 52)`
 
@@ -511,7 +511,7 @@ Task: 51.5 — Pre-commit checks + commit
 
 ### Sprint 53
 
-[ ] **53.1 — `react-virtuoso` integration**
+▶ **53.1 — `react-virtuoso` integration**
    - Add `react-virtuoso` to `package.json` if not present
    - `DocumentListPanel.tsx` — `<Virtuoso>` component with fixed row height 56px
    - Row: type icon + title (1-line ellipsis) + date + category pill

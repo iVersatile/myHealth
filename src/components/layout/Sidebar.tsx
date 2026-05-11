@@ -35,7 +35,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-[var(--sidebar-width,220px)] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]">
+    <aside data-testid="nav-sidebar" className="flex h-full w-[var(--sidebar-width,220px)] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="flex h-[var(--topbar-height,56px)] shrink-0 items-center gap-2 px-5">
         <svg
           width="20"
