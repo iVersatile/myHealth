@@ -7,10 +7,10 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 59 — Batch Upload: Draft Pipeline + Per-Document Transactions
+Phase: 59 — COMPLETE
 ```
 
-▶ **59.1** — Draft pipeline: Rust command `begin_batch_upload`
+▶ **Phase 59 done** — all tasks complete, CI green
 
 ---
 
@@ -211,28 +211,28 @@ Phase: 59 — Batch Upload: Draft Pipeline + Per-Document Transactions
 
 ### Sprint 59
 
-[ ] **59.1 — Per-document transaction wrapper in Rust**
+[x] **59.1 — Per-document transaction wrapper in Rust**
    - In `src-tauri/src/commands/documents.rs`
    - Wrap existing entity insert calls in explicit `BEGIN` / `COMMIT` / `ROLLBACK` per document
    - `batch_upload_id` = caller-supplied UUID (frontend generates one UUID per upload session)
    - Done when: unit test confirms rollback on simulated OCR error leaves other docs intact
 
-[ ] **59.2 — Draft entity writes**
+[x] **59.2 — Draft entity writes**
    - All entity inserts (contacts, clinics, appointments, symptoms, medications, document_tags) during upload set `is_draft = 1`
    - Single upload treated same as batch of 1 — same code path
    - Done when: after upload, `SELECT is_draft FROM contacts WHERE …` returns 1
 
-[ ] **59.3 — Duplicate detection + `merge_candidate_id`**
+[x] **59.3 — Duplicate detection + `merge_candidate_id`**
    - Before inserting draft entity, query for existing non-draft entity with same name/identifier
    - If found: set `merge_candidate_id = <existing_entity_id>` on the draft row
    - Done when: uploading a doc with a known doctor populates `merge_candidate_id` on the draft contact
 
-[ ] **59.4 — Rust unit tests: transaction rollback + duplicate detection**
+[x] **59.4 — Rust unit tests: transaction rollback + duplicate detection**
    - Test 1: simulate OCR failure on doc 2 of 3 → docs 1 and 3 committed; doc 2 rolled back
    - Test 2: existing contact "Dr Smith" exists; upload new doc with "Dr Smith" → draft contact has `merge_candidate_id` set
    - Done when: both tests pass
 
-[ ] **59.5 — Pre-commit checks + commit**
+[x] **59.5 — Pre-commit checks + commit**
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx tsc --noEmit`
    - Commit: `feat: draft entity pipeline with per-doc transactions + duplicate detection (Phase 59)`
