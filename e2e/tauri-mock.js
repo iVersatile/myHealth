@@ -438,6 +438,27 @@
       return Promise.resolve(null);
     }
 
+    if (cmd === 'documents_valid_categories') {
+      return Promise.resolve(['lab', 'imaging', 'prescription', 'report', 'other']);
+    }
+
+    if (cmd === 'documents_export_report') {
+      const docId = args?.document_id || args?.documentId || args?.id;
+      const doc = state.documents.find((d) => d.id === docId);
+      return Promise.resolve({
+        document_id: docId || '',
+        title: doc ? (doc.title || doc.filename.replace(/\.pdf$/i, '')) : 'Document',
+        document_date: doc ? (doc.activity_date || null) : null,
+        category: doc ? (doc.category_name || '') : '',
+        clinic_name: doc ? (doc.clinic_name || null) : null,
+        notes: null,
+        tags: doc ? (doc.tags || []) : [],
+        entities: [],
+        appointments: [],
+        ocr_excerpt: doc && doc.extracted_text ? doc.extracted_text.slice(0, 400) : null,
+      });
+    }
+
     if (cmd === 'documents_link_contact') return Promise.resolve(null);
     if (cmd === 'documents_link_clinic') return Promise.resolve(null);
     if (cmd === 'link_document_to_appointment') return Promise.resolve(null);

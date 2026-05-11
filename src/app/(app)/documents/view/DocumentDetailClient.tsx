@@ -12,6 +12,7 @@ import type { Appointment } from '../../../../store/appointmentsStore'
 import type { Note } from '../../../../store/notesStore'
 import { useToast } from '../../../../hooks/useToast'
 import { Toast } from '../../../../components/shared/Toast'
+import { downloadReport, type ReportData } from '../../../../components/documents/DocumentReport'
 
 interface DocumentEntity {
   id: string
@@ -128,6 +129,7 @@ export default function DocumentDetailClient() {
   const [linkedMedications, setLinkedMedications] = useState<Medication[]>([])
   const [allMedications, setAllMedications] = useState<Medication[]>([])
   const [selectedMedicationId, setSelectedMedicationId] = useState('')
+  const [exportingReport, setExportingReport] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -383,6 +385,19 @@ export default function DocumentDetailClient() {
 
   function handleDismissSuggestion(appointmentId: string) {
     setDismissedIds((prev) => new Set([...prev, appointmentId]))
+  }
+
+  async function handleExportReport() {
+    if (!doc) return
+    setExportingReport(true)
+    try {
+      const data = await invoke<ReportData>('documents_export_report', { documentId: doc.id })
+      await downloadReport(data)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setExportingReport(false)
+    }
   }
 
   async function handleDelete() {
@@ -952,6 +967,16 @@ export default function DocumentDetailClient() {
             className="mb-2 w-full rounded-[var(--radius-md)] border border-[var(--color-primary)] py-1.5 text-[var(--text-sm)] text-[var(--color-primary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
           >
             + Add Note
+          </button>
+
+          <button
+            type="button"
+            data-testid="export-report-btn"
+            disabled={exportingReport}
+            onClick={() => void handleExportReport()}
+            className="mb-2 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] py-1.5 text-[var(--text-sm)] text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)] disabled:opacity-40"
+          >
+            {exportingReport ? 'Generating…' : '↓ Export PDF Report'}
           </button>
 
           <button

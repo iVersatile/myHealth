@@ -6,8 +6,13 @@ const mockInvoke = vi.fn()
 const mockConvertFileSrc = vi.fn((path: string) => `asset://localhost${path}`)
 const mockRouterPush = vi.fn()
 const mockConfirm = vi.fn()
+const mockDownloadReport = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ confirm: (...a: unknown[]) => mockConfirm(...a) }))
+
+vi.mock('../../../../../components/documents/DocumentReport', () => ({
+  downloadReport: (...args: unknown[]) => mockDownloadReport(...args),
+}))
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
@@ -1248,5 +1253,68 @@ describe('DocumentDetailClient — uncovered branches', () => {
     await waitFor(() =>
       expect(mockInvoke).toHaveBeenCalledWith('documents_get_file_url', { id: 'doc-1' })
     )
+  })
+})
+
+describe('DocumentDetailClient — export PDF report (task 50.4)', () => {
+  const reportFixture = {
+    document_id: 'doc-1',
+    title: 'report.pdf',
+    document_date: '2026-04-22',
+    category: 'lab',
+    clinic_name: 'City Clinic',
+    notes: null,
+    tags: ['blood', 'annual'],
+    entities: [],
+    appointments: [],
+    ocr_excerpt: 'Sample text',
+  }
+
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockConvertFileSrc.mockClear()
+    mockDownloadReport.mockClear()
+    setupInvoke()
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'documents_export_report') return Promise.resolve(reportFixture)
+      if (cmd === 'documents_get') return Promise.resolve(makeDoc())
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_document') return Promise.resolve([])
+      if (cmd === 'links_list_for_document') return Promise.resolve([])
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      if (cmd === 'links_score_candidates') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([])
+      if (cmd === 'document_entities_get') return Promise.resolve([])
+      if (cmd === 'symptoms_for_entity') return Promise.resolve([])
+      if (cmd === 'medications_for_entity') return Promise.resolve([])
+      if (cmd === 'symptoms_list') return Promise.resolve([])
+      if (cmd === 'medications_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+  })
+
+  it('renders export-report-btn', async () => {
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    expect(screen.getByTestId('export-report-btn')).toBeTruthy()
+  })
+
+  it('invokes documents_export_report and calls downloadReport on click', async () => {
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    fireEvent.click(screen.getByTestId('export-report-btn'))
+    await waitFor(() =>
+      expect(mockInvoke).toHaveBeenCalledWith('documents_export_report', { documentId: 'doc-1' })
+    )
+    await waitFor(() => expect(mockDownloadReport).toHaveBeenCalledWith(reportFixture))
+  })
+
+  it('button is disabled while generating', async () => {
+    mockDownloadReport.mockReturnValue(new Promise(() => {}))
+    render(<DocumentDetailClient />)
+    await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
+    const btn = screen.getByTestId('export-report-btn')
+    fireEvent.click(btn)
+    await waitFor(() => expect(btn).toBeDisabled())
   })
 })

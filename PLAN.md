@@ -10,7 +10,7 @@
 Phase: 50 — PDF Summary Report Export
 ```
 
-▶ **50.1** — Design PDF report structure and Rust command
+▶ **50.6** — Pre-commit checks + commit
 
 ---
 
@@ -121,32 +121,32 @@ Phase: 50 — PDF Summary Report Export
 
 ### Sprint 50
 
-[ ] **50.1 — Design report structure + Rust command `documents_export_report`**
+[x] **50.1 — Design report structure + Rust command `documents_export_report`**
    - Input: `document_id: String`
    - Fetch document metadata, entities, linked appointments from SQLite
    - Return `ReportData` struct (title, date, category, doctor, clinic, entities grouped by type, appointments, ocr_excerpt)
    - No PDF rendering in Rust — return data; rendering happens in frontend
    - Done when: `cargo test` passes with fixture data; struct serialises to JSON correctly
 
-[ ] **50.2 — Frontend: PDF rendering with `@react-pdf/renderer`**
+[x] **50.2 — Frontend: PDF rendering with `@react-pdf/renderer`**
    - Add `@react-pdf/renderer` (lightweight, no worker) — check bundle size impact
    - If > 50KB gz impact, use dynamic import to keep page budget under 300KB
    - Create `src/components/documents/DocumentReport.tsx` — `<Document>` + `<Page>` with sections for metadata, entities, appointments, OCR excerpt
    - Done when: `npx tsc --noEmit` passes; PDF renders correctly in dev
 
-[ ] **50.3 — Wire "Export Report" button on DocumentDetailClient**
+[x] **50.3 — Wire "Export Report" button on DocumentDetailClient**
    - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
    - Add "Export Report" button in header actions
    - On click: `invoke('documents_export_report', { documentId })` → render PDF → trigger download via `URL.createObjectURL`
    - Add `data-testid="export-report-btn"` to button
    - Done when: clicking button downloads a PDF file
 
-[ ] **50.4 — Unit test: report data assembly**
+[x] **50.4 — Unit test: report data assembly**
    - Mock `invoke('documents_export_report')` returning fixture data
    - Assert `export-report-btn` present; assert clicking triggers download (mock URL.createObjectURL)
    - Done when: `npx vitest run` passes
 
-[ ] **50.5 — E2E spec: PDF export flow**
+[x] **50.5 — E2E spec: PDF export flow**
    - File: `e2e/pdf-export.spec.ts`
    - Upload `medical-invoice.pdf` → navigate to document detail
    - Assert `export-report-btn` is visible
