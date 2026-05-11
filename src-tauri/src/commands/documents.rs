@@ -538,6 +538,205 @@ pub fn documents_get_file_url(
 }
 
 #[tauri::command]
+pub fn get_document_preview_url(
+    state: State<'_, AppState>,
+    doc_id: String,
+) -> Result<String, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    conn.query_row(
+        "SELECT file_path FROM documents WHERE id = ? AND is_deleted = 0",
+        [&doc_id],
+        |row| row.get(0),
+    )
+    .map_err(|_| CommandError::NotFound(format!("document not found: {doc_id}")))
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct FlaggedValue {
+    pub name: String,
+    pub value: String,
+    pub unit: String,
+    pub status: String,
+}
+
+fn classify_lab_status(name: &str, value_str: &str) -> &'static str {
+    let v: f64 = match value_str.trim().parse() {
+        Ok(n) => n,
+        Err(_) => return "NORMAL",
+    };
+    let name_lc = name.to_lowercase();
+    // Reference ranges — adult population, SI units where applicable
+    if name_lc.contains("hba1c") {
+        if v >= 6.5 {
+            "HIGH"
+        } else if v >= 5.7 {
+            "BORDERLINE"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("egfr") {
+        if v < 30.0 {
+            "LOW"
+        } else if v < 60.0 {
+            "BORDERLINE"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("creatinine") {
+        if v > 120.0 {
+            "HIGH"
+        } else if v > 110.0 {
+            "BORDERLINE"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("glucose") {
+        if v >= 11.1 {
+            "HIGH"
+        } else if v >= 5.6 {
+            "BORDERLINE"
+        } else if v < 3.9 {
+            "LOW"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("cholesterol")
+        && !name_lc.contains("ldl")
+        && !name_lc.contains("hdl")
+    {
+        if v >= 6.2 {
+            "HIGH"
+        } else if v >= 5.2 {
+            "BORDERLINE"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("ldl") {
+        if v >= 4.1 {
+            "HIGH"
+        } else if v >= 3.4 {
+            "BORDERLINE"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("hdl") {
+        if v < 1.0 {
+            "LOW"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("triglyceride") {
+        if v >= 5.6 {
+            "HIGH"
+        } else if v >= 1.7 {
+            "BORDERLINE"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("tsh") {
+        if v > 4.0 {
+            "HIGH"
+        } else if v < 0.4 {
+            "LOW"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("haemoglobin") || name_lc.contains("hemoglobin") {
+        if v < 120.0 {
+            "LOW"
+        } else if v > 170.0 {
+            "HIGH"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("wbc") {
+        if v < 4.0 {
+            "LOW"
+        } else if v > 11.0 {
+            "HIGH"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("platelet") {
+        if v < 150.0 {
+            "LOW"
+        } else if v > 400.0 {
+            "HIGH"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("sodium") {
+        if v < 135.0 {
+            "LOW"
+        } else if v > 145.0 {
+            "HIGH"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("potassium") {
+        if v < 3.5 {
+            "LOW"
+        } else if v > 5.0 {
+            "HIGH"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("inr") {
+        if v > 1.1 {
+            "HIGH"
+        } else {
+            "NORMAL"
+        }
+    } else if name_lc.contains("psa") {
+        if v >= 4.0 {
+            "HIGH"
+        } else if v >= 2.5 {
+            "BORDERLINE"
+        } else {
+            "NORMAL"
+        }
+    } else {
+        "NORMAL"
+    }
+}
+
+#[tauri::command]
+pub fn get_flagged_lab_values(
+    state: State<'_, AppState>,
+    doc_id: String,
+) -> Result<Vec<FlaggedValue>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let mut stmt = conn.prepare(
+        "SELECT name, value, unit FROM document_entities \
+         WHERE document_id = ? AND entity_type = 'lab_value' \
+         ORDER BY name",
+    )?;
+    let rows = stmt.query_map([&doc_id], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, Option<String>>(1)?,
+            row.get::<_, Option<String>>(2)?,
+        ))
+    })?;
+    let mut result = Vec::new();
+    for row in rows {
+        let (name, value_opt, unit_opt) = row?;
+        let value = value_opt.unwrap_or_default();
+        let unit = unit_opt.unwrap_or_default();
+        let status = classify_lab_status(&name, &value).to_string();
+        result.push(FlaggedValue {
+            name,
+            value,
+            unit,
+            status,
+        });
+    }
+    Ok(result)
+}
+
+#[tauri::command]
 pub fn documents_tags_set(
     state: State<'_, AppState>,
     id: String,
@@ -1597,6 +1796,61 @@ mod tests {
             .optional()
             .unwrap();
         assert!(doc2_exists.is_none());
+    }
+
+    #[test]
+    fn classify_hba1c_high() {
+        assert_eq!(classify_lab_status("HbA1c", "7.2"), "HIGH");
+    }
+
+    #[test]
+    fn classify_hba1c_borderline() {
+        assert_eq!(classify_lab_status("HbA1c", "6.0"), "BORDERLINE");
+    }
+
+    #[test]
+    fn classify_hba1c_normal() {
+        assert_eq!(classify_lab_status("HbA1c", "5.3"), "NORMAL");
+    }
+
+    #[test]
+    fn classify_egfr_low() {
+        assert_eq!(classify_lab_status("eGFR", "25"), "LOW");
+    }
+
+    #[test]
+    fn classify_egfr_borderline() {
+        assert_eq!(classify_lab_status("eGFR", "55"), "BORDERLINE");
+    }
+
+    #[test]
+    fn classify_glucose_low() {
+        assert_eq!(classify_lab_status("glucose", "3.5"), "LOW");
+    }
+
+    #[test]
+    fn classify_glucose_high() {
+        assert_eq!(classify_lab_status("glucose", "12.0"), "HIGH");
+    }
+
+    #[test]
+    fn classify_hdl_low() {
+        assert_eq!(classify_lab_status("HDL", "0.8"), "LOW");
+    }
+
+    #[test]
+    fn classify_sodium_normal() {
+        assert_eq!(classify_lab_status("sodium", "140"), "NORMAL");
+    }
+
+    #[test]
+    fn classify_unknown_lab_is_normal() {
+        assert_eq!(classify_lab_status("ferritin", "45"), "NORMAL");
+    }
+
+    #[test]
+    fn classify_non_numeric_is_normal() {
+        assert_eq!(classify_lab_status("HbA1c", "pending"), "NORMAL");
     }
 }
 

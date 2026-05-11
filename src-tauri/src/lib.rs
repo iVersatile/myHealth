@@ -48,7 +48,8 @@ use commands::documents::{
     documents_export_report, documents_get, documents_get_extraction_status,
     documents_get_file_url, documents_list, documents_restore, documents_run_extraction,
     documents_search_filtered, documents_set_clinic, documents_tags_set, documents_update,
-    documents_upload, documents_upload_batch, get_pending_review_count,
+    documents_upload, documents_upload_batch, get_document_preview_url, get_flagged_lab_values,
+    get_pending_review_count,
 };
 use commands::drafts::{
     accept_draft_entity, get_draft_entities, merge_draft_entity, reject_draft_entity,
@@ -159,6 +160,8 @@ pub fn run() {
             documents_delete,
             documents_restore,
             documents_get_file_url,
+            get_document_preview_url,
+            get_flagged_lab_values,
             documents_get_extraction_status,
             documents_run_extraction,
             document_entities_get,
