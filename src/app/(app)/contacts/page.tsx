@@ -11,7 +11,8 @@ import { ContactForm } from '../../../components/contacts/ContactForm'
 import { AddressList, type Address } from '../../../components/shared/AddressList'
 import { useToast } from '../../../hooks/useToast'
 import { Toast } from '../../../components/shared/Toast'
-import { DraftEntitySection } from '../../../components/shared/DraftEntitySection'
+import { DraftEntitySection, type DraftEntityRow } from '../../../components/shared/DraftEntitySection'
+import { MergeEntityDialog } from '../../../components/shared/MergeEntityDialog'
 
 interface Clinic {
   id: string
@@ -317,6 +318,7 @@ export default function ContactsPage() {
   const [showDuplicates, setShowDuplicates] = useState(false)
   const [dupError, setDupError] = useState<string | null>(null)
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  const [mergeDraft, setMergeDraft] = useState<DraftEntityRow | null>(null)
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const { message: toastMessage, show: showToast } = useToast()
@@ -466,7 +468,7 @@ export default function ContactsPage() {
         </div>
       ) : (
         <>
-          <DraftEntitySection entityType="contact" />
+          <DraftEntitySection entityType="contact" onMerge={(draft) => setMergeDraft(draft)} />
           <div className="flex flex-wrap gap-2 mb-4">
             {chips.map(({ value, label }) => (
               <button
@@ -539,6 +541,14 @@ export default function ContactsPage() {
         />
       )}
       <Toast message={toastMessage} />
+      {mergeDraft && (
+        <MergeEntityDialog
+          draft={mergeDraft}
+          entityType="contact"
+          onClose={() => setMergeDraft(null)}
+          onMerged={() => setMergeDraft(null)}
+        />
+      )}
     </div>
   )
 }

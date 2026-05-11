@@ -329,6 +329,165 @@ pub fn reject_draft_entity(
     Ok(())
 }
 
+#[allow(clippy::type_complexity)]
+#[tauri::command]
+pub fn merge_draft_entity(
+    entity_type: String,
+    draft_id: String,
+    existing_id: String,
+    field_choices: std::collections::HashMap<String, String>,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let now = chrono::Utc::now().to_rfc3339();
+
+    let pick =
+        |field: &str, draft_val: Option<String>, existing_val: Option<String>| -> Option<String> {
+            if field_choices.get(field).map(|s| s.as_str()) == Some("existing") {
+                existing_val
+            } else {
+                draft_val
+            }
+        };
+
+    match entity_type.as_str() {
+        "contact" => {
+            let (d_name, d_role, d_specialty, d_phone, d_email, d_clinic, d_notes): (
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+            ) = conn.query_row(
+                "SELECT name, role, specialty, phone, email, clinic, notes
+                 FROM contacts WHERE id = ?1 AND is_draft = 1 AND is_deleted = 0",
+                [&draft_id],
+                |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                        r.get(6)?,
+                    ))
+                },
+            )?;
+            let (e_name, e_role, e_specialty, e_phone, e_email, e_clinic, e_notes): (
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+            ) = conn.query_row(
+                "SELECT name, role, specialty, phone, email, clinic, notes
+                 FROM contacts WHERE id = ?1 AND is_draft = 0 AND is_deleted = 0",
+                [&existing_id],
+                |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                        r.get(6)?,
+                    ))
+                },
+            )?;
+
+            let name = pick("name", Some(d_name), Some(e_name)).unwrap_or_default();
+            let role = pick("role", d_role, e_role);
+            let specialty = pick("specialty", d_specialty, e_specialty);
+            let phone = pick("phone", d_phone, e_phone);
+            let email = pick("email", d_email, e_email);
+            let clinic = pick("clinic", d_clinic, e_clinic);
+            let notes = pick("notes", d_notes, e_notes);
+
+            conn.execute(
+                "UPDATE contacts SET name=?1, role=?2, specialty=?3, phone=?4, email=?5,
+                 clinic=?6, notes=?7, updated_at=?8
+                 WHERE id=?9 AND is_draft=0 AND is_deleted=0",
+                rusqlite::params![
+                    name,
+                    role,
+                    specialty,
+                    phone,
+                    email,
+                    clinic,
+                    notes,
+                    now,
+                    existing_id
+                ],
+            )?;
+            let deleted = conn.execute(
+                "UPDATE contacts SET is_deleted=1, deleted_at=?1 WHERE id=?2 AND is_draft=1",
+                rusqlite::params![now, draft_id],
+            )?;
+            if deleted == 0 {
+                return Err(CommandError::NotFound(format!(
+                    "draft contact {draft_id} not found"
+                )));
+            }
+        }
+        "clinic" => {
+            let (d_name, d_address, d_phone, d_email): (
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+            ) = conn.query_row(
+                "SELECT name, address, phone, email FROM clinics WHERE id=?1 AND is_draft=1 AND is_deleted=0",
+                [&draft_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )?;
+            let (e_name, e_address, e_phone, e_email): (
+                String,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+            ) = conn.query_row(
+                "SELECT name, address, phone, email FROM clinics WHERE id=?1 AND is_draft=0 AND is_deleted=0",
+                [&existing_id],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )?;
+
+            let name = pick("name", Some(d_name), Some(e_name)).unwrap_or_default();
+            let address = pick("address", d_address, e_address);
+            let phone = pick("phone", d_phone, e_phone);
+            let email = pick("email", d_email, e_email);
+
+            conn.execute(
+                "UPDATE clinics SET name=?1, address=?2, phone=?3, email=?4
+                 WHERE id=?5 AND is_draft=0 AND is_deleted=0",
+                rusqlite::params![name, address, phone, email, existing_id],
+            )?;
+            let deleted = conn.execute(
+                "UPDATE clinics SET is_deleted=1, deleted_at=?1 WHERE id=?2 AND is_draft=1",
+                rusqlite::params![now, draft_id],
+            )?;
+            if deleted == 0 {
+                return Err(CommandError::NotFound(format!(
+                    "draft clinic {draft_id} not found"
+                )));
+            }
+        }
+        other => {
+            return Err(CommandError::InvalidInput(format!(
+                "merge not supported for entity_type: {other}"
+            )))
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
@@ -360,6 +519,18 @@ mod tests {
                 notes TEXT,
                 created_at TEXT NOT NULL DEFAULT '',
                 is_draft INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT
+            );
+            CREATE TABLE clinics (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL DEFAULT '',
+                address TEXT,
+                phone TEXT,
+                email TEXT,
+                merge_candidate_id TEXT,
+                created_at TEXT NOT NULL DEFAULT '',
+                is_draft INTEGER NOT NULL DEFAULT 0,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
                 deleted_at TEXT
             );",
         )
@@ -477,5 +648,83 @@ mod tests {
             })
             .unwrap();
         assert!(deleted_at.is_some());
+    }
+
+    #[test]
+    fn merge_draft_contact_applies_chosen_fields_and_soft_deletes_draft() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO contacts (id, name, role, specialty, phone, email, clinic, notes, is_draft, is_deleted)
+             VALUES
+               ('d1', 'Dr. Draft', 'GP', 'Cardiology', '111', 'draft@x.com', 'DraftClinic', 'dnote', 1, 0),
+               ('e1', 'Dr. Exist', 'Surgeon', 'Neurology', '222', 'exist@x.com', 'ExistClinic', 'enote', 0, 0);",
+        )
+        .unwrap();
+
+        // name=draft, role=existing, specialty=draft, rest=draft
+        let mut choices = std::collections::HashMap::new();
+        choices.insert("role".to_string(), "existing".to_string());
+
+        let pick = |field: &str,
+                    draft_val: Option<String>,
+                    existing_val: Option<String>|
+         -> Option<String> {
+            if choices.get(field).map(|s| s.as_str()) == Some("existing") {
+                existing_val
+            } else {
+                draft_val
+            }
+        };
+
+        let (d_name, d_role, d_specialty, d_phone, d_email, d_clinic, d_notes): (
+            String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>,
+        ) = conn.query_row(
+            "SELECT name, role, specialty, phone, email, clinic, notes FROM contacts WHERE id='d1'",
+            [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
+        ).unwrap();
+        let (e_name, e_role, e_specialty, e_phone, e_email, e_clinic, e_notes): (
+            String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>,
+        ) = conn.query_row(
+            "SELECT name, role, specialty, phone, email, clinic, notes FROM contacts WHERE id='e1'",
+            [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
+        ).unwrap();
+
+        let name = pick("name", Some(d_name), Some(e_name)).unwrap_or_default();
+        let role = pick("role", d_role, e_role);
+        let specialty = pick("specialty", d_specialty, e_specialty);
+        let phone = pick("phone", d_phone, e_phone);
+        let email = pick("email", d_email, e_email);
+        let clinic = pick("clinic", d_clinic, e_clinic);
+        let notes = pick("notes", d_notes, e_notes);
+        let now = chrono::Utc::now().to_rfc3339();
+
+        conn.execute(
+            "UPDATE contacts SET name=?1, role=?2, specialty=?3, phone=?4, email=?5,
+             clinic=?6, notes=?7, updated_at=?8 WHERE id='e1' AND is_draft=0 AND is_deleted=0",
+            rusqlite::params![name, role, specialty, phone, email, clinic, notes, now],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE contacts SET is_deleted=1, deleted_at=?1 WHERE id='d1' AND is_draft=1",
+            rusqlite::params![now],
+        )
+        .unwrap();
+
+        // existing entity: name from draft, role from existing
+        let (merged_name, merged_role): (String, String) = conn
+            .query_row("SELECT name, role FROM contacts WHERE id='e1'", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert_eq!(merged_name, "Dr. Draft");
+        assert_eq!(merged_role, "Surgeon");
+
+        // draft is soft-deleted
+        let is_deleted: i64 = conn
+            .query_row("SELECT is_deleted FROM contacts WHERE id='d1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(is_deleted, 1);
     }
 }
