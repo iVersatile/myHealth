@@ -8,10 +8,10 @@
 
 ```
 Phase: 61
-Task: 61.5 — Merge dialog
+Task: 61.7 — Pre-commit checks + commit
 ```
 
-▶ **61.4 — Draft section on entity list pages**
+[x] **61.4 — Draft section on entity list pages**
 
 ---
 
@@ -330,7 +330,7 @@ Task: 61.5 — Merge dialog
    - `data-testid="draft-entity-card"`, `data-testid="draft-accept-btn"`, `data-testid="draft-reject-btn"`
    - Done when: draft cards appear; Accept/Reject work; page renders without TypeScript errors
 
-▶ **61.5 — Merge dialog**
+[x] **61.5 — Merge dialog**
    - `src/components/shared/MergeEntityDialog.tsx`
    - Shows draft entity fields side-by-side with existing entity fields
    - User picks winner per field (radio group per field)
@@ -338,12 +338,12 @@ Task: 61.5 — Merge dialog
    - Rust: apply chosen fields to existing entity; soft-delete draft
    - Done when: merge resolves to one non-draft entity with chosen field values
 
-[ ] **61.6 — Unit + E2E tests**
+[x] **61.6 — Unit + E2E tests**
    - Unit: mock draft list; assert DRAFT badge renders; assert Accept removes card; assert Reject fires toast
    - E2E: `e2e/draft-review.spec.ts` — upload PDF → navigate to Contacts → assert draft card → click Accept → assert card gone → assert contact in normal list
    - Done when: all tests pass
 
-[ ] **61.7 — Pre-commit checks + commit**
+▶ **61.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: draft review UI — DRAFT badge, Accept/Reject/Merge on entity pages (Phase 61)`
