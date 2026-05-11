@@ -8,7 +8,7 @@
 
 ```
 Phase: 56
-Task: 56.1 — VaultLayout CSS Grid
+Task: 56.6 — Pre-commit checks + commit
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -669,37 +669,37 @@ Task: 56.1 — VaultLayout CSS Grid
 
 ### Sprint 56
 
-▶ **56.1 — `VaultLayout` CSS Grid**
+[x] **56.1 — `VaultLayout` CSS Grid**
    - `src/components/layout/VaultLayout.tsx`
    - CSS Grid: `52px` rail | `var(--doc-list-width, 300px)` list | `1fr` preview | `var(--ai-panel-width, 240px)` AI
    - Import and compose: `<IconRail>`, `<DocumentListPanel>`, `<DocumentPreviewPanel>`, `<AiInsightsPanel>`
    - Done when: all 4 panels render side-by-side
 
-[ ] **56.2 — AI panel auto-collapse below 1400px**
+[x] **56.2 — AI panel auto-collapse below 1400px**
    - `ResizeObserver` on root container; when width < 1400px collapse AI panel (width → 0, toggle button visible)
    - Collapse animation: 200ms ease as per §2.4
    - Done when: resizing viewport to 1280px hides AI panel; toggle button restores it
 
-[ ] **56.3 — Resizable DocumentListPanel width**
+[x] **56.3 — Resizable DocumentListPanel width**
    - Drag handle between list and preview panels
    - Clamp: 240px min, 400px max
    - Persist in `localStorage('doc-list-width')`; restore on mount
    - Done when: drag resize works; survives page reload
 
-[ ] **56.4 — Feature flag wiring in root layout**
+[x] **56.4 — Feature flag wiring in root layout**
    - `src/app/(app)/layout.tsx` (or root layout)
    - When `NEXT_PUBLIC_REDESIGN_A=true`: render `<VaultLayout>` replacing existing `<Sidebar>` + content layout
    - When false: existing layout unchanged (no regression)
    - Done when: toggle env var switches layouts; both work correctly
 
-[ ] **56.5 — E2E spec: layout + responsive**
+[x] **56.5 — E2E spec: layout + responsive**
    - File: `e2e/redesign-A-vault-layout.spec.ts`
    - TC-A-01: 1440px — all 4 panels visible
    - TC-A-02: 1280px — AI panel collapsed, toggle button visible
    - TC-A-03: click toggle → AI panel expands
    - Done when: all TCs pass
 
-[ ] **56.6 — Pre-commit checks + commit**
+▶ **56.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: VaultLayout — 4-panel CSS Grid, AI panel auto-collapse, resizable list (Phase 56)`
 

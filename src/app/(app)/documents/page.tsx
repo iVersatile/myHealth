@@ -15,7 +15,10 @@ import { ApptSuggestionBanner } from '../../../components/documents/ApptSuggesti
 import type { AppointmentSuggestion } from '../../../components/documents/ApptSuggestionBanner'
 import { ContactForm } from '../../../components/contacts/ContactForm'
 import { DocumentPreviewPanel } from '../../../components/documents/DocumentPreviewPanel'
+import { VaultLayout } from '../../../components/layout/VaultLayout'
 import { useDocumentsStore } from '../../../store/documentsStore'
+
+const REDESIGN_A = process.env.NEXT_PUBLIC_REDESIGN_A === 'true'
 import { useContacts } from '../../../hooks/useContacts'
 import { useAppointmentsStore } from '../../../store/appointmentsStore'
 import type { Document } from '../../../store/documentsStore'
@@ -155,6 +158,10 @@ export default function DocumentsPage() {
     await createContactWithClinic(input)
     setShowContactForm(false)
     setPendingContactSuggestion(null)
+  }
+
+  if (REDESIGN_A) {
+    return <VaultLayout documents={documents} />
   }
 
   return (

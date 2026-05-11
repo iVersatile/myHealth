@@ -178,6 +178,29 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
     expect(box?.width ?? 0).toBeLessThan(10)
   })
 
+  test('TC-A-25 — 1440px: all 4 panels visible, no expand button', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/documents')
+    await expect(page.getByTestId('nav-rail')).toBeVisible()
+    await expect(page.getByTestId('document-list-panel')).toBeVisible()
+    await expect(page.getByTestId('document-preview-panel')).toBeVisible()
+    await expect(page.getByTestId('ai-insights-panel')).toBeVisible()
+    await expect(page.getByTestId('ai-panel-expand-btn')).not.toBeVisible()
+  })
+
+  test('TC-A-26 — 1280px: AI panel collapsed, expand button visible', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.goto('/documents')
+    await expect(page.getByTestId('ai-panel-expand-btn')).toBeVisible()
+  })
+
+  test('TC-A-27 — clicking expand button restores AI panel', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.goto('/documents')
+    await page.getByTestId('ai-panel-expand-btn').click()
+    await expect(page.getByTestId('ai-panel-expand-btn')).not.toBeVisible()
+  })
+
   // ─── Accessibility ───────────────────────────────────────────────────────
 
   test('TC-A-23 — keyboard Tab reaches first rail button', async ({ page }) => {
