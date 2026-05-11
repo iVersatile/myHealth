@@ -52,10 +52,16 @@ function draftSubtitle(draft: DraftEntityRow): string {
 
 export function DraftEntitySection({ entityType, onMerge }: Props) {
   const [drafts, setDrafts] = useState<DraftEntityRow[]>([])
+  const [hasSeenDrafts, setHasSeenDrafts] = useState(false)
   const { message: toast, show: showToast } = useToast()
 
   const loadDrafts = useCallback(() => {
-    invoke<DraftEntityRow[]>('get_draft_entities', { entityType }).then(setDrafts).catch(() => undefined)
+    invoke<DraftEntityRow[]>('get_draft_entities', { entityType })
+      .then((rows) => {
+        if (rows.length > 0) setHasSeenDrafts(true)
+        setDrafts(rows)
+      })
+      .catch(() => undefined)
   }, [entityType])
 
   useEffect(() => {
@@ -81,60 +87,75 @@ export function DraftEntitySection({ entityType, onMerge }: Props) {
     }
   }
 
-  if (drafts.length === 0) return null
+  if (drafts.length === 0 && !hasSeenDrafts) return null
 
   return (
-    <div className="mb-6">
+    <div data-testid="draft-review-section" className="mb-6">
       {toast && <Toast message={toast} />}
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Drafts from uploads</span>
-        <span className="text-xs text-[var(--color-text-muted)]">({drafts.length})</span>
-      </div>
-      <div className="flex flex-col gap-3">
-        {drafts.map((draft) => (
-          <div
-            key={draft.id}
-            data-testid="draft-entity-card"
-            className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700 p-4 flex items-start justify-between gap-4"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="inline-flex items-center rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest">
-                  Draft
-                </span>
-                <span className="font-medium text-[var(--color-text)] truncate">{draft.name}</span>
-              </div>
-              {draftSubtitle(draft) && (
-                <p className="text-xs text-[var(--color-text-muted)] truncate">{draftSubtitle(draft)}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {draft.merge_candidate_id && onMerge && (
-                <button
-                  onClick={() => onMerge(draft)}
-                  className="text-xs px-3 py-1.5 rounded border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                >
-                  Merge
-                </button>
-              )}
-              <button
-                data-testid="draft-accept-btn"
-                onClick={() => void handleAccept(draft)}
-                className="text-xs px-3 py-1.5 rounded border border-green-400 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-              >
-                Accept
-              </button>
-              <button
-                data-testid="draft-reject-btn"
-                onClick={() => void handleReject(draft)}
-                className="text-xs px-3 py-1.5 rounded border border-red-300 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              >
-                Reject
-              </button>
-            </div>
+      {drafts.length === 0 ? (
+        <div
+          data-testid="draft-review-empty"
+          className="text-xs text-[var(--color-text-muted)] py-2"
+        >
+          All drafts resolved.
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Drafts from uploads</span>
+            <span className="text-xs text-[var(--color-text-muted)]">({drafts.length})</span>
           </div>
-        ))}
-      </div>
+          <div className="flex flex-col gap-3">
+            {drafts.map((draft) => (
+              <div
+                key={draft.id}
+                data-testid="draft-entity-card"
+                className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700 p-4 flex items-start justify-between gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      data-testid="draft-badge"
+                      className="inline-flex items-center rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest"
+                    >
+                      Draft
+                    </span>
+                    <span className="font-medium text-[var(--color-text)] truncate">{draft.name}</span>
+                  </div>
+                  {draftSubtitle(draft) && (
+                    <p className="text-xs text-[var(--color-text-muted)] truncate">{draftSubtitle(draft)}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {draft.merge_candidate_id && onMerge && (
+                    <button
+                      data-testid="merge-draft-btn"
+                      onClick={() => onMerge(draft)}
+                      className="text-xs px-3 py-1.5 rounded border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      Merge
+                    </button>
+                  )}
+                  <button
+                    data-testid="accept-draft-btn"
+                    onClick={() => void handleAccept(draft)}
+                    className="text-xs px-3 py-1.5 rounded border border-green-400 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    data-testid="reject-draft-btn"
+                    onClick={() => void handleReject(draft)}
+                    className="text-xs px-3 py-1.5 rounded border border-red-300 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

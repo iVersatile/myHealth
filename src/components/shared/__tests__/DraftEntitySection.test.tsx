@@ -209,8 +209,8 @@ describe('DraftEntitySection', () => {
       return Promise.resolve(undefined)
     })
     render(<DraftEntitySection entityType="contact" />)
-    await waitFor(() => screen.getByTestId('draft-accept-btn'))
-    await userEvent.click(screen.getByTestId('draft-accept-btn'))
+    await waitFor(() => screen.getByTestId('accept-draft-btn'))
+    await userEvent.click(screen.getByTestId('accept-draft-btn'))
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith('accept_draft_entity', { entityType: 'contact', id: 'd1' })
     })
@@ -231,8 +231,8 @@ describe('DraftEntitySection', () => {
       return Promise.resolve(undefined)
     })
     render(<DraftEntitySection entityType="contact" />)
-    await waitFor(() => screen.getByTestId('draft-accept-btn'))
-    await userEvent.click(screen.getByTestId('draft-accept-btn'))
+    await waitFor(() => screen.getByTestId('accept-draft-btn'))
+    await userEvent.click(screen.getByTestId('accept-draft-btn'))
     await waitFor(() => {
       expect(loadCount).toBeGreaterThanOrEqual(2)
     })
@@ -248,8 +248,8 @@ describe('DraftEntitySection', () => {
       return Promise.resolve(undefined)
     })
     render(<DraftEntitySection entityType="contact" />)
-    await waitFor(() => screen.getAllByTestId('draft-reject-btn'))
-    await userEvent.click(screen.getAllByTestId('draft-reject-btn')[0]!)
+    await waitFor(() => screen.getAllByTestId('reject-draft-btn'))
+    await userEvent.click(screen.getAllByTestId('reject-draft-btn')[0]!)
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith('reject_draft_entity', { entityType: 'contact', id: 'd1' })
     })
@@ -270,8 +270,8 @@ describe('DraftEntitySection', () => {
       return Promise.resolve(undefined)
     })
     render(<DraftEntitySection entityType="contact" />)
-    await waitFor(() => screen.getByTestId('draft-reject-btn'))
-    await userEvent.click(screen.getByTestId('draft-reject-btn'))
+    await waitFor(() => screen.getByTestId('reject-draft-btn'))
+    await userEvent.click(screen.getByTestId('reject-draft-btn'))
     await waitFor(() => {
       expect(loadCount).toBeGreaterThanOrEqual(2)
     })
