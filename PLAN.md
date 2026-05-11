@@ -7,11 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 60
-Task: 60.6 — Pre-commit checks + commit
+Phase: 61
+Task: 61.4 — Draft section on entity list pages
 ```
 
-▶ **60.6 — Pre-commit checks + commit**
+▶ **61.4 — Draft section on entity list pages**
 
 ---
 
@@ -303,24 +303,24 @@ Task: 60.6 — Pre-commit checks + commit
 
 ### Sprint 61
 
-[ ] **61.1 — Rust command `get_draft_entities`**
+[x] **61.1 — Rust command `get_draft_entities`**
    - Input: `entity_type: String` ("contact" | "clinic" | "appointment" | "symptom" | "medication")
    - Return: `Vec<DraftEntityRow>` — entity fields + `id`, `merge_candidate_id`, `batch_upload_id`, `source_document_id`
    - Register in `lib.rs`
    - Done when: `cargo test` passes with fixture draft rows
 
-[ ] **61.2 — Rust command `accept_draft_entity`**
+[x] **61.2 — Rust command `accept_draft_entity`**
    - Input: `entity_type: String`, `entity_id: String`
    - `UPDATE <table> SET is_draft = 0 WHERE id = ?`
    - Also flip `is_draft = 0` on related `document_tags` rows where applicable
    - Done when: `cargo test` confirms entity flipped to non-draft and appears in normal list query
 
-[ ] **61.3 — Rust command `reject_draft_entity`**
+[x] **61.3 — Rust command `reject_draft_entity`**
    - Input: `entity_type: String`, `entity_id: String`
    - Soft-delete: `UPDATE <table> SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?` (reuse existing Trash pattern)
    - Done when: `cargo test` confirms entity no longer in draft or normal list
 
-[ ] **61.4 — Draft section on entity list pages**
+▶ **61.4 — Draft section on entity list pages**
    - Contacts (`src/app/(app)/contacts/page.tsx`), Clinics, Appointments, Symptoms, Medications
    - Fetch drafts via `get_draft_entities` on page load
    - Render draft cards above normal list with DRAFT badge (amber pill)
