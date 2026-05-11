@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { UploadDialog } from './UploadDialog'
 import type { Document } from '../../store/documentsStore'
@@ -61,15 +61,15 @@ describe('UploadDialog', () => {
     setupInvoke()
   })
 
-  it('renders Upload Document title in pick step', () => {
+  it('renders Upload Document title in pick step', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    expect(screen.getByText('Upload Document')).toBeTruthy()
+    expect(await screen.findByText('Upload Document')).toBeTruthy()
   })
 
-  it('shows Select Files and Select Folder buttons in pick step', () => {
+  it('shows Select Files and Select Folder buttons in pick step', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /select files/i })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /select folder/i })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: /select files/i })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: /select folder/i })).toBeTruthy()
   })
 
   it('calls onClose when close (✕) button clicked in pick step', async () => {
@@ -562,7 +562,9 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(ocrCallback).not.toBeNull())
 
     // Fire a progress event
-    ocrCallback!({ payload: { page: 3, total: 8, elapsed_ms: 4000 } })
+    await act(async () => {
+      ocrCallback!({ payload: { page: 3, total: 8, elapsed_ms: 4000 } })
+    })
 
     await waitFor(() => expect(screen.getByRole('progressbar')).toBeTruthy())
     const bar = screen.getByRole('progressbar')

@@ -50,6 +50,7 @@ use commands::documents::{
     documents_search_filtered, documents_set_clinic, documents_tags_set, documents_update,
     documents_upload, documents_upload_batch, get_pending_review_count,
 };
+use commands::drafts::{accept_draft_entity, get_draft_entities, reject_draft_entity};
 use commands::entity_links::{
     links_for_medication, links_for_symptom, medication_link, medication_unlink,
     medications_for_entity, symptom_link, symptom_unlink, symptoms_for_entity,
@@ -163,6 +164,9 @@ pub fn run() {
             documents_set_clinic,
             documents_export_report,
             get_pending_review_count,
+            get_draft_entities,
+            accept_draft_entity,
+            reject_draft_entity,
             appointments_suggest_from_document,
             documents_search_filtered,
             appointments_list,
