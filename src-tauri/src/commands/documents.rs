@@ -407,7 +407,7 @@ fn upload_one_document(
         )?;
         for tag in &parsed.tags {
             conn.execute(
-                "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
+                "INSERT OR IGNORE INTO document_tags (document_id, tag, is_draft) VALUES (?1, ?2, 1)",
                 rusqlite::params![id, tag],
             )?;
         }
@@ -1455,6 +1455,149 @@ mod tests {
             .unwrap();
         assert_eq!(total, 1, "only one document row must exist in total");
     }
+
+    use rusqlite::OptionalExtension;
+
+    fn migrated_conn() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+        crate::db::migrations::run(&conn).unwrap();
+        conn
+    }
+
+    /// document_tags inserted during upload must have is_draft = 1
+    #[test]
+    fn document_tags_upload_sets_is_draft() {
+        let conn = migrated_conn();
+        conn.execute_batch(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES ('doc-1', 'test.pdf', '/tmp/test.pdf', 'application/pdf', 0, 'other', '2024-01-01', '2024-01-01');",
+        ).unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO document_tags (document_id, tag, is_draft) VALUES (?1, ?2, 1)",
+            rusqlite::params!["doc-1", "blood-test"],
+        )
+        .unwrap();
+        let is_draft: i32 = conn
+            .query_row(
+                "SELECT is_draft FROM document_tags WHERE document_id = 'doc-1' AND tag = 'blood-test'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_draft, 1);
+    }
+
+    /// draft contact insert sets is_draft = 1 and returns 1 on SELECT
+    #[test]
+    fn draft_contact_insert_sets_is_draft() {
+        let conn = migrated_conn();
+        let now = "2024-01-01T00:00:00Z";
+        conn.execute(
+            "INSERT INTO contacts \
+             (id, name, role, is_draft, created_at, updated_at) \
+             VALUES ('c-draft', 'Dr Smith', 'specialist', 1, ?1, ?1)",
+            rusqlite::params![now],
+        )
+        .unwrap();
+        let is_draft: i32 = conn
+            .query_row(
+                "SELECT is_draft FROM contacts WHERE id = 'c-draft'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_draft, 1);
+    }
+
+    /// when a non-draft contact with the same name exists,
+    /// the draft contact should have merge_candidate_id set to that contact's id
+    #[test]
+    fn duplicate_detection_sets_merge_candidate_id() {
+        let conn = migrated_conn();
+        let now = "2024-01-01T00:00:00Z";
+
+        // existing non-draft contact
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, is_draft, created_at, updated_at) \
+             VALUES ('c-real', 'Dr Smith', 'gp', 0, ?1, ?1)",
+            rusqlite::params![now],
+        )
+        .unwrap();
+
+        // duplicate detection: find existing non-draft by name
+        let existing_id: Option<String> = conn
+            .query_row(
+                "SELECT id FROM contacts WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                rusqlite::params!["Dr Smith"],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap();
+
+        // insert draft with merge_candidate_id
+        conn.execute(
+            "INSERT INTO contacts \
+             (id, name, role, is_draft, merge_candidate_id, created_at, updated_at) \
+             VALUES ('c-draft', 'Dr Smith', 'specialist', 1, ?1, ?2, ?2)",
+            rusqlite::params![existing_id, now],
+        )
+        .unwrap();
+
+        let merge_id: Option<String> = conn
+            .query_row(
+                "SELECT merge_candidate_id FROM contacts WHERE id = 'c-draft'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(merge_id.as_deref(), Some("c-real"));
+    }
+
+    /// upload_one_document transaction: if doc 2 fails, doc 1 and doc 3 remain
+    #[test]
+    fn upload_transaction_rollback_leaves_other_docs_intact() {
+        let conn = migrated_conn();
+        let now = "2024-01-01T00:00:00Z";
+
+        // Doc 1: success
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES ('doc-1', 'a.pdf', '/a.pdf', 'application/pdf', 0, 'other', ?1, ?1)",
+            rusqlite::params![now],
+        ).unwrap();
+
+        // Doc 2: attempt then rollback
+        {
+            conn.execute("BEGIN", []).unwrap();
+            conn.execute(
+                "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+                 VALUES ('doc-2', 'b.pdf', '/b.pdf', 'application/pdf', 0, 'other', ?1, ?1)",
+                rusqlite::params![now],
+            ).unwrap();
+            conn.execute("ROLLBACK", []).unwrap();
+        }
+
+        // Doc 3: success
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES ('doc-3', 'c.pdf', '/c.pdf', 'application/pdf', 0, 'other', ?1, ?1)",
+            rusqlite::params![now],
+        ).unwrap();
+
+        let count: i32 = conn
+            .query_row("SELECT COUNT(*) FROM documents", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 2); // doc-1 and doc-3 only
+
+        let doc2_exists: Option<String> = conn
+            .query_row("SELECT id FROM documents WHERE id = 'doc-2'", [], |r| {
+                r.get(0)
+            })
+            .optional()
+            .unwrap();
+        assert!(doc2_exists.is_none());
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1694,6 +1837,66 @@ pub async fn documents_run_extraction(
                     now,
                 ],
             )?;
+        }
+
+        // Auto-create draft contacts from extraction suggestions
+        for c in &contact_dtos {
+            let existing_id: Option<String> = conn
+                .query_row(
+                    "SELECT id FROM contacts WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                    rusqlite::params![c.name],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            let contact_id = Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO contacts \
+                 (id, name, role, title, specialty, phone, email, clinic, address, \
+                  is_draft, merge_candidate_id, created_at, updated_at) \
+                 VALUES (?1, ?2, 'specialist', ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9, ?10, ?10)",
+                rusqlite::params![
+                    contact_id,
+                    c.name,
+                    c.title,
+                    c.specialty,
+                    c.phone,
+                    c.email,
+                    c.clinic,
+                    c.address,
+                    existing_id,
+                    now,
+                ],
+            )?;
+        }
+
+        // Auto-create draft clinics from extraction suggestions
+        for clinic in &clinic_suggestions {
+            let existing_id: Option<String> = conn
+                .query_row(
+                    "SELECT id FROM clinics WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                    rusqlite::params![clinic.name],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            let clinic_id = Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO clinics \
+                 (id, name, company_registration_number, is_draft, merge_candidate_id, created_at) \
+                 VALUES (?1, ?2, ?3, 1, ?4, ?5)",
+                rusqlite::params![
+                    clinic_id,
+                    clinic.name,
+                    clinic.company_registration_number,
+                    existing_id,
+                    now,
+                ],
+            )?;
+            for addr in &clinic.addresses {
+                conn.execute(
+                    "INSERT INTO clinic_addresses (clinic_id, address) VALUES (?1, ?2)",
+                    rusqlite::params![clinic_id, addr.line1],
+                )?;
+            }
         }
 
         // Propagate extracted_text into FTS5 so content search finds this document
