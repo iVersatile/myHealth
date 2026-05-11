@@ -736,6 +736,55 @@ pub fn get_flagged_lab_values(
     Ok(result)
 }
 
+#[derive(Debug, Serialize)]
+pub struct DocSummary {
+    pub id: String,
+    pub title: String,
+    pub activity_date: Option<String>,
+    pub doc_type: String,
+}
+
+#[tauri::command]
+pub fn get_linked_documents(
+    state: State<'_, AppState>,
+    doc_id: String,
+) -> Result<Vec<DocSummary>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT d.id, d.filename, d.activity_date, d.category \
+         FROM documents d \
+         WHERE d.is_deleted = 0 \
+           AND d.id != ?1 \
+           AND ( \
+             EXISTS ( \
+               SELECT 1 FROM document_contacts dc1 \
+               JOIN document_contacts dc2 ON dc1.contact_id = dc2.contact_id \
+               WHERE dc1.document_id = ?1 AND dc2.document_id = d.id \
+             ) \
+             OR EXISTS ( \
+               SELECT 1 FROM documents src \
+               WHERE src.id = ?1 \
+                 AND src.clinic_name IS NOT NULL \
+                 AND src.clinic_name != '' \
+                 AND d.clinic_name = src.clinic_name \
+             ) \
+           ) \
+         ORDER BY d.activity_date DESC \
+         LIMIT 10",
+    )?;
+    let rows = stmt.query_map([&doc_id], |row| {
+        Ok(DocSummary {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            activity_date: row.get(2)?,
+            doc_type: row.get(3)?,
+        })
+    })?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(CommandError::from)
+}
+
 #[tauri::command]
 pub fn documents_tags_set(
     state: State<'_, AppState>,
@@ -1851,6 +1900,107 @@ mod tests {
     #[test]
     fn classify_non_numeric_is_normal() {
         assert_eq!(classify_lab_status("HbA1c", "pending"), "NORMAL");
+    }
+
+    // ── get_linked_documents ──────────────────────────────────────────────────
+
+    fn linked_doc_conn() -> Connection {
+        let conn = migrated_conn();
+        conn.execute_batch(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES \
+               ('ld-src', 'src.pdf', '/src.pdf', 'application/pdf', 0, 'lab', '2024-01-01', '2024-01-01'), \
+               ('ld-shared-contact', 'a.pdf', '/a.pdf', 'application/pdf', 0, 'diagnosis', '2024-02-01', '2024-02-01'), \
+               ('ld-shared-clinic', 'b.pdf', '/b.pdf', 'application/pdf', 0, 'other', '2024-03-01', '2024-03-01'), \
+               ('ld-unrelated', 'c.pdf', '/c.pdf', 'application/pdf', 0, 'other', '2024-04-01', '2024-04-01'), \
+               ('ld-deleted', 'd.pdf', '/d.pdf', 'application/pdf', 0, 'other', '2024-05-01', '2024-05-01');
+             UPDATE documents SET is_deleted = 1 WHERE id = 'ld-deleted';
+             UPDATE documents SET clinic_name = 'City Clinic' WHERE id IN ('ld-src', 'ld-shared-clinic');
+             INSERT INTO contacts (id, name, role, created_at, updated_at) VALUES ('c-1', 'Dr A', 'gp', '2024-01-01', '2024-01-01');
+             INSERT INTO document_contacts (document_id, contact_id) VALUES ('ld-src', 'c-1'), ('ld-shared-contact', 'c-1');",
+        ).unwrap();
+        conn
+    }
+
+    #[test]
+    fn linked_docs_returns_shared_contact_doc() {
+        let conn = linked_doc_conn();
+        let mut stmt = conn
+            .prepare(
+                "SELECT DISTINCT d.id FROM documents d \
+                 WHERE d.is_deleted = 0 AND d.id != 'ld-src' AND ( \
+                   EXISTS ( \
+                     SELECT 1 FROM document_contacts dc1 \
+                     JOIN document_contacts dc2 ON dc1.contact_id = dc2.contact_id \
+                     WHERE dc1.document_id = 'ld-src' AND dc2.document_id = d.id \
+                   ) \
+                   OR EXISTS ( \
+                     SELECT 1 FROM documents src \
+                     WHERE src.id = 'ld-src' \
+                       AND src.clinic_name IS NOT NULL AND src.clinic_name != '' \
+                       AND d.clinic_name = src.clinic_name \
+                   ) \
+                 ) ORDER BY d.activity_date DESC LIMIT 10",
+            )
+            .unwrap();
+        let ids: Vec<String> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
+        assert!(
+            ids.contains(&"ld-shared-contact".to_string()),
+            "shared contact doc missing"
+        );
+        assert!(
+            ids.contains(&"ld-shared-clinic".to_string()),
+            "shared clinic doc missing"
+        );
+        assert!(
+            !ids.contains(&"ld-unrelated".to_string()),
+            "unrelated doc should not appear"
+        );
+        assert!(
+            !ids.contains(&"ld-deleted".to_string()),
+            "deleted doc should not appear"
+        );
+        assert!(
+            !ids.contains(&"ld-src".to_string()),
+            "source doc must not appear"
+        );
+    }
+
+    #[test]
+    fn linked_docs_no_results_when_no_shared_entities() {
+        let conn = migrated_conn();
+        conn.execute_batch(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES ('iso-1', 'x.pdf', '/x.pdf', 'application/pdf', 0, 'lab', '2024-01-01', '2024-01-01');",
+        ).unwrap();
+        let mut stmt = conn
+            .prepare(
+                "SELECT DISTINCT d.id FROM documents d \
+                 WHERE d.is_deleted = 0 AND d.id != 'iso-1' AND ( \
+                   EXISTS ( \
+                     SELECT 1 FROM document_contacts dc1 \
+                     JOIN document_contacts dc2 ON dc1.contact_id = dc2.contact_id \
+                     WHERE dc1.document_id = 'iso-1' AND dc2.document_id = d.id \
+                   ) \
+                   OR EXISTS ( \
+                     SELECT 1 FROM documents src \
+                     WHERE src.id = 'iso-1' \
+                       AND src.clinic_name IS NOT NULL AND src.clinic_name != '' \
+                       AND d.clinic_name = src.clinic_name \
+                   ) \
+                 ) LIMIT 10",
+            )
+            .unwrap();
+        let ids: Vec<String> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect();
+        assert!(ids.is_empty());
     }
 }
 
