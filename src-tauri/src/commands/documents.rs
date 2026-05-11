@@ -1408,18 +1408,6 @@ mod tests {
 
     // ── batch upload rollback ──────────────────────────────────────────────────
 
-    fn insert_batch_doc(conn: &Connection, id: &str, category: &str, batch_upload_id: &str) {
-        let now = Utc::now().to_rfc3339();
-        conn.execute(
-            "INSERT INTO documents \
-             (id, filename, file_path, mime_type, file_size_bytes, category, \
-              batch_upload_id, created_at, updated_at, is_deleted) \
-             VALUES (?1, 'test.pdf', '/tmp/test.pdf', 'application/pdf', 1024, ?2, ?3, ?4, ?4, 0)",
-            rusqlite::params![id, category, batch_upload_id, now],
-        )
-        .unwrap();
-    }
-
     #[test]
     fn rollback_leaves_other_committed_docs_intact() {
         let conn = test_conn();
