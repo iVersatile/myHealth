@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 54
-Task: 55.1 — Rust command get_flagged_lab_values
+Phase: 55
+Task: 55.5 — Unit + E2E tests for AiInsightsPanel
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -609,27 +609,27 @@ Task: 55.1 — Rust command get_flagged_lab_values
 
 ### Sprint 55
 
-▶ **55.1 — Rust command `get_flagged_lab_values`**
+[x] **55.1 — Rust command `get_flagged_lab_values`**
    - Input: `doc_id: String`
    - Read `flagged_values` from `extracted_info` JSON column (already stored by Phase 40 entity extraction)
    - Return: `Vec<FlaggedValue>` — `{name, value, unit, status: LOW|HIGH|BORDERLINE|NORMAL}`
    - Register in `lib.rs`
    - Done when: `cargo test` passes with fixture data
 
-[ ] **55.2 — Rust command `get_linked_documents`**
+[x] **55.2 — Rust command `get_linked_documents`**
    - Input: `doc_id: String`
    - Return docs sharing the same doctor or clinic as the input doc
    - Return: `Vec<DocSummary>` — `{id, title, activity_date, doc_type}` max 10 items
    - Register in `lib.rs`
    - Done when: `cargo test` passes; docs from same doctor returned
 
-[ ] **55.3 — `FlaggedValueBadge` component**
+[x] **55.3 — `FlaggedValueBadge` component**
    - `src/components/shared/FlaggedValueBadge.tsx`
    - HIGH: red `#DC2626`, LOW: amber `#D97706`, BORDERLINE: orange `#F59E0B`, NORMAL: green `#16A34A`
    - `data-testid="flagged-status-pill"`
    - Done when: all 4 status variants render correctly
 
-[ ] **55.4 — `AiInsightsPanel` component**
+[x] **55.4 — `AiInsightsPanel` component**
    - `src/components/documents/AiInsightsPanel.tsx`
    - Section 1 — Summary: `extracted_info.summary`, truncated at 300 chars with expand toggle
    - Section 2 — Flagged Lab Values: rows from `get_flagged_lab_values`; hide section for non-lab docs
@@ -639,7 +639,7 @@ Task: 55.1 — Rust command get_flagged_lab_values
    - `data-testid="ai-insights-panel"`
    - Done when: all 4 sections render; collapse animation works
 
-[ ] **55.5 — Unit + E2E tests**
+▶ **55.5 — Unit + E2E tests**
    - Unit: `src/components/documents/__tests__/AiInsightsPanel.test.tsx`
      - Mock both Rust commands; assert all 4 sections render; assert HIGH badge colour
      - Assert "Show all" navigates to filtered document list
