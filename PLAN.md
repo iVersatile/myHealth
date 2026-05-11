@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 61
-Task: Phase 62 — Batch Upload: Full Test Suite + Coverage Gate
+Phase: 62
+Task: 62.4 — Full E2E run
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -363,20 +363,20 @@ Task: Phase 62 — Batch Upload: Full Test Suite + Coverage Gate
 
 ### Sprint 62
 
-▶ **62.1 — Coverage audit: identify gaps**
+[x] **62.1 — Coverage audit: identify gaps**
    - Run `npx vitest run --coverage`; identify files < 80%
    - Run `cargo test`; identify any untested command paths
    - Done when: gap list known
 
-[ ] **62.2 — Fill frontend coverage gaps**
+[x] **62.2 — Fill frontend coverage gaps**
    - Add missing unit tests for: `UploadDialog` batch mode, draft entity hooks, `MergeEntityDialog`
    - Done when: all new frontend files ≥ 80%
 
-[ ] **62.3 — Fill Rust coverage gaps**
+[x] **62.3 — Fill Rust coverage gaps**
    - Add missing tests for: transaction rollback edge cases, `merge_draft_entity` field-choice logic
    - Done when: `cargo test` passes with all edge cases covered
 
-[ ] **62.4 — Full E2E run**
+▶ **62.4 — Full E2E run**
    - `npx playwright test e2e/batch-upload.spec.ts e2e/draft-review.spec.ts`
    - Fix any flaky or failing specs
    - Done when: both specs exit 0

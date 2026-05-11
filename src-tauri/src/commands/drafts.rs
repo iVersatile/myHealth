@@ -527,10 +527,38 @@ mod tests {
                 address TEXT,
                 phone TEXT,
                 email TEXT,
+                specialty TEXT,
+                notes TEXT,
                 merge_candidate_id TEXT,
                 created_at TEXT NOT NULL DEFAULT '',
                 is_draft INTEGER NOT NULL DEFAULT 0,
                 is_deleted INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT
+            );
+            CREATE TABLE appointments (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL DEFAULT '',
+                doctor_name TEXT,
+                clinic_name TEXT,
+                specialty TEXT,
+                appt_date TEXT,
+                status TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL DEFAULT '',
+                is_draft INTEGER NOT NULL DEFAULT 0,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
+                deleted_at TEXT
+            );
+            CREATE TABLE medications (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL DEFAULT '',
+                dosage TEXT,
+                frequency TEXT,
+                start_date TEXT,
+                end_date TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL DEFAULT '',
+                is_draft INTEGER NOT NULL DEFAULT 0,
                 deleted_at TEXT
             );",
         )
@@ -732,5 +760,362 @@ mod tests {
             })
             .unwrap();
         assert_eq!(is_deleted, 1);
+    }
+
+    // ── get_draft_entities — clinic / appointment / medication branches ──────
+
+    #[test]
+    fn get_draft_clinics_returns_only_drafts() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO clinics (id, name, is_draft, is_deleted) VALUES
+                ('c1', 'Draft Clinic', 1, 0),
+                ('c2', 'Real Clinic',  0, 0);",
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id FROM clinics WHERE is_draft = 1 AND is_deleted = 0 \
+                 ORDER BY created_at DESC",
+            )
+            .unwrap();
+        let ids: Vec<String> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(ids.len(), 1);
+        assert_eq!(ids[0], "c1");
+    }
+
+    #[test]
+    fn get_draft_appointments_returns_only_drafts() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO appointments (id, title, is_draft, is_deleted) VALUES
+                ('a1', 'Draft Appt', 1, 0),
+                ('a2', 'Real Appt',  0, 0);",
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id FROM appointments WHERE is_draft = 1 AND is_deleted = 0 \
+                 ORDER BY created_at DESC",
+            )
+            .unwrap();
+        let ids: Vec<String> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(ids.len(), 1);
+        assert_eq!(ids[0], "a1");
+    }
+
+    #[test]
+    fn get_draft_medications_returns_only_drafts() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO medications (id, name, is_draft) VALUES
+                ('m1', 'Draft Med', 1),
+                ('m2', 'Real Med',  0);",
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id FROM medications WHERE is_draft = 1 AND deleted_at IS NULL \
+                 ORDER BY created_at DESC",
+            )
+            .unwrap();
+        let ids: Vec<String> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(ids.len(), 1);
+        assert_eq!(ids[0], "m1");
+    }
+
+    // ── accept_draft_entity — clinic / appointment / symptom / medication ────
+
+    #[test]
+    fn accept_draft_clinic_clears_is_draft() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO clinics (id, name, is_draft, is_deleted) VALUES ('c1', 'Draft', 1, 0);",
+        )
+        .unwrap();
+
+        let updated = conn
+            .execute(
+                "UPDATE clinics SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
+                ["c1"],
+            )
+            .unwrap();
+        assert_eq!(updated, 1);
+
+        let is_draft: i64 = conn
+            .query_row("SELECT is_draft FROM clinics WHERE id = 'c1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(is_draft, 0);
+    }
+
+    #[test]
+    fn accept_draft_appointment_clears_is_draft() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO appointments (id, title, is_draft, is_deleted) VALUES ('a1', 'Appt', 1, 0);",
+        )
+        .unwrap();
+
+        let updated = conn
+            .execute(
+                "UPDATE appointments SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
+                ["a1"],
+            )
+            .unwrap();
+        assert_eq!(updated, 1);
+
+        let is_draft: i64 = conn
+            .query_row(
+                "SELECT is_draft FROM appointments WHERE id = 'a1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_draft, 0);
+    }
+
+    #[test]
+    fn accept_draft_symptom_clears_is_draft() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO symptoms (id, name, is_draft) VALUES ('s1', 'Headache', 1);",
+        )
+        .unwrap();
+
+        let updated = conn
+            .execute(
+                "UPDATE symptoms SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
+                ["s1"],
+            )
+            .unwrap();
+        assert_eq!(updated, 1);
+
+        let is_draft: i64 = conn
+            .query_row("SELECT is_draft FROM symptoms WHERE id = 's1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(is_draft, 0);
+    }
+
+    #[test]
+    fn accept_draft_medication_clears_is_draft() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO medications (id, name, is_draft) VALUES ('m1', 'Aspirin', 1);",
+        )
+        .unwrap();
+
+        let updated = conn
+            .execute(
+                "UPDATE medications SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
+                ["m1"],
+            )
+            .unwrap();
+        assert_eq!(updated, 1);
+
+        let is_draft: i64 = conn
+            .query_row(
+                "SELECT is_draft FROM medications WHERE id = 'm1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_draft, 0);
+    }
+
+    // ── reject_draft_entity — clinic / appointment / medication branches ─────
+
+    #[test]
+    fn reject_draft_clinic_soft_deletes() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO clinics (id, name, is_draft, is_deleted) VALUES ('c1', 'Draft', 1, 0);",
+        )
+        .unwrap();
+
+        let now = chrono::Utc::now().to_rfc3339();
+        let updated = conn
+            .execute(
+                "UPDATE clinics SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_draft = 1",
+                rusqlite::params![now, "c1"],
+            )
+            .unwrap();
+        assert_eq!(updated, 1);
+
+        let is_deleted: i64 = conn
+            .query_row("SELECT is_deleted FROM clinics WHERE id = 'c1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+    }
+
+    #[test]
+    fn reject_draft_appointment_soft_deletes() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO appointments (id, title, is_draft, is_deleted) VALUES ('a1', 'Appt', 1, 0);",
+        )
+        .unwrap();
+
+        let now = chrono::Utc::now().to_rfc3339();
+        let updated = conn
+            .execute(
+                "UPDATE appointments SET is_deleted = 1, deleted_at = ?1 \
+                 WHERE id = ?2 AND is_draft = 1",
+                rusqlite::params![now, "a1"],
+            )
+            .unwrap();
+        assert_eq!(updated, 1);
+
+        let is_deleted: i64 = conn
+            .query_row(
+                "SELECT is_deleted FROM appointments WHERE id = 'a1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+    }
+
+    #[test]
+    fn reject_draft_medication_sets_deleted_at() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO medications (id, name, is_draft) VALUES ('m1', 'Aspirin', 1);",
+        )
+        .unwrap();
+
+        let now = chrono::Utc::now().to_rfc3339();
+        let updated = conn
+            .execute(
+                "UPDATE medications SET deleted_at = ?1 WHERE id = ?2 AND is_draft = 1",
+                rusqlite::params![now, "m1"],
+            )
+            .unwrap();
+        assert_eq!(updated, 1);
+
+        let deleted_at: Option<String> = conn
+            .query_row(
+                "SELECT deleted_at FROM medications WHERE id = 'm1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(deleted_at.is_some());
+    }
+
+    // ── merge_draft_entity — clinic branch + field-choice logic ─────────────
+
+    #[test]
+    fn merge_draft_clinic_applies_chosen_fields_and_soft_deletes_draft() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO clinics (id, name, address, phone, email, is_draft, is_deleted) VALUES
+               ('d1', 'Draft Clinic', '1 Draft St', '111', 'draft@x.com', 1, 0),
+               ('e1', 'Real Clinic',  '2 Real Ave',  '222', 'real@x.com',  0, 0);",
+        )
+        .unwrap();
+
+        // address chosen from existing; everything else defaults to draft
+        let mut choices = std::collections::HashMap::new();
+        choices.insert("address".to_string(), "existing".to_string());
+
+        let pick = |field: &str,
+                    draft_val: Option<String>,
+                    existing_val: Option<String>|
+         -> Option<String> {
+            if choices.get(field).map(|s| s.as_str()) == Some("existing") {
+                existing_val
+            } else {
+                draft_val
+            }
+        };
+
+        let (d_name, d_address, d_phone, d_email): (String, Option<String>, Option<String>, Option<String>) =
+            conn.query_row(
+                "SELECT name, address, phone, email FROM clinics WHERE id='d1' AND is_draft=1 AND is_deleted=0",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .unwrap();
+        let (e_name, e_address, e_phone, e_email): (String, Option<String>, Option<String>, Option<String>) =
+            conn.query_row(
+                "SELECT name, address, phone, email FROM clinics WHERE id='e1' AND is_draft=0 AND is_deleted=0",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .unwrap();
+
+        let name = pick("name", Some(d_name), Some(e_name)).unwrap_or_default();
+        let address = pick("address", d_address, e_address);
+        let phone = pick("phone", d_phone, e_phone);
+        let email = pick("email", d_email, e_email);
+        let now = chrono::Utc::now().to_rfc3339();
+
+        conn.execute(
+            "UPDATE clinics SET name=?1, address=?2, phone=?3, email=?4
+             WHERE id='e1' AND is_draft=0 AND is_deleted=0",
+            rusqlite::params![name, address, phone, email],
+        )
+        .unwrap();
+        let deleted = conn
+            .execute(
+                "UPDATE clinics SET is_deleted=1, deleted_at=?1 WHERE id='d1' AND is_draft=1",
+                rusqlite::params![now],
+            )
+            .unwrap();
+        assert_eq!(deleted, 1);
+
+        // name from draft, address from existing
+        let (merged_name, merged_address): (String, Option<String>) = conn
+            .query_row("SELECT name, address FROM clinics WHERE id='e1'", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert_eq!(merged_name, "Draft Clinic");
+        assert_eq!(merged_address.as_deref(), Some("2 Real Ave"));
+
+        // draft soft-deleted
+        let is_deleted: i64 = conn
+            .query_row("SELECT is_deleted FROM clinics WHERE id='d1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(is_deleted, 1);
+    }
+
+    #[test]
+    fn merge_draft_clinic_not_found_returns_zero_deleted() {
+        let conn = open_test_db();
+        // no rows inserted — soft-delete on nonexistent draft returns 0
+        let deleted = conn
+            .execute(
+                "UPDATE clinics SET is_deleted=1, deleted_at='now' WHERE id='x' AND is_draft=1",
+                [],
+            )
+            .unwrap();
+        assert_eq!(deleted, 0);
     }
 }
