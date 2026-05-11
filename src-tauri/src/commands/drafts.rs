@@ -676,18 +676,24 @@ mod tests {
             }
         };
 
-        let (d_name, d_role, d_specialty, d_phone, d_email, d_clinic, d_notes): (
-            String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>,
-        ) = conn.query_row(
+        type ContactRow = (
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        );
+        let (d_name, d_role, d_specialty, d_phone, d_email, d_clinic, d_notes): ContactRow = conn.query_row(
             "SELECT name, role, specialty, phone, email, clinic, notes FROM contacts WHERE id='d1'",
             [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
         ).unwrap();
-        let (e_name, e_role, e_specialty, e_phone, e_email, e_clinic, e_notes): (
-            String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>,
-        ) = conn.query_row(
-            "SELECT name, role, specialty, phone, email, clinic, notes FROM contacts WHERE id='e1'",
-            [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
-        ).unwrap();
+        let (e_name, e_role, e_specialty, e_phone, e_email, e_clinic, e_notes): ContactRow =
+            conn.query_row(
+                "SELECT name, role, specialty, phone, email, clinic, notes FROM contacts WHERE id='e1'",
+                [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
+            ).unwrap();
 
         let name = pick("name", Some(d_name), Some(e_name)).unwrap_or_default();
         let role = pick("role", d_role, e_role);
