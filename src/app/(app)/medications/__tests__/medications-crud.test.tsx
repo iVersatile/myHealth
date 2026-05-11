@@ -33,6 +33,7 @@ function setupInvoke(list: Medication[] = []) {
     if (cmd === 'medications_create') return Promise.resolve(makeMedication({ id: 'new' }))
     if (cmd === 'medications_update') return Promise.resolve(makeMedication())
     if (cmd === 'medications_delete') return Promise.resolve(undefined)
+    if (cmd === 'get_draft_entities') return Promise.resolve([])
     return Promise.resolve(undefined)
   })
 }

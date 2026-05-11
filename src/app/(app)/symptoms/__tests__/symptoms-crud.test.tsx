@@ -31,6 +31,7 @@ function setupInvoke(list: Symptom[] = []) {
     if (cmd === 'symptoms_create') return Promise.resolve(makeSymptom({ id: 'new' }))
     if (cmd === 'symptoms_update') return Promise.resolve(makeSymptom())
     if (cmd === 'symptoms_delete') return Promise.resolve(undefined)
+    if (cmd === 'get_draft_entities') return Promise.resolve([])
     return Promise.resolve(undefined)
   })
 }

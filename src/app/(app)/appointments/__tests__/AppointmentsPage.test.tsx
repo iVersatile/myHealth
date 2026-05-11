@@ -45,6 +45,7 @@ function setupInvoke(appts: ReturnType<typeof makeAppt>[] = []) {
     if (cmd === 'reminders_cancel') return Promise.resolve(undefined)
     if (cmd === 'contacts_list') return Promise.resolve([])
     if (cmd === 'clinics_list') return Promise.resolve([])
+    if (cmd === 'get_draft_entities') return Promise.resolve([])
     return Promise.resolve(undefined)
   })
 }
@@ -258,6 +259,7 @@ describe('ICS import/export', () => {
       if (cmd === 'icalendar_import') return Promise.resolve(3)
       if (cmd === 'contacts_list') return Promise.resolve([])
       if (cmd === 'clinics_list') return Promise.resolve([])
+      if (cmd === 'get_draft_entities') return Promise.resolve([])
       return Promise.resolve(undefined)
     })
     render(<AppointmentsPage />)
