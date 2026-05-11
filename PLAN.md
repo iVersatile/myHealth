@@ -7,10 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 59 — COMPLETE
+Phase: 60
+Task: 60.5 — Unit + E2E tests
 ```
 
-▶ **Phase 59 done** — all tasks complete, CI green
+▶ **60.5 — Unit + E2E tests**
 
 ---
 
@@ -253,36 +254,36 @@ Phase: 59 — COMPLETE
 
 ### Sprint 60
 
-[ ] **60.1 — Multi-file + folder select in UploadDialog**
+[x] **60.1 — Multi-file + folder select in UploadDialog**
    - `src/components/documents/UploadDialog.tsx`
    - `<input type="file" multiple>` already exists — ensure `webkitdirectory` attribute toggleable for folder select
    - Button group: "Select Files" | "Select Folder"
    - `data-testid="batch-upload-zone"`
    - Done when: selecting 3 files queues 3 rows in dialog
 
-[ ] **60.2 — Drag-and-drop zone**
+[x] **60.2 — Drag-and-drop zone**
    - `onDragOver` / `onDrop` handlers on drop zone
    - Accept `application/pdf` + `image/*`
    - Visual: dashed border + "Drop files here" label when dragging
    - Done when: dragging files from Finder drops them into queue
 
-[ ] **60.3 — Per-file progress row**
+[x] **60.3 — Per-file progress row**
    - `data-testid="upload-file-row"` per queued file
    - States: Queued (grey) → Processing (spinner) → Done (green ✓) → Error (red ✗ + error message)
    - Upload runs sequentially (one at a time) — no parallel OCR to avoid DB contention
    - Done when: 3-file upload shows all 3 rows cycling through states
 
-[ ] **60.4 — Batch complete toast**
+[x] **60.4 — Batch complete toast**
    - On all files processed: `toast("N documents uploaded — X entities pending review")` where X = count of `is_draft = 1` entities from this `batch_upload_id`
    - Count via new Rust command `get_draft_entity_count(batch_upload_id: String) → u32`
    - Done when: toast fires with correct counts
 
-[ ] **60.5 — Unit + E2E tests**
+[x] **60.5 — Unit + E2E tests**
    - Unit: mock 3 invoke calls (2 success, 1 failure); assert rows show correct states; assert toast fires
    - E2E: `e2e/batch-upload.spec.ts` — drop 2 PDFs → assert 2 rows done → assert toast with count
    - Done when: all tests pass
 
-[ ] **60.6 — Pre-commit checks + commit**
+▶ [ ] **60.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: batch upload UI — multi-file, folder, drag-drop, per-file progress (Phase 60)`
 

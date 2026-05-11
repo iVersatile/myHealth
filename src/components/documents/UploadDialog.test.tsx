@@ -48,7 +48,7 @@ function setupInvoke() {
 
 async function pickFileAndReachReview() {
   mockOpen.mockResolvedValue('/home/user/report.pdf')
-  await userEvent.click(screen.getByRole('button', { name: /drop file here/i }))
+  await userEvent.click(screen.getByRole('button', { name: /select files/i }))
   await waitFor(() => expect(screen.getByText('report.pdf')).toBeTruthy())
 }
 
@@ -66,9 +66,10 @@ describe('UploadDialog', () => {
     expect(screen.getByText('Upload Document')).toBeTruthy()
   })
 
-  it('shows drop zone button in initial step', () => {
+  it('shows Select Files and Select Folder buttons in pick step', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /drop file here/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /select files/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /select folder/i })).toBeTruthy()
   })
 
   it('calls onClose when close (✕) button clicked in pick step', async () => {
@@ -81,7 +82,7 @@ describe('UploadDialog', () => {
   it('calls open() when drop zone clicked', async () => {
     mockOpen.mockResolvedValue(null)
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: /drop file here/i }))
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
     expect(mockOpen).toHaveBeenCalled()
   })
 
@@ -140,7 +141,7 @@ describe('UploadDialog', () => {
     })
     mockOpen.mockResolvedValue('/home/user/report.pdf')
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: /drop file here/i }))
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
     await waitFor(() => expect(screen.getByText('disk full')).toBeTruthy())
   })
 
@@ -527,7 +528,7 @@ describe('UploadDialog', () => {
 
   it('processes file via drag and drop', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    const dropZone = screen.getByRole('button', { name: /drop file here/i })
+    const dropZone = screen.getByTestId('batch-upload-zone')
     const fakeFile = Object.assign(new File(['data'], 'dropped.pdf', { type: 'application/pdf' }), { path: '/tmp/dropped.pdf' })
     const dataTransfer = { files: [fakeFile] }
     fireEvent.drop(dropZone, { dataTransfer })
@@ -555,7 +556,7 @@ describe('UploadDialog', () => {
       return Promise.resolve(undefined)
     })
 
-    await userEvent.click(screen.getByRole('button', { name: /drop file here/i }))
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
 
     // Wait for listen to be registered
     await waitFor(() => expect(ocrCallback).not.toBeNull())
@@ -632,7 +633,7 @@ describe('UploadDialog', () => {
       return Promise.resolve(undefined)
     })
 
-    await userEvent.click(screen.getByRole('button', { name: /drop file here/i }))
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
     await waitFor(() => expect(ocrCallback).not.toBeNull())
 
     ocrCallback!({ payload: { page: 1, total: 3, elapsed_ms: 1000 } })
@@ -754,5 +755,94 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     expect(screen.queryByTestId('upload-extracted-text-preview')).toBeNull()
+  })
+})
+
+describe('UploadDialog — batch mode', () => {
+  beforeEach(() => {
+    mockInvoke.mockReset()
+    mockOpen.mockReset()
+    mockListen.mockReset()
+    mockListen.mockResolvedValue(() => {})
+  })
+
+  it('shows file rows with done/error status after batch processing 3 files (2 ok, 1 fail)', async () => {
+    const fakeDoc1 = { ...fakeDoc, id: 'doc-1', filename: 'file1.pdf', file_path: '/f/file1.pdf' }
+    const fakeDoc2 = { ...fakeDoc, id: 'doc-2', filename: 'file2.pdf', file_path: '/f/file2.pdf' }
+
+    mockInvoke.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_upload') {
+        const path = (args as { filePath: string }).filePath
+        if (path === '/f/file1.pdf') return Promise.resolve(fakeDoc1)
+        if (path === '/f/file2.pdf') return Promise.resolve(fakeDoc2)
+        return Promise.reject(new Error('upload failed'))
+      }
+      if (cmd === 'get_pending_review_count') return Promise.resolve(3)
+      return Promise.resolve(undefined)
+    })
+
+    mockOpen.mockResolvedValue(['/f/file1.pdf', '/f/file2.pdf', '/f/file3.pdf'])
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
+
+    await waitFor(() => {
+      const rows = screen.getAllByTestId('upload-file-row')
+      expect(rows).toHaveLength(3)
+      const statuses = rows.map((r) => r.getAttribute('data-status'))
+      expect(statuses).toContain('done')
+      expect(statuses).toContain('error')
+    })
+  })
+
+  it('shows toast with document count and pending entity count after batch completes', async () => {
+    const fakeDoc1 = { ...fakeDoc, id: 'doc-1', filename: 'a.pdf', file_path: '/f/a.pdf' }
+    const fakeDoc2 = { ...fakeDoc, id: 'doc-2', filename: 'b.pdf', file_path: '/f/b.pdf' }
+
+    mockInvoke.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_upload') {
+        const path = (args as { filePath: string }).filePath
+        if (path === '/f/a.pdf') return Promise.resolve(fakeDoc1)
+        return Promise.resolve(fakeDoc2)
+      }
+      if (cmd === 'get_pending_review_count') return Promise.resolve(5)
+      return Promise.resolve(undefined)
+    })
+
+    mockOpen.mockResolvedValue(['/f/a.pdf', '/f/b.pdf'])
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/2 documents uploaded/i)).toBeTruthy()
+      expect(screen.getByText(/5 entities pending review/i)).toBeTruthy()
+    })
+  })
+
+  it('shows toast without entity suffix when get_pending_review_count returns 0', async () => {
+    const fakeDoc1 = { ...fakeDoc, id: 'doc-x', filename: 'x.pdf', file_path: '/f/x.pdf' }
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc1)
+      if (cmd === 'get_pending_review_count') return Promise.resolve(0)
+      return Promise.resolve(undefined)
+    })
+
+    mockOpen.mockResolvedValue(['/f/x.pdf', '/f/y.pdf'])
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/documents uploaded/i)).toBeTruthy()
+      expect(screen.queryByText(/entities pending review/i)).toBeNull()
+    })
   })
 })
