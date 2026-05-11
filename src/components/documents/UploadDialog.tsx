@@ -484,6 +484,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
               {/* Select Files / Select Folder button group */}
               <div className="mt-3 flex gap-2">
                 <button
+                  data-testid="select-files-btn"
                   type="button"
                   onClick={() => void pickFiles()}
                   className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)]"
@@ -491,6 +492,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                   Select Files
                 </button>
                 <button
+                  data-testid="select-folder-btn"
                   type="button"
                   onClick={pickFolder}
                   className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)]"

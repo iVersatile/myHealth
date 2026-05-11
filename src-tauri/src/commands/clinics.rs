@@ -13,6 +13,7 @@ pub struct Clinic {
     pub name: String,
     pub address: Option<String>,
     pub phone: Option<String>,
+    pub email: Option<String>,
     pub created_at: String,
     pub company_registration_number: Option<String>,
 }
@@ -72,7 +73,7 @@ pub struct ClinicWithContacts {
 }
 
 const SELECT_CLINIC: &str =
-    "SELECT id, name, address, phone, created_at, company_registration_number FROM clinics";
+    "SELECT id, name, address, phone, email, created_at, company_registration_number FROM clinics";
 
 fn row_to_clinic(row: &rusqlite::Row) -> rusqlite::Result<Clinic> {
     Ok(Clinic {
@@ -80,8 +81,9 @@ fn row_to_clinic(row: &rusqlite::Row) -> rusqlite::Result<Clinic> {
         name: row.get(1)?,
         address: row.get(2)?,
         phone: row.get(3)?,
-        created_at: row.get(4)?,
-        company_registration_number: row.get(5)?,
+        email: row.get(4)?,
+        created_at: row.get(5)?,
+        company_registration_number: row.get(6)?,
     })
 }
 

@@ -12,7 +12,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'NEXT_PUBLIC_SKIP_AUTH=1 pnpm dev',
+    command: 'NEXT_PUBLIC_SKIP_AUTH=1 node_modules/.bin/next dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

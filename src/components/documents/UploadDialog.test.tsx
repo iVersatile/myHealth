@@ -758,6 +758,241 @@ describe('UploadDialog', () => {
     await pickFileAndReachReview()
     expect(screen.queryByTestId('upload-extracted-text-preview')).toBeNull()
   })
+
+  it('changes category when select value changes', async () => {
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    const select = screen.getByLabelText(/category/i) as HTMLSelectElement
+    await userEvent.selectOptions(select, 'diagnosis')
+    expect(select.value).toBe('diagnosis')
+  })
+
+  it('removes tag chip when × button clicked', async () => {
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    const tagsInput = screen.getByTestId('tag-input')
+    await userEvent.type(tagsInput, 'blood{Enter}')
+    await waitFor(() => expect(screen.getByTestId('tag-chip')).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /remove tag blood/i }))
+    await waitFor(() => expect(screen.queryByTestId('tag-chip')).toBeNull())
+  })
+
+  it('shows timeline entry when activity date manually entered', async () => {
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    expect(screen.queryByLabelText(/timeline entry/i)).toBeNull()
+    fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '2026-03-15' } })
+    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy())
+  })
+
+  it('hides timeline entry when activity date cleared (empty string → null)', async () => {
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '2026-03-15' } })
+    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy())
+    fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '' } })
+    await waitFor(() => expect(screen.queryByLabelText(/timeline entry/i)).toBeNull())
+  })
+
+  it('keeps timeline section visible when textarea cleared but activityDate still set', async () => {
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '2026-03-15' } })
+    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy())
+    await userEvent.clear(screen.getByLabelText(/timeline entry/i))
+    expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy()
+  })
+
+  it('shows clinic duplicate merge UI when extracted clinic already exists in DB', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [],
+        contact_suggestions: [],
+        clinic_suggestions: [{ name: 'City Clinic', company_registration_number: null, addresses: [] }],
+        activity_date: null, extracted_text_preview: null,
+      })
+      if (cmd === 'clinics_list') return Promise.resolve([{ id: 'existing-clinic-id', name: 'City Clinic' }])
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-merge')).toBeTruthy())
+  })
+
+  it('links existing clinic and transitions to saved when "Link existing" clicked', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [],
+        contact_suggestions: [],
+        clinic_suggestions: [{ name: 'City Clinic', company_registration_number: null, addresses: [] }],
+        activity_date: null, extracted_text_preview: null,
+      })
+      if (cmd === 'clinics_list') return Promise.resolve([{ id: 'existing-clinic-id', name: 'City Clinic' }])
+      if (cmd === 'documents_link_clinic') return Promise.resolve(undefined)
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-merge')).toBeTruthy())
+    await userEvent.click(screen.getByRole('button', { name: /link existing/i }))
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_clinic', expect.objectContaining({ clinicId: 'existing-clinic-id' })))
+    await waitFor(() => expect(screen.queryByTestId('clinic-suggestion-merge')).toBeNull())
+  })
+
+  it('dismisses clinic suggestion card when Dismiss button clicked', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [],
+        contact_suggestions: [],
+        clinic_suggestions: [{ name: 'New Clinic', company_registration_number: null, addresses: [] }],
+        activity_date: null, extracted_text_preview: null,
+      })
+      if (cmd === 'clinics_list') return Promise.resolve([])
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-card')).toBeTruthy())
+    await userEvent.click(screen.getByTestId('clinic-suggestion-dismiss'))
+    await waitFor(() => expect(screen.queryByTestId('clinic-suggestion-card')).toBeNull())
+  })
+
+  it('skips extraction and goes to review when doc mime type is not OCR-eligible', async () => {
+    const nonOcrDoc = { ...fakeDoc, mime_type: 'text/plain' }
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(nonOcrDoc)
+      if (cmd === 'documents_update') return Promise.resolve(nonOcrDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(nonOcrDoc)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    expect(mockInvoke).not.toHaveBeenCalledWith('documents_run_extraction', expect.anything())
+    expect(screen.getByText('report.pdf')).toBeTruthy()
+  })
+
+  it('goes back to pick step with error when extraction throws', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.reject(new Error('OCR service unavailable'))
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    mockOpen.mockResolvedValue('/home/user/report.pdf')
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
+    await waitFor(() => expect(screen.getByText(/OCR service unavailable/i)).toBeTruthy())
+  })
+
+  it('shows error state when clinic save fails on documents_set_clinic', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [],
+        contact_suggestions: [],
+        clinic_suggestions: [{ name: 'New Clinic', company_registration_number: null, addresses: [] }],
+        activity_date: null, extracted_text_preview: null,
+      })
+      if (cmd === 'clinics_list') return Promise.resolve([])
+      if (cmd === 'clinics_create_if_not_exists') return Promise.resolve({ id: 'new-clinic-id' })
+      if (cmd === 'documents_set_clinic') return Promise.reject(new Error('link failed'))
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-save')).toBeTruthy())
+    await userEvent.click(screen.getByTestId('clinic-suggestion-save'))
+    await waitFor(() => expect(screen.getByText(/Clinic saved but could not be linked/i)).toBeTruthy())
+  })
+
+  it('reverts clinic to idle when clinics_create_if_not_exists throws', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [],
+        contact_suggestions: [],
+        clinic_suggestions: [{ name: 'New Clinic', company_registration_number: null, addresses: [] }],
+        activity_date: null, extracted_text_preview: null,
+      })
+      if (cmd === 'clinics_list') return Promise.resolve([])
+      if (cmd === 'clinics_create_if_not_exists') return Promise.reject(new Error('DB error'))
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-save')).toBeTruthy())
+    await userEvent.click(screen.getByTestId('clinic-suggestion-save'))
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-dismiss')).toBeTruthy())
+  })
+
+  it('shows confirm error when documents_update throws', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_update') return Promise.reject(new Error('save failed'))
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await userEvent.click(screen.getByRole('button', { name: /confirm/i }))
+    await waitFor(() => expect(screen.getByText(/save failed/i)).toBeTruthy())
+  })
+
+  it('shows allCategories picker when categories_list returns items', async () => {
+    const cats = [{ id: 'c1', name: 'Cardiology', color: '#f00', icon: null, document_count: 0, created_at: '', updated_at: '' }]
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve(cats)
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => expect(screen.getByText('Medical Categories')).toBeTruthy())
+  })
 })
 
 describe('UploadDialog — batch mode', () => {

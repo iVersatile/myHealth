@@ -177,6 +177,7 @@ export default function DocumentsPage() {
             ↓ Export PDF
           </button>
           <button
+            data-testid="upload-btn"
             type="button"
             onClick={() => setUploadOpen(true)}
             className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary)] px-4 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text-inverse)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-primary-hover)]"
