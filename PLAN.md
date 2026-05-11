@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 53
-Task: 53.1 — react-virtuoso integration
+Phase: 54
+Task: 55.1 — Rust command get_flagged_lab_values
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -511,30 +511,30 @@ Task: 53.1 — react-virtuoso integration
 
 ### Sprint 53
 
-▶ **53.1 — `react-virtuoso` integration**
+[x] **53.1 — `react-virtuoso` integration**
    - Add `react-virtuoso` to `package.json` if not present
    - `DocumentListPanel.tsx` — `<Virtuoso>` component with fixed row height 56px
    - Row: type icon + title (1-line ellipsis) + date + category pill
    - `data-testid="document-list-panel"`
    - Done when: renders 1000+ items without scroll jank
 
-[ ] **53.2 — Filter bar**
+[x] **53.2 — Filter bar**
    - Search input (debounced 300ms) + category dropdown + date range picker
    - Filters invoke `documents_search_filtered` (already implemented in Phase 36)
    - Done when: filtering by category shows only matching docs
 
-[ ] **53.3 — Flagged docs + selection state**
+[x] **53.3 — Flagged docs + selection state**
    - Flagged: amber `⚑` + row tint `rgba(240,165,0,0.08)`
    - Selected: `#1C2128` bg + amber 2px left border
    - On row click: emit selected doc to parent
    - Done when: clicking a row highlights it; parent receives doc id
 
-[ ] **53.4 — Unit + E2E tests**
+[x] **53.4 — Unit + E2E tests**
    - Unit: mock 50 docs; assert virtualised list renders; assert filter narrows results
    - E2E: `e2e/redesign-A-doc-list.spec.ts` — assert `document-list-panel` visible; assert filter works
    - Done when: all tests pass
 
-[ ] **53.5 — Pre-commit checks + commit**
+[x] **53.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: DocumentListPanel — virtualised, filter bar, flagged indicators (Phase 53)`
 
@@ -556,7 +556,7 @@ Task: 53.1 — react-virtuoso integration
 
 ### Sprint 54
 
-[ ] **54.1 — Spike: dynamic import of pdfjs-dist — measure chunk size**
+[x] **54.1 — Spike: dynamic import of pdfjs-dist — measure chunk size**
    - `const pdfjsLib = await import('pdfjs-dist')`
    - Set `GlobalWorkerOptions.workerSrc` to bundled worker URL
    - Run `next build` and measure chunk size
@@ -564,8 +564,9 @@ Task: 53.1 — react-virtuoso integration
    - If > 300KB gz: implement option 2 (iframe via Tauri `asset://`)
    - Document result in `docs/LESSONS_LEARNT.md`
    - Done when: decision made and documented
+   - Result: 413KB gz (252.7+160.5) → option 2 selected (L-012)
 
-[ ] **54.2 — `DocumentPreviewPanel` component (chosen strategy)**
+[x] **54.2 — `DocumentPreviewPanel` component (chosen strategy)**
    - `src/components/documents/DocumentPreviewPanel.tsx`
    - Canvas-based rendering (pdfjs) OR iframe with `asset://` URL
    - Toolbar: zoom in/out, rotate, page counter, fullscreen
@@ -573,19 +574,19 @@ Task: 53.1 — react-virtuoso integration
    - `data-testid="document-preview-panel"`
    - Done when: `npx tsc --noEmit` passes; PDF renders in dev
 
-[ ] **54.3 — Rust command `get_document_preview_url`**
+[x] **54.3 — Rust command `get_document_preview_url`**
    - `src-tauri/src/commands/documents.rs`
    - Input: `doc_id: String`
    - Return: `String` — local `file://` or `asset://` path to the PDF file
    - Register in `lib.rs`
    - Done when: `cargo test` passes; frontend can invoke and receive a valid path
 
-[ ] **54.4 — Unit + E2E tests**
+[x] **54.4 — Unit + E2E tests**
    - Unit: mock invoke returning a path; assert `document-preview-panel` renders
    - E2E: `e2e/redesign-A-pdf-preview.spec.ts` — upload PDF → select in list panel → assert preview panel visible
    - Done when: all tests pass
 
-[ ] **54.5 — Pre-commit checks + commit**
+[x] **54.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: DocumentPreviewPanel — pdfjs-dist dynamic import, canvas render, toolbar (Phase 54)`
@@ -608,7 +609,7 @@ Task: 53.1 — react-virtuoso integration
 
 ### Sprint 55
 
-[ ] **55.1 — Rust command `get_flagged_lab_values`**
+▶ **55.1 — Rust command `get_flagged_lab_values`**
    - Input: `doc_id: String`
    - Read `flagged_values` from `extracted_info` JSON column (already stored by Phase 40 entity extraction)
    - Return: `Vec<FlaggedValue>` — `{name, value, unit, status: LOW|HIGH|BORDERLINE|NORMAL}`
