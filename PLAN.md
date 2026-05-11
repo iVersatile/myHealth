@@ -7,10 +7,10 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 50 — PDF Summary Report Export
+Phase: 59 — Batch Upload: Draft Pipeline + Per-Document Transactions
 ```
 
-▶ **50.6** — Pre-commit checks + commit
+▶ **59.1** — Draft pipeline: Rust command `begin_batch_upload`
 
 ---
 
@@ -153,7 +153,7 @@ Phase: 50 — PDF Summary Report Export
    - Click → assert file download triggered (Playwright download event)
    - Done when: `npx playwright test e2e/pdf-export.spec.ts` passes
 
-[ ] **50.6 — Pre-commit checks + commit**
+[x] **50.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: PDF summary report export from document detail (Phase 50)`
@@ -173,7 +173,7 @@ Phase: 50 — PDF Summary Report Export
 
 ### Sprint 58
 
-[ ] **58.1 — SQLite migration: add `is_draft` + `batch_upload_id` columns**
+[x] **58.1 — SQLite migration: add `is_draft` + `batch_upload_id` columns**
    - Add migration in `src-tauri/src/db/migrations.rs` (next version number)
    - `ALTER TABLE contacts ADD COLUMN is_draft BOOLEAN NOT NULL DEFAULT 0`
    - Same for `clinics`, `appointments`, `symptoms`, `medications`
@@ -181,17 +181,17 @@ Phase: 50 — PDF Summary Report Export
    - `ALTER TABLE documents ADD COLUMN batch_upload_id TEXT`
    - Done when: migration runs without error on clean + existing DB
 
-[ ] **58.2 — Grep audit: find all list/search queries missing `is_draft` filter**
+[x] **58.2 — Grep audit: find all list/search queries missing `is_draft` filter**
    - `grep -rn 'SELECT.*FROM contacts\|SELECT.*FROM clinics\|SELECT.*FROM appointments\|SELECT.*FROM symptoms\|SELECT.*FROM medications' src-tauri/src/`
    - Add `AND is_draft = 0` to all production list queries; exclude from FTS5 idx if entity row is draft
    - Done when: all list commands return only non-draft rows
 
-[ ] **58.3 — Rust unit tests: existing queries unaffected**
+[x] **58.3 — Rust unit tests: existing queries unaffected**
    - Insert fixture with `is_draft = 1`; assert it does NOT appear in list results
    - Insert fixture with `is_draft = 0`; assert it DOES appear
    - Done when: `cargo test` passes
 
-[ ] **58.4 — Pre-commit checks + commit**
+[x] **58.4 — Pre-commit checks + commit**
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx tsc --noEmit`
    - Commit: `feat: schema migration — is_draft entity columns + batch_upload_id (Phase 58)`
