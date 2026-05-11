@@ -71,6 +71,14 @@ interface OcrProgress {
   elapsed_ms: number
 }
 
+export type FileQueueStatus = 'queued' | 'processing' | 'done' | 'error'
+export interface FileQueueItem {
+  path: string
+  filename: string
+  status: FileQueueStatus
+  errorMessage?: string
+}
+
 type ContactPhase =
   | { kind: 'idle' }
   | { kind: 'saving' }
@@ -113,7 +121,13 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [docCategories, setDocCategories] = useState<string[]>(
     DOCUMENT_CATEGORIES.filter((c) => c !== 'all')
   )
+  const [fileQueue, setFileQueue] = useState<FileQueueItem[]>([])
+  const [batchMode, setBatchMode] = useState(false)
+  const [batchUploadId, setBatchUploadId] = useState<string | null>(null)
+  const [batchDocIds, setBatchDocIds] = useState<string[]>([])
   const unlistenRef = useRef<(() => void) | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     return () => { unlistenRef.current?.() }
@@ -211,24 +225,85 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
     }
   }
 
-  async function pickFile() {
+  async function runBatchQueue(queue: FileQueueItem[], uploadId: string) {
+    const collectedIds: string[] = []
+    for (const item of queue) {
+      setFileQueue((prev) =>
+        prev.map((f) => (f.path === item.path ? { ...f, status: 'processing' } : f))
+      )
+      try {
+        const doc = await invoke<Document>('documents_upload', {
+          filePath: item.path,
+          category: 'lab',
+          notes: null,
+        })
+        const isOcrCandidate =
+          doc.mime_type === 'application/pdf' || (doc.mime_type?.startsWith('image/') ?? false)
+        if (isOcrCandidate) {
+          await invoke('documents_run_extraction', { id: doc.id, emitProgress: false })
+        }
+        collectedIds.push(doc.id)
+        setFileQueue((prev) =>
+          prev.map((f) => (f.path === item.path ? { ...f, status: 'done' } : f))
+        )
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setFileQueue((prev) =>
+          prev.map((f) =>
+            f.path === item.path ? { ...f, status: 'error', errorMessage: msg } : f
+          )
+        )
+      }
+    }
+    setBatchDocIds(collectedIds)
+    setBatchUploadId(uploadId)
+  }
+
+  function handlePaths(paths: string[]) {
+    if (paths.length === 0) return
+    if (paths.length === 1) {
+      void processFile(paths[0]!)
+      return
+    }
+    const uploadId = crypto.randomUUID()
+    const queue = paths.map((p) => ({
+      path: p,
+      filename: p.split('/').pop() ?? p,
+      status: 'queued' as FileQueueStatus,
+    }))
+    setBatchMode(true)
+    setFileQueue(queue)
+    void runBatchQueue(queue, uploadId)
+  }
+
+  async function pickFiles() {
     const selected = await open({
-      multiple: false,
+      multiple: true,
       filters: [{ name: 'Documents', extensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'tiff'] }],
     })
-    if (typeof selected === 'string') await processFile(selected)
+    if (!selected) return
+    const paths = Array.isArray(selected) ? selected : [selected]
+    handlePaths(paths)
+  }
+
+  function pickFolder() {
+    folderInputRef.current?.click()
   }
 
   function handleDragOver(e: React.DragEvent) { e.preventDefault(); setDragging(true) }
   function handleDragLeave() { setDragging(false) }
 
-  async function handleDrop(e: React.DragEvent) {
+  function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (!file) return
-    const nativePath = (file as File & { path?: string }).path
-    if (nativePath) await processFile(nativePath)
+    const accepted = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type === 'application/pdf' || f.type.startsWith('image/')
+    )
+    if (accepted.length === 0) return
+    const paths = accepted
+      .map((f) => (f as File & { path?: string }).path)
+      .filter((p): p is string => Boolean(p))
+    if (paths.length > 0) handlePaths(paths)
   }
 
   async function handleCancel() {
@@ -337,37 +412,117 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                   {analyzeError}
                 </p>
               )}
-              {/* Hidden file input for programmatic/test access */}
+              {/* Hidden multi-file input */}
               <input
+                ref={fileInputRef}
                 type="file"
+                multiple
                 className="sr-only"
                 accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.tiff"
                 onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) void processFile((file as File & { path?: string }).path ?? file.name)
+                  const files = Array.from(e.target.files ?? [])
+                  const paths = files
+                    .map((f) => (f as File & { path?: string }).path)
+                    .filter((p): p is string => Boolean(p))
+                  if (paths.length > 0) handlePaths(paths)
+                  e.target.value = ''
                 }}
               />
-              <button
-                type="button"
-                onClick={() => void pickFile()}
+              {/* Hidden folder input */}
+              <input
+                ref={folderInputRef}
+                type="file"
+                className="sr-only"
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore – webkitdirectory not in standard typings
+                webkitdirectory="true"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? [])
+                  const paths = files
+                    .map((f) => (f as File & { path?: string }).path)
+                    .filter((p): p is string => Boolean(p))
+                  if (paths.length > 0) handlePaths(paths)
+                  e.target.value = ''
+                }}
+              />
+              {/* Drop zone */}
+              <div
+                data-testid="batch-upload-zone"
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                onDrop={(e) => void handleDrop(e)}
+                onDrop={handleDrop}
                 className={[
-                  'flex w-full flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border-2 border-dashed px-4 py-12 text-center transition-colors duration-[var(--duration-fast)]',
+                  'flex w-full flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border-2 border-dashed px-4 py-8 text-center transition-colors duration-[var(--duration-fast)]',
                   dragging
                     ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                    : 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-surface-sunken)]',
+                    : 'border-[var(--color-border)]',
                 ].join(' ')}
               >
-                <span className="text-3xl">↑</span>
+                <span className="text-3xl">{dragging ? '⬇' : '↑'}</span>
                 <span className="text-[var(--text-sm)] font-medium text-[var(--color-text)]">
-                  Drop file here or click to browse
+                  {dragging ? 'Drop files here' : 'Drag files here or use buttons below'}
                 </span>
-                <span className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">
-                  PDF, JPG, PNG, HEIC, TIFF, WebP
-                </span>
-              </button>
+                {!dragging && (
+                  <span className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                    PDF, JPG, PNG, HEIC, TIFF, WebP
+                  </span>
+                )}
+              </div>
+              {/* Select Files / Select Folder button group */}
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void pickFiles()}
+                  className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)]"
+                >
+                  Select Files
+                </button>
+                <button
+                  type="button"
+                  onClick={pickFolder}
+                  className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-sunken)]"
+                >
+                  Select Folder
+                </button>
+              </div>
+              {/* Batch queue */}
+              {batchMode && fileQueue.length > 0 && (
+                <ul className="mt-4 flex flex-col gap-1">
+                  {fileQueue.map((item) => (
+                    <li
+                      key={item.path}
+                      data-testid="upload-file-row"
+                      data-status={item.status}
+                      className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)]"
+                    >
+                      <span className="flex-1 truncate text-[var(--color-text)]">{item.filename}</span>
+                      <span className="shrink-0">
+                        {item.status === 'queued' && (
+                          <span className="rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-text-secondary)]">
+                            Queued
+                          </span>
+                        )}
+                        {item.status === 'processing' && (
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-primary)] border-t-transparent" />
+                        )}
+                        {item.status === 'done' && (
+                          <span className="text-green-600 dark:text-green-400">✓</span>
+                        )}
+                        {item.status === 'error' && (
+                          <span className="flex items-center gap-1 text-[var(--color-danger)]">
+                            <span>✗</span>
+                            {item.errorMessage && (
+                              <span className="max-w-[160px] truncate text-[var(--text-xs)]">
+                                {item.errorMessage}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 
