@@ -120,8 +120,8 @@ export function DocumentListPanel({
 
   useEffect(() => {
     if (!hasFilter) {
-      setFilteredDocs(null)
-      return
+      const id = setTimeout(() => setFilteredDocs(null), 0)
+      return () => clearTimeout(id)
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
