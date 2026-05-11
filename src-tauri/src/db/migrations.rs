@@ -492,6 +492,21 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 26 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "ALTER TABLE contacts      ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0;
+             ALTER TABLE clinics       ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0;
+             ALTER TABLE appointments  ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0;
+             ALTER TABLE symptoms      ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0;
+             ALTER TABLE medications   ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0;
+             ALTER TABLE document_tags ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0;
+             ALTER TABLE documents     ADD COLUMN batch_upload_id TEXT;",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [26])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -518,7 +533,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 25);
+        assert_eq!(version, 26);
     }
 
     #[test]
@@ -532,7 +547,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 25);
+        assert_eq!(version, 26);
     }
 
     #[test]
