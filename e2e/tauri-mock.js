@@ -195,6 +195,98 @@
       appointment_suggestion: null,
       extracted_text_preview: null,
     },
+    // Phase 64-66 E2E acceptance test fixtures
+    'ecg-invoice-london-clinic-dec2023.pdf': {
+      contact_suggestions: [
+        { name: 'Dr Sarah Chen', phone: '020 7935 1234', email: null, role: 'doctor', specialty: 'Cardiology' },
+      ],
+      clinic_suggestions: [
+        {
+          name: 'The London Cardiac Centre',
+          company_registration_number: null,
+          addresses: [{ line1: '15 Harley Street', city: 'London', postcode: 'W1G 9QT' }],
+        },
+      ],
+      category_suggestion: 'Cardiology',
+      document_tags: ['ECG', 'Cardiology', 'invoice', '2023-11-23'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-11-23',
+      appointment_suggestion: { date: '2023-11-23', type: 'Cardiology' },
+      extracted_text_preview: '12-lead ECG recording and interpretation. Amount Due: GBP 350.00',
+    },
+    'gp-notes-dr-sharma-2023.pdf': {
+      contact_suggestions: [
+        { name: 'Dr Priya Sharma', phone: null, email: null, role: 'doctor', specialty: 'General Practice' },
+      ],
+      clinic_suggestions: [
+        {
+          name: 'Riverside Medical Practice',
+          company_registration_number: null,
+          addresses: [{ line1: '42 Station Road', city: 'London', postcode: 'SE1 7PB' }],
+        },
+      ],
+      category_suggestion: 'General Practice',
+      document_tags: ['GP notes', 'General Practice', '2023-09-15'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-09-15',
+      appointment_suggestion: { date: '2023-09-15', type: 'General Practice' },
+      extracted_text_preview: 'GP Consultation Notes. Date: 15/09/2023. Provider: Dr Priya Sharma.',
+    },
+    'skin-invoice-2023.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [
+        {
+          name: 'ClearSkin Dermatology Clinic',
+          company_registration_number: null,
+          addresses: [{ line1: '8 Welbeck Street', city: 'London', postcode: 'W1G 9YN' }],
+        },
+      ],
+      category_suggestion: 'Dermatology',
+      document_tags: ['Dermatology', 'invoice', '2023-07-10'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-07-10',
+      appointment_suggestion: { date: '2023-07-10', type: 'Dermatology' },
+      extracted_text_preview: 'ClearSkin Dermatology Clinic. Amount Due: GBP 220.00',
+    },
+    'neurology-scan-letter-nov2019.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [
+        {
+          name: 'National Hospital for Neurology',
+          company_registration_number: null,
+          addresses: [{ line1: 'Queen Square', city: 'London', postcode: 'WC1N 3BG' }],
+        },
+      ],
+      category_suggestion: 'Neurology',
+      document_tags: ['Neurology', 'referral', '2019-11-21'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2019-11-21',
+      appointment_suggestion: null,
+      extracted_text_preview: 'Neurology Referral Letter. Date: 21/11/2019.',
+    },
+    'gynaecology-invoice-2023.pdf': {
+      contact_suggestions: [
+        { name: 'Dr Helen Moore', phone: null, email: null, role: 'doctor', specialty: 'Gynaecology' },
+      ],
+      clinic_suggestions: [
+        {
+          name: "Women's Health London",
+          company_registration_number: null,
+          addresses: [{ line1: '22 Devonshire Place', city: 'London', postcode: 'W1G 6JB' }],
+        },
+      ],
+      category_suggestion: 'Gynaecology',
+      document_tags: ['Gynaecology', 'invoice', '2023-04-05'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2023-04-05',
+      appointment_suggestion: { date: '2023-04-05', type: 'Gynaecology' },
+      extracted_text_preview: "Women's Health London. Total Amount Due: GBP 555.00",
+    },
     // UTF-08 contact extraction edge-case fixtures
     'allcaps-surname-2023-06-01.pdf': {
       contact_suggestions: [
@@ -606,6 +698,12 @@
       // fallback: legacy name-based lookup
       const name = (args?.name || '').toLowerCase();
       return Promise.resolve(state.contacts.filter((c) => !c._deleted && c.name.toLowerCase() === name));
+    }
+
+    if (cmd === 'contacts_find_similar') {
+      const name = (args?.name || '').toLowerCase();
+      const match = state.contacts.find((c) => !c._deleted && c.name.toLowerCase() === name);
+      return Promise.resolve(match || null);
     }
 
     if (cmd === 'merge_contacts') {
