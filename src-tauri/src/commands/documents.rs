@@ -2002,6 +2002,286 @@ mod tests {
             .collect();
         assert!(ids.is_empty());
     }
+
+    // ── draft entity creation tests ──────────────────────────────────────────
+
+    fn draft_test_conn() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE documents (
+                id              TEXT    PRIMARY KEY,
+                filename        TEXT    NOT NULL,
+                file_path       TEXT    NOT NULL,
+                mime_type       TEXT    NOT NULL,
+                file_size_bytes INTEGER NOT NULL,
+                category        TEXT    NOT NULL,
+                thumbnail_path  TEXT,
+                notes           TEXT,
+                created_at      DATETIME NOT NULL,
+                updated_at      DATETIME NOT NULL,
+                is_deleted      BOOLEAN  NOT NULL DEFAULT 0,
+                deleted_at      DATETIME,
+                document_date   TEXT,
+                activity_date   TEXT,
+                extracted_metadata TEXT,
+                extracted_text  TEXT,
+                extraction_status TEXT,
+                clinic_name     TEXT,
+                batch_upload_id TEXT
+            );
+            CREATE TABLE document_tags (
+                document_id TEXT NOT NULL,
+                tag         TEXT NOT NULL,
+                PRIMARY KEY (document_id, tag)
+            );
+            CREATE TABLE document_categories (
+                document_id TEXT NOT NULL,
+                category_id TEXT NOT NULL,
+                PRIMARY KEY (document_id, category_id)
+            );
+            CREATE TABLE appointments (
+                id          TEXT PRIMARY KEY,
+                title       TEXT NOT NULL,
+                doctor_name TEXT,
+                clinic_name TEXT,
+                specialty   TEXT,
+                appt_date   TEXT NOT NULL,
+                duration_min INTEGER,
+                location    TEXT,
+                notes       TEXT,
+                status      TEXT NOT NULL,
+                reminder_min INTEGER,
+                is_draft    INTEGER NOT NULL DEFAULT 0,
+                created_at  TEXT NOT NULL,
+                updated_at  TEXT NOT NULL
+            );
+            CREATE TABLE appointment_documents (
+                appointment_id TEXT NOT NULL,
+                document_id    TEXT NOT NULL,
+                PRIMARY KEY (appointment_id, document_id)
+            );
+            CREATE TABLE medications (
+                id         TEXT PRIMARY KEY,
+                name       TEXT NOT NULL,
+                dosage     TEXT,
+                frequency  TEXT,
+                notes      TEXT,
+                is_draft   INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE document_medications (
+                document_id   TEXT NOT NULL,
+                medication_id TEXT NOT NULL,
+                PRIMARY KEY (document_id, medication_id)
+            );
+            CREATE TABLE symptoms (
+                id         TEXT PRIMARY KEY,
+                name       TEXT NOT NULL,
+                severity   TEXT,
+                notes      TEXT,
+                is_draft   INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE document_symptoms (
+                document_id TEXT NOT NULL,
+                symptom_id  TEXT NOT NULL,
+                PRIMARY KEY (document_id, symptom_id)
+            );",
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn draft_appointment_created_from_extraction_with_date_and_doctor() {
+        let conn = draft_test_conn();
+        insert_doc(&conn, "doc-appt", "lab", false);
+        let now = Utc::now().to_rfc3339();
+        let doctor_name = "Dr. Smith";
+        let appt_date = "2024-03-15";
+
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM appointments \
+                 WHERE doctor_name = ?1 AND appt_date = ?2 AND is_draft = 0 LIMIT 1",
+                rusqlite::params![doctor_name, appt_date],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert!(existing.is_none());
+
+        let appt_id = "appt-uuid-1";
+        let title = format!("Appointment with {doctor_name}");
+        conn.execute(
+            "INSERT INTO appointments \
+             (id, title, doctor_name, appt_date, status, is_draft, created_at, updated_at) \
+             VALUES (?1, ?2, ?3, ?4, 'completed', 1, ?5, ?5)",
+            rusqlite::params![appt_id, title, doctor_name, appt_date, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO appointment_documents \
+             (appointment_id, document_id) VALUES (?1, ?2)",
+            rusqlite::params![appt_id, "doc-appt"],
+        )
+        .unwrap();
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointments WHERE doctor_name = ?1 AND is_draft = 1",
+                rusqlite::params![doctor_name],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+
+        let linked: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM appointment_documents WHERE appointment_id = ?1",
+                rusqlite::params![appt_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(linked, 1);
+    }
+
+    #[test]
+    fn draft_medication_created_from_extraction() {
+        let conn = draft_test_conn();
+        insert_doc(&conn, "doc-med", "lab", false);
+        let now = Utc::now().to_rfc3339();
+        let med_name = "Metformin";
+
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM medications WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                rusqlite::params![med_name],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert!(existing.is_none());
+
+        let med_id = "med-uuid-1";
+        conn.execute(
+            "INSERT INTO medications (id, name, is_draft, created_at, updated_at) \
+             VALUES (?1, ?2, 1, ?3, ?3)",
+            rusqlite::params![med_id, med_name, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO document_medications \
+             (document_id, medication_id) VALUES (?1, ?2)",
+            rusqlite::params!["doc-med", med_id],
+        )
+        .unwrap();
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM medications WHERE name = ?1 AND is_draft = 1",
+                rusqlite::params![med_name],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+
+        let linked: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_medications WHERE medication_id = ?1",
+                rusqlite::params![med_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(linked, 1);
+    }
+
+    #[test]
+    fn draft_symptom_created_from_extraction() {
+        let conn = draft_test_conn();
+        insert_doc(&conn, "doc-sym", "lab", false);
+        let now = Utc::now().to_rfc3339();
+        let sym_name = "Hypertension";
+
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM symptoms WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                rusqlite::params![sym_name],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert!(existing.is_none());
+
+        let sym_id = "sym-uuid-1";
+        conn.execute(
+            "INSERT INTO symptoms (id, name, is_draft, created_at, updated_at) \
+             VALUES (?1, ?2, 1, ?3, ?3)",
+            rusqlite::params![sym_id, sym_name, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO document_symptoms \
+             (document_id, symptom_id) VALUES (?1, ?2)",
+            rusqlite::params!["doc-sym", sym_id],
+        )
+        .unwrap();
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM symptoms WHERE name = ?1 AND is_draft = 1",
+                rusqlite::params![sym_name],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1);
+
+        let linked: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM document_symptoms WHERE symptom_id = ?1",
+                rusqlite::params![sym_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(linked, 1);
+    }
+
+    #[test]
+    fn no_duplicate_draft_created_if_matching_row_exists() {
+        let conn = draft_test_conn();
+        let now = Utc::now().to_rfc3339();
+        let med_name = "Aspirin";
+
+        // Insert a confirmed (non-draft) medication — duplicate guard must fire
+        conn.execute(
+            "INSERT INTO medications (id, name, is_draft, created_at, updated_at) \
+             VALUES ('med-confirmed', ?1, 0, ?2, ?2)",
+            rusqlite::params![med_name, now],
+        )
+        .unwrap();
+
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM medications WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                rusqlite::params![med_name],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap();
+        // Guard fires: existing confirmed row found → skip draft insert
+        assert!(existing.is_some());
+
+        let total: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM medications WHERE name = ?1",
+                rusqlite::params![med_name],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(total, 1); // only the confirmed row; no draft inserted
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -2300,6 +2580,89 @@ pub async fn documents_run_extraction(
                     "INSERT INTO clinic_addresses (clinic_id, address) VALUES (?1, ?2)",
                     rusqlite::params![clinic_id, addr.line1],
                 )?;
+            }
+        }
+
+        // Auto-create draft appointment if doctor and date are available
+        if !contact_dtos.is_empty() {
+            let doctor_name = &contact_dtos[0].name;
+            let existing_appt: Option<String> = conn
+                .query_row(
+                    "SELECT id FROM appointments \
+                     WHERE doctor_name = ?1 AND appt_date = ?2 AND is_draft = 0 LIMIT 1",
+                    rusqlite::params![doctor_name, resolved_activity_date],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            if existing_appt.is_none() {
+                let appt_id = Uuid::new_v4().to_string();
+                let title = format!("Appointment with {doctor_name}");
+                conn.execute(
+                    "INSERT INTO appointments \
+                     (id, title, doctor_name, appt_date, status, is_draft, created_at, updated_at) \
+                     VALUES (?1, ?2, ?3, ?4, 'completed', 1, ?5, ?5)",
+                    rusqlite::params![appt_id, title, doctor_name, resolved_activity_date, now],
+                )?;
+                conn.execute(
+                    "INSERT OR IGNORE INTO appointment_documents \
+                     (appointment_id, document_id) VALUES (?1, ?2)",
+                    rusqlite::params![appt_id, id],
+                )?;
+            }
+        }
+
+        // Auto-create draft medications and symptoms from extracted entities
+        let entities2 = crate::extraction::entities::extract_entities(&result.text);
+        for entity in entities2 {
+            use crate::extraction::entities::EntityType;
+            match entity.entity_type {
+                EntityType::Medication => {
+                    let existing: Option<String> = conn
+                        .query_row(
+                            "SELECT id FROM medications WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                            rusqlite::params![entity.name],
+                            |row| row.get(0),
+                        )
+                        .optional()?;
+                    if existing.is_none() {
+                        let med_id = Uuid::new_v4().to_string();
+                        conn.execute(
+                            "INSERT INTO medications \
+                             (id, name, is_draft, created_at, updated_at) \
+                             VALUES (?1, ?2, 1, ?3, ?3)",
+                            rusqlite::params![med_id, entity.name, now],
+                        )?;
+                        conn.execute(
+                            "INSERT OR IGNORE INTO document_medications \
+                             (document_id, medication_id) VALUES (?1, ?2)",
+                            rusqlite::params![id, med_id],
+                        )?;
+                    }
+                }
+                EntityType::Diagnosis => {
+                    let existing: Option<String> = conn
+                        .query_row(
+                            "SELECT id FROM symptoms WHERE name = ?1 AND is_draft = 0 LIMIT 1",
+                            rusqlite::params![entity.name],
+                            |row| row.get(0),
+                        )
+                        .optional()?;
+                    if existing.is_none() {
+                        let sym_id = Uuid::new_v4().to_string();
+                        conn.execute(
+                            "INSERT INTO symptoms \
+                             (id, name, is_draft, created_at, updated_at) \
+                             VALUES (?1, ?2, 1, ?3, ?3)",
+                            rusqlite::params![sym_id, entity.name, now],
+                        )?;
+                        conn.execute(
+                            "INSERT OR IGNORE INTO document_symptoms \
+                             (document_id, symptom_id) VALUES (?1, ?2)",
+                            rusqlite::params![id, sym_id],
+                        )?;
+                    }
+                }
+                _ => {}
             }
         }
 
