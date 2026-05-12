@@ -8,8 +8,8 @@
 
 ```
 Phase: 102
-Task: 102.3 — Entity suggestion integration tests
-Note: All phases 0–66 complete. Phases 100–101 complete. 102.1 and 102.2 complete.
+Task: 102.4 — Upload pipeline integration tests
+Note: All phases 0–66 complete. Phases 100–101 complete. 102.1–102.3 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1091,7 +1091,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
      - `test_document_fts5_search` — insert with `extracted_text`, FTS5 query returns it
    - Done when: all 5 pass with `cargo test --test integration`
 
-▶ [ ] **102.3 — Entity suggestion integration tests**
+[x] **102.3 — Entity suggestion integration tests**
    - `tests/integration/entities.rs`:
      - `test_contacts_upsert_no_dup` — insert same contact twice, assert single row
      - `test_clinics_insert_and_link` — insert clinic, link to document, query linked
@@ -1100,7 +1100,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
      - `test_trash_purge_expired` — insert deleted_at 31 days ago, run purge, assert row gone
    - Done when: all 5 pass
 
-[ ] **102.4 — Upload pipeline integration tests**
+▶ [ ] **102.4 — Upload pipeline integration tests**
    - `tests/integration/upload_pipeline.rs`:
      - `test_upload_batch_single_file` — call `documents_upload_batch` logic with 1 fixture PDF bytes, assert DB row inserted
      - `test_upload_batch_three_files` — 3 fixtures, assert 3 rows, all share same `batch_upload_id`
