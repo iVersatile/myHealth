@@ -8,7 +8,7 @@
 
 ```
 Phase: 57
-Task: 57.2 — axe-core accessibility audit
+Task: 57.4 — Pre-commit checks + commit + CI (COMPLETE)
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -726,18 +726,18 @@ Task: 57.2 — axe-core accessibility audit
    - Fix all failures
    - Done when: all redesign-A specs exit 0
 
-▶ **57.2 — axe-core accessibility audit**
+[x] **57.2 — axe-core accessibility audit**
    - Add `@axe-core/playwright` if not present
    - Run audit on `/documents` with `REDESIGN_A=true` at 1440px and 1280px
    - Fix any WCAG violations (focus on aria-label, role=tooltip, colour contrast)
    - Done when: audit returns 0 violations
 
-[ ] **57.3 — Keyboard navigation end-to-end**
+[x] **57.3 — Keyboard navigation end-to-end**
    - Tab through IconRail → DocumentListPanel → PreviewPanel → AiInsightsPanel without mouse
    - Verify focus indicators visible at each step
    - Done when: full keyboard flow confirmed
 
-[ ] **57.4 — Pre-commit checks + commit + CI**
+▶ **57.4 — Pre-commit checks + commit + CI**
    - `npx tsc --noEmit`
    - Push to `origin/develop`; confirm CI green
    - Commit: `feat: Redesign-A full E2E suite + accessibility audit — all specs passing (Phase 57)`

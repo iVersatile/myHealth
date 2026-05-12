@@ -172,6 +172,7 @@ export function DocumentListPanel({
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
+          aria-label="Filter by category"
           data-testid="filter-category"
           className="h-8 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-2 text-[var(--text-sm)] text-[var(--color-text)] focus:outline-none focus:ring-1 focus:ring-[#F0A500]"
         >
