@@ -7,11 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 63
-Task: 63.1 — Create E2E fixture PDFs via scripts/gen-test-fixtures.mjs
+Phase: 65
+Task: 65.1 — Write e2e/v3-acceptance-case2.spec.ts
 ```
 
-▶ **63.1 — Create E2E fixture PDFs**
+▶ **65.1 — Write `e2e/v3-acceptance-case2.spec.ts`**
 
 [x] **61.4 — Draft section on entity list pages**
 
@@ -101,7 +101,7 @@ Task: 63.1 — Create E2E fixture PDFs via scripts/gen-test-fixtures.mjs
 |---------|--------|----------|--------|--------|
 | Close pipeline gap: auto-draft appointments/symptoms/medications | PRD §8 §9 | HIGH | Medium | ⬜ Phase 62 |
 | Fixture PDFs (5 files, hybrid OCR text embedded) | PRD §8 | HIGH | Small | ⬜ Phase 63 |
-| E2E Case 1 — single invoice, draft entities, accept flow | PRD §8.1 | HIGH | Medium | ⬜ Phase 64 |
+| E2E Case 1 — single invoice, draft entities, accept flow | PRD §8.1 | HIGH | Medium | ✅ Phase 64 |
 | E2E Case 2 — GP notes, no-dup contact, draft clinic, appt | PRD §8.2 | HIGH | Medium | ⬜ Phase 65 |
 | E2E Case 3 — batch 3 docs, all draft entity types | PRD §8.3 | HIGH | Medium | ⬜ Phase 66 |
 
@@ -844,13 +844,13 @@ Task: 63.1 — Create E2E fixture PDFs via scripts/gen-test-fixtures.mjs
 
 ### Sprint 63
 
-[ ] **63.1 — Scaffold fixture generator in `scripts/gen-test-fixtures.mjs`**
+[x] **63.1 — Scaffold fixture generator in `scripts/gen-test-fixtures.mjs`**
    - Check if `pdf-lib` is already in devDependencies; add if missing (`pnpm add -D pdf-lib`)
    - Add `generateE2EFixtures()` function — creates all 5 PDFs with descriptive text content matching their OCR mock payloads
    - Each PDF: title page + 1–2 pages of text matching the expected extraction output
    - Done when: `node scripts/gen-test-fixtures.mjs` exits 0 and 5 files appear under `e2e/fixtures/`
 
-[ ] **63.2 — Commit fixtures + generator**
+[x] **63.2 — Commit fixtures + generator**
    - `npx tsc --noEmit`
    - Commit: `test: add 5 E2E fixture PDFs for acceptance test cases 1-3 (Phase 63)`
 
@@ -864,17 +864,6 @@ Task: 63.1 — Create E2E fixture PDFs via scripts/gen-test-fixtures.mjs
 
 **Fixture:** `e2e/fixtures/ecg-invoice-london-clinic-dec2023.pdf`
 
-**OCR mock payload (inject via `invoke` mock):**
-```json
-{
-  "doctor": { "name": "Dr. Sarah Chen", "specialty": "Cardiology" },
-  "clinic": { "name": "London Clinic" },
-  "date": "2023-11-23",
-  "tags": ["ECG", "Cardiology", "invoice"],
-  "category": "Cardiology"
-}
-```
-
 **Done when:**
 - All 9 test cases from PRD §8.1 pass
 - `npx playwright test e2e/v3-acceptance-case1.spec.ts` exits 0
@@ -882,27 +871,13 @@ Task: 63.1 — Create E2E fixture PDFs via scripts/gen-test-fixtures.mjs
 
 ### Sprint 64
 
-[ ] **64.1 — Write `e2e/v3-acceptance-case1.spec.ts`**
-   - Mock `invoke('documents_upload_batch')` → returns `[{ id: 'doc-1', filename: 'ecg-invoice-london-clinic-dec2023.pdf', status: 'ok' }]`
-   - Mock `invoke('documents_extract_suggestions')` → returns OCR mock payload above
-   - Mock `invoke('get_draft_entities')` for each type: appointment, contact, clinic
-   - Test steps:
-     1. Navigate to `/documents`, open upload dialog
-     2. Drop fixture PDF → submit
-     3. Assert document row visible in list
-     4. Assert filename-parsed tags present (`data-testid="tag-pill"`)
-     5. Assert OCR-extracted tags present (ECG, Cardiology, invoice)
-     6. Assert draft contact card visible: "Dr. Sarah Chen" with `data-testid="draft-contact-card"`
-     7. Assert draft clinic card visible: "London Clinic"
-     8. Assert appointment suggestion banner visible with date 23 Nov 2023
-     9. Click "Accept" on appointment suggestion → assert appointment saved (`invoke('appointments_create')` called)
-     10. Click "Accept" on draft contact → assert `invoke('contacts_accept_draft')` called
-   - Done when: spec runs and all assertions pass with mocks
+[x] **64.1 — Write `e2e/v3-acceptance-case1.spec.ts`**
+   - Done when: all 9 tests pass
 
-[ ] **64.2 — Pre-commit checks + commit**
-   - `npx tsc --noEmit`
-   - `npx playwright test e2e/v3-acceptance-case1.spec.ts` (with mocks — exits 0)
-   - Commit: `test: E2E acceptance case 1 — single invoice draft entities accept flow (Phase 64)`
+[x] **64.2 — Pre-commit checks + commit**
+   - `npx tsc --noEmit` — clean
+   - `npx playwright test e2e/v3-acceptance-case1.spec.ts` — 9 passed
+   - Committed: `test: E2E acceptance case 1 — single invoice draft entities accept flow (Phase 64)`
 
 ---
 
