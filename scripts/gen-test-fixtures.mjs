@@ -1,10 +1,12 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
-import { writeFileSync } from 'fs'
+import { writeFileSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const fixturesDir = join(__dirname, '..', 'src-tauri', 'tests', 'fixtures')
+const e2eFixturesDir = join(__dirname, '..', 'e2e', 'fixtures')
+mkdirSync(e2eFixturesDir, { recursive: true })
 
 async function createPdf(text) {
   const doc = await PDFDocument.create()
@@ -117,3 +119,126 @@ Please settle within 30 days of receipt.`
 const realPdfBytes = await createPdf(realPdfContent)
 writeFileSync(join(fixturesDir, 'sample-Upload (09Mar2023-16_31_26).pdf'), realPdfBytes)
 console.log('Created sample-Upload (09Mar2023-16_31_26).pdf')
+
+// ── E2E fixtures ─────────────────────────────────────────────────────────────
+
+// 1. ecg-invoice-london-clinic-dec2023.pdf
+const ecgContent = `INVOICE
+
+The London Cardiac Centre
+15 Harley Street
+London W1G 9QT
+Tel: 020 7935 1234
+
+Date of Service: 23/11/2023
+
+Provider: Dr Sarah Chen MBBS MRCP
+Specialty: Cardiology
+
+Description: 12-lead ECG recording and interpretation
+
+Amount Due: GBP 350.00
+
+Please settle within 14 days of receipt.`
+
+const ecgBytes = await createPdf(ecgContent)
+writeFileSync(join(e2eFixturesDir, 'ecg-invoice-london-clinic-dec2023.pdf'), ecgBytes)
+console.log('Created e2e/fixtures/ecg-invoice-london-clinic-dec2023.pdf')
+
+// 2. gp-notes-dr-sharma-2023.pdf
+const gpContent = `GP CONSULTATION NOTES
+
+Riverside Medical Practice
+42 Station Road
+London SE1 7PB
+
+Date: 15/09/2023
+
+Provider: Dr Priya Sharma MBBS MRCGP
+Specialty: General Practice
+
+Patient presented with fatigue and mild breathlessness.
+BP 128/82 mmHg. Heart rate 72 bpm. SpO2 98%.
+
+Impression: Likely iron-deficiency anaemia. FBC requested.
+
+Follow-up in 2 weeks.`
+
+const gpBytes = await createPdf(gpContent)
+writeFileSync(join(e2eFixturesDir, 'gp-notes-dr-sharma-2023.pdf'), gpBytes)
+console.log('Created e2e/fixtures/gp-notes-dr-sharma-2023.pdf')
+
+// 3. skin-invoice-2023.pdf
+const skinContent = `INVOICE
+
+ClearSkin Dermatology Clinic
+8 Wimpole Street
+London W1G 9SP
+Tel: 020 7935 5678
+
+Date of Service: 10/07/2023
+
+Provider: Dr James Ward MBBS FRCP
+Specialty: Dermatology
+
+Presenting symptom: persistent rash — right forearm, 6 weeks duration.
+
+Treatment: Betamethasone 0.1% cream prescribed (30g tube).
+
+Amount Due: GBP 220.00
+
+Please settle within 14 days.`
+
+const skinBytes = await createPdf(skinContent)
+writeFileSync(join(e2eFixturesDir, 'skin-invoice-2023.pdf'), skinBytes)
+console.log('Created e2e/fixtures/skin-invoice-2023.pdf')
+
+// 4. neurology-scan-letter-nov2019.pdf
+const neuroContent = `NEUROLOGY REFERRAL LETTER
+
+National Hospital for Neurology
+Queen Square
+London WC1N 3BG
+
+Date: 21/11/2019
+
+Dear Colleague,
+
+Re: Referral for MRI brain and neurovascular assessment.
+
+Clinical history: Incidental finding of unruptured brain aneurysm (3 mm, right MCA) on prior imaging. Patient asymptomatic.
+
+Recommendation: Annual MRI surveillance. Neurosurgical opinion if growth > 5 mm.
+
+Yours sincerely,
+Consultant Neurologist`
+
+const neuroBytes = await createPdf(neuroContent)
+writeFileSync(join(e2eFixturesDir, 'neurology-scan-letter-nov2019.pdf'), neuroBytes)
+console.log('Created e2e/fixtures/neurology-scan-letter-nov2019.pdf')
+
+// 5. gynaecology-invoice-2023.pdf
+const gynContent = `INVOICE
+
+Women's Health London
+22 Portland Place
+London W1B 1LY
+Tel: 020 7580 0001
+
+Date of Service: 05/04/2023
+
+Provider: Dr Helen Moore MBBS MRCOG
+Specialty: Gynaecology
+
+Itemised charges:
+  Initial consultation      GBP 280.00
+  Pelvic ultrasound scan    GBP 180.00
+  Blood panel (hormonal)    GBP  95.00
+
+Total Amount Due: GBP 555.00
+
+Payment due within 14 days of receipt.`
+
+const gynBytes = await createPdf(gynContent)
+writeFileSync(join(e2eFixturesDir, 'gynaecology-invoice-2023.pdf'), gynBytes)
+console.log('Created e2e/fixtures/gynaecology-invoice-2023.pdf')
