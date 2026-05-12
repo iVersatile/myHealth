@@ -8,7 +8,7 @@
 
 ```
 Phase: 57
-Task: 57.4 — Pre-commit checks + commit + CI (COMPLETE)
+Task: ALL COMPLETE — Phase 57 fully done. CI green.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -737,7 +737,7 @@ Task: 57.4 — Pre-commit checks + commit + CI (COMPLETE)
    - Verify focus indicators visible at each step
    - Done when: full keyboard flow confirmed
 
-▶ **57.4 — Pre-commit checks + commit + CI**
+[x] **57.4 — Pre-commit checks + commit + CI**
    - `npx tsc --noEmit`
    - Push to `origin/develop`; confirm CI green
    - Commit: `feat: Redesign-A full E2E suite + accessibility audit — all specs passing (Phase 57)`
