@@ -7,9 +7,11 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 57
-Task: ALL COMPLETE — Phase 57 fully done. CI green.
+Phase: 63
+Task: 63.1 — Create E2E fixture PDFs via scripts/gen-test-fixtures.mjs
 ```
+
+▶ **63.1 — Create E2E fixture PDFs**
 
 [x] **61.4 — Draft section on entity list pages**
 
@@ -92,6 +94,16 @@ Task: ALL COMPLETE — Phase 57 fully done. CI green.
 
 > **Execution order:** 50 → 58 → 59 → 60 → 61 → 62 → 51 → 52 → 53 → 54 → 55 → 56 → 57
 > Batch upload (58–62) executes before redesign-A (51–57) despite higher phase numbers.
+
+**v1.9 E2E Acceptance Gate (Phases 62–66)**
+
+| Feature | Source | Priority | Effort | Status |
+|---------|--------|----------|--------|--------|
+| Close pipeline gap: auto-draft appointments/symptoms/medications | PRD §8 §9 | HIGH | Medium | ⬜ Phase 62 |
+| Fixture PDFs (5 files, hybrid OCR text embedded) | PRD §8 | HIGH | Small | ⬜ Phase 63 |
+| E2E Case 1 — single invoice, draft entities, accept flow | PRD §8.1 | HIGH | Medium | ⬜ Phase 64 |
+| E2E Case 2 — GP notes, no-dup contact, draft clinic, appt | PRD §8.2 | HIGH | Medium | ⬜ Phase 65 |
+| E2E Case 3 — batch 3 docs, all draft entity types | PRD §8.3 | HIGH | Medium | ⬜ Phase 66 |
 
 **v1.5+ (future)**
 
@@ -741,3 +753,313 @@ Task: ALL COMPLETE — Phase 57 fully done. CI green.
    - `npx tsc --noEmit`
    - Push to `origin/develop`; confirm CI green
    - Commit: `feat: Redesign-A full E2E suite + accessibility audit — all specs passing (Phase 57)`
+
+---
+
+## Phase 62 — Close Pipeline Gap: Auto-Draft Appointments / Symptoms / Medications
+
+**Goal:** `documents_extract_suggestions` in `src-tauri/src/commands/documents.rs` already auto-creates draft contacts and clinics on OCR extraction. Extend it to also auto-create draft appointments, symptoms, and medications so the full draft entity flow is gated by a single command (PRD §9).
+
+**Audit findings:**
+- `documents_extract_suggestions` (cache-miss path): calls `crate::extraction::extract()` → auto-inserts draft contacts + draft clinics. Does NOT touch appointments, symptoms, or medications.
+- `appointments`, `symptoms`, `medications` tables already have `is_draft BOOLEAN NOT NULL DEFAULT 0` (added Phase 58).
+- Extraction result struct exposes: `date`, `doctor_name`, `clinic_name`, `medications[]`, `symptoms[]` — enough to seed draft rows.
+
+**Done when:**
+- After `documents_extract_suggestions` runs on a document with date + doctor + clinic in extracted text: one draft appointment row exists in `appointments` table with `is_draft=1`, linked to the document via `document_appointments`.
+- After extraction on a document with medication names in extracted text: draft medication rows exist in `medications` with `is_draft=1`.
+- After extraction on a document with symptom/diagnosis text: draft symptom rows exist in `symptoms` with `is_draft=1`.
+- `get_draft_entities('appointment')`, `get_draft_entities('medication')`, `get_draft_entities('symptom')` return the new rows.
+- `cargo test --manifest-path src-tauri/Cargo.toml` passes.
+- `npx tsc --noEmit` passes.
+- CI green.
+
+### Sprint 62
+
+[x] **62.0 — DB migration: create document_symptoms and document_medications linking tables**
+   - File: `src-tauri/src/db/migrations.rs` — add next migration version
+   - Add:
+     ```sql
+     CREATE TABLE IF NOT EXISTS document_symptoms (
+         document_id TEXT NOT NULL,
+         symptom_id  TEXT NOT NULL,
+         PRIMARY KEY (document_id, symptom_id),
+         FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+         FOREIGN KEY (symptom_id)  REFERENCES symptoms(id)  ON DELETE CASCADE
+     );
+     CREATE TABLE IF NOT EXISTS document_medications (
+         document_id   TEXT NOT NULL,
+         medication_id TEXT NOT NULL,
+         PRIMARY KEY (document_id, medication_id),
+         FOREIGN KEY (document_id)   REFERENCES documents(id)   ON DELETE CASCADE,
+         FOREIGN KEY (medication_id) REFERENCES medications(id) ON DELETE CASCADE
+     );
+     ```
+   - Done when: `cargo test --manifest-path src-tauri/Cargo.toml` passes (migrations run on fresh + existing DB without error)
+
+[x] **62.1 — Auto-create draft appointments/symptoms/medications during OCR extraction**
+   - File: `src-tauri/src/commands/documents.rs` — `documents_run_extraction` cache-miss path (after existing draft contact/clinic insertion blocks at lines ~2276–2304)
+   - Data source: `extract_entities()` results — already called on line ~2226; results stored in `document_entities`. Re-use those same entity rows:
+     - Filter `EntityType::Medication` → `INSERT INTO medications (id, name, is_draft) VALUES (uuid(), entity.name, 1)` + `INSERT INTO document_medications (document_id, medication_id) VALUES (?, ?)`
+     - Filter `EntityType::Diagnosis` → `INSERT INTO symptoms (id, name, is_draft) VALUES (uuid(), entity.name, 1)` + `INSERT INTO document_symptoms (document_id, symptom_id) VALUES (?, ?)`
+     - Appointment: use `result.activity_date` (already resolved) + `contact_dtos[0].name` if present → `INSERT INTO appointments (id, title, appointment_date, is_draft) VALUES (uuid(), '<doctor> visit', date, 1)` + `INSERT INTO document_appointments (document_id, appointment_id) VALUES (?, ?)`
+   - **NOTE:** `ExtractionResult` has NO `symptoms[]` / `medications[]` fields — use `extract_entities()` return value (available at the call site), NOT any field on `ExtractionResult` or `ExtractionSuggestions`
+   - Skip insertion if matching non-draft row already exists (same name) to avoid duplicates
+   - Done when: `cargo test` passes with fixture that has date + doctor + medications
+
+[x] **62.2 — Unit tests: draft entity creation from extraction**
+   - File: `src-tauri/src/commands/documents.rs` → `#[cfg(test)] mod tests`
+   - Test: `draft_appointment_created_from_extraction_with_date_and_doctor`
+   - Test: `draft_medication_created_from_extraction`
+   - Test: `draft_symptom_created_from_extraction`
+   - Test: `no_duplicate_draft_created_if_matching_row_exists`
+   - Use in-memory SQLite (`Connection::open_in_memory()`)
+   - Done when: all 4 tests pass under `cargo test`
+
+[x] **62.3 — Pre-commit checks + commit**
+   - `~/.cargo/bin/cargo fmt --all --manifest-path src-tauri/Cargo.toml`
+   - `~/.cargo/bin/cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+   - `cargo test --manifest-path src-tauri/Cargo.toml`
+   - `npx tsc --noEmit`
+   - Push; confirm CI green
+   - Commit: `feat: auto-create draft appointments/symptoms/medications on OCR extraction (Phase 62)`
+
+---
+
+## Phase 63 — Create E2E Fixture PDFs
+
+**Goal:** Generate 5 fixture PDF files for the 3 E2E acceptance test cases. PDFs contain enough text to drive hybrid OCR injection in Playwright tests. Use `scripts/gen-test-fixtures.mjs` with `pdf-lib`.
+
+**Hybrid OCR strategy:** Playwright tests mock `invoke('documents_extract_suggestions')` to inject pre-extracted text directly — actual Tesseract does NOT run in E2E. The fixture PDFs serve as the upload payload only; the mocked return value carries the "OCR output".
+
+**Done when:**
+- 5 fixture PDF files exist under `e2e/fixtures/`:
+  - `ecg-invoice-london-clinic-dec2023.pdf` — London Clinic ECG invoice, service 23 Nov 2023, amount £350, Dr. Sarah Chen, Cardiology
+  - `gp-notes-dr-sharma-2023.pdf` — GP visit notes, date in body 15 Sep 2023, Dr. Priya Sharma, existing contact
+  - `skin-invoice-2023.pdf` — Dermatology invoice, symptom: "persistent rash", medication: "Betamethasone 0.1% cream"
+  - `neurology-scan-letter-nov2019.pdf` — Neurology referral letter re brain aneurysm 21 Nov 2019
+  - `gynaecology-invoice-2023.pdf` — Gynaecology invoice with 3 line items (consultation, ultrasound, blood panel)
+- All files < 50KB, valid PDF 1.4+
+- Script is idempotent (re-running regenerates same files)
+
+### Sprint 63
+
+[ ] **63.1 — Scaffold fixture generator in `scripts/gen-test-fixtures.mjs`**
+   - Check if `pdf-lib` is already in devDependencies; add if missing (`pnpm add -D pdf-lib`)
+   - Add `generateE2EFixtures()` function — creates all 5 PDFs with descriptive text content matching their OCR mock payloads
+   - Each PDF: title page + 1–2 pages of text matching the expected extraction output
+   - Done when: `node scripts/gen-test-fixtures.mjs` exits 0 and 5 files appear under `e2e/fixtures/`
+
+[ ] **63.2 — Commit fixtures + generator**
+   - `npx tsc --noEmit`
+   - Commit: `test: add 5 E2E fixture PDFs for acceptance test cases 1-3 (Phase 63)`
+
+---
+
+## Phase 64 — E2E Acceptance Test: Case 1 (Single Invoice, Draft Entities, Accept Flow)
+
+**Goal:** Playwright spec for PRD §8 Case 1 — user uploads ECG invoice, hybrid OCR runs, draft contact + clinic + appointment appear, user accepts all three. Verifies the full upload→draft→accept→persist cycle for a single document.
+
+**Reference:** PRD §8.1 Case 1 table (9 expected outcomes)
+
+**Fixture:** `e2e/fixtures/ecg-invoice-london-clinic-dec2023.pdf`
+
+**OCR mock payload (inject via `invoke` mock):**
+```json
+{
+  "doctor": { "name": "Dr. Sarah Chen", "specialty": "Cardiology" },
+  "clinic": { "name": "London Clinic" },
+  "date": "2023-11-23",
+  "tags": ["ECG", "Cardiology", "invoice"],
+  "category": "Cardiology"
+}
+```
+
+**Done when:**
+- All 9 test cases from PRD §8.1 pass
+- `npx playwright test e2e/v3-acceptance-case1.spec.ts` exits 0
+- `npx tsc --noEmit` passes
+
+### Sprint 64
+
+[ ] **64.1 — Write `e2e/v3-acceptance-case1.spec.ts`**
+   - Mock `invoke('documents_upload_batch')` → returns `[{ id: 'doc-1', filename: 'ecg-invoice-london-clinic-dec2023.pdf', status: 'ok' }]`
+   - Mock `invoke('documents_extract_suggestions')` → returns OCR mock payload above
+   - Mock `invoke('get_draft_entities')` for each type: appointment, contact, clinic
+   - Test steps:
+     1. Navigate to `/documents`, open upload dialog
+     2. Drop fixture PDF → submit
+     3. Assert document row visible in list
+     4. Assert filename-parsed tags present (`data-testid="tag-pill"`)
+     5. Assert OCR-extracted tags present (ECG, Cardiology, invoice)
+     6. Assert draft contact card visible: "Dr. Sarah Chen" with `data-testid="draft-contact-card"`
+     7. Assert draft clinic card visible: "London Clinic"
+     8. Assert appointment suggestion banner visible with date 23 Nov 2023
+     9. Click "Accept" on appointment suggestion → assert appointment saved (`invoke('appointments_create')` called)
+     10. Click "Accept" on draft contact → assert `invoke('contacts_accept_draft')` called
+   - Done when: spec runs and all assertions pass with mocks
+
+[ ] **64.2 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `npx playwright test e2e/v3-acceptance-case1.spec.ts` (with mocks — exits 0)
+   - Commit: `test: E2E acceptance case 1 — single invoice draft entities accept flow (Phase 64)`
+
+---
+
+## Phase 65 — E2E Acceptance Test: Case 2 (GP Notes, Existing Contact, Draft Clinic, Notes Entry)
+
+**Goal:** Playwright spec for PRD §8 Case 2 — user uploads GP visit notes, existing doctor contact (Dr. Priya Sharma) matched (no duplicate), draft clinic created, appointment suggestion with date from document body, notes entry linked to document.
+
+**Reference:** PRD §8.2 Case 2 table (7 expected outcomes)
+
+**Fixture:** `e2e/fixtures/gp-notes-dr-sharma-2023.pdf`
+
+**OCR mock payload:**
+```json
+{
+  "doctor": { "name": "Dr. Priya Sharma", "specialty": "General Practice" },
+  "clinic": { "name": "Highbury Park Surgery" },
+  "date": "2023-09-15",
+  "tags": ["GP notes", "General Practice"],
+  "category": "General Practice",
+  "notes_text": "Patient presented with fatigue and mild hypertension..."
+}
+```
+
+**Pre-condition:** seed DB with existing contact `{ name: "Dr. Priya Sharma", is_draft: 0 }` before test runs.
+
+**Done when:**
+- All 7 test cases from PRD §8.2 pass
+- `npx playwright test e2e/v3-acceptance-case2.spec.ts` exits 0
+
+### Sprint 65
+
+[ ] **65.1 — Write `e2e/v3-acceptance-case2.spec.ts`**
+   - Seed existing contact via `invoke('contacts_create')` mock or direct fixture state
+   - Mock `invoke('documents_upload_batch')` + `invoke('documents_extract_suggestions')` with Case 2 payload
+   - Test steps:
+     1. Upload GP notes fixture
+     2. Assert document row visible
+     3. Assert GP notes / General Practice tags present
+     4. Assert NO duplicate draft contact card for Dr. Priya Sharma (existing contact should match)
+     5. Assert draft clinic card: "Highbury Park Surgery"
+     6. Assert appointment suggestion with date 15 Sep 2023
+     7. Accept appointment → assert created
+     8. Assert notes entry created and linked to document (check `/notes` or linked-notes panel)
+   - Done when: all assertions pass
+
+[ ] **65.2 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `npx playwright test e2e/v3-acceptance-case2.spec.ts`
+   - Commit: `test: E2E acceptance case 2 — GP notes existing contact no-dup draft clinic (Phase 65)`
+
+---
+
+## Phase 66 — E2E Acceptance Test: Case 3 (Batch 3 Docs, All Draft Entity Types)
+
+**Goal:** Playwright spec for PRD §8 Case 3 — user batch-uploads 3 documents (skin invoice, neurology scan letter, gynaecology invoice). All 3 are processed; draft contacts, clinics, appointments, symptoms, and medications are created. Verifies batch_upload_id grouping and completeness of draft entity coverage.
+
+**Reference:** PRD §8.3 Case 3 table (15 expected outcomes)
+
+**Fixtures:**
+- `e2e/fixtures/skin-invoice-2023.pdf`
+- `e2e/fixtures/neurology-scan-letter-nov2019.pdf`
+- `e2e/fixtures/gynaecology-invoice-2023.pdf`
+
+**OCR mock payloads (one per document):**
+
+Skin invoice:
+```json
+{
+  "doctor": { "name": "Dr. James Okafor", "specialty": "Dermatology" },
+  "clinic": { "name": "Skin & Wellness Clinic" },
+  "date": "2023-07-10",
+  "tags": ["Dermatology", "invoice"],
+  "symptoms": ["persistent rash"],
+  "medications": ["Betamethasone 0.1% cream"]
+}
+```
+
+Neurology letter:
+```json
+{
+  "doctor": { "name": "Dr. Amir Farouk", "specialty": "Neurology" },
+  "clinic": { "name": "National Hospital for Neurology" },
+  "date": "2019-11-21",
+  "tags": ["Neurology", "scan", "referral"],
+  "symptoms": ["brain aneurysm"]
+}
+```
+
+Gynaecology invoice:
+```json
+{
+  "doctor": { "name": "Dr. Elena Vasquez", "specialty": "Gynaecology" },
+  "clinic": { "name": "Women's Health Centre" },
+  "date": "2023-05-08",
+  "tags": ["Gynaecology", "invoice"],
+  "line_items": ["Consultation £200", "Ultrasound £150", "Blood panel £80"]
+}
+```
+
+**Done when:**
+- All 15 test cases from PRD §8.3 pass
+- `npx playwright test e2e/v3-acceptance-case3.spec.ts` exits 0
+- All 3 documents share the same `batch_upload_id` (verify via `invoke` spy)
+
+### Sprint 66
+
+[ ] **66.1 — Write `e2e/v3-acceptance-case3.spec.ts`**
+   - Mock `invoke('documents_upload_batch')` with 3-file payload → returns 3 result rows with same `batch_upload_id`
+   - Mock `invoke('documents_extract_suggestions')` × 3 with respective payloads above
+   - Test steps:
+     1. Upload all 3 fixture PDFs at once (multi-file drop)
+     2. Assert 3 document rows visible; all share same batch group in UI
+     3. Skin doc: assert draft symptom card "persistent rash"; draft medication "Betamethasone 0.1% cream"
+     4. Skin doc: assert draft contact Dr. James Okafor; draft clinic "Skin & Wellness Clinic"
+     5. Neurology doc: assert draft symptom "brain aneurysm"; draft contact Dr. Amir Farouk; date 21 Nov 2019
+     6. Gynaecology doc: assert draft contact Dr. Elena Vasquez; tags contain "invoice"
+     7. Accept draft symptom on skin doc → assert `symptoms_accept_draft` called
+     8. Accept draft medication on skin doc → assert `medications_accept_draft` called
+     9. Assert all 3 docs grouped correctly under same batch_upload_id
+   - Done when: all assertions pass
+
+[ ] **66.2 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `npx playwright test e2e/v3-acceptance-case3.spec.ts`
+   - Commit: `test: E2E acceptance case 3 — batch 3 docs all draft entity types (Phase 66)`
+
+---
+
+## Phase 99 (DEFERRED) — Full Tauri Binary Test Harness
+
+**Goal:** Set up a proper integration test harness that spins up the actual Tauri binary (not mocked), runs SQL migrations against a real SQLCipher-encrypted database, and exercises Rust commands end-to-end. This is a pre-requisite for full stack E2E without Playwright IPC mocks.
+
+**Defer until:** v2.0 or when mock-based E2E coverage is insufficient to catch regressions.
+
+**Why deferred:** Current hybrid OCR E2E approach (Playwright + invoke mocks) covers the acceptance gate at lower cost. Tauri binary harness requires cross-platform CI test signing, binary builds, and significant boilerplate. Doing it now would block v1.9 shipping.
+
+**Done when:**
+- `cargo test --test integration` in `src-tauri/` spins up Tauri app pointing at an in-memory SQLCipher database
+- Rust commands (`documents_upload_batch`, `documents_extract_suggestions`, `get_draft_entities`, etc.) are exercised without frontend mocks
+- Tests cover the full upload→OCR→draft→accept cycle at the Rust/SQL layer
+- CI job `integration-test` runs on every push to develop
+
+### Sprint 99 (DEFERRED — do not execute until v2.0)
+
+[ ] **99.1 — Research Tauri test harness patterns**
+   - Survey `tauri-plugin-test`, `mockito`, `rstest` fixtures for Tauri v2
+   - Evaluate: in-process test binary vs. spawned binary approach
+   - Done when: approach documented in `docs/ARCHITECTURE.md` §Testing
+
+[ ] **99.2 — Scaffold `src-tauri/tests/integration/` harness**
+   - `tests/integration/mod.rs` — shared setup (open in-memory SQLCipher DB, run all migrations, return `AppState`)
+   - `tests/integration/upload_flow.rs` — uploads a fixture PDF bytes buffer, asserts DB state
+
+[ ] **99.3 — Port acceptance cases 1–3 to integration tests**
+   - One test per case, no frontend mocks, real Rust extraction against injected OCR text
+   - Assert all DB rows directly (no Playwright)
+
+[ ] **99.4 — CI job: `integration-test`**
+   - `.github/workflows/test.yml` → add `cargo test --test integration` step
+   - Requires `SQLCIPHER_KEY` secret in GitHub Actions
