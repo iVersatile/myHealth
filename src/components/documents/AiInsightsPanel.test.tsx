@@ -96,7 +96,7 @@ describe('AiInsightsPanel', () => {
     })
     render(<AiInsightsPanel doc={makeDoc({ category: 'lab' })} entities={ENTITIES} docId="doc1" />)
     await waitFor(() => expect(screen.getAllByTestId('flagged-status-pill').length).toBeGreaterThan(0))
-    expect(screen.getByText('High')).toBeTruthy()
+    expect(screen.getByText('HIGH')).toBeTruthy()
   })
 
   it('shows clinic name in Extracted Details', async () => {

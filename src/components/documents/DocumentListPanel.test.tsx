@@ -54,7 +54,7 @@ describe('DocumentListPanel', () => {
 
   it('renders all 50 docs via virtualised list', () => {
     render(<DocumentListPanel documents={DOCS_50} />)
-    const rows = screen.getAllByTestId('document-row')
+    const rows = screen.getAllByTestId('doc-row')
     expect(rows).toHaveLength(50)
   })
 
@@ -94,21 +94,21 @@ describe('DocumentListPanel', () => {
     render(<DocumentListPanel documents={DOCS_50} />)
     fireEvent.change(screen.getByTestId('filter-search'), { target: { value: 'blood' } })
     await waitFor(() => {
-      const rows = screen.getAllByTestId('document-row')
+      const rows = screen.getAllByTestId('doc-row')
       expect(rows).toHaveLength(1)
     }, { timeout: 500 })
   })
 
   it('highlights selected row with amber left border', () => {
     render(<DocumentListPanel documents={DOCS_50} selectedId="doc-0" />)
-    const rows = screen.getAllByTestId('document-row')
+    const rows = screen.getAllByTestId('doc-row')
     expect(rows[0]).toHaveStyle({ borderLeft: '2px solid #F0A500' })
   })
 
   it('emits selected doc on row click', () => {
     const onSelect = vi.fn()
     render(<DocumentListPanel documents={DOCS_50} onSelect={onSelect} />)
-    fireEvent.click(screen.getAllByTestId('document-row')[0]!)
+    fireEvent.click(screen.getAllByTestId('doc-row')[0]!)
     expect(onSelect).toHaveBeenCalledWith(DOCS_50[0])
   })
 
@@ -121,7 +121,7 @@ describe('DocumentListPanel', () => {
   it('applies tint background to flagged rows', () => {
     const flaggedDoc = makeDoc('flagged-1', { tags: ['flagged'] })
     render(<DocumentListPanel documents={[flaggedDoc]} />)
-    const row = screen.getByTestId('document-row')
+    const row = screen.getByTestId('doc-row-flagged')
     expect(row).toHaveStyle({ backgroundColor: 'rgba(240,165,0,0.08)' })
   })
 })

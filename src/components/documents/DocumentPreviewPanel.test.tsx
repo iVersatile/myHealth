@@ -61,7 +61,7 @@ describe('DocumentPreviewPanel', () => {
         document={makeDoc({ mime_type: 'text/plain', extracted_text: 'hello world' })}
       />,
     )
-    expect(screen.getByTestId('preview-text')).toBeTruthy()
+    expect(screen.getByTestId('text-preview')).toBeTruthy()
     expect(screen.getByText('hello world')).toBeTruthy()
   })
 
