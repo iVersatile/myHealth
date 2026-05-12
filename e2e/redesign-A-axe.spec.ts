@@ -33,7 +33,7 @@ const SEED = [
 
 function seedInvoke(page: import('@playwright/test').Page) {
   return page.addInitScript((docs) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, react/display-name
     ;(window as any).__TAURI_INVOKE_MOCK__ = async (cmd: string, args?: Record<string, unknown>) => {
       if (cmd === 'documents_list') return docs
       if (cmd === 'documents_search_filtered') return { items: docs, total: docs.length }
