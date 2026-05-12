@@ -517,6 +517,28 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 28 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "CREATE TABLE IF NOT EXISTS document_symptoms (
+                 document_id TEXT NOT NULL,
+                 symptom_id  TEXT NOT NULL,
+                 PRIMARY KEY (document_id, symptom_id),
+                 FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+                 FOREIGN KEY (symptom_id)  REFERENCES symptoms(id)  ON DELETE CASCADE
+             );
+             CREATE TABLE IF NOT EXISTS document_medications (
+                 document_id   TEXT NOT NULL,
+                 medication_id TEXT NOT NULL,
+                 PRIMARY KEY (document_id, medication_id),
+                 FOREIGN KEY (document_id)   REFERENCES documents(id)   ON DELETE CASCADE,
+                 FOREIGN KEY (medication_id) REFERENCES medications(id) ON DELETE CASCADE
+             );",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [28])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -543,7 +565,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 27);
+        assert_eq!(version, 28);
     }
 
     #[test]
@@ -557,7 +579,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 27);
+        assert_eq!(version, 28);
     }
 
     #[test]
@@ -1874,5 +1896,62 @@ mod tests {
             count, 0,
             "entities must cascade-delete when document deleted"
         );
+    }
+
+    #[test]
+    fn document_symptoms_and_medications_linking_tables_exist() {
+        let conn = migrated_conn();
+        // Insert prerequisite rows
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, \
+             category, created_at, updated_at, is_deleted) \
+             VALUES ('doc-lnk', 'link.pdf', '/link.pdf', 'application/pdf', 1, 'other', \
+             '2024-01-01', '2024-01-01', 0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO symptoms (id, name, created_at, updated_at) VALUES ('sym-lnk', 'Headache', '2024-01-01', '2024-01-01')",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO medications (id, name, created_at, updated_at) VALUES ('med-lnk', 'Ibuprofen', '2024-01-01', '2024-01-01')",
+            [],
+        ).unwrap();
+
+        conn.execute(
+            "INSERT INTO document_symptoms (document_id, symptom_id) VALUES ('doc-lnk', 'sym-lnk')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO document_medications (document_id, medication_id) VALUES ('doc-lnk', 'med-lnk')",
+            [],
+        ).unwrap();
+
+        let sc: i64 = conn
+            .query_row("SELECT COUNT(*) FROM document_symptoms", [], |r| r.get(0))
+            .unwrap();
+        let mc: i64 = conn
+            .query_row("SELECT COUNT(*) FROM document_medications", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(sc, 1);
+        assert_eq!(mc, 1);
+
+        // Cascade delete
+        conn.execute("DELETE FROM documents WHERE id = 'doc-lnk'", [])
+            .unwrap();
+        let sc2: i64 = conn
+            .query_row("SELECT COUNT(*) FROM document_symptoms", [], |r| r.get(0))
+            .unwrap();
+        let mc2: i64 = conn
+            .query_row("SELECT COUNT(*) FROM document_medications", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(sc2, 0, "document_symptoms must cascade-delete");
+        assert_eq!(mc2, 0, "document_medications must cascade-delete");
     }
 }
