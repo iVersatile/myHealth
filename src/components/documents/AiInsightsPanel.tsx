@@ -86,7 +86,7 @@ export function AiInsightsPanel({ doc, entities, docId }: AiInsightsPanelProps) 
   const visibleLinked = showAllLinked ? linkedDocs : linkedDocs.slice(0, 5);
 
   return (
-    <section data-testid="ai-insights-panel" className="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <section className="h-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-sm">
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
@@ -154,7 +154,9 @@ export function AiInsightsPanel({ doc, entities, docId }: AiInsightsPanelProps) 
                       {fv.reference_range && (
                         <span className="text-xs text-gray-400">({fv.reference_range})</span>
                       )}
-                      <FlaggedValueBadge status={fv.status} />
+                      <span data-testid="flagged-value-badge">
+                        <FlaggedValueBadge status={fv.status} />
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -163,7 +165,7 @@ export function AiInsightsPanel({ doc, entities, docId }: AiInsightsPanelProps) 
           )}
 
           {/* Section 3: Extracted Details */}
-          <div className="py-3">
+          <div className="py-3" data-testid="entities-section">
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
               Extracted Details
             </p>

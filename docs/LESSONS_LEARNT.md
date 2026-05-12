@@ -231,3 +231,28 @@ Before writing any code for a new task:
 1. **Contact extraction must cover all name presentation styles in real medical letters:** titled (Dr/Prof), role-labelled (GP:, Consultant:), and plain name with ALLCAPS surname. Adding support for new document formats requires checking all three patterns.
 2. **Phone regex branches must be tested against format variants, not just the canonical form.** London landlines appear as "020 7xxx xxxx", "020 3xxx xxxx", "+44 20 7xxx xxxx", and "+44 (0) 203 xxx xxxx" — each variant needs a unit test.
 3. **Cross-pattern deduplication is mandatory when multiple patterns can match the same person.** Insert matched names into `seen` after each pattern so a second pattern cannot re-insert the same contact.
+
+---
+
+## L-012 — pdfjs-dist chunk size exceeds 300KB gzip threshold → use iframe strategy
+
+**Phase:** 54.1 spike (2026-05-11)
+
+**What happened:** Evaluated `pdfjs-dist@5.7.284` as a dynamic import for the `DocumentPreviewPanel`. After running `next build --webpack` with a spike page that executed `await import('pdfjs-dist')`, webpack split pdfjs into two chunks:
+
+| Chunk | Raw | Gzipped |
+|-------|-----|---------|
+| pdfjs main | 612 KB | 252.7 KB |
+| pdfjs worker | 376 KB | 160.5 KB |
+| **Total** | **988 KB** | **413.2 KB** |
+
+**Decision:** Combined gzipped size is **413 KB — exceeds the 300 KB threshold**. Proceeding with **option 2: iframe via Tauri `asset://` protocol**.
+
+**Implementation plan:**
+- Rust command `get_document_asset_url(doc_id)` returns an `asset://localhost/...` URL for the local PDF file
+- `DocumentPreviewPanel` renders `<iframe src={assetUrl}>` for PDF MIME types
+- Non-PDF fallback: render `extracted_text` in `<pre>` with `overflow-y: auto`
+- No pdfjs-dist dependency shipped to users; native browser PDF rendering handles display inside the Tauri WebView
+
+**Rule:** Before adopting any heavy PDF/rendering library as a bundled dependency, measure actual webpack chunk size with `next build`. `pdfjs-dist` raw size (~988 KB for lib + worker) compresses to ~413 KB gzipped — always exceeds a 300 KB budget. For a local-first desktop app, `asset://` iframe is simpler, faster, and requires zero extra bundle weight.
+

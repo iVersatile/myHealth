@@ -56,6 +56,7 @@ export function DocumentPreviewPanel({ document }: Props) {
     >
       <div
         data-testid="preview-toolbar"
+        role="toolbar"
         className="flex shrink-0 items-center gap-1 border-b border-[var(--color-border)] px-3 py-1.5 text-[var(--color-text-secondary)]"
       >
         <span
@@ -117,7 +118,7 @@ export function DocumentPreviewPanel({ document }: Props) {
           <div className="p-4">
             {document.extracted_text ? (
               <pre
-                data-testid="preview-text"
+                data-testid="text-preview"
                 className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--color-text)]"
               >
                 {document.extracted_text}

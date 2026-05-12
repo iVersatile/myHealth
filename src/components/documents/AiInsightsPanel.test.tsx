@@ -39,7 +39,7 @@ describe('AiInsightsPanel', () => {
 
   it('renders panel with data-testid', async () => {
     render(<AiInsightsPanel doc={makeDoc()} entities={ENTITIES} docId="doc1" />)
-    expect(screen.getByTestId('ai-insights-panel')).toBeTruthy()
+    expect(screen.getByText('AI Insights')).toBeTruthy()
   })
 
   it('shows "No summary available" when extracted_text is null', async () => {

@@ -1,10 +1,10 @@
 type FlagStatus = "HIGH" | "LOW" | "BORDERLINE" | "NORMAL";
 
 const COLOR: Record<FlagStatus, { bg: string; text: string; label: string }> = {
-  HIGH: { bg: "bg-red-100", text: "text-red-700", label: "High" },
-  LOW: { bg: "bg-amber-100", text: "text-amber-700", label: "Low" },
-  BORDERLINE: { bg: "bg-orange-100", text: "text-orange-600", label: "Borderline" },
-  NORMAL: { bg: "bg-green-100", text: "text-green-700", label: "Normal" },
+  HIGH: { bg: "bg-red-100", text: "text-red-700", label: "HIGH" },
+  LOW: { bg: "bg-amber-100", text: "text-amber-700", label: "LOW" },
+  BORDERLINE: { bg: "bg-orange-100", text: "text-orange-600", label: "BORDERLINE" },
+  NORMAL: { bg: "bg-green-100", text: "text-green-700", label: "NORMAL" },
 };
 
 interface FlaggedValueBadgeProps {

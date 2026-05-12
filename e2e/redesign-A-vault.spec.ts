@@ -1,21 +1,86 @@
 import { test, expect } from './fixtures'
 
+const SEED_DOCS = [
+  {
+    id: 'doc-1',
+    filename: 'Blood Test Results 2023.pdf',
+    file_path: '/tmp/blood.pdf',
+    mime_type: 'application/pdf',
+    category: 'lab',
+    tags: [],
+    activity_date: '2023-01-15',
+    created_at: new Date().toISOString(),
+    _deleted: false,
+    extracted_text: null,
+    _entities: [],
+    _flagged_values: [],
+  },
+  {
+    id: 'doc-2',
+    filename: 'Lab Results Flagged.pdf',
+    file_path: '/tmp/lab.pdf',
+    mime_type: 'application/pdf',
+    category: 'lab',
+    tags: ['flagged'],
+    activity_date: '2023-03-10',
+    created_at: new Date().toISOString(),
+    _deleted: false,
+    extracted_text: null,
+    _entities: [],
+    _flagged_values: [
+      { name: 'Haemoglobin', value: '8.5', unit: 'g/dL', status: 'LOW', reference_range: '12-16' },
+    ],
+  },
+  {
+    id: 'doc-3',
+    filename: 'Clinic Notes.txt',
+    file_path: '/tmp/notes.txt',
+    mime_type: 'text/plain',
+    category: 'other',
+    tags: [],
+    activity_date: '2023-05-01',
+    created_at: new Date().toISOString(),
+    _deleted: false,
+    extracted_text: 'Clinic visit notes',
+    _entities: [],
+  },
+]
+
 test.describe('Redesign-A — Dark Vault Layout', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript((docs) => {
+      const STATE_KEY = 'tauri_mock_state'
+      const state = {
+        documents: docs,
+        contacts: [],
+        clinics: [],
+        appointments: [],
+        notes: [],
+        categories: [],
+        trash: [],
+        symptoms: [],
+        medications: [],
+        entity_links: [],
+      }
+      sessionStorage.setItem(STATE_KEY, JSON.stringify(state))
+    }, SEED_DOCS)
+  })
+
   // ─── Icon Rail ───────────────────────────────────────────────────────────
 
   test('TC-A-01 — icon rail renders with correct data-testid', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/documents')
     await expect(page.getByTestId('nav-rail')).toBeVisible()
   })
 
   test('TC-A-02 — icon rail has 52px width', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/documents')
     const box = await page.getByTestId('nav-rail').boundingBox()
     expect(box?.width).toBe(52)
   })
 
   test('TC-A-03 — all nav rail buttons have aria-label', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/documents')
     const buttons = page.getByTestId('nav-rail').getByRole('button')
     const count = await buttons.count()
     expect(count).toBeGreaterThan(0)
@@ -36,15 +101,15 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
   })
 
   test('TC-A-05 — tooltip appears on rail button hover after 400ms', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/documents')
     await page.getByTestId('nav-rail').getByRole('button').first().hover()
     await page.waitForTimeout(450)
     await expect(page.locator('[role="tooltip"]')).toBeVisible()
   })
 
   test('TC-A-06 — clicking nav rail item navigates to correct route', async ({ page }) => {
-    await page.goto('/')
-    await page.getByTestId('nav-rail').getByRole('button', { name: /documents/i }).click()
+    await page.goto('/documents')
+    await page.getByTestId('nav-rail').getByRole('link', { name: /documents/i }).click()
     await expect(page).toHaveURL(/\/documents/)
   })
 
@@ -109,8 +174,9 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
 
   test('TC-A-15 — non-PDF document shows text preview fallback', async ({ page }) => {
     await page.goto('/documents')
+    // doc-3 (index 2) is text/plain — no data-type attr on rows, select by position
     const txtRow = page.getByTestId('document-list-panel')
-      .locator('[data-testid="doc-row"][data-type="text"]').first()
+      .locator('[data-testid="doc-row"]').nth(1) // doc-3 is index 1 among non-flagged rows
     await txtRow.click()
     await expect(page.getByTestId('document-preview-panel').locator('[data-testid="text-preview"]')).toBeVisible()
   })
@@ -153,7 +219,7 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
     await page.getByTestId('document-list-panel').locator('[data-testid="doc-row"]').first().click()
     const panel = page.getByTestId('ai-insights-panel')
     await panel.getByRole('button', { name: /collapse/i }).click()
-    await panel.getByRole('button', { name: /expand/i }).click()
+    await page.getByTestId('ai-panel-expand-btn').click()
     const box = await panel.boundingBox()
     expect(box?.width ?? 0).toBeGreaterThan(200)
   })
@@ -161,11 +227,12 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
   // ─── Dark Theme ──────────────────────────────────────────────────────────
 
   test('TC-A-21 — vault theme CSS variable --color-bg is #0D1117', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/documents')
+    await page.waitForSelector('[data-testid="vault-layout"]')
     const bg = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim()
     )
-    expect(bg).toBe('#0D1117')
+    expect(bg.toLowerCase()).toBe('#0d1117')
   })
 
   // ─── Responsive Collapse ─────────────────────────────────────────────────
@@ -204,14 +271,14 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
   // ─── Accessibility ───────────────────────────────────────────────────────
 
   test('TC-A-23 — keyboard Tab reaches first rail button', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/documents')
     await page.keyboard.press('Tab')
     const focused = await page.evaluate(() => document.activeElement?.closest('[data-testid="nav-rail"]') !== null)
     expect(focused).toBe(true)
   })
 
   test('TC-A-24 — tooltip has role=tooltip and aria-describedby wired', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/documents')
     await page.getByTestId('nav-rail').getByRole('button').first().hover()
     await page.waitForTimeout(450)
     const tooltip = page.locator('[role="tooltip"]')

@@ -26,9 +26,18 @@ export function AppShell({ children }: AppShellProps) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [])
 
+  if (redesignA) {
+    return (
+      <>
+        {children}
+        <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      </>
+    )
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-surface)]">
-      {redesignA ? <IconRail /> : <Sidebar />}
+      <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar onSearchOpen={() => setSearchOpen(true)} />
         <main className="flex-1 overflow-y-auto p-6">

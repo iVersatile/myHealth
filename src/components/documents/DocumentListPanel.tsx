@@ -60,7 +60,7 @@ function DocumentRow({ doc, selected, onSelect }: RowProps) {
   return (
     <button
       type="button"
-      data-testid="document-row"
+      data-testid={flagged ? 'doc-row-flagged' : 'doc-row'}
       onClick={() => onSelect(doc)}
       style={{
         height: 56,
@@ -78,19 +78,19 @@ function DocumentRow({ doc, selected, onSelect }: RowProps) {
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1">
           {flagged && (
-            <span aria-label="Flagged" className="shrink-0 text-[#F0A500]">
+            <span data-testid="flag-indicator" aria-label="Flagged" className="shrink-0 text-[#F0A500]">
               ⚑
             </span>
           )}
-          <span className="block truncate text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+          <span data-testid="doc-row-title" className="block truncate text-[var(--text-sm)] font-medium text-[var(--color-text)]">
             {doc.filename}
           </span>
         </span>
-        <span className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">{date}</span>
+        <span data-testid="doc-row-date" className="text-[var(--text-xs)] text-[var(--color-text-secondary)]">{date}</span>
       </span>
 
       {/* Category pill */}
-      <span className="shrink-0 rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)]">
+      <span data-testid="doc-row-category" className="shrink-0 rounded-full bg-[var(--color-surface-sunken)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)]">
         {catLabel}
       </span>
     </button>
@@ -103,6 +103,13 @@ export function DocumentListPanel({
   onSelect,
 }: DocumentListPanelProps) {
   const handleSelect = onSelect ?? (() => {})
+
+  const [localDocs, setLocalDocs] = useState<Document[] | null>(null)
+  useEffect(() => {
+    invoke<Document[]>('documents_list', { page: 1, limit: 1000 })
+      .then(docs => setLocalDocs(docs))
+      .catch(() => {})
+  }, [])
 
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -141,7 +148,8 @@ export function DocumentListPanel({
     }
   }, [hasFilter, search, categoryId, dateFrom, dateTo])
 
-  const displayDocs = hasFilter ? (filteredDocs ?? []) : documents
+  const baseDocs = localDocs ?? documents
+  const displayDocs = hasFilter ? (filteredDocs ?? []) : baseDocs
 
   return (
     <div

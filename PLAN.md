@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 56
-Task: 56.6 — Pre-commit checks + commit
+Phase: 57
+Task: 57.2 — axe-core accessibility audit
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -699,7 +699,7 @@ Task: 56.6 — Pre-commit checks + commit
    - TC-A-03: click toggle → AI panel expands
    - Done when: all TCs pass
 
-▶ **56.6 — Pre-commit checks + commit**
+[x] **56.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: VaultLayout — 4-panel CSS Grid, AI panel auto-collapse, resizable list (Phase 56)`
 
@@ -720,13 +720,13 @@ Task: 56.6 — Pre-commit checks + commit
 
 ### Sprint 57
 
-[ ] **57.1 — Run full redesign-A E2E suite; fix failures**
+[x] **57.1 — Run full redesign-A E2E suite; fix failures**
    - `npx playwright test e2e/redesign-A-*`
    - Triage each failure: testid mismatch vs timing vs implementation gap
    - Fix all failures
    - Done when: all redesign-A specs exit 0
 
-[ ] **57.2 — axe-core accessibility audit**
+▶ **57.2 — axe-core accessibility audit**
    - Add `@axe-core/playwright` if not present
    - Run audit on `/documents` with `REDESIGN_A=true` at 1440px and 1280px
    - Fix any WCAG violations (focus on aria-label, role=tooltip, colour contrast)

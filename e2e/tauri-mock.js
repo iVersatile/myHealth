@@ -6,6 +6,13 @@
 (function () {
   'use strict';
 
+  // Disable Next.js dev overlay so it doesn't block hover events in tests
+  document.addEventListener('DOMContentLoaded', function () {
+    var style = document.createElement('style');
+    style.textContent = 'nextjs-portal { pointer-events: none !important; }';
+    document.head.appendChild(style);
+  });
+
   const STATE_KEY = 'tauri_mock_state';
 
   function loadState() {
@@ -1003,9 +1010,27 @@
     // ------------------------------------------------------------------
     // Advanced search filters
     // ------------------------------------------------------------------
+    if (cmd === 'get_flagged_lab_values') {
+      const docId = args?.docId || args?.doc_id;
+      const doc = state.documents.find((d) => d.id === docId);
+      return Promise.resolve(doc?._flagged_values || []);
+    }
+
+    if (cmd === 'get_linked_documents') {
+      return Promise.resolve([]);
+    }
+
     if (cmd === 'documents_search_filtered') {
-      const { dateFrom, dateTo, categoryIds, page = 0, limit = 20 } = args || {};
+      const { query, dateFrom, dateTo, categoryIds, page = 0, limit = 20 } = args || {};
       let docs = state.documents.filter((d) => !d._deleted);
+      const q = (query || '').toLowerCase();
+      if (q) {
+        docs = docs.filter(
+          (d) =>
+            (d.filename || '').toLowerCase().includes(q) ||
+            (d.extracted_text || '').toLowerCase().includes(q),
+        );
+      }
       if (dateFrom) {
         docs = docs.filter((d) => d.activity_date && d.activity_date >= dateFrom);
       }

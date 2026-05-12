@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { IconRail } from './IconRail'
 import { DocumentListPanel } from '../documents/DocumentListPanel'
 import { DocumentPreviewPanel } from '../documents/DocumentPreviewPanel'
@@ -28,6 +28,11 @@ export function VaultLayout({ documents }: VaultLayoutProps) {
     return Number.isFinite(n) ? Math.min(LIST_WIDTH_MAX, Math.max(LIST_WIDTH_MIN, n)) : LIST_WIDTH_DEFAULT
   })
   const [isDragging, setIsDragging] = useState(false)
+
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'vault-dark')
+    return () => { document.documentElement.removeAttribute('data-theme') }
+  }, [])
 
   const rootRef = useRef<HTMLDivElement>(null)
   const dragStartRef = useRef<{ x: number; width: number } | null>(null)
@@ -79,7 +84,7 @@ export function VaultLayout({ documents }: VaultLayoutProps) {
         gridTemplateColumns: `52px ${listWidth}px 4px 1fr ${aiWidth}`,
         height: '100vh',
         overflow: 'hidden',
-        transition: isDragging ? 'none' : 'grid-template-columns 200ms ease',
+        transition: 'none',
       }}
     >
       <IconRail />
@@ -108,8 +113,29 @@ export function VaultLayout({ documents }: VaultLayoutProps) {
 
       <div
         data-testid="ai-insights-panel"
-        style={{ overflow: 'hidden', borderLeft: aiCollapsed ? 'none' : '1px solid var(--color-border)' }}
+        style={{ overflow: aiCollapsed ? 'visible' : 'hidden', borderLeft: aiCollapsed ? 'none' : '1px solid var(--color-border)', position: 'relative' }}
       >
+        {!aiCollapsed && (
+          <button
+            onClick={() => setAiCollapsed(true)}
+            aria-label="Collapse AI insights"
+            style={{
+              position: 'absolute',
+              right: 4,
+              top: 8,
+              zIndex: 10,
+              padding: '2px 6px',
+              background: 'var(--color-surface-raised)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '10px',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            ‹
+          </button>
+        )}
         {!aiCollapsed && selectedDoc && (
           <AiInsightsPanel
             doc={selectedDoc}
@@ -121,7 +147,7 @@ export function VaultLayout({ documents }: VaultLayoutProps) {
           <button
             data-testid="ai-panel-expand-btn"
             onClick={() => setAiCollapsed(false)}
-            aria-label="Show AI insights"
+            aria-label="Expand AI insights"
             style={{
               position: 'absolute',
               right: 0,

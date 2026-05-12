@@ -3,6 +3,31 @@
  * Layout vars (--sidebar-width etc.) switch in Phase 52 when IconRail ships.
  */
 
+:root[data-theme="vault-dark"] {
+  --color-bg:             #0D1117;
+  --color-surface:        #161B22;
+  --color-surface-raised: #21262D;
+  --color-surface-sunken: #0D1117;
+  --color-surface-hover:  #30363D;
+  --color-border:         #30363D;
+  --color-text:           #E6EDF3;
+  --color-text-secondary: #8B949E;
+  --color-text-muted:     #6E7681;
+  --color-text-disabled:  #484F58;
+  --color-text-inverse:   #0D1117;
+  --color-primary:        #F0A500;
+  --color-primary-hover:  #D4920A;
+  --color-primary-dim:    rgba(240, 165, 0, 0.15);
+  --color-rail-bg:        #010409;
+  --color-flagged-low:    #D29922;
+  --color-flagged-high:   #F85149;
+  --color-flagged-ok:     #3FB950;
+  --color-tag-bg:         rgba(240, 165, 0, 0.15);
+  --color-tag-text:       #F0A500;
+  --doc-list-width:       300px;
+  --ai-panel-width:       240px;
+}
+
 :root[data-theme="calm"] {
   --color-bg:             #EBF5F7;
   --color-surface:        #FFFFFF;

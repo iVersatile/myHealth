@@ -110,6 +110,7 @@ function NavButton({
         href={item.href}
         aria-label={item.label}
         aria-describedby={tooltipVisible ? tooltipId : undefined}
+        data-active={active ? 'true' : undefined}
         onMouseEnter={() => onTooltipShow(item.href)}
         onMouseLeave={onTooltipHide}
         onFocus={() => onTooltipShow(item.href)}
