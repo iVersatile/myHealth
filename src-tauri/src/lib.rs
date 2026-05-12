@@ -1,7 +1,7 @@
 pub(crate) mod commands;
 pub(crate) mod crypto;
 pub mod db;
-pub(crate) mod extraction;
+pub mod extraction;
 pub(crate) mod parsing;
 pub(crate) mod plugins;
 pub(crate) mod services;
