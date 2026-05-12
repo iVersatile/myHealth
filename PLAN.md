@@ -8,8 +8,8 @@
 
 ```
 Phase: 102
-Task: 102.4 — Upload pipeline integration tests
-Note: All phases 0–66 complete. Phases 100–101 complete. 102.1–102.3 complete.
+Task: 102.5 — CI: add Rust integration job to test.yml
+Note: All phases 0–66 complete. Phases 100–101 complete. 102.1–102.4 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1100,7 +1100,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
      - `test_trash_purge_expired` — insert deleted_at 31 days ago, run purge, assert row gone
    - Done when: all 5 pass
 
-▶ [ ] **102.4 — Upload pipeline integration tests**
+[x] **102.4 — Upload pipeline integration tests**
    - `tests/integration/upload_pipeline.rs`:
      - `test_upload_batch_single_file` — call `documents_upload_batch` logic with 1 fixture PDF bytes, assert DB row inserted
      - `test_upload_batch_three_files` — 3 fixtures, assert 3 rows, all share same `batch_upload_id`
@@ -1109,7 +1109,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
      - `test_duplicate_upload_creates_new_row` — same file twice, assert 2 separate rows (no dedup by content)
    - Done when: all 5 pass
 
-[ ] **102.5 — CI: add Rust integration job to `test.yml`**
+▶ [ ] **102.5 — CI: add Rust integration job to `test.yml`**
    - New job `rust-integration` in `.github/workflows/test.yml`
    - Runs on same `ubuntu-22.04` runner as existing `rust` job
    - Step: `cargo test --test integration --manifest-path src-tauri/Cargo.toml`
