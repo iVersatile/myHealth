@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 99 (DEFERRED)
-Task: 99.1 — Research Tauri test harness patterns
-Note: All phases 0–66 complete. Phase 99 is deferred full Tauri binary integration harness.
+Phase: 102
+Task: 102.3 — Entity suggestion integration tests
+Note: All phases 0–66 complete. Phases 100–101 complete. 102.1 and 102.2 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -994,35 +994,145 @@ Gynaecology invoice:
 
 ---
 
-## Phase 99 (DEFERRED) — Full Tauri Binary Test Harness
+---
 
-**Goal:** Set up a proper integration test harness that spins up the actual Tauri binary (not mocked), runs SQL migrations against a real SQLCipher-encrypted database, and exercises Rust commands end-to-end. This is a pre-requisite for full stack E2E without Playwright IPC mocks.
+## Phase 100 — True E2E: tauri-driver + WebdriverIO
 
-**Defer until:** v2.0 or when mock-based E2E coverage is insufficient to catch regressions.
+**Goal:** Drive the actual compiled Tauri binary through WebDriver. Tests exercise the full stack — Rust commands, real SQLCipher DB, real UI rendering — with no IPC mocks.
 
-**Why deferred:** Current hybrid OCR E2E approach (Playwright + invoke mocks) covers the acceptance gate at lower cost. Tauri binary harness requires cross-platform CI test signing, binary builds, and significant boilerplate. Doing it now would block v1.9 shipping.
+**Platform constraint (discovered 2026-05-12):** `tauri-driver` outputs "not supported on this platform" on macOS. WebDriver for WKWebView is Linux-only (webkit2gtk-driver) and Windows-only (WebView2). CI must use `ubuntu-22.04` with webkit2gtk. No local macOS execution — develop tests on Linux CI only.
+
+**Test pyramid position:**
+```
+Playwright + mock  →  fast, 100+ tests, CI every push
+tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch only (ubuntu-22.04)
+```
 
 **Done when:**
-- `cargo test --test integration` in `src-tauri/` spins up Tauri app pointing at an in-memory SQLCipher database
-- Rust commands (`documents_upload_batch`, `documents_extract_suggestions`, `get_draft_entities`, etc.) are exercised without frontend mocks
-- Tests cover the full upload→OCR→draft→accept cycle at the Rust/SQL layer
-- CI job `integration-test` runs on every push to develop
+- `tauri-driver` binary installed; `e2e-tauri/` workspace scaffolded with WebdriverIO
+- `wdio.conf.ts` targets webkit2gtk (Linux); `e2e-tauri/helpers/` provides `launchApp`/`closeApp`/`resetDb`
+- 20 smoke tests written (run + validate in CI)
+- CI job `e2e-tauri` runs on `release/**` branches (ubuntu-22.04 runner)
+- All test artifacts (screenshots, video) uploaded on failure
 
-### Sprint 99 (DEFERRED — do not execute until v2.0)
+### Sprint 100 — Setup
+
+[x] **100.1 — Install tauri-driver + scaffold e2e-tauri/ workspace**
+   - `cargo install tauri-driver` ✅ (2.0.6 installed to ~/.cargo/bin/)
+   - `e2e-tauri/` directory created with isolated `package.json` + npm install ✅
+   - Note: macOS limitation confirmed — `tauri-driver` is Linux/Windows only
+   - `wdio.conf.ts` targets webkit2gtk on Linux; `tsconfig.json` for the workspace
+   - Root `package.json` gains `test:e2e-tauri` script
+   - Done when: wdio.conf.ts + tsconfig.json created; root script wired
+
+[x] **100.2 — Shared helpers and DB reset utility**
+   - `e2e-tauri/helpers/app.ts` — `waitForApp()` / `resetDb()` functions ✅
+   - `e2e-tauri/helpers/selectors.ts` — shared `data-testid` selector constants ✅
+
+[x] **100.3 — CI job: `e2e-tauri` on release branches**
+   - `.github/workflows/e2e-tauri.yml` — new workflow (does NOT run on every push)
+   - Trigger: `push` to `release/**`, manual `workflow_dispatch`
+   - Steps: checkout → Rust toolchain → install webkit2gtk-driver → `cargo build --release` → install tauri-driver → `node node_modules/.bin/wdio wdio.conf.ts`
+   - Runner: `ubuntu-22.04` (webkit2gtk-driver available via `sudo apt-get install webkit2gtk-driver`)
+   - Upload screenshots/video as artifacts on failure
+   - Done when: workflow YAML is valid (checked with `act --dry-run` or yamllint)
+
+### Sprint 101 — Core Smoke Tests (20 tests)
+
+[x] **101.1 — Upload flow smoke (5 tests)**
+   - `TC-WD-01` App launches, documents page loads, upload button visible
+   - `TC-WD-02` Upload single PDF → review step appears with at least 1 tag chip
+   - `TC-WD-03` Confirm upload → document row appears in list
+   - `TC-WD-04` Document row click → detail page loads with filename heading
+   - `TC-WD-05` Search for uploaded document filename → result returned
+   - Done when: all 5 pass against compiled binary
+
+[x] **101.2 — Entity suggestion smoke (5 tests)**
+   - `TC-WD-06` Upload fixture with known contact → contact suggestion card visible in review step
+   - `TC-WD-07` Accept contact suggestion → contact row visible in contacts page
+   - `TC-WD-08` Upload fixture with known clinic → clinic suggestion card visible
+   - `TC-WD-09` Accept clinic suggestion → clinic row visible in clinics page
+   - `TC-WD-10` Upload fixture with appointment_suggestion → appt banner appears after confirm
+   - Done when: all 5 pass
+
+[x] **101.3 — Navigation + keyboard smoke (5 tests)**
+   - `TC-WD-11` All 5 main nav items reachable by click (Documents, Contacts, Clinics, Timeline, Trash)
+   - `TC-WD-12` Tab key cycles through nav items without trapping focus
+   - `TC-WD-13` Escape key closes upload dialog
+   - `TC-WD-14` Timeline page renders at least one tab (Chronological)
+   - `TC-WD-15` Trash page renders empty state when no deleted items
+   - Done when: all 5 pass
+
+[x] **101.4 — Data persistence smoke (5 tests)**
+   - `TC-WD-16` Upload document → quit app → relaunch → document still in list (DB persists)
+   - `TC-WD-17` Accept contact → quit app → relaunch → contact still in contacts page
+   - `TC-WD-18` Delete document → moves to trash → restore → returns to documents list
+   - `TC-WD-19` Edit document activity_date → value persists after page reload
+   - `TC-WD-20` FTS5 search: upload doc with known text → search query returns it
+   - Done when: all 5 pass
+
+### Sprint 102 — Rust Integration Tests (no UI, no mocks)
+
+**Goal:** `cargo test --test integration` exercises Rust commands + SQLCipher directly. No Tauri binary, no frontend. Pure Rust layer verification.
+
+[x] **102.1 — Scaffold `src-tauri/tests/integration/` harness**
+   - `tests/integration/helpers.rs` — `setup_db()` opens in-memory SQLCipher DB (`key="test"`), runs all migrations, returns `Connection`
+   - `tests/integration/mod.rs` — re-exports helpers
+   - Add `[[test]]` entry in `Cargo.toml`: `name = "integration"`, `path = "tests/integration/mod.rs"`
+   - Add `rstest` to `[dev-dependencies]` for parameterised test cases
+   - Done when: `cargo test --test integration` compiles and runs (empty test suite OK)
+
+[x] **102.2 — Document CRUD integration tests**
+   - `tests/integration/documents.rs`:
+     - `test_insert_document_persists` — insert row, query back, assert all fields match
+     - `test_documents_list_returns_all` — insert 3, list, assert count = 3
+     - `test_document_delete_soft` — soft-delete, assert `deleted_at` set, not in list
+     - `test_document_restore` — restore soft-deleted, assert back in list
+     - `test_document_fts5_search` — insert with `extracted_text`, FTS5 query returns it
+   - Done when: all 5 pass with `cargo test --test integration`
+
+▶ [ ] **102.3 — Entity suggestion integration tests**
+   - `tests/integration/entities.rs`:
+     - `test_contacts_upsert_no_dup` — insert same contact twice, assert single row
+     - `test_clinics_insert_and_link` — insert clinic, link to document, query linked
+     - `test_tags_bulk_insert` — insert 5 tags for a document, query back, assert all present
+     - `test_appointment_suggestion_accept` — insert suggestion, accept, assert `appointments` row created
+     - `test_trash_purge_expired` — insert deleted_at 31 days ago, run purge, assert row gone
+   - Done when: all 5 pass
+
+[ ] **102.4 — Upload pipeline integration tests**
+   - `tests/integration/upload_pipeline.rs`:
+     - `test_upload_batch_single_file` — call `documents_upload_batch` logic with 1 fixture PDF bytes, assert DB row inserted
+     - `test_upload_batch_three_files` — 3 fixtures, assert 3 rows, all share same `batch_upload_id`
+     - `test_extract_suggestions_returns_contact` — inject OCR text with doctor name, assert contact_suggestions non-empty
+     - `test_extract_suggestions_returns_tags` — inject OCR text with date, assert date tag extracted
+     - `test_duplicate_upload_creates_new_row` — same file twice, assert 2 separate rows (no dedup by content)
+   - Done when: all 5 pass
+
+[ ] **102.5 — CI: add Rust integration job to `test.yml`**
+   - New job `rust-integration` in `.github/workflows/test.yml`
+   - Runs on same `ubuntu-22.04` runner as existing `rust` job
+   - Step: `cargo test --test integration --manifest-path src-tauri/Cargo.toml`
+   - Requires no `SQLCIPHER_KEY` secret (in-memory DB uses hardcoded test key)
+   - Done when: job green on develop
+
+---
+
+## Phase 99 (DEFERRED) — Full Tauri Binary Test Harness (superseded by Phase 100–102)
+
+**Status:** Superseded. Phase 100 covers tauri-driver E2E; Phase 102 covers Rust integration tests with better scope and CI integration.
+
+### Sprint 99 (DEFERRED — do not execute)
 
 [ ] **99.1 — Research Tauri test harness patterns**
-   - Survey `tauri-plugin-test`, `mockito`, `rstest` fixtures for Tauri v2
-   - Evaluate: in-process test binary vs. spawned binary approach
+   - Superseded by Phase 100.1 and 102.1
    - Done when: approach documented in `docs/ARCHITECTURE.md` §Testing
 
 [ ] **99.2 — Scaffold `src-tauri/tests/integration/` harness**
-   - `tests/integration/mod.rs` — shared setup (open in-memory SQLCipher DB, run all migrations, return `AppState`)
-   - `tests/integration/upload_flow.rs` — uploads a fixture PDF bytes buffer, asserts DB state
+   - Superseded by Phase 102.1
 
 [ ] **99.3 — Port acceptance cases 1–3 to integration tests**
-   - One test per case, no frontend mocks, real Rust extraction against injected OCR text
-   - Assert all DB rows directly (no Playwright)
+   - Superseded by Phase 102.2–102.4
 
 [ ] **99.4 — CI job: `integration-test`**
-   - `.github/workflows/test.yml` → add `cargo test --test integration` step
-   - Requires `SQLCIPHER_KEY` secret in GitHub Actions
+   - Superseded by Phase 102.5
