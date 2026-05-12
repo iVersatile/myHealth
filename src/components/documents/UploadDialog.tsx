@@ -435,8 +435,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? [])
                   const paths = files
-                    .map((f) => (f as File & { path?: string }).path)
-                    .filter((p): p is string => Boolean(p))
+                    .map((f) => (f as File & { path?: string }).path ?? f.name)
+                    .filter(Boolean)
                   if (paths.length > 0) handlePaths(paths)
                   e.target.value = ''
                 }}
@@ -452,8 +452,8 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? [])
                   const paths = files
-                    .map((f) => (f as File & { path?: string }).path)
-                    .filter((p): p is string => Boolean(p))
+                    .map((f) => (f as File & { path?: string }).path ?? f.name)
+                    .filter(Boolean)
                   if (paths.length > 0) handlePaths(paths)
                   e.target.value = ''
                 }}
