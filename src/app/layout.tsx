@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { IdleLockProvider } from "../components/providers/IdleLockProvider";
+import { ThemeInitializer } from "../components/providers/ThemeInitializer";
 
 export const metadata: Metadata = {
   title: "myHealth",
@@ -15,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="calm" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        <ThemeInitializer />
         <IdleLockProvider>{children}</IdleLockProvider>
       </body>
     </html>

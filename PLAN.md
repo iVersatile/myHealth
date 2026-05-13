@@ -8,11 +8,11 @@
 
 ```
 Phase: 103
-Task:  103.1 — Define theme tokens for Calm / Coffee / Mint
+Task:  103.6 — Pre-commit checks + commit
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
-▶ **103.1 — Define theme tokens for Calm / Coffee / Mint**
+▶ **103.4 — Unit test: theme store**
 
 ---
 
@@ -101,35 +101,35 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 
 ### Sprint 103
 
-▶ [ ] **103.1 — Define theme tokens for Calm / Coffee / Mint**
+[x] **103.1 — Define theme tokens for Calm / Coffee / Mint**
    - `src/styles/themes.css` — three sets of CSS custom property overrides (background, surface, accent, text, border)
    - Calm: existing default palette
    - Coffee: warm browns, cream surface, amber accent
    - Mint: cool greens, light surface, teal accent
    - Done when: applying each class to `<html>` visually changes the app without layout shift
 
-[ ] **103.2 — Zustand theme store + localStorage persistence**
+[x] **103.2 — Zustand theme store + localStorage persistence**
    - `src/store/themeStore.ts` — `theme: 'calm' | 'coffee' | 'mint'`, `setTheme(t)` persists to `localStorage`
    - `src/app/layout.tsx` — read store on mount, apply class to `document.documentElement`
    - Done when: `npx tsc --noEmit` passes; refreshing page restores theme
 
-[ ] **103.3 — Theme picker UI**
+[x] **103.3 — Theme picker UI**
    - Add `<ThemePicker />` component (`src/components/ui/ThemePicker.tsx`) — three swatches, active indicator, `data-testid="theme-picker"`
    - Wire into settings page or top-nav header
    - Done when: picker visible and functional in dev
 
-[ ] **103.4 — Unit test: theme store**
+[x] **103.4 — Unit test: theme store**
    - Assert `setTheme('coffee')` updates store and writes to `localStorage`
    - Assert `document.documentElement` class updated
    - Done when: `npx vitest run` passes
 
-[ ] **103.5 — E2E test: theme switcher**
+[x] **103.5 — E2E test: theme switcher**
    - `e2e/theme-switcher.spec.ts`
    - Navigate to picker → click Coffee → assert `<html>` has `theme-coffee` class
    - Reload → assert theme persists
    - Done when: `npx playwright test e2e/theme-switcher.spec.ts` passes
 
-[ ] **103.6 — Pre-commit checks + commit**
+▶ [ ] **103.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: system-wide theme switcher — Calm / Coffee / Mint (Phase 103)`
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { type Theme, SectionTitle, sectionStyle } from './settingsShared'
+import { ThemePicker } from '../../../components/ui/ThemePicker'
 
 export function AppearanceSection() {
   const [theme, setTheme] = useState<Theme>('system')
@@ -64,6 +65,10 @@ export function AppearanceSection() {
           </label>
         ))}
       </div>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 'var(--space-4) 0 var(--space-2)' }}>
+        Color scheme
+      </p>
+      <ThemePicker />
     </div>
   )
 }
