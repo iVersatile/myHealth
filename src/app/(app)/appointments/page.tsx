@@ -158,6 +158,7 @@ export default function AppointmentsPage() {
         {!showForm && (
           <div className="flex items-center gap-2">
             <button
+              data-testid="import-ics-btn"
               type="button"
               onClick={handleIcsImport}
               className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"
@@ -165,6 +166,7 @@ export default function AppointmentsPage() {
               Import .ics
             </button>
             <button
+              data-testid="export-ics-btn"
               type="button"
               onClick={handleIcsExport}
               className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-[var(--text-sm)] font-medium text-[var(--color-text-secondary)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-surface-sunken)]"

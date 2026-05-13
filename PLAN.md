@@ -7,12 +7,12 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 103
-Task:  103.6 — Pre-commit checks + commit
+Phase: 104
+Task:  104.2 — Tauri save-dialog integration for export
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
-▶ **103.4 — Unit test: theme store**
+▶ **104.2 — Tauri save-dialog integration for export**
 
 ---
 
@@ -129,7 +129,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - Reload → assert theme persists
    - Done when: `npx playwright test e2e/theme-switcher.spec.ts` passes
 
-▶ [ ] **103.6 — Pre-commit checks + commit**
+[x] **103.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - Commit: `feat: system-wide theme switcher — Calm / Coffee / Mint (Phase 103)`
 
@@ -147,12 +147,12 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 
 ### Sprint 104
 
-[ ] **104.1 — Add `icalendar` Rust crate; implement export command**
+[x] **104.1 — Add `icalendar` Rust crate; implement export command**
    - `src-tauri/Cargo.toml`: add `icalendar = "0.15"`
    - New command `appointments_export_ics` — query all appointments from SQLite, build `Calendar` object, serialise to `.ics` string, return to frontend
    - Done when: `cargo test` passes with fixture appointment data
 
-[ ] **104.2 — Tauri save-dialog integration for export**
+▶ [ ] **104.2 — Tauri save-dialog integration for export**
    - Frontend: `invoke('appointments_export_ics')` → `dialog::save()` → write file via `fs::write_text_file`
    - Add `data-testid="export-ics-btn"` to button on appointments page
    - Done when: clicking button opens save dialog and writes valid `.ics`
