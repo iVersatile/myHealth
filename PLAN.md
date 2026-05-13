@@ -8,7 +8,7 @@
 
 ```
 Phase: 107
-Task:  107.5 — Profile deletion with confirmation
+Task:  107.6 — Unit + E2E tests
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -308,12 +308,12 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - Validation: name non-empty, passwords match, min 8 chars
    - Done when: creation flow works end-to-end in dev
 
-▶ [ ] **107.5 — Profile deletion with confirmation**
+[x] **107.5 — Profile deletion with confirmation**
    - Delete button on profile item → confirm dialog + password re-entry → `invoke('profiles_delete')` → profile removed from list
    - Warning: "This permanently deletes all data in this profile and cannot be undone."
    - Done when: deletion flow works; `.db` file removed from disk
 
-[ ] **107.6 — Unit + E2E tests**
+▶ [ ] **107.6 — Unit + E2E tests**
    - Unit: mock `invoke('profiles_list')` returning fixture profiles; assert `profile-item` count matches
    - E2E: `e2e/multi-user-vault.spec.ts` — profiles page loads; `new-profile-btn` visible
    - Done when: all tests pass
