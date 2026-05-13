@@ -19,7 +19,6 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       NEXT_PUBLIC_SKIP_AUTH: '1',
-      NEXT_PUBLIC_REDESIGN_A: 'true',
     },
   },
   projects: [

@@ -385,6 +385,116 @@ Draft items appear **inline** on each existing entity page:
 
 ---
 
+## 8. Pre-Release E2E Acceptance Test Cases (v1.9 gate)
+
+> **Purpose:** These 3 real-PDF upload scenarios must pass as automated E2E tests before the v1.9 tag. Each test injects pre-extracted OCR text into the Tauri mock (hybrid OCR strategy) so Tesseract is not required in CI, but the full entity-extraction and draft-creation pipeline runs against real data.
+
+### Case 1 — Single Invoice: auto-tags + appointment + contact/clinic
+
+**Fixture PDF:** `ecg-invoice-london-clinic-2023.pdf`
+
+**Content summary:**
+- Invoice for an ECG test at London Clinic
+- Invoice date: 10 December 2023
+- Service/appointment date: 23 November 2023
+- Doctor is new (not in DB); specialty: cardiology
+
+**Upload flow:** Single-file upload, category = `Medical Invoice`
+
+**Expected outcomes:**
+| # | Outcome | Detail |
+|---|---------|--------|
+| 1 | Document created | `category = "Medical Invoice"` |
+| 2 | Tags from filename | Date tag from upload timestamp in filename |
+| 3 | Tags from content | `ecg`, `cardiology`, `london clinic`, doctor name, invoice date |
+| 4 | Draft contact created | New doctor with `is_draft = 1` |
+| 5 | Draft clinic created | "London Clinic" with `is_draft = 1` |
+| 6 | Appointment suggestion | Date 23 Nov 2023 surfaced in UploadDialog banner |
+| 7 | User accepts appointment | Appointment created with `activity_date = 2023-11-23` |
+| 8 | Draft contact visible | Contacts list shows draft card with Accept/Edit/Reject |
+| 9 | Accept contact | `is_draft` set to `FALSE` |
+
+---
+
+### Case 2 — GP Notes: auto-tags + appointment + contact/clinic + notes entry
+
+**Fixture PDF:** `gp-notes-sharma-2023.pdf`
+
+**Content summary:**
+- GP letter from an existing GP (already in DB)
+- Contains appointment date in document body
+- Includes Assessment / Plan sections for a notes entry
+
+**Upload flow:** Single-file upload, category = `GP Notes`
+
+**Expected outcomes:**
+| # | Outcome | Detail |
+|---|---------|--------|
+| 1 | Document created | `category = "GP Notes"` |
+| 2 | Tags from content | Date, specialty, GP name |
+| 3 | No duplicate contact | Existing GP matched; no new draft contact |
+| 4 | Draft clinic created (if new) | `is_draft = 1` if not already in DB |
+| 5 | Appointment suggestion | Date from document body surfaced |
+| 6 | User accepts appointment | Appointment created, linked to document |
+| 7 | Notes entry created | Note record linked to document with extracted Assessment/Plan text |
+
+---
+
+### Case 3 — Batch Upload (3 docs): draft appointments + contacts + clinics + symptoms + medications
+
+**Fixture PDFs (3 files):**
+
+| File | Content |
+|------|---------|
+| `skin-invoice-2023.pdf` | Invoice from a new skin doctor at a new clinic; contains symptom description and medication prescription |
+| `neurology-scan-letter-2019.pdf` | Letter from neurologist re: brain aneurysm scan on 21 Nov 2019; stable, no size change |
+| `gynaecology-invoice-2023.pdf` | Invoice from a gynaecologist with 3 line items: consultation, smear test, medication |
+
+**Upload flow:** Multi-file select, batch upload (all 3), category = `Medical Invoice`
+
+**Contacts:** 2 new doctors (skin + gynaecologist); 1 existing neurologist already in DB
+
+**Expected outcomes:**
+| # | Outcome | Detail |
+|---|---------|--------|
+| 1 | 3 documents created | Each shares the same `batch_upload_id` |
+| 2 | Skin invoice — draft contact | New skin doctor, `is_draft = 1` |
+| 3 | Skin invoice — draft clinic | New dermatology clinic, `is_draft = 1` |
+| 4 | Skin invoice — draft symptom | Symptom from content, `is_draft = 1` |
+| 5 | Skin invoice — draft medication | Medication from content, `is_draft = 1` |
+| 6 | Skin invoice — draft appointment | Service date from invoice, `is_draft = 1` |
+| 7 | Neurology letter — tags | `aneurysm`, `imaging`, `neurology`, doctor name, clinic name, date |
+| 8 | Neurology letter — draft appointment | Scan date 21 Nov 2019, `is_draft = 1` |
+| 9 | Neurology letter — existing contact | Matched to existing DB record; no new draft |
+| 10 | Gynaecology invoice — tags | `consultation`, `smear test`, `medication` as separate tags |
+| 11 | Gynaecology invoice — draft contact | New gynaecologist, `is_draft = 1` |
+| 12 | Gynaecology invoice — draft clinic | New clinic, `is_draft = 1` |
+| 13 | Draft entities visible | All draft contacts/clinics/symptoms/medications show draft label + Accept/Edit/Reject |
+| 14 | Accept one entity | `is_draft = FALSE`; entity appears in normal list |
+| 15 | Reject one entity | Entity removed from DB |
+
+---
+
+### Hybrid OCR Strategy (all 3 cases)
+
+Real PDF files used as fixtures. In E2E tests, Tesseract OCR is bypassed by injecting pre-extracted text via the Tauri invoke mock — the full Rust entity-extraction and draft-creation pipeline runs against the injected text. Production Tesseract behaviour is covered by manual smoke tests.
+
+---
+
+## 9. Implementation Gaps Identified (Audit 2026-05-12)
+
+> **Source:** Audit of `documents_extract_suggestions` in `src-tauri/src/commands/documents.rs`
+
+| Entity type | Auto-created as draft during OCR? | Gap |
+|---|---|---|
+| contacts | ✅ Yes | — |
+| clinics | ✅ Yes | — |
+| appointments | ✅ Yes — Phase 62 complete (`documents.rs` lines 2586–2611) | — |
+| symptoms | ✅ Yes — Phase 62 complete (`documents.rs` lines 2643–2667) | — |
+| medications | ✅ Yes — Phase 62 complete (`documents.rs` lines 2614–2641) | — |
+
+---
+
 ## 7. Backup Index
 
 | File | Content | Backed up as |

@@ -83,39 +83,44 @@ Note: All phases 0–66 complete. Phases 100–102 complete. No pending tasks.
 | Hardcoded filter tech debt cleanup | Phase 48 | ✅ Phase 48 |
 | OCR text preview in upload review step | Phase 49 | ✅ Phase 49 |
 
-**v1.3b (in progress — Phases 50–62)**
+**v1.3b (SHIPPED — Phases 50–62)**
 
 | Feature | Source | Priority | Effort | Status |
 |---------|--------|----------|--------|--------|
-| PDF summary report export | PRD_V2 Phase 2 | MED | Medium | ⬜ Phase 50 |
-| Batch Document Upload with Draft Entity Flow | PRD §F9 | HIGH | Large | ⬜ Phases 58–62 |
-| UX Redesign — Option A (Multi-Theme Panel Layout) | docs/frontend/redesign-design-A.md | HIGH | Large | ⬜ Phases 51–57 |
+| PDF summary report export | PRD_V2 Phase 2 | MED | Medium | ✅ Phase 50 |
+| Batch Document Upload with Draft Entity Flow | PRD §F9 | HIGH | Large | ✅ Phases 58–62 |
+| UX Redesign — Option A (Multi-Theme Panel Layout) | docs/frontend/redesign-design-A.md | HIGH | Large | ✅ Phases 51–57 |
 
-> **Execution order:** 50 → 58 → 59 → 60 → 61 → 62 → 51 → 52 → 53 → 54 → 55 → 56 → 57
-> Batch upload (58–62) executes before redesign-A (51–57) despite higher phase numbers.
-
-**v1.9 E2E Acceptance Gate (Phases 62–66)**
+**v1.9 E2E Acceptance Gate (SHIPPED — Phases 62–66)**
 
 | Feature | Source | Priority | Effort | Status |
 |---------|--------|----------|--------|--------|
-| Close pipeline gap: auto-draft appointments/symptoms/medications | PRD §8 §9 | HIGH | Medium | ⬜ Phase 62 |
-| Fixture PDFs (5 files, hybrid OCR text embedded) | PRD §8 | HIGH | Small | ⬜ Phase 63 |
+| Close pipeline gap: auto-draft appointments/symptoms/medications | PRD §8 §9 | HIGH | Medium | ✅ Phase 62 |
+| Fixture PDFs (5 files, hybrid OCR text embedded) | PRD §8 | HIGH | Small | ✅ Phase 63 |
 | E2E Case 1 — single invoice, draft entities, accept flow | PRD §8.1 | HIGH | Medium | ✅ Phase 64 |
-| E2E Case 2 — GP notes, no-dup contact, draft clinic, appt | PRD §8.2 | HIGH | Medium | ⬜ Phase 65 |
-| E2E Case 3 — batch 3 docs, all draft entity types | PRD §8.3 | HIGH | Medium | ⬜ Phase 66 |
+| E2E Case 2 — GP notes, no-dup contact, draft clinic, appt | PRD §8.2 | HIGH | Medium | ✅ Phase 65 |
+| E2E Case 3 — batch 3 docs, all draft entity types | PRD §8.3 | HIGH | Medium | ✅ Phase 66 |
 
-**v1.5+ (future)**
+**v1.5 (Phases 103–110)**
 
-| Feature | Source | Priority | Effort |
-|---------|--------|----------|--------|
-| F4.5 Calendar conflict resolution UI | PRD_V2 §F4 | SHOULD | Medium |
-| LLM-assisted extraction (on-device Mistral 7B via llama.cpp) | PRD_V4 | POST-MVP | Large |
-| Outlook Calendar sync (Windows) | PRD_V2 Phase 3 | MED | Large |
-| iCalendar import/export (.ics) | PRD_V2 Phase 3 | MED | Medium |
-| AI appointment notes summarization | PRD_V2 Phase 3 | LOW | Large |
-| Medical code tagging (ICD-10) | PRD_V2 Phase 3 | LOW | Medium |
-| Multi-user vault support | PRD_V2 Phase 3 | LOW | Large |
-| System-wide theme switcher (Calm / Coffee / Mint picker) | redesign-design-A.md §8 | LOW | Small |
+| Feature | Phase | Priority | Effort | Status |
+|---------|-------|----------|--------|--------|
+| **Test Quality & Coverage Hardening** | **110** | **HIGH** | **Medium** | **⬜** |
+| System-wide theme switcher (Calm / Coffee / Mint picker) | 103 | LOW | Small | ⬜ |
+| iCalendar import/export (.ics) | 104 | MED | Medium | ⬜ |
+| Medical code tagging (ICD-10) | 105 | LOW | Medium | ⬜ |
+| F4.5 Calendar conflict resolution UI (read-only display) | 106 | SHOULD | Medium | ⬜ |
+| Multi-user vault support | 107 | LOW | Large | ⬜ |
+| F4.8 + F4.9 Contact extraction: ALLCAPS-surname + role-labelled names | 108 | MED | Small | ⬜ |
+| F3.6 Auto-extract clinical notes from OCR text → pre-fill upload dialog | 109 | MED | Medium | ⬜ |
+
+**v1.6+ (deferred)**
+
+| Feature | Source | Priority | Effort | Status |
+|---------|--------|----------|--------|--------|
+| LLM-assisted extraction (on-device Phi-3-mini Q4 via llama.cpp) | PRD_V4 | POST-MVP | Large | 🔜 DEFERRED |
+| Outlook Calendar sync (Windows, COM automation) | PRD_V2 Phase 3 | MED | Large | 🔜 DEFERRED |
+| AI appointment notes summarization | PRD_V2 Phase 3 | LOW | Large | 🔜 DEFERRED (needs LLM first) |
 
 **Coverage requirement:** ≥ 80% across all new code
 
@@ -1136,3 +1141,452 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
 
 [ ] **99.4 — CI job: `integration-test`**
    - Superseded by Phase 102.5
+
+---
+
+## Phase 103 — System-wide Theme Switcher
+
+**Goal:** Let users pick a visual theme (Calm / Coffee / Mint) that persists across sessions. Redesign-A CSS variable infrastructure already exists; this wires up the picker UI.
+
+**Done when:**
+- Theme picker accessible from settings or top-nav
+- Selecting a theme swaps CSS class on `<html>` and persists to `localStorage`
+- All three themes (Calm, Coffee, Mint) render without contrast or layout regressions
+- Unit test covers store + persistence; E2E test covers picker interaction
+
+### Sprint 103
+
+[ ] **103.1 — Define theme tokens for Calm / Coffee / Mint**
+   - `src/styles/themes.css` — three sets of CSS custom property overrides (background, surface, accent, text, border)
+   - Calm: existing default palette
+   - Coffee: warm browns, cream surface, amber accent
+   - Mint: cool greens, light surface, teal accent
+   - Done when: applying each class to `<html>` visually changes the app without layout shift
+
+[ ] **103.2 — Zustand theme store + localStorage persistence**
+   - `src/store/themeStore.ts` — `theme: 'calm' | 'coffee' | 'mint'`, `setTheme(t)` persists to `localStorage`
+   - `src/app/layout.tsx` — read store on mount, apply class to `document.documentElement`
+   - Done when: `npx tsc --noEmit` passes; refreshing page restores theme
+
+[ ] **103.3 — Theme picker UI**
+   - Add `<ThemePicker />` component (`src/components/ui/ThemePicker.tsx`) — three swatches, active indicator, `data-testid="theme-picker"`
+   - Wire into settings page or top-nav header
+   - Done when: picker visible and functional in dev
+
+[ ] **103.4 — Unit test: theme store**
+   - Assert `setTheme('coffee')` updates store and writes to `localStorage`
+   - Assert `document.documentElement` class updated
+   - Done when: `npx vitest run` passes
+
+[ ] **103.5 — E2E test: theme switcher**
+   - `e2e/theme-switcher.spec.ts`
+   - Navigate to picker → click Coffee → assert `<html>` has `theme-coffee` class
+   - Reload → assert theme persists
+   - Done when: `npx playwright test e2e/theme-switcher.spec.ts` passes
+
+[ ] **103.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - Commit: `feat: system-wide theme switcher — Calm / Coffee / Mint (Phase 103)`
+
+---
+
+## Phase 104 — iCalendar Import / Export (.ics)
+
+**Goal:** Export appointments as a standard `.ics` file; import `.ics` files to create appointments in the local DB. Fully offline — no calendar service API.
+
+**Done when:**
+- "Export Calendar" button on appointments page exports all appointments as `.ics` via Tauri save dialog
+- "Import .ics" button parses a user-selected `.ics` file and creates appointments in SQLite
+- Duplicate detection: skip events already present (match on `uid` or `dtstart + summary`)
+- Unit tests cover serialisation and parsing; E2E covers button visibility
+
+### Sprint 104
+
+[ ] **104.1 — Add `icalendar` Rust crate; implement export command**
+   - `src-tauri/Cargo.toml`: add `icalendar = "0.15"`
+   - New command `appointments_export_ics` — query all appointments from SQLite, build `Calendar` object, serialise to `.ics` string, return to frontend
+   - Done when: `cargo test` passes with fixture appointment data
+
+[ ] **104.2 — Tauri save-dialog integration for export**
+   - Frontend: `invoke('appointments_export_ics')` → `dialog::save()` → write file via `fs::write_text_file`
+   - Add `data-testid="export-ics-btn"` to button on appointments page
+   - Done when: clicking button opens save dialog and writes valid `.ics`
+
+[ ] **104.3 — Import command: parse .ics → insert appointments**
+   - New command `appointments_import_ics(ics_content: String)` — parse with `icalendar` crate
+   - For each `VEVENT`: extract `SUMMARY`, `DTSTART`, `DTEND`, `DESCRIPTION`, `UID`
+   - Duplicate check: skip if row with same `uid` exists; else insert with `source = 'ics_import'`
+   - Return `{ imported: usize, skipped: usize }`
+   - Done when: `cargo test` passes; imports fixture `.ics` without error
+
+[ ] **104.4 — Frontend import UI**
+   - "Import .ics" button → `dialog::open()` filter `.ics` → read file → `invoke('appointments_import_ics')` → toast "X appointments imported, Y skipped"
+   - `data-testid="import-ics-btn"`
+   - Done when: `npx tsc --noEmit` passes
+
+[ ] **104.5 — Unit + E2E tests**
+   - Unit: mock `invoke` for export; assert `.ics` content structure correct
+   - E2E: `e2e/icalendar.spec.ts` — assert `export-ics-btn` and `import-ics-btn` visible on appointments page
+   - Done when: all tests pass
+
+[ ] **104.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: iCalendar .ics import and export (Phase 104)`
+
+---
+
+## Phase 105 — Medical Code Tagging (ICD-10)
+
+**Goal:** Automatically tag extracted diagnoses with ICD-10 codes during OCR processing. Codes stored in SQLite; displayed on document detail. Fully offline — ICD-10 dataset bundled as SQLite table.
+
+**Done when:**
+- ICD-10 lookup table seeded in SQLite migration (≥ 70k codes, code + description)
+- OCR pipeline matches extracted diagnoses against ICD-10 via FTS5 or fuzzy match
+- Matched codes stored in `document_icd10_tags(document_id, code, description, confidence)`
+- Document detail page shows matched codes with `data-testid="icd10-tag"`
+- Unit tests cover matching logic; E2E asserts tags visible on detail page
+
+### Sprint 105
+
+[ ] **105.1 — Bundle ICD-10 dataset as SQLite migration**
+   - Source: CMS ICD-10-CM public domain data (CSV)
+   - Migration creates `icd10_codes(code TEXT PRIMARY KEY, description TEXT)` + FTS5 virtual table `icd10_fts`
+   - Seed script in `scripts/seed-icd10.mjs` — reads CSV, generates SQL migration file
+   - Done when: migration runs cleanly; `SELECT COUNT(*) FROM icd10_codes` ≥ 70000
+
+[ ] **105.2 — Rust matching command `documents_tag_icd10(document_id)`**
+   - Query `extracted_text` for the document
+   - Run FTS5 search on `icd10_fts` for each extracted entity (`diagnoses` array from structured extraction)
+   - Score matches; keep top result per entity if rank > threshold
+   - Insert into `document_icd10_tags`; return matched codes
+   - Done when: `cargo test` passes with fixture text containing known diagnosis terms
+
+[ ] **105.3 — Wire into upload pipeline**
+   - Call `documents_tag_icd10` after structured entity extraction step in `upload_document` command
+   - Done when: uploading a document with diagnosis text auto-populates `document_icd10_tags`
+
+[ ] **105.4 — Document detail UI: ICD-10 tags section**
+   - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
+   - Fetch `document_icd10_tags` via new query `documents_get_icd10_tags(documentId)`
+   - Render as chip list with `data-testid="icd10-tag"` per chip; section `data-testid="icd10-section"`
+   - Hide section if no tags
+   - Done when: `npx tsc --noEmit` passes; tags render correctly in dev
+
+[ ] **105.5 — Unit + E2E tests**
+   - Unit: mock `invoke('documents_get_icd10_tags')` returning fixture codes; assert chips render
+   - E2E: `e2e/icd10-tags.spec.ts` — navigate to document detail; assert `icd10-section` present (or hidden when empty)
+   - Done when: all tests pass
+
+[ ] **105.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: ICD-10 code tagging for extracted diagnoses (Phase 105)`
+
+---
+
+## Phase 106 — Calendar Conflict Resolution UI
+
+**Goal:** Display overlapping appointments with a visual conflict indicator. Users can dismiss or reschedule. Read-only detection only — no write-back to Apple Calendar in this phase.
+
+**Done when:**
+- Appointments page detects time-window overlaps in SQLite (pure SQL, no Apple Calendar reads needed)
+- Conflicting rows shown with `data-testid="conflict-badge"` and highlighted border
+- "Dismiss conflict" button marks pair as acknowledged (`conflicts_dismissed` table)
+- Dismissed conflicts no longer shown as conflicts
+- Unit + E2E tests cover detection and dismiss
+
+### Sprint 106
+
+[ ] **106.1 — SQL conflict detection query**
+   - New Rust command `appointments_list_conflicts` — self-join on `appointments` where `a.start_time < b.end_time AND b.start_time < a.end_time AND a.id != b.id AND a.is_draft = 0`
+   - Return pairs `[(id_a, id_b, title_a, title_b, start_a, start_b)]`
+   - Done when: `cargo test` passes with fixture overlapping appointments
+
+[ ] **106.2 — `conflicts_dismissed` table migration**
+   - Migration: `conflicts_dismissed(id_a TEXT, id_b TEXT, dismissed_at TEXT, PRIMARY KEY(id_a, id_b))`
+   - `appointments_dismiss_conflict(id_a, id_b)` command inserts row
+   - `appointments_list_conflicts` excludes dismissed pairs via LEFT JOIN
+   - Done when: `cargo test` passes
+
+[ ] **106.3 — Conflict UI on appointments page**
+   - `src/app/(app)/appointments/page.tsx` — call `appointments_list_conflicts` on mount
+   - For each conflicting appointment row: add `data-testid="conflict-badge"` chip + highlight class
+   - "Dismiss" button per conflict pair → `invoke('appointments_dismiss_conflict')` → optimistic remove from list
+   - Done when: `npx tsc --noEmit` passes; conflicts render in dev with fixture data
+
+[ ] **106.4 — Unit + E2E tests**
+   - Unit: mock `invoke('appointments_list_conflicts')` returning fixture pair; assert `conflict-badge` visible; click Dismiss → badge gone
+   - E2E: `e2e/calendar-conflicts.spec.ts` — appointments page loads; assert no unhandled JS errors
+   - Done when: all tests pass
+
+[ ] **106.5 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: calendar conflict detection and dismiss UI (Phase 106)`
+
+---
+
+## Phase 107 — Multi-User Vault Support
+
+**Goal:** Support multiple local user profiles, each with their own encrypted SQLite vault and PBKDF2-derived key. Users switch profiles at app start. No network — fully local.
+
+**Done when:**
+- Profile list screen at app launch (or Settings → Switch Profile)
+- Each profile = separate `{profile_id}.db` file under app data dir, encrypted with its own key
+- Creating a profile: choose name + master password → derives key → creates empty vault
+- Switching profile: close current DB connection → open new DB with new key
+- Deleting a profile: requires confirmation + password re-entry; deletes `.db` file permanently
+- All existing features work correctly within a profile
+- Unit tests cover key derivation isolation; E2E covers profile creation and switch flow
+
+### Sprint 107
+
+[ ] **107.1 — Profile metadata store (unencrypted)**
+   - `profiles.json` in app data dir: `[{ id, name, db_path, created_at }]`
+   - New Rust commands: `profiles_list`, `profiles_create(name, password)`, `profiles_delete(id, password)`
+   - `profiles_create`: generate UUID, derive key via PBKDF2-SHA512 + random salt, create `{id}.db`, store salt in `profiles.json`
+   - Done when: `cargo test` passes; profile JSON round-trips correctly
+
+[ ] **107.2 — Dynamic DB connection switching**
+   - Refactor `AppState` in `src-tauri/src/lib.rs`: `db: Mutex<Option<Connection>>` → allow re-open
+   - New command `profiles_switch(id, password)` — close current connection, derive key from stored salt + supplied password, open new DB
+   - All existing commands remain unchanged (read from `state.db`)
+   - Done when: `cargo test` passes; switching profile mid-session works
+
+[ ] **107.3 — Profile selection screen (frontend)**
+   - `src/app/profiles/page.tsx` — list profiles from `profiles_list`; "New Profile" button; click to select
+   - On select: prompt password → `invoke('profiles_switch')` → redirect to `/documents`
+   - `data-testid="profile-list"`, `data-testid="profile-item"`, `data-testid="new-profile-btn"`
+   - Done when: `npx tsc --noEmit` passes; screen renders in dev
+
+[ ] **107.4 — Profile creation dialog**
+   - Modal: name field + password field + confirm password → `invoke('profiles_create')` → close modal → profile appears in list
+   - Validation: name non-empty, passwords match, min 8 chars
+   - Done when: creation flow works end-to-end in dev
+
+[ ] **107.5 — Profile deletion with confirmation**
+   - Delete button on profile item → confirm dialog + password re-entry → `invoke('profiles_delete')` → profile removed from list
+   - Warning: "This permanently deletes all data in this profile and cannot be undone."
+   - Done when: deletion flow works; `.db` file removed from disk
+
+[ ] **107.6 — Unit + E2E tests**
+   - Unit: mock `invoke('profiles_list')` returning fixture profiles; assert `profile-item` count matches
+   - E2E: `e2e/multi-user-vault.spec.ts` — profiles page loads; `new-profile-btn` visible
+   - Done when: all tests pass
+
+[ ] **107.7 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - Commit: `feat: multi-user vault with per-profile encrypted SQLite DB (Phase 107)`
+
+## Phase 108 — Contact Extraction: ALLCAPS Surname + Role-Labelled Names (F4.8 + F4.9)
+
+**Goal:** Improve contact name detection in OCR text by adding two new extraction patterns: (1) ALLCAPS-surname detection (e.g. "Dr John SMITH" → surname = "SMITH"), (2) role-label prefix detection (e.g. "GP: Dr Jane Lee", "Consultant: Mr Ahmed"). Both extend the existing Rust contact extractor in `src-tauri/src/commands/contact.rs`.
+
+**Done when:**
+- `extract_contact_name()` (or equivalent) in `contact.rs` recognises ALLCAPS surname tokens adjacent to a title prefix
+- Role-label prefix pattern ("GP:", "Consultant:", "Physiotherapist:", "Nurse:", "Registrar:") correctly extracts the name that follows
+- Existing contact extraction tests still pass; new unit tests cover both patterns
+- E2E: upload a fixture PDF whose OCR text contains each pattern; assert suggested contact name is correct
+- `cargo fmt` + `cargo clippy -- -D warnings` pass; `npx tsc --noEmit` passes
+
+### Sprint 108
+
+[ ] **108.1 — ALLCAPS surname pattern (Rust)**
+   - In `src-tauri/src/commands/contact.rs` (or `src-tauri/src/extraction/contact.rs`), add regex: title prefix + given name + ALLCAPS token (≥2 uppercase letters, no lowercase)
+   - Example: `r"(?i)\b(Dr|Mr|Mrs|Ms|Prof)\.?\s+[A-Z][a-z]+\s+([A-Z]{2,})\b"` → group 2 is surname
+   - Normalise captured surname to title-case before returning
+   - Done when: unit test `extracts_allcaps_surname` passes
+
+[ ] **108.2 — Role-label prefix pattern (Rust)**
+   - Add regex matching `"<Role>:\s*<title> <name>"` where Role ∈ {GP, Consultant, Physiotherapist, Nurse, Registrar, Specialist, Surgeon}
+   - Example: `r"(?i)\b(GP|Consultant|Physiotherapist|Nurse|Registrar|Specialist|Surgeon)\s*:\s*(Dr|Mr|Mrs|Ms|Prof)\.?\s+([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)*)"` → group 3 is full name
+   - Done when: unit test `extracts_role_labelled_name` passes
+
+[ ] **108.3 — Unit tests**
+   - Add test cases to `src-tauri/tests/contact_extraction.rs` (or inline `#[cfg(test)]` module):
+     - `"Referred by Dr John SMITH"` → name contains "Smith"
+     - `"GP: Dr Jane Lee"` → name = "Jane Lee"
+     - `"Consultant: Mr Ahmed Al-Rashid"` → name = "Ahmed Al-Rashid"
+     - Existing pattern tests unchanged
+   - Done when: `cargo test` passes with new cases
+
+[ ] **108.4 — Fixture PDF + E2E test**
+   - Add a small fixture PDF (or reuse existing) whose text includes ALLCAPS surname and role-label
+   - `e2e/v3-f4-contact-patterns.spec.ts`: upload fixture → assert `[data-testid="contact-suggestion"]` shows correct extracted name
+   - Done when: E2E passes in mock/browser mode
+
+[ ] **108.5 — Pre-commit checks + commit**
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - `npx tsc --noEmit`
+   - Commit: `feat: add ALLCAPS surname and role-label contact extraction patterns (F4.8+F4.9, Phase 108)`
+
+## Phase 109 — Clinical Notes Auto-Extraction (F3.6)
+
+**Goal:** When OCR text contains section headers commonly found in clinical documents ("Notes:", "Assessment:", "Plan:", "Impression:", "Clinical Notes:"), extract the following paragraph and pre-fill the notes textarea in `UploadDialog.tsx`. Extraction runs in Rust alongside existing field extraction and is returned in `ExtractionSuggestions`.
+
+**Done when:**
+- `extract_clinical_notes(text: &str) -> Option<String>` exists in `src-tauri/src/extraction/` (new file or added to existing module)
+- `ExtractionSuggestions` struct in `documents.rs` includes `clinical_notes: Option<String>`
+- `UploadDialog.tsx` pre-fills the notes `<textarea>` when `clinical_notes` is present in the suggestion payload
+- Unit tests cover header detection and paragraph capture; edge cases (no header, empty body) handled
+- E2E: upload fixture with "Assessment:" section → notes textarea pre-filled
+- `cargo fmt` + `cargo clippy -- -D warnings` pass; `npx tsc --noEmit` passes
+
+### Sprint 109
+
+[ ] **109.1 — `extract_clinical_notes` Rust function**
+   - Create or extend `src-tauri/src/extraction/clinical_notes.rs`
+   - Detect headers: `Notes:`, `Assessment:`, `Plan:`, `Impression:`, `Clinical Notes:`, `Findings:` (case-insensitive, may be on their own line or inline)
+   - Capture text from header until next section header or end of text; trim whitespace; truncate at 1000 chars
+   - Return `Some(captured_text)` if ≥10 chars, else `None`
+   - Done when: unit test `extracts_assessment_section` passes
+
+[ ] **109.2 — Wire into `ExtractionSuggestions`**
+   - Add `clinical_notes: Option<String>` field to `ExtractionSuggestions` struct in `src-tauri/src/commands/documents.rs`
+   - Call `extract_clinical_notes(&ocr_text)` and assign to field in the extraction pipeline
+   - Serialises as `"clinicalNotes"` at IPC boundary (snake_case → camelCase auto-conversion)
+   - Done when: `cargo test` passes; `clinical_notes` appears in serialised JSON response
+
+[ ] **109.3 — UploadDialog notes pre-fill (frontend)**
+   - In `src/components/documents/UploadDialog.tsx`, read `suggestions.clinicalNotes` from the extraction response
+   - If present and notes textarea is empty, set its value to `clinicalNotes`
+   - Add `data-testid="notes-textarea"` to the notes field if not already present
+   - Done when: `npx tsc --noEmit` passes; pre-fill visible in dev when fixture text used
+
+[ ] **109.4 — Unit tests (Rust)**
+   - `extracts_assessment_section`: text with "Assessment:\nPatient presents with..." → returns Some containing "Patient presents with..."
+   - `extracts_plan_section`: text with "Plan: Refer to physio" → returns Some
+   - `returns_none_for_no_header`: plain text with no header → returns None
+   - `returns_none_for_empty_body`: "Notes:\n\n" → returns None (< 10 chars)
+   - Done when: `cargo test` passes
+
+[ ] **109.5 — Unit tests (frontend)**
+   - In `src/components/documents/UploadDialog.test.tsx`: mock extraction response with `clinicalNotes: "Patient presents..."` → assert notes textarea value matches
+   - Done when: `npm test` passes
+
+[ ] **109.6 — Fixture PDF + E2E test**
+   - Add or reuse fixture PDF whose OCR text contains "Assessment:" section
+   - `e2e/v3-f3-clinical-notes.spec.ts`: upload fixture → assert `[data-testid="notes-textarea"]` has expected pre-filled value
+   - Done when: E2E passes
+
+[ ] **109.7 — Pre-commit checks + commit**
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - `npx tsc --noEmit`
+   - Commit: `feat: clinical notes auto-extraction from OCR section headers (F3.6, Phase 109)`
+
+---
+
+## Phase 110 — Test Quality & Coverage Hardening
+
+**Goal:** Fix widespread false-confidence test patterns, close critical E2E gaps, eliminate state bleed. Team review (e2e-runner + refactor-cleaner + cavecrew-reviewer) identified these as highest-risk gaps before v1.5 ship.
+
+### Sprint 110 — P0: Fix False-Confidence Assertions (do first — blocks trust)
+
+[ ] **110.1 — Replace `.toBeTruthy()` on RTL queries (35+ occurrences)**
+   - Files: `src/components/documents/DocumentList.test.tsx`, `UploadDialog.test.tsx`, `DoctorSuggestionBanner.test.tsx`, `ApptSuggestionBanner.test.tsx`
+   - Replace all `expect(screen.getByText(...)).toBeTruthy()` → `expect(screen.getByText(...)).toBeInTheDocument()`
+   - Replace all `expect(screen.getByRole(...)).toBeTruthy()` → `expect(screen.getByRole(...)).toBeInTheDocument()`
+   - For text-content assertions: use `.toHaveTextContent(exactString)` not `.toBeTruthy()`
+   - Done when: `npm test` passes; `grep -r "toBeTruthy" src/` returns 0 results in test files
+
+[ ] **110.2 — Add E2E test isolation (beforeEach sessionStorage reset)**
+   - In all 44 files under `e2e/`, add `beforeEach` that calls `page.evaluate(() => sessionStorage.removeItem('tauri_mock_state'))`
+   - If a shared fixture helper already exists in `e2e/fixtures.ts`, add the reset there
+   - Done when: running `npx playwright test --repeat-each=2` shows no state-bleed failures
+
+[ ] **110.3 — Replace `waitForTimeout` with condition waits (8 occurrences)**
+   - `e2e/redesign-A-doc-list.spec.ts:28` — replace with `await expect(locator).toBeVisible()`
+   - `e2e/redesign-A-vault.spec.ts:106, 283` — replace with appropriate `waitFor` or `expect(...).toBeVisible()`
+   - `e2e/v3-acceptance-case2.spec.ts:72` — wait for specific element/state
+   - `e2e/v3-acceptance-case3.spec.ts:153` — wait for specific element/state
+   - `e2e/v3-f3-category-reorder.spec.ts:45, 48, 51, 122` — wait for drag result to settle via element assertion
+   - Done when: `grep -r "waitForTimeout" e2e/` returns 0 results
+
+[ ] **110.4 — Fix brittle `getByText().click()` selectors (2 occurrences)**
+   - `e2e/v3-f3-clinic.spec.ts:30, 47` — replace `page.getByText('JOHN GREEN PHYSIOTHERAPY LTD').click()` with `data-testid` selector; add `data-testid="clinic-row"` to clinic list item in `src/app/(app)/clinics/page.tsx` if missing
+   - `e2e/v3-f8-clinic-contact-creation.spec.ts:77` — replace `page.getByText(personName.trim()).first().click()` with testid-based selector
+   - Done when: both selectors use `data-testid`; E2E passes
+
+### Sprint 110 — P1: Critical Missing Coverage
+
+[ ] **110.5 — Add recurrence + reminders E2E tests**
+   - Create `e2e/recurrence-reminders.spec.ts`
+   - TC-REC-01: create weekly recurring appointment (5 occurrences) → verify 5 cards with recurrence badge
+   - TC-REC-02: delete single occurrence → count drops by 1, others remain
+   - TC-REC-03: delete entire series → all cards removed
+   - TC-REM-01: set two reminder offsets on new appointment → verify both chips visible on detail view
+   - TC-REM-02: reminders tile shows upcoming reminders count
+   - Mock recurrence IPC in `e2e/tauri-mock.js` as needed
+   - Done when: all 5 tests pass in CI
+
+[ ] **110.6 — Add `ClinicSuggestionBanner.test.tsx` (missing entirely)**
+   - Create `src/components/documents/ClinicSuggestionBanner.test.tsx`
+   - Follow same structure as `DoctorSuggestionBanner.test.tsx` (14 test cases pattern)
+   - Cover: renders nothing when no suggestions, renders single candidate, renders multiple, accept callback fires with correct payload, reject callback fires, keyboard navigation
+   - Done when: `npm test` passes; coverage for `ClinicSuggestionBanner.tsx` ≥ 80%
+
+[ ] **110.7 — Add extraction pipeline integration test**
+   - In `src-tauri/tests/integration/`, add `extraction_pipeline.rs`
+   - Test: real fixture PDF text → `run_extraction()` → `ExtractionSuggestions` struct has all fields populated (contact, clinic, tags, dates, clinical_notes)
+   - Test: PDF with no extraction signals → all optional fields are `None`, required fields are empty vec
+   - Done when: `cargo test --test integration` passes
+
+[ ] **110.8 — Draft entity review E2E (expand from skipped tests)**
+   - In `e2e/tauri-mock.js`, add support for seeding draft contacts/clinics/appointments in mock state
+   - In `e2e/draft-entity-review.spec.ts` (or equivalent), unskip and implement:
+     - TC-DRAFT-01: draft contact card visible with accept/reject buttons
+     - TC-DRAFT-02: accept draft → moves to permanent list, no draft badge
+     - TC-DRAFT-03: reject draft → removed, not in permanent list
+   - Done when: 3 draft review tests pass without `test.skip`
+
+### Sprint 110 — P2: Refactor Debt
+
+[ ] **110.9 — Split `UploadDialog.tsx` (1008 lines → < 800)**
+   - Extract upload queue state into `src/hooks/useUploadQueue.ts`
+   - Extract extraction review step into `src/components/documents/UploadReviewStep.tsx`
+   - Main `UploadDialog.tsx` becomes orchestrator < 400 lines
+   - Done when: `npx tsc --noEmit` passes; `wc -l src/components/documents/UploadDialog.tsx` < 800; existing tests still pass
+
+[ ] **110.10 — Split `SettingsPage` (1002 lines → < 800)**
+   - Extract each settings section: `PasswordSection.tsx`, `AutoLockSection.tsx`, `ThemeSection.tsx`, `BackupSection.tsx`
+   - Remove `console.error` calls at lines ~1123, ~1135 (errors surfaced via UI state already)
+   - Done when: `npx tsc --noEmit` passes; `wc -l src/app/(app)/settings/page.tsx` < 800
+
+[ ] **110.11 — Extract shared `SuggestionBanner` base component**
+   - `DoctorSuggestionBanner`, `ApptSuggestionBanner`, `ClinicSuggestionBanner` share ~80% markup
+   - Create `src/components/documents/SuggestionBanner.tsx` with shared card/button structure
+   - Each banner becomes a thin wrapper passing type-specific props
+   - Done when: `npx tsc --noEmit` passes; all 3 banner test suites still pass
+
+[ ] **110.12 — Standardise `ApptSuggestionBanner` colors to CSS variables**
+   - Replace hardcoded `border-blue-200`, `bg-blue-50`, `text-blue-600`, `border-blue-300` with CSS variable equivalents matching other banners
+   - Done when: `grep "blue-" src/components/documents/ApptSuggestionBanner.tsx` returns 0 results
+
+[ ] **110.13 — Remove unused exported types from `UploadDialog.tsx`**
+   - `FileQueueStatus`, `FileQueueItem`, `ExtractedAddress` — exported but never imported elsewhere
+   - Remove `export` keyword from each; keep type definitions for internal use
+   - Done when: `grep -n "^export.*FileQueueStatus\|^export.*FileQueueItem\|^export.*ExtractedAddress" src/components/documents/UploadDialog.tsx` returns 0
+
+### Sprint 110 — P3: Nice-to-Have
+
+[ ] **110.14 — Add Settings page E2E tests**
+   - Create `e2e/settings-theme.spec.ts`
+   - TC-SET-01: navigate to settings, verify theme selector and auto-lock selector visible
+   - TC-SET-02: switch theme light→dark, verify CSS variable updates
+   - TC-SET-03: auto-lock timeout selection persists after page reload
+   - Done when: all 3 tests pass
+
+[ ] **110.15 — Add clinical notes extraction E2E (after Phase 109 lands)**
+   - Create `e2e/clinical-notes-extraction.spec.ts` (depends on Phase 109 complete)
+   - TC-CLIN-01: upload GP notes fixture → notes textarea pre-filled with Assessment/Plan section
+   - TC-CLIN-02: pre-filled notes editable before confirm
+   - TC-CLIN-03: doc without clinical section → notes textarea empty
+   - Done when: all 3 tests pass; Phase 109 must be ✅ first
+
+[ ] **110.16 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all --manifest-path src-tauri/Cargo.toml`
+   - `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+   - Commit: `test: phase 110 — test quality hardening (P0-P3 action list)`
