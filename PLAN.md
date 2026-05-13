@@ -8,8 +8,8 @@
 
 ```
 Phase: 102
-Task: 102.5 — CI: add Rust integration job to test.yml
-Note: All phases 0–66 complete. Phases 100–101 complete. 102.1–102.4 complete.
+Task: COMPLETE — Phase 102 fully done
+Note: All phases 0–66 complete. Phases 100–102 complete. No pending tasks.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1109,7 +1109,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
      - `test_duplicate_upload_creates_new_row` — same file twice, assert 2 separate rows (no dedup by content)
    - Done when: all 5 pass
 
-▶ [ ] **102.5 — CI: add Rust integration job to `test.yml`**
+[x] **102.5 — CI: add Rust integration job to `test.yml`**
    - New job `rust-integration` in `.github/workflows/test.yml`
    - Runs on same `ubuntu-22.04` runner as existing `rust` job
    - Step: `cargo test --test integration --manifest-path src-tauri/Cargo.toml`
