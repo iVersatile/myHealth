@@ -8,7 +8,7 @@
 
 ```
 Phase: 105
-Task:  105.3 — Wire into upload pipeline
+Task:  105.4 — Document detail UI: ICD-10 tags section
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -207,11 +207,11 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - Insert into `document_icd10_tags`; return matched codes
    - Done when: `cargo test` passes with fixture text containing known diagnosis terms
 
-▶ [ ] **105.3 — Wire into upload pipeline**
+[x] **105.3 — Wire into upload pipeline**
    - Call `documents_tag_icd10` after structured entity extraction step in `upload_document` command
    - Done when: uploading a document with diagnosis text auto-populates `document_icd10_tags`
 
-[ ] **105.4 — Document detail UI: ICD-10 tags section**
+▶ [ ] **105.4 — Document detail UI: ICD-10 tags section**
    - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
    - Fetch `document_icd10_tags` via new query `documents_get_icd10_tags(documentId)`
    - Render as chip list with `data-testid="icd10-tag"` per chip; section `data-testid="icd10-section"`

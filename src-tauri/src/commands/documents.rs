@@ -2526,6 +2526,9 @@ pub async fn documents_run_extraction(
             )?;
         }
 
+        // Match diagnosis entities against ICD-10 FTS index
+        let _ = crate::commands::icd10::match_and_store(conn, &id, &result.text);
+
         // Auto-create draft contacts from extraction suggestions
         for c in &contact_dtos {
             let existing_id: Option<String> = conn
