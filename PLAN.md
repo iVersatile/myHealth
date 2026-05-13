@@ -8,8 +8,8 @@
 
 ```
 Phase: 110
-Task: 110.9 — Split UploadDialog.tsx
-Note: 110.1–110.8 complete.
+Task: 110.10 — Split SettingsPage
+Note: 110.1–110.9 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1543,13 +1543,13 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
 
 ### Sprint 110 — P2: Refactor Debt
 
-▶ **110.9 — Split `UploadDialog.tsx` (1008 lines → < 800)**
+[x] **110.9 — Split `UploadDialog.tsx` (1008 lines → < 800)**
    - Extract upload queue state into `src/hooks/useUploadQueue.ts`
    - Extract extraction review step into `src/components/documents/UploadReviewStep.tsx`
    - Main `UploadDialog.tsx` becomes orchestrator < 400 lines
    - Done when: `npx tsc --noEmit` passes; `wc -l src/components/documents/UploadDialog.tsx` < 800; existing tests still pass
 
-[ ] **110.10 — Split `SettingsPage` (1002 lines → < 800)**
+▶ **110.10 — Split `SettingsPage` (1002 lines → < 800)**
    - Extract each settings section: `PasswordSection.tsx`, `AutoLockSection.tsx`, `ThemeSection.tsx`, `BackupSection.tsx`
    - Remove `console.error` calls at lines ~1123, ~1135 (errors surfaced via UI state already)
    - Done when: `npx tsc --noEmit` passes; `wc -l src/app/(app)/settings/page.tsx` < 800
