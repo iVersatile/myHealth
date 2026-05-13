@@ -8,7 +8,7 @@
 
 ```
 Phase: 107
-Task:  107.3 — Profile selection screen (frontend)
+Task:  107.4 — Profile creation dialog
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -297,13 +297,13 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - All existing commands remain unchanged (read from `state.db`)
    - Done when: `cargo test` passes; switching profile mid-session works
 
-▶ [ ] **107.3 — Profile selection screen (frontend)**
+[x] **107.3 — Profile selection screen (frontend)**
    - `src/app/profiles/page.tsx` — list profiles from `profiles_list`; "New Profile" button; click to select
    - On select: prompt password → `invoke('profiles_switch')` → redirect to `/documents`
    - `data-testid="profile-list"`, `data-testid="profile-item"`, `data-testid="new-profile-btn"`
    - Done when: `npx tsc --noEmit` passes; screen renders in dev
 
-[ ] **107.4 — Profile creation dialog**
+▶ [ ] **107.4 — Profile creation dialog**
    - Modal: name field + password field + confirm password → `invoke('profiles_create')` → close modal → profile appears in list
    - Validation: name non-empty, passwords match, min 8 chars
    - Done when: creation flow works end-to-end in dev
