@@ -8,7 +8,7 @@
 
 ```
 Phase: 107
-Task:  107.4 — Profile creation dialog
+Task:  107.5 — Profile deletion with confirmation
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -303,12 +303,12 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - `data-testid="profile-list"`, `data-testid="profile-item"`, `data-testid="new-profile-btn"`
    - Done when: `npx tsc --noEmit` passes; screen renders in dev
 
-▶ [ ] **107.4 — Profile creation dialog**
+[x] **107.4 — Profile creation dialog**
    - Modal: name field + password field + confirm password → `invoke('profiles_create')` → close modal → profile appears in list
    - Validation: name non-empty, passwords match, min 8 chars
    - Done when: creation flow works end-to-end in dev
 
-[ ] **107.5 — Profile deletion with confirmation**
+▶ [ ] **107.5 — Profile deletion with confirmation**
    - Delete button on profile item → confirm dialog + password re-entry → `invoke('profiles_delete')` → profile removed from list
    - Warning: "This permanently deletes all data in this profile and cannot be undone."
    - Done when: deletion flow works; `.db` file removed from disk
