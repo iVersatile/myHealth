@@ -8,8 +8,8 @@
 
 ```
 Phase: 110
-Task: 110.10 — Split SettingsPage
-Note: 110.1–110.9 complete.
+Task: 110.16 — Pre-commit checks + commit
+Note: 110.1–110.14 complete. 110.15 skipped (Phase 109 not landed).
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1549,29 +1549,29 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - Main `UploadDialog.tsx` becomes orchestrator < 400 lines
    - Done when: `npx tsc --noEmit` passes; `wc -l src/components/documents/UploadDialog.tsx` < 800; existing tests still pass
 
-▶ **110.10 — Split `SettingsPage` (1002 lines → < 800)**
+[x] **110.10 — Split `SettingsPage` (1002 lines → < 800)**
    - Extract each settings section: `PasswordSection.tsx`, `AutoLockSection.tsx`, `ThemeSection.tsx`, `BackupSection.tsx`
    - Remove `console.error` calls at lines ~1123, ~1135 (errors surfaced via UI state already)
    - Done when: `npx tsc --noEmit` passes; `wc -l src/app/(app)/settings/page.tsx` < 800
 
-[ ] **110.11 — Extract shared `SuggestionBanner` base component**
+[x] **110.11 — Extract shared `SuggestionBanner` base component**
    - `DoctorSuggestionBanner`, `ApptSuggestionBanner`, `ClinicSuggestionBanner` share ~80% markup
    - Create `src/components/documents/SuggestionBanner.tsx` with shared card/button structure
    - Each banner becomes a thin wrapper passing type-specific props
    - Done when: `npx tsc --noEmit` passes; all 3 banner test suites still pass
 
-[ ] **110.12 — Standardise `ApptSuggestionBanner` colors to CSS variables**
+[x] **110.12 — Standardise `ApptSuggestionBanner` colors to CSS variables**
    - Replace hardcoded `border-blue-200`, `bg-blue-50`, `text-blue-600`, `border-blue-300` with CSS variable equivalents matching other banners
    - Done when: `grep "blue-" src/components/documents/ApptSuggestionBanner.tsx` returns 0 results
 
-[ ] **110.13 — Remove unused exported types from `UploadDialog.tsx`**
+[x] **110.13 — Remove unused exported types from `UploadDialog.tsx`**
    - `FileQueueStatus`, `FileQueueItem`, `ExtractedAddress` — exported but never imported elsewhere
    - Remove `export` keyword from each; keep type definitions for internal use
    - Done when: `grep -n "^export.*FileQueueStatus\|^export.*FileQueueItem\|^export.*ExtractedAddress" src/components/documents/UploadDialog.tsx` returns 0
 
 ### Sprint 110 — P3: Nice-to-Have
 
-[ ] **110.14 — Add Settings page E2E tests**
+[x] **110.14 — Add Settings page E2E tests**
    - Create `e2e/settings-theme.spec.ts`
    - TC-SET-01: navigate to settings, verify theme selector and auto-lock selector visible
    - TC-SET-02: switch theme light→dark, verify CSS variable updates
@@ -1585,7 +1585,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - TC-CLIN-03: doc without clinical section → notes textarea empty
    - Done when: all 3 tests pass; Phase 109 must be ✅ first
 
-[ ] **110.16 — Pre-commit checks + commit**
+▶ **110.16 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all --manifest-path src-tauri/Cargo.toml`
    - `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`

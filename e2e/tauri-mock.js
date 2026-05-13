@@ -34,6 +34,7 @@
       draft_contacts: [],
       draft_clinics: [],
       draft_appointments: [],
+      settings: {},
     };
   }
 
@@ -386,8 +387,16 @@
     if (cmd === 'auth_switch_user') return Promise.resolve(null);
 
     // Settings
-    if (cmd === 'settings_get') return Promise.resolve(null);
-    if (cmd === 'settings_set') return Promise.resolve(null);
+    if (cmd === 'settings_get') {
+      const s = loadState();
+      return Promise.resolve(s.settings[args.key] ?? null);
+    }
+    if (cmd === 'settings_set') {
+      const s = loadState();
+      s.settings[args.key] = args.value;
+      saveState(s);
+      return Promise.resolve(null);
+    }
     if (cmd === 'settings_get_data_dir') return Promise.resolve('/mock/data');
 
     // Calendar

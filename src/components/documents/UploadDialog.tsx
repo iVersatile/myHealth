@@ -11,7 +11,7 @@ import { UploadReviewStep } from './UploadReviewStep'
 import { buildTimelineDescription } from './uploadTypes'
 import type { ContactSuggestion, ClinicSuggestion, ContactPhase, ClinicPhase, FileQueueItem, FileQueueStatus } from './uploadTypes'
 import type { Category } from '../categories/CategoryPicker'
-export type { ExtractedAddress, ClinicSuggestion, ContactSuggestion, FileQueueStatus, FileQueueItem } from './uploadTypes'
+export type { ClinicSuggestion, ContactSuggestion } from './uploadTypes'
 
 interface UploadDialogProps {
   onClose: () => void
