@@ -8,8 +8,8 @@
 
 ```
 Phase: 110
-Task: 110.2 — Add E2E test isolation (beforeEach sessionStorage reset)
-Note: 110.1 complete. Replace toBeTruthy done (266 occurrences). Next: E2E isolation.
+Task: 110.3 — Replace waitForTimeout with condition waits (8 occurrences)
+Note: 110.1–110.2 complete. Next: eliminate flaky timeout-based waits.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1491,12 +1491,12 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - For text-content assertions: use `.toHaveTextContent(exactString)` not `.toBeTruthy()`
    - Done when: `npm test` passes; `grep -r "toBeTruthy" src/` returns 0 results in test files
 
-▶ **110.2 — Add E2E test isolation (beforeEach sessionStorage reset)**
+[x] **110.2 — Add E2E test isolation (beforeEach sessionStorage reset)**
    - In all 44 files under `e2e/`, add `beforeEach` that calls `page.evaluate(() => sessionStorage.removeItem('tauri_mock_state'))`
    - If a shared fixture helper already exists in `e2e/fixtures.ts`, add the reset there
    - Done when: running `npx playwright test --repeat-each=2` shows no state-bleed failures
 
-[ ] **110.3 — Replace `waitForTimeout` with condition waits (8 occurrences)**
+▶ **110.3 — Replace `waitForTimeout` with condition waits (8 occurrences)**
    - `e2e/redesign-A-doc-list.spec.ts:28` — replace with `await expect(locator).toBeVisible()`
    - `e2e/redesign-A-vault.spec.ts:106, 283` — replace with appropriate `waitFor` or `expect(...).toBeVisible()`
    - `e2e/v3-acceptance-case2.spec.ts:72` — wait for specific element/state
