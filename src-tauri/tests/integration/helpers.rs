@@ -9,6 +9,12 @@ pub struct TempDb {
     pub path: PathBuf,
 }
 
+impl Default for TempDb {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TempDb {
     pub fn new() -> Self {
         let path =
