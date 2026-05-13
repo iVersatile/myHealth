@@ -19,7 +19,7 @@
     try {
       const raw = sessionStorage.getItem(STATE_KEY);
       if (raw) return JSON.parse(raw);
-    } catch (_) {}
+    } catch { /* ignore */ }
     return {
       documents: [],
       contacts: [],
@@ -361,7 +361,7 @@
       ocrListeners.forEach((cb) => {
         try {
           cb({ payload });
-        } catch (_) {}
+        } catch { /* ignore */ }
       });
       if (page >= total) clearInterval(interval);
     }, 600);
