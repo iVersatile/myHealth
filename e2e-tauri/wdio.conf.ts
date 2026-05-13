@@ -8,7 +8,7 @@ export const config: WebdriverIO.Config = {
       'tauri:options': {
         application:
           process.env.TAURI_APP_BINARY ??
-          '../src-tauri/target/release/myhealth',
+          '../src-tauri/target/release/app',
       },
     },
   ],
