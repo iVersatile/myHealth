@@ -41,14 +41,10 @@ async function dragTo(
 
   await page.mouse.move(sx, sy)
   await page.mouse.down()
-  // Brief pause so dnd-kit PointerSensor registers the pointerdown
-  await page.waitForTimeout(100)
   for (let i = 1; i <= 20; i++) {
     await page.mouse.move(sx + (tx - sx) * (i / 20), sy + (ty - sy) * (i / 20))
-    await page.waitForTimeout(20)
   }
   await page.mouse.up()
-  await page.waitForTimeout(200)
 }
 
 async function gotoSettings(page: import('@playwright/test').Page) {
@@ -119,7 +115,6 @@ test.describe('V3-F3 — Category drag-to-reorder', () => {
     const gammaEl = page.getByRole('button', { name: /Gamma/ })
     await dragTo(page, alphaEl, gammaEl)
 
-    await page.waitForTimeout(400)
-    expect(reorderCalls.length).toBeGreaterThanOrEqual(1)
+    await expect.poll(() => reorderCalls.length).toBeGreaterThanOrEqual(1)
   })
 })

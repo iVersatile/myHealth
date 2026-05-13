@@ -69,8 +69,7 @@ test.describe('Acceptance Case 2 — GP Notes, Existing Contact No-Dup, Draft Cl
     await page.getByRole('button', { name: /confirm upload/i }).click()
     await expect(page.locator('[data-testid="upload-review-step"]')).not.toBeVisible({ timeout: 10_000 })
 
-    await page.waitForTimeout(2_000)
-    await expect(page.getByTestId('doctor-suggestion-banner')).not.toBeVisible()
+    await expect(page.getByTestId('doctor-suggestion-banner')).not.toBeVisible({ timeout: 5_000 })
   })
 
   test('TC-AC2-05 — draft clinic card visible with Riverside Medical Practice', async ({

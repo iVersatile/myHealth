@@ -74,7 +74,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
 
     await page.goto('/contacts')
     if (personName) {
-      await page.getByText(personName.trim()).first().click()
+      await page.getByTestId('contact-list-item').filter({ hasText: personName.trim() }).click()
     }
     // The contact detail view should show the clinic name
     const clinicField = page.getByTestId('contact-clinic-name')

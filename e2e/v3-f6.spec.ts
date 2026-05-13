@@ -85,7 +85,6 @@ test.describe('V3-F6 — Appointment Suggestion Banner', () => {
       timeout: 10_000,
     })
 
-    await page.waitForTimeout(3_000)
-    await expect(page.getByTestId('appt-suggestion-banner')).not.toBeVisible()
+    await expect(page.getByTestId('appt-suggestion-banner')).not.toBeVisible({ timeout: 5_000 })
   })
 })

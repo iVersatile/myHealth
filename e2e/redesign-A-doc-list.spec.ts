@@ -25,7 +25,6 @@ test.describe('Redesign-A — DocumentListPanel', () => {
   test.skip('TC-R-A-DL-04 — filter bar narrows results in DocumentListPanel', async ({ page }) => {
     await page.goto('/documents')
     await page.getByTestId('filter-search').fill('blood')
-    await page.waitForTimeout(400)
     const rows = page.getByTestId('document-row')
     await expect(rows.first()).toBeVisible()
   })

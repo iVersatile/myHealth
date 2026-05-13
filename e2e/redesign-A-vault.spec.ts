@@ -103,7 +103,6 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
   test('TC-A-05 — tooltip appears on rail button hover after 400ms', async ({ page }) => {
     await page.goto('/documents')
     await page.getByTestId('nav-rail').getByRole('button').first().hover()
-    await page.waitForTimeout(450)
     await expect(page.locator('[role="tooltip"]')).toBeVisible()
   })
 
@@ -280,7 +279,6 @@ test.describe('Redesign-A — Dark Vault Layout', () => {
   test('TC-A-24 — tooltip has role=tooltip and aria-describedby wired', async ({ page }) => {
     await page.goto('/documents')
     await page.getByTestId('nav-rail').getByRole('button').first().hover()
-    await page.waitForTimeout(450)
     const tooltip = page.locator('[role="tooltip"]')
     await expect(tooltip).toBeVisible()
     const id = await tooltip.getAttribute('id')
