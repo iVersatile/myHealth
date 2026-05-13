@@ -5,8 +5,8 @@ export const config: WebdriverIO.Config = {
   capabilities: [
     {
       browserName: 'wry',
-      'wry:options': {
-        binary:
+      'tauri:options': {
+        application:
           process.env.TAURI_APP_BINARY ??
           '../src-tauri/target/release/myhealth',
       },
