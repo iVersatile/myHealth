@@ -8,7 +8,7 @@
 
 ```
 Phase: 109
-Task: 109.7 — Pre-commit checks + commit
+Task: COMPLETE — all phases done through 110.16
 Note: Phase 110 complete (110.15 deferred until Phase 109 done). Now on Phase 109.
 ```
 
@@ -1471,7 +1471,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - `e2e/v3-f3-clinical-notes.spec.ts`: upload fixture → assert `[data-testid="notes-textarea"]` has expected pre-filled value
    - Done when: E2E passes
 
-▶ **109.7 — Pre-commit checks + commit**
+[x] **109.7 — Pre-commit checks + commit**
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx tsc --noEmit`
    - Commit: `feat: clinical notes auto-extraction from OCR section headers (F3.6, Phase 109)`
@@ -1578,7 +1578,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - TC-SET-03: auto-lock timeout selection persists after page reload
    - Done when: all 3 tests pass
 
-[ ] **110.15 — Add clinical notes extraction E2E (after Phase 109 lands)**
+[x] **110.15 — Add clinical notes extraction E2E (after Phase 109 lands)**
    - Create `e2e/clinical-notes-extraction.spec.ts` (depends on Phase 109 complete)
    - TC-CLIN-01: upload GP notes fixture → notes textarea pre-filled with Assessment/Plan section
    - TC-CLIN-02: pre-filled notes editable before confirm
