@@ -31,6 +31,9 @@
       symptoms: [],
       medications: [],
       entity_links: [],
+      draft_contacts: [],
+      draft_clinics: [],
+      draft_appointments: [],
     };
   }
 
@@ -1474,7 +1477,80 @@
     }
 
     if (cmd === 'get_draft_entities') {
-      return Promise.resolve([]);
+      const entityType = args?.entityType || args?.entity_type;
+      let drafts = [];
+      if (entityType === 'contact') drafts = state.draft_contacts || [];
+      else if (entityType === 'clinic') drafts = state.draft_clinics || [];
+      else if (entityType === 'appointment') drafts = state.draft_appointments || [];
+      return Promise.resolve(drafts);
+    }
+
+    if (cmd === 'accept_draft_entity') {
+      const entityType = args?.entityType || args?.entity_type;
+      const id = args?.id;
+      if (entityType === 'contact') {
+        const idx = state.draft_contacts.findIndex((d) => d.id === id);
+        if (idx !== -1) {
+          const draft = state.draft_contacts.splice(idx, 1)[0];
+          const permanent = { ...draft, id: draft.id, _deleted: false };
+          delete permanent.entity_type;
+          delete permanent.source_document_id;
+          state.contacts.push(permanent);
+        }
+      } else if (entityType === 'clinic') {
+        const idx = state.draft_clinics.findIndex((d) => d.id === id);
+        if (idx !== -1) {
+          const draft = state.draft_clinics.splice(idx, 1)[0];
+          const permanent = { ...draft, _deleted: false };
+          delete permanent.entity_type;
+          delete permanent.source_document_id;
+          state.clinics.push(permanent);
+        }
+      } else if (entityType === 'appointment') {
+        const idx = state.draft_appointments.findIndex((d) => d.id === id);
+        if (idx !== -1) {
+          const draft = state.draft_appointments.splice(idx, 1)[0];
+          const permanent = { ...draft, _deleted: false };
+          delete permanent.entity_type;
+          delete permanent.source_document_id;
+          state.appointments.push(permanent);
+        }
+      }
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'reject_draft_entity') {
+      const entityType = args?.entityType || args?.entity_type;
+      const id = args?.id;
+      if (entityType === 'contact') {
+        state.draft_contacts = (state.draft_contacts || []).filter((d) => d.id !== id);
+      } else if (entityType === 'clinic') {
+        state.draft_clinics = (state.draft_clinics || []).filter((d) => d.id !== id);
+      } else if (entityType === 'appointment') {
+        state.draft_appointments = (state.draft_appointments || []).filter((d) => d.id !== id);
+      }
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    if (cmd === '__seed_draft_entity') {
+      // Test-only: inject a draft row into the appropriate draft array.
+      // args: { entityType: 'contact'|'clinic'|'appointment', draft: DraftEntityRow }
+      const entityType = args?.entityType;
+      const draft = args?.draft;
+      if (entityType === 'contact') {
+        state.draft_contacts = state.draft_contacts || [];
+        state.draft_contacts.push(draft);
+      } else if (entityType === 'clinic') {
+        state.draft_clinics = state.draft_clinics || [];
+        state.draft_clinics.push(draft);
+      } else if (entityType === 'appointment') {
+        state.draft_appointments = state.draft_appointments || [];
+        state.draft_appointments.push(draft);
+      }
+      saveState(state);
+      return Promise.resolve(null);
     }
 
     // Unknown command — log and resolve null

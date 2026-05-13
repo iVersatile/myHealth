@@ -8,8 +8,8 @@
 
 ```
 Phase: 110
-Task: 110.8 — Draft entity review E2E
-Note: 110.1–110.7 complete.
+Task: 110.9 — Split UploadDialog.tsx
+Note: 110.1–110.8 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1533,7 +1533,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - Test: PDF with no extraction signals → all optional fields are `None`, required fields are empty vec
    - Done when: `cargo test --test integration` passes
 
-▶ **110.8 — Draft entity review E2E (expand from skipped tests)**
+[x] **110.8 — Draft entity review E2E (expand from skipped tests)**
    - In `e2e/tauri-mock.js`, add support for seeding draft contacts/clinics/appointments in mock state
    - In `e2e/draft-entity-review.spec.ts` (or equivalent), unskip and implement:
      - TC-DRAFT-01: draft contact card visible with accept/reject buttons
@@ -1543,7 +1543,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
 
 ### Sprint 110 — P2: Refactor Debt
 
-[ ] **110.9 — Split `UploadDialog.tsx` (1008 lines → < 800)**
+▶ **110.9 — Split `UploadDialog.tsx` (1008 lines → < 800)**
    - Extract upload queue state into `src/hooks/useUploadQueue.ts`
    - Extract extraction review step into `src/components/documents/UploadReviewStep.tsx`
    - Main `UploadDialog.tsx` becomes orchestrator < 400 lines
