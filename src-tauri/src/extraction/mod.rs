@@ -1,5 +1,6 @@
 pub mod category;
 pub mod clinic;
+pub mod clinical_notes;
 pub mod contact;
 pub mod doctor;
 pub mod entities;
@@ -7,6 +8,7 @@ pub mod ocr;
 pub mod pdf;
 pub mod tags;
 
+pub use clinical_notes::extract_clinical_notes;
 pub use contact::ContactSuggestion;
 pub use tags::{auto_extract_tags, extract_activity_date};
 

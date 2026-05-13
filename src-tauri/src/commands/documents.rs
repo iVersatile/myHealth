@@ -2312,6 +2312,7 @@ pub struct ExtractionSuggestions {
     pub auto_tags: Vec<String>,
     pub activity_date: Option<String>,
     pub extracted_text_preview: Option<String>,
+    pub clinical_notes: Option<String>,
 }
 
 #[tauri::command]
@@ -2385,6 +2386,7 @@ pub async fn documents_run_extraction(
                     Some(trimmed.chars().take(400).collect::<String>())
                 }
             };
+            let clinical_notes = crate::extraction::extract_clinical_notes(&text);
             return Ok(ExtractionSuggestions {
                 doctor_candidates,
                 category_suggestion,
@@ -2394,6 +2396,7 @@ pub async fn documents_run_extraction(
                 auto_tags,
                 activity_date,
                 extracted_text_preview,
+                clinical_notes,
             });
         }
     }
@@ -2692,6 +2695,7 @@ pub async fn documents_run_extraction(
             Some(trimmed.chars().take(400).collect::<String>())
         }
     };
+    let clinical_notes = crate::extraction::extract_clinical_notes(&result.text);
     Ok(ExtractionSuggestions {
         doctor_candidates: result.doctor_candidates,
         category_suggestion: result.category_suggestion,
@@ -2701,6 +2705,7 @@ pub async fn documents_run_extraction(
         auto_tags,
         activity_date: Some(resolved_activity_date),
         extracted_text_preview,
+        clinical_notes,
     })
 }
 

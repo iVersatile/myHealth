@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 110
-Task: 110.16 — Pre-commit checks + commit
-Note: 110.1–110.14 complete. 110.15 skipped (Phase 109 not landed).
+Phase: 109
+Task: 109.7 — Pre-commit checks + commit
+Note: Phase 110 complete (110.15 deferred until Phase 109 done). Now on Phase 109.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1436,42 +1436,42 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
 
 ### Sprint 109
 
-[ ] **109.1 — `extract_clinical_notes` Rust function**
+[x] **109.1 — `extract_clinical_notes` Rust function**
    - Create or extend `src-tauri/src/extraction/clinical_notes.rs`
    - Detect headers: `Notes:`, `Assessment:`, `Plan:`, `Impression:`, `Clinical Notes:`, `Findings:` (case-insensitive, may be on their own line or inline)
    - Capture text from header until next section header or end of text; trim whitespace; truncate at 1000 chars
    - Return `Some(captured_text)` if ≥10 chars, else `None`
    - Done when: unit test `extracts_assessment_section` passes
 
-[ ] **109.2 — Wire into `ExtractionSuggestions`**
+[x] **109.2 — Wire into `ExtractionSuggestions`**
    - Add `clinical_notes: Option<String>` field to `ExtractionSuggestions` struct in `src-tauri/src/commands/documents.rs`
    - Call `extract_clinical_notes(&ocr_text)` and assign to field in the extraction pipeline
    - Serialises as `"clinicalNotes"` at IPC boundary (snake_case → camelCase auto-conversion)
    - Done when: `cargo test` passes; `clinical_notes` appears in serialised JSON response
 
-[ ] **109.3 — UploadDialog notes pre-fill (frontend)**
+[x] **109.3 — UploadDialog notes pre-fill (frontend)**
    - In `src/components/documents/UploadDialog.tsx`, read `suggestions.clinicalNotes` from the extraction response
    - If present and notes textarea is empty, set its value to `clinicalNotes`
    - Add `data-testid="notes-textarea"` to the notes field if not already present
    - Done when: `npx tsc --noEmit` passes; pre-fill visible in dev when fixture text used
 
-[ ] **109.4 — Unit tests (Rust)**
+[x] **109.4 — Unit tests (Rust)**
    - `extracts_assessment_section`: text with "Assessment:\nPatient presents with..." → returns Some containing "Patient presents with..."
    - `extracts_plan_section`: text with "Plan: Refer to physio" → returns Some
    - `returns_none_for_no_header`: plain text with no header → returns None
    - `returns_none_for_empty_body`: "Notes:\n\n" → returns None (< 10 chars)
    - Done when: `cargo test` passes
 
-[ ] **109.5 — Unit tests (frontend)**
+[x] **109.5 — Unit tests (frontend)**
    - In `src/components/documents/UploadDialog.test.tsx`: mock extraction response with `clinicalNotes: "Patient presents..."` → assert notes textarea value matches
    - Done when: `npm test` passes
 
-[ ] **109.6 — Fixture PDF + E2E test**
+[x] **109.6 — Fixture PDF + E2E test**
    - Add or reuse fixture PDF whose OCR text contains "Assessment:" section
    - `e2e/v3-f3-clinical-notes.spec.ts`: upload fixture → assert `[data-testid="notes-textarea"]` has expected pre-filled value
    - Done when: E2E passes
 
-[ ] **109.7 — Pre-commit checks + commit**
+▶ **109.7 — Pre-commit checks + commit**
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx tsc --noEmit`
    - Commit: `feat: clinical notes auto-extraction from OCR section headers (F3.6, Phase 109)`
@@ -1585,7 +1585,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - TC-CLIN-03: doc without clinical section → notes textarea empty
    - Done when: all 3 tests pass; Phase 109 must be ✅ first
 
-▶ **110.16 — Pre-commit checks + commit**
+[x] **110.16 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all --manifest-path src-tauri/Cargo.toml`
    - `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`

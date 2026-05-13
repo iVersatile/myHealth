@@ -753,6 +753,34 @@ describe('UploadDialog', () => {
     expect(notesTextarea.value).toBe('')
   })
 
+  it('pre-fills notes textarea when extraction returns clinical_notes', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [],
+        category_suggestion: null,
+        document_tags: [],
+        auto_tags: [],
+        contact_suggestions: [],
+        extracted_text_preview: null,
+        clinical_notes: 'Patient presents with mild hypertension.',
+      })
+      if (cmd === 'documents_update') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_tags_set') return Promise.resolve(undefined)
+      if (cmd === 'documents_get') return Promise.resolve(fakeDoc)
+      if (cmd === 'documents_delete') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await pickFileAndReachReview()
+    await waitFor(() => {
+      const textarea = screen.getByTestId('notes-textarea') as HTMLTextAreaElement
+      expect(textarea.value).toBe('Patient presents with mild hypertension.')
+    })
+  })
+
   it('does not show OCR extracted text preview block when extraction returns null', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()

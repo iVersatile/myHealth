@@ -558,6 +558,7 @@ export function UploadReviewStep({
         </label>
         <textarea
           id="upload-notes"
+          data-testid="notes-textarea"
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}

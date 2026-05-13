@@ -237,6 +237,7 @@
       activity_date: '2023-09-15',
       appointment_suggestion: { date: '2023-09-15', type: 'General Practice' },
       extracted_text_preview: 'GP Consultation Notes. Date: 15/09/2023. Provider: Dr Priya Sharma.',
+      clinical_notes: 'Likely iron-deficiency anaemia. FBC requested.',
     },
     'skin-invoice-2023.pdf': {
       contact_suggestions: [],
