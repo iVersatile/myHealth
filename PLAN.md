@@ -8,7 +8,7 @@
 
 ```
 Phase: 107
-Task:  107.7 — Pre-commit checks + commit
+Task:  108.1 — ALLCAPS surname pattern (Rust)
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -318,7 +318,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - E2E: `e2e/multi-user-vault.spec.ts` — profiles page loads; `new-profile-btn` visible
    - Done when: all tests pass
 
-▶ [ ] **107.7 — Pre-commit checks + commit**
+[x] **107.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: multi-user vault with per-profile encrypted SQLite DB (Phase 107)`
@@ -338,7 +338,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 
 ### Sprint 108
 
-[ ] **108.1 — ALLCAPS surname pattern (Rust)**
+▶ [ ] **108.1 — ALLCAPS surname pattern (Rust)**
    - In `src-tauri/src/commands/contact.rs` (or `src-tauri/src/extraction/contact.rs`), add regex: title prefix + given name + ALLCAPS token (≥2 uppercase letters, no lowercase)
    - Example: `r"(?i)\b(Dr|Mr|Mrs|Ms|Prof)\.?\s+[A-Z][a-z]+\s+([A-Z]{2,})\b"` → group 2 is surname
    - Normalise captured surname to title-case before returning
