@@ -8,8 +8,8 @@
 
 ```
 Phase: 110
-Task: 110.7 — Add extraction pipeline integration test
-Note: 110.1–110.6 complete.
+Task: 110.8 — Draft entity review E2E
+Note: 110.1–110.7 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1527,13 +1527,13 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - Cover: renders nothing when no suggestions, renders single candidate, renders multiple, accept callback fires with correct payload, reject callback fires, keyboard navigation
    - Done when: `npm test` passes; coverage for `ClinicSuggestionBanner.tsx` ≥ 80%
 
-▶ **110.7 — Add extraction pipeline integration test**
+[x] **110.7 — Add extraction pipeline integration test**
    - In `src-tauri/tests/integration/`, add `extraction_pipeline.rs`
    - Test: real fixture PDF text → `run_extraction()` → `ExtractionSuggestions` struct has all fields populated (contact, clinic, tags, dates, clinical_notes)
    - Test: PDF with no extraction signals → all optional fields are `None`, required fields are empty vec
    - Done when: `cargo test --test integration` passes
 
-[ ] **110.8 — Draft entity review E2E (expand from skipped tests)**
+▶ **110.8 — Draft entity review E2E (expand from skipped tests)**
    - In `e2e/tauri-mock.js`, add support for seeding draft contacts/clinics/appointments in mock state
    - In `e2e/draft-entity-review.spec.ts` (or equivalent), unskip and implement:
      - TC-DRAFT-01: draft contact card visible with accept/reject buttons
