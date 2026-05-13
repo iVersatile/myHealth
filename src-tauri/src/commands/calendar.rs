@@ -338,16 +338,23 @@ pub fn calendar_event_delete(id: String, state: State<'_, AppState>) -> Result<(
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+pub struct IcsImportResult {
+    pub imported: usize,
+    pub skipped: usize,
+}
+
 fn import_from_ics_content(
     conn: &rusqlite::Connection,
     content: &str,
-) -> Result<usize, CommandError> {
+) -> Result<IcsImportResult, CommandError> {
     use icalendar::{CalendarComponent, Component, EventLike};
     let calendar: icalendar::Calendar = content
         .parse()
         .map_err(|_| CommandError::Internal("failed to parse .ics file".into()))?;
     let now = Utc::now().to_rfc3339();
     let mut imported = 0usize;
+    let mut skipped = 0usize;
     for component in &calendar.components {
         let CalendarComponent::Event(event) = component else {
             continue;
@@ -375,6 +382,7 @@ fn import_from_ics_content(
                 )
                 .unwrap_or(0);
             if exists > 0 {
+                skipped += 1;
                 continue;
             }
         }
@@ -389,7 +397,7 @@ fn import_from_ics_content(
         )?;
         imported += 1;
     }
-    Ok(imported)
+    Ok(IcsImportResult { imported, skipped })
 }
 
 fn ics_event_start_rfc3339(event: &icalendar::Event) -> Option<String> {
@@ -463,7 +471,7 @@ fn export_to_ics_content(
 pub fn icalendar_import(
     file_path: String,
     state: State<'_, AppState>,
-) -> Result<usize, CommandError> {
+) -> Result<IcsImportResult, CommandError> {
     let content = std::fs::read_to_string(&file_path)
         .map_err(|e| CommandError::Internal(format!("failed to read file: {e}")))?;
     let guard = state
@@ -1074,8 +1082,9 @@ mod tests {
     fn ics_import_creates_appointments() {
         let conn = open_test_db();
         let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:test-uid-001@example.com\r\nSUMMARY:Cardiology Follow-up\r\nDTSTART:20251015T090000Z\r\nLOCATION:City Hospital\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
-        let count = import_from_ics_content(&conn, ics).unwrap();
-        assert_eq!(count, 1);
+        let result = import_from_ics_content(&conn, ics).unwrap();
+        assert_eq!(result.imported, 1);
+        assert_eq!(result.skipped, 0);
         let (title, location): (String, Option<String>) = conn
             .query_row("SELECT title, location FROM appointments", [], |r| {
                 Ok((r.get(0)?, r.get(1)?))
@@ -1090,9 +1099,11 @@ mod tests {
         let conn = open_test_db();
         let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:dup-uid-001@example.com\r\nSUMMARY:Duplicate Event\r\nDTSTART:20251015T090000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
         let first = import_from_ics_content(&conn, ics).unwrap();
-        assert_eq!(first, 1);
+        assert_eq!(first.imported, 1);
+        assert_eq!(first.skipped, 0);
         let second = import_from_ics_content(&conn, ics).unwrap();
-        assert_eq!(second, 0);
+        assert_eq!(second.imported, 0);
+        assert_eq!(second.skipped, 1);
         let count: i64 = conn
             .query_row("SELECT COUNT(*) FROM appointments", [], |r| r.get(0))
             .unwrap();

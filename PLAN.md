@@ -8,11 +8,11 @@
 
 ```
 Phase: 104
-Task:  104.2 — Tauri save-dialog integration for export
+Task:  104.6 — Pre-commit checks + commit
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
-▶ **104.2 — Tauri save-dialog integration for export**
+▶ **104.5 — Unit + E2E tests**
 
 ---
 
@@ -152,29 +152,29 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - New command `appointments_export_ics` — query all appointments from SQLite, build `Calendar` object, serialise to `.ics` string, return to frontend
    - Done when: `cargo test` passes with fixture appointment data
 
-▶ [ ] **104.2 — Tauri save-dialog integration for export**
+[x] **104.2 — Tauri save-dialog integration for export**
    - Frontend: `invoke('appointments_export_ics')` → `dialog::save()` → write file via `fs::write_text_file`
    - Add `data-testid="export-ics-btn"` to button on appointments page
    - Done when: clicking button opens save dialog and writes valid `.ics`
 
-[ ] **104.3 — Import command: parse .ics → insert appointments**
+[x] **104.3 — Import command: parse .ics → insert appointments**
    - New command `appointments_import_ics(ics_content: String)` — parse with `icalendar` crate
    - For each `VEVENT`: extract `SUMMARY`, `DTSTART`, `DTEND`, `DESCRIPTION`, `UID`
    - Duplicate check: skip if row with same `uid` exists; else insert with `source = 'ics_import'`
    - Return `{ imported: usize, skipped: usize }`
    - Done when: `cargo test` passes; imports fixture `.ics` without error
 
-[ ] **104.4 — Frontend import UI**
+[x] **104.4 — Frontend import UI**
    - "Import .ics" button → `dialog::open()` filter `.ics` → read file → `invoke('appointments_import_ics')` → toast "X appointments imported, Y skipped"
    - `data-testid="import-ics-btn"`
    - Done when: `npx tsc --noEmit` passes
 
-[ ] **104.5 — Unit + E2E tests**
+[x] **104.5 — Unit + E2E tests**
    - Unit: mock `invoke` for export; assert `.ics` content structure correct
    - E2E: `e2e/icalendar.spec.ts` — assert `export-ics-btn` and `import-ics-btn` visible on appointments page
    - Done when: all tests pass
 
-[ ] **104.6 — Pre-commit checks + commit**
+▶ [ ] **104.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: iCalendar .ics import and export (Phase 104)`

@@ -126,8 +126,9 @@ export default function AppointmentsPage() {
         filters: [{ name: 'iCalendar', extensions: ['ics'] }],
       })
       if (!filePath) return
-      const count = await invoke<number>(IPC.icalendarImport, { filePath })
-      setIcsMessage(`Imported ${count} appointment${count === 1 ? '' : 's'}.`)
+      const result = await invoke<{ imported: number; skipped: number }>(IPC.icalendarImport, { filePath })
+      const { imported, skipped } = result
+      setIcsMessage(`Imported ${imported} appointment${imported === 1 ? '' : 's'}${skipped > 0 ? `, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''}.`)
     } catch (e) {
       setIcsMessage(`Import failed: ${e}`)
     }
