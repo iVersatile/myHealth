@@ -1,3 +1,4 @@
+import path from 'path'
 import { waitForApp } from '../helpers/app'
 import { SEL } from '../helpers/selectors'
 
@@ -19,7 +20,7 @@ describe('Upload flow (TC-WD-01 – TC-WD-05)', () => {
     const dialog = await $(SEL.uploadDialog)
     await dialog.waitForDisplayed({ timeout: 5_000 })
 
-    const fixturePath = require('path').resolve(
+    const fixturePath = path.resolve(
       __dirname,
       '../../src-tauri/tests/fixtures/medical-invoice.pdf'
     )

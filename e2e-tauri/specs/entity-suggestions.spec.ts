@@ -1,7 +1,8 @@
+import path from 'path'
 import { waitForApp } from '../helpers/app'
 import { SEL } from '../helpers/selectors'
 
-const FIXTURE_INVOICE = require('path').resolve(
+const FIXTURE_INVOICE = path.resolve(
   __dirname,
   '../../src-tauri/tests/fixtures/medical-invoice.pdf'
 )
