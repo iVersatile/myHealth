@@ -59,6 +59,19 @@ jobs:
       - name: Install e2e-tauri deps
         run: cd e2e-tauri && npm ci
 
+      - name: Debug environment
+        run: |
+          echo "=== Release binaries ==="
+          ls -la src-tauri/target/release/ | grep -v '^\(total\|dr\)' | head -30
+          echo "=== WebKitWebDriver ==="
+          which WebKitWebDriver 2>/dev/null || echo "NOT IN PATH"
+          WebKitWebDriver --version 2>/dev/null || echo "NO VERSION"
+          echo "=== tauri-driver ==="
+          tauri-driver --version 2>/dev/null || echo "NOT FOUND"
+          echo "=== TAURI_APP_BINARY ==="
+          echo "$PWD/src-tauri/target/release/app"
+          ls -la "$PWD/src-tauri/target/release/app" 2>/dev/null || echo "BINARY NOT FOUND"
+
       - name: Run WebdriverIO smoke tests
         run: |
           export DISPLAY=:99
