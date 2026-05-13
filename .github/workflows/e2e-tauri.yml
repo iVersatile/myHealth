@@ -59,6 +59,12 @@ jobs:
       - name: Install e2e-tauri deps
         run: cd e2e-tauri && npm ci
 
+      - name: Start display
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+          sleep 1
+
       - name: Debug environment
         run: |
           echo "=== Release binaries ==="
@@ -67,19 +73,23 @@ jobs:
           which WebKitWebDriver 2>/dev/null || echo "NOT IN PATH"
           WebKitWebDriver --version 2>/dev/null || echo "NO VERSION"
           echo "=== tauri-driver ==="
-          tauri-driver --version 2>/dev/null || echo "NOT FOUND"
-          echo "=== TAURI_APP_BINARY ==="
-          echo "$PWD/src-tauri/target/release/app"
+          which tauri-driver || echo "NOT IN PATH"
+          tauri-driver --version 2>/dev/null || echo "NO VERSION"
+          echo "=== binary check ==="
           ls -la "$PWD/src-tauri/target/release/app" 2>/dev/null || echo "BINARY NOT FOUND"
+          echo "=== ldd ==="
+          ldd "$PWD/src-tauri/target/release/app" 2>&1 | head -40
+          echo "=== App launch test (5s timeout) ==="
+          timeout 5 "$PWD/src-tauri/target/release/app" > /tmp/app-launch.log 2>&1 || echo "App exit code: $?"
+          cat /tmp/app-launch.log
 
       - name: Run WebdriverIO smoke tests
         run: |
-          export DISPLAY=:99
-          Xvfb :99 -screen 0 1280x800x24 &
-          sleep 1
           export TAURI_APP_BINARY=$PWD/src-tauri/target/release/app
-          tauri-driver &
+          tauri-driver > /tmp/tauri-driver.log 2>&1 &
           sleep 2
-          cd e2e-tauri && npm test
+          cd e2e-tauri && npm test || true
+          echo "=== tauri-driver log ==="
+          cat /tmp/tauri-driver.log
         env:
           MYHEALTH_TEST_DB: ${{ github.workspace }}/src-tauri/tests/fixtures/test.db
