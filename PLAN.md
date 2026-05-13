@@ -7,12 +7,10 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 106
-Task:  106.5 — Pre-commit checks + commit
+Phase: 107
+Task:  107.2 — Dynamic DB connection switching
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
-
-▶ **104.5 — Unit + E2E tests**
 
 ---
 
@@ -265,7 +263,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - E2E: `e2e/calendar-conflicts.spec.ts` — appointments page loads; assert no unhandled JS errors
    - Done when: all tests pass
 
-▶ [ ] **106.5 — Pre-commit checks + commit**
+[x] **106.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: calendar conflict detection and dismiss UI (Phase 106)`
@@ -287,13 +285,13 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 
 ### Sprint 107
 
-[ ] **107.1 — Profile metadata store (unencrypted)**
+[x] **107.1 — Profile metadata store (unencrypted)**
    - `profiles.json` in app data dir: `[{ id, name, db_path, created_at }]`
    - New Rust commands: `profiles_list`, `profiles_create(name, password)`, `profiles_delete(id, password)`
    - `profiles_create`: generate UUID, derive key via PBKDF2-SHA512 + random salt, create `{id}.db`, store salt in `profiles.json`
    - Done when: `cargo test` passes; profile JSON round-trips correctly
 
-[ ] **107.2 — Dynamic DB connection switching**
+▶ [ ] **107.2 — Dynamic DB connection switching**
    - Refactor `AppState` in `src-tauri/src/lib.rs`: `db: Mutex<Option<Connection>>` → allow re-open
    - New command `profiles_switch(id, password)` — close current connection, derive key from stored salt + supplied password, open new DB
    - All existing commands remain unchanged (read from `state.db`)

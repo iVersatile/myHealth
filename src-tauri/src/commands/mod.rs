@@ -50,6 +50,7 @@ pub mod links;
 pub mod medications;
 pub mod notes;
 pub mod outlook;
+pub mod profiles;
 pub mod recurrence;
 pub mod reminders;
 pub mod scoring;
