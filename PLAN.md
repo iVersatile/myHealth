@@ -8,7 +8,7 @@
 
 ```
 Phase: 107
-Task:  107.2 — Dynamic DB connection switching
+Task:  107.3 — Profile selection screen (frontend)
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -291,13 +291,13 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - `profiles_create`: generate UUID, derive key via PBKDF2-SHA512 + random salt, create `{id}.db`, store salt in `profiles.json`
    - Done when: `cargo test` passes; profile JSON round-trips correctly
 
-▶ [ ] **107.2 — Dynamic DB connection switching**
+[x] **107.2 — Dynamic DB connection switching**
    - Refactor `AppState` in `src-tauri/src/lib.rs`: `db: Mutex<Option<Connection>>` → allow re-open
    - New command `profiles_switch(id, password)` — close current connection, derive key from stored salt + supplied password, open new DB
    - All existing commands remain unchanged (read from `state.db`)
    - Done when: `cargo test` passes; switching profile mid-session works
 
-[ ] **107.3 — Profile selection screen (frontend)**
+▶ [ ] **107.3 — Profile selection screen (frontend)**
    - `src/app/profiles/page.tsx` — list profiles from `profiles_list`; "New Profile" button; click to select
    - On select: prompt password → `invoke('profiles_switch')` → redirect to `/documents`
    - `data-testid="profile-list"`, `data-testid="profile-item"`, `data-testid="new-profile-btn"`

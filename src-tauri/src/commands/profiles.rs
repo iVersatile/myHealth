@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{crypto, db};
 
-use super::CommandError;
+use super::{AppState, CommandError};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProfileEntry {
@@ -127,6 +127,42 @@ pub fn profiles_delete(app_handle: tauri::AppHandle, id: String) -> Result<(), C
     Ok(())
 }
 
+#[tauri::command]
+pub fn profiles_switch(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    id: String,
+    password: String,
+) -> Result<(), CommandError> {
+    use tauri::Manager;
+    let data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::Internal(format!("no data dir: {e}")))?;
+
+    let profiles = read_profiles(&data_dir);
+    let profile = profiles
+        .iter()
+        .find(|p| p.id == id)
+        .ok_or_else(|| CommandError::NotFound(format!("profile {id}")))?;
+
+    let salt = std::fs::read(profile_salt_path(&data_dir, &id))
+        .map_err(|e| CommandError::Internal(format!("read salt: {e}")))?;
+    let key = crypto::derive_key(&password, &salt);
+    let hex = crypto::key_to_hex(&key);
+
+    let conn = db::open_db(&profile.db_path, &hex)
+        .map_err(|_| CommandError::InvalidInput("incorrect password".into()))?;
+
+    let mut db_guard = state.db.lock()?;
+    *db_guard = Some(conn);
+
+    let mut key_guard = state.key_hex.lock()?;
+    *key_guard = Some(zeroize::Zeroizing::new(hex));
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,5 +216,34 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let profiles = read_profiles(dir.path());
         assert!(profiles.is_empty());
+    }
+
+    #[test]
+    fn salt_written_and_readable() {
+        let dir = TempDir::new().unwrap();
+        let salt = generate_salt();
+        let salt_path = profile_salt_path(dir.path(), "test-id");
+        fs::write(&salt_path, salt).unwrap();
+        let read_back = fs::read(&salt_path).unwrap();
+        assert_eq!(read_back.len(), 32);
+        assert_eq!(read_back.as_slice(), &salt);
+    }
+
+    #[test]
+    fn wrong_password_cannot_open_db() {
+        use crate::{crypto, db};
+        let dir = TempDir::new().unwrap();
+        let id = "switch-test";
+        let db_path = profile_db_path(dir.path(), id);
+        let db_path_str = db_path.to_str().unwrap();
+
+        let salt = generate_salt();
+        let key = crypto::derive_key("correct-password", &salt);
+        let hex = crypto::key_to_hex(&key);
+        db::open_db(db_path_str, &hex).unwrap();
+
+        let bad_key = crypto::derive_key("wrong-password", &salt);
+        let bad_hex = crypto::key_to_hex(&bad_key);
+        assert!(db::open_db(db_path_str, &bad_hex).is_err());
     }
 }
