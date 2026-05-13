@@ -3,6 +3,18 @@ use rusqlite::{Connection, Result};
 const SCHEMA_V1: &str = include_str!("schema.sql");
 const SCHEMA_V2: &str = include_str!("migrations/v2.sql");
 const SCHEMA_V3: &str = include_str!("migrations/v3.sql");
+const SCHEMA_V29: &str = include_str!("migrations/v29.sql");
+const ICD10_SEED: &str = include_str!("icd10_seed.sql");
+
+pub fn seed_icd10(conn: &Connection) -> Result<()> {
+    let mut sql = String::with_capacity(ICD10_SEED.len() + 20);
+    sql.push_str("BEGIN;\n");
+    sql.push_str(ICD10_SEED);
+    sql.push_str("\nCOMMIT;");
+    conn.execute_batch(&sql)?;
+    conn.execute_batch("INSERT INTO icd10_fts(icd10_fts) VALUES('rebuild');")?;
+    Ok(())
+}
 const SCHEMA_V4: &str = "
     CREATE INDEX IF NOT EXISTS idx_documents_category
         ON documents (category);
@@ -539,6 +551,15 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 29 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(SCHEMA_V29)?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [29])?;
+        tx.commit()?;
+        #[cfg(not(test))]
+        seed_icd10(conn)?;
+    }
+
     Ok(())
 }
 
@@ -565,7 +586,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 28);
+        assert_eq!(version, 29);
     }
 
     #[test]
@@ -579,7 +600,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 28);
+        assert_eq!(version, 29);
     }
 
     #[test]
@@ -1953,5 +1974,51 @@ mod tests {
             .unwrap();
         assert_eq!(sc2, 0, "document_symptoms must cascade-delete");
         assert_eq!(mc2, 0, "document_medications must cascade-delete");
+    }
+
+    #[test]
+    fn icd10_tables_exist_after_migration() {
+        let conn = migrated_conn();
+        // Verify schema tables exist (no seed in test mode)
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM icd10_codes", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "icd10_codes table exists but is empty in test mode"
+        );
+        // Verify document_icd10_tags table and cascade delete
+        conn.execute(
+            "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, \
+             category, created_at, updated_at, is_deleted) \
+             VALUES ('doc-icd10', 'icd10.pdf', '/tmp/icd10.pdf', 'application/pdf', 1024, \
+             'other', '2025-01-01', '2025-01-01', 0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO document_icd10_tags (document_id, code, description, confidence) \
+             VALUES ('doc-icd10', 'J06.9', 'Acute upper respiratory infection, unspecified', 0.9)",
+            [],
+        )
+        .unwrap();
+        conn.execute("DELETE FROM documents WHERE id = 'doc-icd10'", [])
+            .unwrap();
+        let tag_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM document_icd10_tags", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(tag_count, 0, "document_icd10_tags must cascade-delete");
+    }
+
+    #[test]
+    fn icd10_seed_loads_minimum_codes() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+        run(&conn).unwrap();
+        super::seed_icd10(&conn).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM icd10_codes", [], |r| r.get(0))
+            .unwrap();
+        assert!(count >= 70_000, "Expected ≥70000 ICD-10 codes, got {count}");
     }
 }
