@@ -8,8 +8,8 @@
 
 ```
 Phase: 110
-Task: 110.6 — Add ClinicSuggestionBanner.test.tsx (missing entirely)
-Note: 110.1–110.5 complete.
+Task: 110.7 — Add extraction pipeline integration test
+Note: 110.1–110.6 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1521,13 +1521,13 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - Mock recurrence IPC in `e2e/tauri-mock.js` as needed
    - Done when: all 5 tests pass in CI
 
-▶ **110.6 — Add `ClinicSuggestionBanner.test.tsx` (missing entirely)**
+[x] **110.6 — Add `ClinicSuggestionBanner.test.tsx` (missing entirely)**
    - Create `src/components/documents/ClinicSuggestionBanner.test.tsx`
    - Follow same structure as `DoctorSuggestionBanner.test.tsx` (14 test cases pattern)
    - Cover: renders nothing when no suggestions, renders single candidate, renders multiple, accept callback fires with correct payload, reject callback fires, keyboard navigation
    - Done when: `npm test` passes; coverage for `ClinicSuggestionBanner.tsx` ≥ 80%
 
-[ ] **110.7 — Add extraction pipeline integration test**
+▶ **110.7 — Add extraction pipeline integration test**
    - In `src-tauri/tests/integration/`, add `extraction_pipeline.rs`
    - Test: real fixture PDF text → `run_extraction()` → `ExtractionSuggestions` struct has all fields populated (contact, clinic, tags, dates, clinical_notes)
    - Test: PDF with no extraction signals → all optional fields are `None`, required fields are empty vec
