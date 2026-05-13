@@ -8,7 +8,7 @@
 
 ```
 Phase: 107
-Task:  107.6 — Unit + E2E tests
+Task:  107.7 — Pre-commit checks + commit
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -313,12 +313,12 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - Warning: "This permanently deletes all data in this profile and cannot be undone."
    - Done when: deletion flow works; `.db` file removed from disk
 
-▶ [ ] **107.6 — Unit + E2E tests**
+[x] **107.6 — Unit + E2E tests**
    - Unit: mock `invoke('profiles_list')` returning fixture profiles; assert `profile-item` count matches
    - E2E: `e2e/multi-user-vault.spec.ts` — profiles page loads; `new-profile-btn` visible
    - Done when: all tests pass
 
-[ ] **107.7 — Pre-commit checks + commit**
+▶ [ ] **107.7 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: multi-user vault with per-profile encrypted SQLite DB (Phase 107)`
