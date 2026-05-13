@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 105
-Task:  105.6 — Pre-commit checks + commit
+Phase: 106
+Task:  106.2 — conflicts_dismissed table migration
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -223,7 +223,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - E2E: `e2e/icd10-tags.spec.ts` — navigate to document detail; assert `icd10-section` present (or hidden when empty)
    - Done when: all tests pass
 
-▶ [ ] **105.6 — Pre-commit checks + commit**
+[x] **105.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: ICD-10 code tagging for extracted diagnoses (Phase 105)`
@@ -243,12 +243,12 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 
 ### Sprint 106
 
-[ ] **106.1 — SQL conflict detection query**
+[x] **106.1 — SQL conflict detection query**
    - New Rust command `appointments_list_conflicts` — self-join on `appointments` where `a.start_time < b.end_time AND b.start_time < a.end_time AND a.id != b.id AND a.is_draft = 0`
    - Return pairs `[(id_a, id_b, title_a, title_b, start_a, start_b)]`
    - Done when: `cargo test` passes with fixture overlapping appointments
 
-[ ] **106.2 — `conflicts_dismissed` table migration**
+▶ [ ] **106.2 — `conflicts_dismissed` table migration**
    - Migration: `conflicts_dismissed(id_a TEXT, id_b TEXT, dismissed_at TEXT, PRIMARY KEY(id_a, id_b))`
    - `appointments_dismiss_conflict(id_a, id_b)` command inserts row
    - `appointments_list_conflicts` excludes dismissed pairs via LEFT JOIN

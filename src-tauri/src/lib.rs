@@ -12,8 +12,8 @@ mod acceptance_tests;
 use commands::appointments::{
     appointment_link_contact, appointment_unlink_contact, appointments_clear_doctor,
     appointments_create, appointments_delete, appointments_get, appointments_hard_delete,
-    appointments_link_document, appointments_list, appointments_list_upcoming, appointments_update,
-    contacts_for_appointment,
+    appointments_link_document, appointments_list, appointments_list_conflicts,
+    appointments_list_upcoming, appointments_update, contacts_for_appointment,
 };
 use commands::auth::{
     app_reset_data, auth_add_user, auth_change_password, auth_has_password, auth_is_locked,
@@ -178,6 +178,7 @@ pub fn run() {
             appointments_suggest_from_document,
             documents_search_filtered,
             appointments_list,
+            appointments_list_conflicts,
             appointments_list_upcoming,
             appointments_get,
             appointments_create,

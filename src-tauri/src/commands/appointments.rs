@@ -534,6 +534,51 @@ pub fn appointments_link_document(
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+pub struct AppointmentConflict {
+    pub id_a: String,
+    pub id_b: String,
+    pub title_a: String,
+    pub title_b: String,
+    pub start_a: String,
+    pub start_b: String,
+}
+
+#[tauri::command]
+pub fn appointments_list_conflicts(
+    state: State<'_, AppState>,
+) -> Result<Vec<AppointmentConflict>, CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT a.id, b.id, a.title, b.title, a.appt_date, b.appt_date
+         FROM appointments a
+         JOIN appointments b ON a.id < b.id
+         WHERE a.is_deleted = 0 AND b.is_deleted = 0
+           AND a.is_draft = 0 AND b.is_draft = 0
+           AND datetime(a.appt_date) < datetime(b.appt_date, '+' || b.duration_min || ' minutes')
+           AND datetime(b.appt_date) < datetime(a.appt_date, '+' || a.duration_min || ' minutes')
+         ORDER BY a.appt_date ASC",
+    )?;
+
+    let rows = stmt.query_map([], |row| {
+        Ok(AppointmentConflict {
+            id_a: row.get(0)?,
+            id_b: row.get(1)?,
+            title_a: row.get(2)?,
+            title_b: row.get(3)?,
+            start_a: row.get(4)?,
+            start_b: row.get(5)?,
+        })
+    })?;
+
+    Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use rusqlite::Connection;
@@ -943,5 +988,79 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    fn insert_appt_with_duration(
+        conn: &Connection,
+        id: &str,
+        title: &str,
+        date: &str,
+        duration_min: i64,
+    ) {
+        conn.execute(
+            "INSERT INTO appointments
+             (id, title, appt_date, duration_min, reminder_min, is_draft, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, 60, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+            rusqlite::params![id, title, date, duration_min],
+        )
+        .unwrap();
+    }
+
+    fn list_conflicts_raw(conn: &Connection) -> Vec<(String, String)> {
+        let mut stmt = conn
+            .prepare(
+                "SELECT a.id, b.id
+                 FROM appointments a
+                 JOIN appointments b ON a.id < b.id
+                 WHERE a.is_deleted = 0 AND b.is_deleted = 0
+                   AND a.is_draft = 0 AND b.is_draft = 0
+                   AND datetime(a.appt_date) < datetime(b.appt_date, '+' || b.duration_min || ' minutes')
+                   AND datetime(b.appt_date) < datetime(a.appt_date, '+' || a.duration_min || ' minutes')
+                 ORDER BY a.appt_date ASC",
+            )
+            .unwrap();
+        stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .unwrap()
+        .filter_map(|r| r.ok())
+        .collect()
+    }
+
+    #[test]
+    fn overlapping_appointments_detected_as_conflict() {
+        let conn = open_migrations_db();
+        // a1: 10:00–10:30, a2: 10:15–10:45 → overlap
+        insert_appt_with_duration(&conn, "a1", "Physio", "2026-06-01T10:00:00", 30);
+        insert_appt_with_duration(&conn, "a2", "GP", "2026-06-01T10:15:00", 30);
+        let pairs = list_conflicts_raw(&conn);
+        assert_eq!(pairs.len(), 1);
+        assert!(pairs[0].0 == "a1" || pairs[0].1 == "a1");
+    }
+
+    #[test]
+    fn adjacent_appointments_not_detected_as_conflict() {
+        let conn = open_migrations_db();
+        // a1: 10:00–10:30, a2: 10:30–11:00 → adjacent, no overlap
+        insert_appt_with_duration(&conn, "a1", "Physio", "2026-06-01T10:00:00", 30);
+        insert_appt_with_duration(&conn, "a2", "GP", "2026-06-01T10:30:00", 30);
+        let pairs = list_conflicts_raw(&conn);
+        assert_eq!(pairs.len(), 0);
+    }
+
+    #[test]
+    fn draft_appointment_excluded_from_conflict_detection() {
+        let conn = open_migrations_db();
+        // a1: 10:00–10:30 (real), a2: 10:15–10:45 (draft) → no conflict
+        insert_appt_with_duration(&conn, "a1", "Physio", "2026-06-01T10:00:00", 30);
+        conn.execute(
+            "INSERT INTO appointments
+             (id, title, appt_date, duration_min, reminder_min, is_draft, created_at, updated_at)
+             VALUES ('a2', 'Draft', '2026-06-01T10:15:00', 30, 60, 1, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+        let pairs = list_conflicts_raw(&conn);
+        assert_eq!(pairs.len(), 0);
     }
 }
