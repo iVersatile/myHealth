@@ -842,6 +842,7 @@
         location: input?.location || null,
         reminder_min: input?.reminder_min || 0,
         recurrence_series_id: null,
+        reminder_offsets: input?.reminder_offsets || null,
         created_at: nowIso(),
         updated_at: nowIso(),
         _deleted: false,
@@ -904,6 +905,45 @@
       }
       return Promise.resolve(null);
     }
+
+    if (cmd === 'recurrence_create') {
+      const baseId = args?.baseAppointmentId;
+      const base = state.appointments.find((a) => a.id === baseId);
+      if (!base) return Promise.resolve(null);
+      const seriesId = uid();
+      base.recurrence_series_id = seriesId;
+      const rule = args?.rule || 'weekly';
+      const n = args?.occurrences ?? 4;
+      for (let i = 1; i < n; i++) {
+        const d = new Date(base.appt_date);
+        if (rule === 'weekly') d.setDate(d.getDate() + 7 * i);
+        else d.setMonth(d.getMonth() + i);
+        state.appointments.push({
+          ...base,
+          id: uid(),
+          appt_date: d.toISOString(),
+          recurrence_series_id: seriesId,
+          _deleted: false,
+        });
+      }
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'recurrence_delete_series') {
+      const seriesId = args?.seriesId;
+      const fromDate = args?.fromOccurrence || null;
+      state.appointments.forEach((a) => {
+        if (a.recurrence_series_id === seriesId) {
+          if (!fromDate || a.appt_date >= fromDate) a._deleted = true;
+        }
+      });
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
+    if (cmd === 'reminders_schedule') return Promise.resolve(null);
+    if (cmd === 'reminders_cancel') return Promise.resolve(null);
 
     // ------------------------------------------------------------------
     // Notes
@@ -1419,6 +1459,22 @@
       );
       saveState(state);
       return Promise.resolve(null);
+    }
+
+    if (cmd === 'appointment_tags_get') {
+      return Promise.resolve([]);
+    }
+
+    if (cmd === 'get_appointment_links') {
+      return Promise.resolve([]);
+    }
+
+    if (cmd === 'categories_for_appointment') {
+      return Promise.resolve([]);
+    }
+
+    if (cmd === 'get_draft_entities') {
+      return Promise.resolve([]);
     }
 
     // Unknown command — log and resolve null

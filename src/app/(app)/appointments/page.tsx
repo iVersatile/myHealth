@@ -79,6 +79,7 @@ export default function AppointmentsPage() {
         untilDate: input.recurrence.untilDate ?? null,
         occurrences: input.recurrence.occurrences,
       }).catch(() => {})
+      await refresh()
     }
     setShowForm(false)
   }
@@ -229,6 +230,19 @@ export default function AppointmentsPage() {
           ))}
         </div>
       )}
+
+      {/* Reminders tile */}
+      {!showForm && (() => {
+        const remindersCount = appointments.filter(
+          (a) => a.reminder_offsets && (a.reminder_offsets.min15 || a.reminder_offsets.hr1 || a.reminder_offsets.day1)
+        ).length
+        if (remindersCount === 0) return null
+        return (
+          <div data-testid="reminders-tile" className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-2 text-[var(--text-sm)] text-[var(--color-text-secondary)]">
+            {remindersCount} appointment{remindersCount !== 1 ? 's' : ''} with reminders
+          </div>
+        )
+      })()}
 
       {/* Error */}
       {error && (

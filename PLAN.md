@@ -8,8 +8,8 @@
 
 ```
 Phase: 110
-Task: 110.3 — Replace waitForTimeout with condition waits (8 occurrences)
-Note: 110.1–110.2 complete. Next: eliminate flaky timeout-based waits.
+Task: 110.6 — Add ClinicSuggestionBanner.test.tsx (missing entirely)
+Note: 110.1–110.5 complete.
 ```
 
 [x] **61.4 — Draft section on entity list pages**
@@ -1496,7 +1496,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - If a shared fixture helper already exists in `e2e/fixtures.ts`, add the reset there
    - Done when: running `npx playwright test --repeat-each=2` shows no state-bleed failures
 
-▶ **110.3 — Replace `waitForTimeout` with condition waits (8 occurrences)**
+[x] **110.3 — Replace `waitForTimeout` with condition waits (8 occurrences)**
    - `e2e/redesign-A-doc-list.spec.ts:28` — replace with `await expect(locator).toBeVisible()`
    - `e2e/redesign-A-vault.spec.ts:106, 283` — replace with appropriate `waitFor` or `expect(...).toBeVisible()`
    - `e2e/v3-acceptance-case2.spec.ts:72` — wait for specific element/state
@@ -1504,14 +1504,14 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - `e2e/v3-f3-category-reorder.spec.ts:45, 48, 51, 122` — wait for drag result to settle via element assertion
    - Done when: `grep -r "waitForTimeout" e2e/` returns 0 results
 
-[ ] **110.4 — Fix brittle `getByText().click()` selectors (2 occurrences)**
+[x] **110.4 — Fix brittle `getByText().click()` selectors (2 occurrences)**
    - `e2e/v3-f3-clinic.spec.ts:30, 47` — replace `page.getByText('JOHN GREEN PHYSIOTHERAPY LTD').click()` with `data-testid` selector; add `data-testid="clinic-row"` to clinic list item in `src/app/(app)/clinics/page.tsx` if missing
    - `e2e/v3-f8-clinic-contact-creation.spec.ts:77` — replace `page.getByText(personName.trim()).first().click()` with testid-based selector
    - Done when: both selectors use `data-testid`; E2E passes
 
 ### Sprint 110 — P1: Critical Missing Coverage
 
-[ ] **110.5 — Add recurrence + reminders E2E tests**
+[x] **110.5 — Add recurrence + reminders E2E tests**
    - Create `e2e/recurrence-reminders.spec.ts`
    - TC-REC-01: create weekly recurring appointment (5 occurrences) → verify 5 cards with recurrence badge
    - TC-REC-02: delete single occurrence → count drops by 1, others remain
@@ -1521,7 +1521,7 @@ tauri-driver       →  slow, ~20 critical smoke tests, CI on release branch onl
    - Mock recurrence IPC in `e2e/tauri-mock.js` as needed
    - Done when: all 5 tests pass in CI
 
-[ ] **110.6 — Add `ClinicSuggestionBanner.test.tsx` (missing entirely)**
+▶ **110.6 — Add `ClinicSuggestionBanner.test.tsx` (missing entirely)**
    - Create `src/components/documents/ClinicSuggestionBanner.test.tsx`
    - Follow same structure as `DoctorSuggestionBanner.test.tsx` (14 test cases pattern)
    - Cover: renders nothing when no suggestions, renders single candidate, renders multiple, accept callback fires with correct payload, reject callback fires, keyboard navigation
