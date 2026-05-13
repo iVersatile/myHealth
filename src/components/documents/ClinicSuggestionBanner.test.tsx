@@ -128,7 +128,7 @@ describe('ClinicSuggestionBanner', () => {
     const suggestion: ClinicSuggestion = {
       name: 'Acme Clinic',
       company_registration_number: null,
-      addresses: [{ line1: '1 Main St', line2: null, city: 'London', postcode: 'SW1A 1AA', country: 'UK' }],
+      addresses: [{ label: null, line1: '1 Main St' }],
     }
     render(<ClinicSuggestionBanner suggestions={[suggestion]} onDismiss={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /save clinic/i }))

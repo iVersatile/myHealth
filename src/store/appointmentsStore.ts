@@ -12,6 +12,7 @@ export interface Appointment {
   notes: string | null
   status: AppointmentStatus
   reminder_min: number
+  reminder_offsets?: { min15: boolean; hr1: boolean; day1: boolean } | null
   created_at: string
   updated_at: string
   document_ids: string[]
