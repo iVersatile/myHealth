@@ -432,6 +432,29 @@ export default function AppointmentDetailClient() {
               )}
             </dl>
 
+            {appt.reminder_offsets && (appt.reminder_offsets.min15 || appt.reminder_offsets.hr1 || appt.reminder_offsets.day1) && (
+              <div className="mt-4" data-testid="reminder-chips">
+                <p className="text-[var(--text-sm)] text-[var(--color-text-secondary)]">Reminders</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {appt.reminder_offsets.min15 && (
+                    <span data-testid="reminder-chip" className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] font-medium text-[var(--color-text)]">
+                      15 min before
+                    </span>
+                  )}
+                  {appt.reminder_offsets.hr1 && (
+                    <span data-testid="reminder-chip" className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] font-medium text-[var(--color-text)]">
+                      1 hour before
+                    </span>
+                  )}
+                  {appt.reminder_offsets.day1 && (
+                    <span data-testid="reminder-chip" className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[var(--text-xs)] font-medium text-[var(--color-text)]">
+                      1 day before
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {appt.notes && (
               <div className="mt-4">
                 <div className="flex items-center justify-between gap-2">

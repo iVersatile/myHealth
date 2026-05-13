@@ -48,6 +48,11 @@ export function AppointmentCard({ appointment: appt, onDelete }: AppointmentCard
           <span className={`shrink-0 rounded-full px-2 py-0.5 text-[var(--text-xs)] font-medium ${statusColor}`}>
             {statusLabel}
           </span>
+          {appt.recurrence_series_id && (
+            <span data-testid="recurrence-badge" className="shrink-0 rounded-full px-2 py-0.5 text-[var(--text-xs)] font-medium bg-[var(--color-accent-muted)] text-[var(--color-accent)]">
+              ↺ Recurring
+            </span>
+          )}
         </div>
 
         <p className="mt-0.5 text-[var(--text-sm)] text-[var(--color-text-secondary)]">
