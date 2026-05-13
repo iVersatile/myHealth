@@ -13,7 +13,7 @@ export const config: WebdriverIO.Config = {
     },
   ],
   hostname: 'localhost',
-  port: 4445,
+  port: 4444,
   path: '/',
   logLevel: 'warn',
   framework: 'mocha',
