@@ -1445,7 +1445,7 @@
   // ------------------------------------------------------------------
   // Main invoke override
   // ------------------------------------------------------------------
-  function invoke(cmd, args, _options) {
+  function invoke(cmd, args) {
     // Tauri v2 passes args wrapped: { __tauriModule, message: { cmd, data } }
     // but from frontend code it's usually invoke('cmd', { key: value })
     // Handle both shapes.
