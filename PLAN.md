@@ -8,7 +8,7 @@
 
 ```
 Phase: 106
-Task:  106.2 — conflicts_dismissed table migration
+Task:  106.5 — Pre-commit checks + commit
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -248,24 +248,24 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - Return pairs `[(id_a, id_b, title_a, title_b, start_a, start_b)]`
    - Done when: `cargo test` passes with fixture overlapping appointments
 
-▶ [ ] **106.2 — `conflicts_dismissed` table migration**
+[x] **106.2 — `conflicts_dismissed` table migration**
    - Migration: `conflicts_dismissed(id_a TEXT, id_b TEXT, dismissed_at TEXT, PRIMARY KEY(id_a, id_b))`
    - `appointments_dismiss_conflict(id_a, id_b)` command inserts row
    - `appointments_list_conflicts` excludes dismissed pairs via LEFT JOIN
    - Done when: `cargo test` passes
 
-[ ] **106.3 — Conflict UI on appointments page**
+[x] **106.3 — Conflict UI on appointments page**
    - `src/app/(app)/appointments/page.tsx` — call `appointments_list_conflicts` on mount
    - For each conflicting appointment row: add `data-testid="conflict-badge"` chip + highlight class
    - "Dismiss" button per conflict pair → `invoke('appointments_dismiss_conflict')` → optimistic remove from list
    - Done when: `npx tsc --noEmit` passes; conflicts render in dev with fixture data
 
-[ ] **106.4 — Unit + E2E tests**
+[x] **106.4 — Unit + E2E tests**
    - Unit: mock `invoke('appointments_list_conflicts')` returning fixture pair; assert `conflict-badge` visible; click Dismiss → badge gone
    - E2E: `e2e/calendar-conflicts.spec.ts` — appointments page loads; assert no unhandled JS errors
    - Done when: all tests pass
 
-[ ] **106.5 — Pre-commit checks + commit**
+▶ [ ] **106.5 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: calendar conflict detection and dismiss UI (Phase 106)`

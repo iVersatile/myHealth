@@ -33,7 +33,9 @@ const makeAppt = (overrides = {}): import('../../../../store/appointmentsStore')
   ...overrides,
 })
 
-function setupInvoke(appts: ReturnType<typeof makeAppt>[] = []) {
+type ConflictTuple = [string, string, string, string, string, string]
+
+function setupInvoke(appts: ReturnType<typeof makeAppt>[] = [], conflicts: ConflictTuple[] = []) {
   mockInvoke.mockImplementation((cmd: string) => {
     if (cmd === 'appointments_list') return Promise.resolve(appts)
     if (cmd === 'appointments_create') return Promise.resolve(makeAppt())
@@ -46,6 +48,8 @@ function setupInvoke(appts: ReturnType<typeof makeAppt>[] = []) {
     if (cmd === 'contacts_list') return Promise.resolve([])
     if (cmd === 'clinics_list') return Promise.resolve([])
     if (cmd === 'get_draft_entities') return Promise.resolve([])
+    if (cmd === 'appointments_list_conflicts') return Promise.resolve(conflicts)
+    if (cmd === 'appointments_dismiss_conflict') return Promise.resolve(undefined)
     return Promise.resolve(undefined)
   })
 }
@@ -317,5 +321,51 @@ describe('Form panel', () => {
     await waitFor(() => {
       expect(screen.queryByRole('heading', { name: /new appointment/i })).toBeNull()
     })
+  })
+})
+
+describe('Conflict detection UI', () => {
+  const conflictFixture: ConflictTuple = ['a1', 'a2', 'Physio', 'GP Visit', '2026-06-01T10:00:00Z', '2026-06-01T10:15:00Z']
+
+  it('shows conflict-badge when conflicts are returned', async () => {
+    setupInvoke([], [conflictFixture])
+    render(<AppointmentsPage />)
+    await waitFor(() => {
+      const badges = screen.getAllByTestId('conflict-badge')
+      expect(badges.length).toBeGreaterThan(0)
+      expect(badges[0]!.textContent).toBe('Physio')
+      expect(badges[1]!.textContent).toBe('GP Visit')
+    })
+  })
+
+  it('clicking Dismiss removes the conflict banner', async () => {
+    setupInvoke([], [conflictFixture])
+    render(<AppointmentsPage />)
+    await waitFor(() => screen.getAllByTestId('conflict-badge'))
+
+    await userEvent.click(screen.getByTestId('dismiss-conflict-btn'))
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('conflict-badge')).toBeNull()
+    })
+  })
+
+  it('calls appointments_dismiss_conflict with correct ids on Dismiss', async () => {
+    setupInvoke([], [conflictFixture])
+    render(<AppointmentsPage />)
+    await waitFor(() => screen.getByTestId('dismiss-conflict-btn'))
+
+    await userEvent.click(screen.getByTestId('dismiss-conflict-btn'))
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('appointments_dismiss_conflict', { idA: 'a1', idB: 'a2' })
+    })
+  })
+
+  it('shows no conflict section when no conflicts returned', async () => {
+    setupInvoke([], [])
+    render(<AppointmentsPage />)
+    await waitFor(() => screen.getByRole('heading', { name: /appointments/i }))
+    expect(screen.queryByTestId('conflicts-section')).toBeNull()
   })
 })

@@ -34,6 +34,8 @@ export const IPC = {
   icd10Suggest: 'icd10_suggest',
   appointmentTagsGet: 'appointment_tags_get',
   appointmentTagsSet: 'appointment_tags_set',
+  appointmentsListConflicts: 'appointments_list_conflicts',
+  appointmentsDismissConflict: 'appointments_dismiss_conflict',
 
   // Notes
   notesList: 'notes_list',

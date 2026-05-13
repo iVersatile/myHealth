@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog'
 import { useAppointments, AppointmentInput } from '../../../hooks/useAppointments'
@@ -11,6 +11,8 @@ import { IPC } from '../../../lib/ipc'
 import { useToast } from '../../../hooks/useToast'
 import { Toast } from '../../../components/shared/Toast'
 import { DraftEntitySection } from '../../../components/shared/DraftEntitySection'
+
+type ConflictPair = { idA: string; idB: string; titleA: string; titleB: string; dateA: string; dateB: string }
 
 type FilterValue = AppointmentStatus | 'all'
 
@@ -53,6 +55,32 @@ export default function AppointmentsPage() {
   const [showForm, setShowForm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [icsMessage, setIcsMessage] = useState<string | null>(null)
+  const [conflicts, setConflicts] = useState<ConflictPair[]>([])
+
+  const fetchConflicts = useCallback(async () => {
+    try {
+      const raw = await invoke<[string, string, string, string, string, string][]>(IPC.appointmentsListConflicts)
+      setConflicts(raw.map(([idA, idB, titleA, titleB, dateA, dateB]) => ({ idA, idB, titleA, titleB, dateA, dateB })))
+    } catch {
+      // non-fatal
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchConflicts()
+  }, [fetchConflicts, appointments])
+
+  async function handleDismissConflict(idA: string, idB: string) {
+    setConflicts((prev) => prev.filter((c) => !(c.idA === idA && c.idB === idB)))
+    try {
+      await invoke(IPC.appointmentsDismissConflict, { idA, idB })
+    } catch {
+      // re-fetch on failure to restore accurate state
+      void fetchConflicts()
+    }
+  }
+
+  const conflictIds = new Set(conflicts.flatMap((c) => [c.idA, c.idB]))
 
   type RecurrenceDeleteModal = { apptId: string; apptDate: string; seriesId: string } | null
   const [recurDeleteModal, setRecurDeleteModal] = useState<RecurrenceDeleteModal>(null)
@@ -186,6 +214,35 @@ export default function AppointmentsPage() {
       </div>
 
       <DraftEntitySection entityType="appointment" />
+
+      {/* Conflict alerts */}
+      {conflicts.length > 0 && (
+        <section data-testid="conflicts-section" className="space-y-2">
+          {conflicts.map((c) => (
+            <div
+              key={`${c.idA}-${c.idB}`}
+              data-testid="conflict-banner"
+              className="flex items-start justify-between rounded-[var(--radius-md)] border border-amber-400/50 bg-amber-50/80 px-4 py-3 text-[var(--text-sm)] dark:bg-amber-900/20"
+            >
+              <p className="text-amber-800 dark:text-amber-300">
+                <span className="font-semibold">Scheduling conflict:</span>{' '}
+                <span data-testid="conflict-badge">{c.titleA}</span>
+                {' and '}
+                <span data-testid="conflict-badge">{c.titleB}</span>
+                {' overlap.'}
+              </p>
+              <button
+                type="button"
+                data-testid="dismiss-conflict-btn"
+                onClick={() => handleDismissConflict(c.idA, c.idB)}
+                className="ml-4 shrink-0 rounded-[var(--radius-sm)] px-2 py-1 text-[var(--text-xs)] font-medium text-amber-700 underline hover:text-amber-900 dark:text-amber-400"
+              >
+                Dismiss
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* ICS feedback */}
       {icsMessage && (
@@ -334,7 +391,7 @@ export default function AppointmentsPage() {
           </h2>
           <ul className="space-y-3">
             {appts.map((appt) => (
-              <li key={appt.id}>
+              <li key={appt.id} className={conflictIds.has(appt.id) ? 'ring-1 ring-amber-400 rounded-[var(--radius-md)]' : ''}>
                 <AppointmentCard
                   appointment={appt}
                   onDelete={handleDelete}
