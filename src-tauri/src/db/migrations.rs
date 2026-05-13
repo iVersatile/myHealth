@@ -560,6 +560,20 @@ pub fn run(conn: &Connection) -> Result<()> {
         seed_icd10(conn)?;
     }
 
+    if version < 30 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "CREATE TABLE IF NOT EXISTS conflicts_dismissed (
+                 id_a         TEXT NOT NULL,
+                 id_b         TEXT NOT NULL,
+                 dismissed_at TEXT NOT NULL,
+                 PRIMARY KEY (id_a, id_b)
+             );",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [30])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -586,7 +600,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 29);
+        assert_eq!(version, 30);
     }
 
     #[test]
@@ -600,7 +614,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 29);
+        assert_eq!(version, 30);
     }
 
     #[test]

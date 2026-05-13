@@ -558,10 +558,13 @@ pub fn appointments_list_conflicts(
         "SELECT a.id, b.id, a.title, b.title, a.appt_date, b.appt_date
          FROM appointments a
          JOIN appointments b ON a.id < b.id
+         LEFT JOIN conflicts_dismissed cd
+               ON cd.id_a = a.id AND cd.id_b = b.id
          WHERE a.is_deleted = 0 AND b.is_deleted = 0
            AND a.is_draft = 0 AND b.is_draft = 0
            AND datetime(a.appt_date) < datetime(b.appt_date, '+' || b.duration_min || ' minutes')
            AND datetime(b.appt_date) < datetime(a.appt_date, '+' || a.duration_min || ' minutes')
+           AND cd.id_a IS NULL
          ORDER BY a.appt_date ASC",
     )?;
 
@@ -577,6 +580,27 @@ pub fn appointments_list_conflicts(
     })?;
 
     Ok(rows.filter_map(|r| r.ok()).collect())
+}
+
+#[tauri::command]
+pub fn appointments_dismiss_conflict(
+    state: State<'_, AppState>,
+    id_a: String,
+    id_b: String,
+) -> Result<(), CommandError> {
+    let guard = state
+        .db
+        .lock()
+        .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "INSERT OR REPLACE INTO conflicts_dismissed (id_a, id_b, dismissed_at) VALUES (?1, ?2, ?3)",
+        rusqlite::params![id_a, id_b, now],
+    )?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1062,5 +1086,44 @@ mod tests {
         .unwrap();
         let pairs = list_conflicts_raw(&conn);
         assert_eq!(pairs.len(), 0);
+    }
+
+    fn list_conflicts_excluding_dismissed(conn: &Connection) -> Vec<(String, String)> {
+        let mut stmt = conn
+            .prepare(
+                "SELECT a.id, b.id
+                 FROM appointments a
+                 JOIN appointments b ON a.id < b.id
+                 LEFT JOIN conflicts_dismissed cd ON cd.id_a = a.id AND cd.id_b = b.id
+                 WHERE a.is_deleted = 0 AND b.is_deleted = 0
+                   AND a.is_draft = 0 AND b.is_draft = 0
+                   AND datetime(a.appt_date) < datetime(b.appt_date, '+' || b.duration_min || ' minutes')
+                   AND datetime(b.appt_date) < datetime(a.appt_date, '+' || a.duration_min || ' minutes')
+                   AND cd.id_a IS NULL
+                 ORDER BY a.appt_date ASC",
+            )
+            .unwrap();
+        stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .unwrap()
+        .filter_map(|r| r.ok())
+        .collect()
+    }
+
+    #[test]
+    fn dismissed_conflict_excluded_from_list() {
+        let conn = open_migrations_db();
+        // a1: 10:00–10:30, a2: 10:15–10:45 → overlap, then dismiss
+        insert_appt_with_duration(&conn, "a1", "Physio", "2026-06-01T10:00:00", 30);
+        insert_appt_with_duration(&conn, "a2", "GP", "2026-06-01T10:15:00", 30);
+        assert_eq!(list_conflicts_excluding_dismissed(&conn).len(), 1);
+
+        conn.execute(
+            "INSERT INTO conflicts_dismissed (id_a, id_b, dismissed_at) VALUES ('a1', 'a2', '2026-06-01T11:00:00Z')",
+            [],
+        )
+        .unwrap();
+        assert_eq!(list_conflicts_excluding_dismissed(&conn).len(), 0);
     }
 }
