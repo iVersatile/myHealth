@@ -8,13 +8,14 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**', 'e2e-tauri/**'],
     coverage: {
       provider: "v8",
       exclude: [
         '**/node_modules/**',
         '**/dist/**',
         'e2e/**',
+        'e2e-tauri/**',
         // Rich-text editor: requires ProseMirror/Tiptap DOM env not supported in jsdom
         '**/*NoteEditorClient*',
         // PDF renderer: uses @react-pdf/renderer which requires browser canvas, not jsdom
