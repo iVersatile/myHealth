@@ -8,7 +8,7 @@
 
 ```
 Phase: 105
-Task:  105.4 — Document detail UI: ICD-10 tags section
+Task:  105.6 — Pre-commit checks + commit
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -211,19 +211,19 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - Call `documents_tag_icd10` after structured entity extraction step in `upload_document` command
    - Done when: uploading a document with diagnosis text auto-populates `document_icd10_tags`
 
-▶ [ ] **105.4 — Document detail UI: ICD-10 tags section**
+[x] **105.4 — Document detail UI: ICD-10 tags section**
    - `src/app/(app)/documents/view/DocumentDetailClient.tsx`
    - Fetch `document_icd10_tags` via new query `documents_get_icd10_tags(documentId)`
    - Render as chip list with `data-testid="icd10-tag"` per chip; section `data-testid="icd10-section"`
    - Hide section if no tags
    - Done when: `npx tsc --noEmit` passes; tags render correctly in dev
 
-[ ] **105.5 — Unit + E2E tests**
+[x] **105.5 — Unit + E2E tests**
    - Unit: mock `invoke('documents_get_icd10_tags')` returning fixture codes; assert chips render
    - E2E: `e2e/icd10-tags.spec.ts` — navigate to document detail; assert `icd10-section` present (or hidden when empty)
    - Done when: all tests pass
 
-[ ] **105.6 — Pre-commit checks + commit**
+▶ [ ] **105.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: ICD-10 code tagging for extracted diagnoses (Phase 105)`

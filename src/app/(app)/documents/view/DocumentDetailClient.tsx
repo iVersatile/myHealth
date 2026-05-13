@@ -130,13 +130,14 @@ export default function DocumentDetailClient() {
   const [allMedications, setAllMedications] = useState<Medication[]>([])
   const [selectedMedicationId, setSelectedMedicationId] = useState('')
   const [exportingReport, setExportingReport] = useState(false)
+  const [icd10Tags, setIcd10Tags] = useState<Array<{ code: string; description: string; confidence: number }>>([])
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fetched, catRows, assignedIds, existingLinks, appts, scored, fetchedNotes, fetchedEntities, fetchedSymptoms, fetchedMedications, allSym, allMed] = await Promise.all([
+        const [fetched, catRows, assignedIds, existingLinks, appts, scored, fetchedNotes, fetchedEntities, fetchedSymptoms, fetchedMedications, allSym, allMed, fetchedIcd10Tags] = await Promise.all([
           invoke<Document>('documents_get', { id }),
           invoke<
             Array<{
@@ -158,6 +159,7 @@ export default function DocumentDetailClient() {
           invoke<Medication[]>('medications_for_entity', { entityType: 'document', entityId: id }),
           invoke<Symptom[]>('symptoms_list'),
           invoke<Medication[]>('medications_list'),
+          invoke<Array<{ code: string; description: string; confidence: number }>>('documents_get_icd10_tags', { documentId: id }),
         ])
         setDoc(fetched)
         setTags(fetched.tags)
@@ -188,6 +190,7 @@ export default function DocumentDetailClient() {
         setLinkedMedications(fetchedMedications)
         setAllSymptoms(allSym.filter((s) => !s.deleted_at))
         setAllMedications(allMed.filter((m) => !m.deleted_at))
+        setIcd10Tags(fetchedIcd10Tags)
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : String(err))
       } finally {
@@ -958,6 +961,29 @@ export default function DocumentDetailClient() {
               </>
             )
           })()}
+
+          {icd10Tags.length > 0 && (
+            <>
+              <hr className="my-4 border-[var(--color-border)]" />
+              <div className="mb-4" data-testid="icd10-section">
+                <p className="mb-2 text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                  ICD-10 Codes
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {icd10Tags.map((tag) => (
+                    <span
+                      key={tag.code}
+                      data-testid="icd10-tag"
+                      title={tag.description}
+                      className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2 py-0.5 text-[var(--text-xs)] text-[var(--color-text)]"
+                    >
+                      {tag.code}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <hr className="my-4 border-[var(--color-border)]" />
 

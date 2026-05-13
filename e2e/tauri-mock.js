@@ -1544,6 +1544,21 @@
       return Promise.resolve(null);
     }
 
+    if (cmd === 'documents_get_icd10_tags') {
+      const { documentId } = args || {};
+      const tags = (state.icd10_tags || {})[documentId] || [];
+      return Promise.resolve(tags);
+    }
+
+    if (cmd === '__seed_icd10_tags') {
+      // Test-only: inject ICD-10 tags for a document
+      // args: { documentId: string, tags: Array<{ code, description, confidence }> }
+      if (!state.icd10_tags) state.icd10_tags = {};
+      state.icd10_tags[args.documentId] = args.tags;
+      saveState(state);
+      return Promise.resolve(null);
+    }
+
     if (cmd === '__seed_draft_entity') {
       // Test-only: inject a draft row into the appropriate draft array.
       // args: { entityType: 'contact'|'clinic'|'appointment', draft: DraftEntityRow }
