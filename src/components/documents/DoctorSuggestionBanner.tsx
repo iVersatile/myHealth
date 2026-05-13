@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { Contact } from '../../store/contactsStore'
+import { SuggestionBanner, bannerPrimaryBtn, bannerSecondaryBtn } from './SuggestionBanner'
 
 export interface ContactSuggestion {
   name: string
@@ -40,7 +41,9 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
       }
     }
     void check()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [candidates])
 
   if (!checked || unmatched.length === 0) return null
@@ -69,47 +72,40 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
 
   if (followUp) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
-        <span className="text-[var(--color-text)]">
-          Is there a doctor for this appointment?
-        </span>
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={onDismiss}
-            className="px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
-          >
-            Yes, keep name
-          </button>
-          <button
-            onClick={() => void handleNoDoctor()}
-            className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs hover:text-[var(--color-text)] transition-colors"
-          >
-            No, it&apos;s a service
-          </button>
-        </div>
-      </div>
+      <SuggestionBanner
+        actions={
+          <>
+            <button onClick={onDismiss} className={bannerPrimaryBtn}>
+              Yes, keep name
+            </button>
+            <button onClick={() => void handleNoDoctor()} className={bannerSecondaryBtn}>
+              No, it&apos;s a service
+            </button>
+          </>
+        }
+      >
+        <span className="text-[var(--color-text)]">Is there a doctor for this appointment?</span>
+      </SuggestionBanner>
     )
   }
 
   return (
-    <div data-testid="doctor-suggestion-banner" className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
+    <SuggestionBanner
+      testId="doctor-suggestion-banner"
+      actions={
+        <>
+          <button onClick={() => onAccept(suggestion)} className={bannerPrimaryBtn}>
+            Add to contacts
+          </button>
+          <button onClick={handleDismiss} className={bannerSecondaryBtn}>
+            Dismiss
+          </button>
+        </>
+      }
+    >
       <span className="text-[var(--color-text)]">
         Create contact for <strong data-testid="suggestion-name">{suggestion.name}</strong>?
       </span>
-      <div className="flex gap-2 shrink-0">
-        <button
-          onClick={() => onAccept(suggestion)}
-          className="px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 transition-opacity"
-        >
-          Add to contacts
-        </button>
-        <button
-          onClick={handleDismiss}
-          className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs hover:text-[var(--color-text)] transition-colors"
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
+    </SuggestionBanner>
   )
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { ClinicSuggestion } from './UploadDialog'
+import { SuggestionBanner, bannerPrimaryBtn, bannerSecondaryBtn } from './SuggestionBanner'
 
 interface Props {
   suggestions: ClinicSuggestion[]
@@ -43,43 +44,43 @@ export function ClinicSuggestionBanner({ suggestions, onDismiss }: Props) {
 
   if (saved) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
+      <SuggestionBanner
+        actions={
+          <button onClick={onDismiss} className={bannerSecondaryBtn}>
+            Dismiss
+          </button>
+        }
+      >
         <span className="text-[var(--color-text)]">
           Clinic <strong>{clinic.name}</strong> saved.
         </span>
-        <button
-          onClick={onDismiss}
-          className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs hover:text-[var(--color-text)] transition-colors"
-        >
-          Dismiss
-        </button>
-      </div>
+      </SuggestionBanner>
     )
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-4 py-3 text-sm">
+    <SuggestionBanner
+      actions={
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex gap-2">
+            <button
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className={bannerPrimaryBtn}
+            >
+              {saving ? 'Saving…' : 'Save Clinic'}
+            </button>
+            <button onClick={onDismiss} className={bannerSecondaryBtn}>
+              Dismiss
+            </button>
+          </div>
+          {error && <span className="text-xs text-red-500">{error}</span>}
+        </div>
+      }
+    >
       <span className="text-[var(--color-text)]">
         Save clinic <strong>{clinic.name}</strong>?
       </span>
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex gap-2">
-          <button
-            onClick={() => void handleSave()}
-            disabled={saving}
-            className="px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : 'Save Clinic'}
-          </button>
-          <button
-            onClick={onDismiss}
-            className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs hover:text-[var(--color-text)] transition-colors"
-          >
-            Dismiss
-          </button>
-        </div>
-        {error && <span className="text-xs text-red-500">{error}</span>}
-      </div>
-    </div>
+    </SuggestionBanner>
   )
 }
