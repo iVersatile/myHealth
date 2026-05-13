@@ -32,50 +32,50 @@ const makeDoc = (overrides: Partial<Document> = {}): Document => ({
 describe('DocumentCard', () => {
   it('renders filename', () => {
     render(<DocumentCard document={makeDoc()} onDelete={vi.fn()} />)
-    expect(screen.getByText('blood-test.pdf')).toBeTruthy()
+    expect(screen.getByText('blood-test.pdf')).toBeInTheDocument()
   })
 
   it('renders category label for lab', () => {
     render(<DocumentCard document={makeDoc()} onDelete={vi.fn()} />)
-    expect(screen.getByText(/Lab Result/)).toBeTruthy()
+    expect(screen.getByText(/Lab Result/)).toBeInTheDocument()
   })
 
   it('renders formatted file size in KB', () => {
     render(<DocumentCard document={makeDoc({ file_size_bytes: 2048 })} onDelete={vi.fn()} />)
-    expect(screen.getByText(/2\.0 KB/)).toBeTruthy()
+    expect(screen.getByText(/2\.0 KB/)).toBeInTheDocument()
   })
 
   it('renders formatted file size in MB for large files', () => {
     render(<DocumentCard document={makeDoc({ file_size_bytes: Math.round(1.5 * 1024 * 1024) })} onDelete={vi.fn()} />)
-    expect(screen.getByText(/1\.5 MB/)).toBeTruthy()
+    expect(screen.getByText(/1\.5 MB/)).toBeInTheDocument()
   })
 
   it('renders PDF type badge when no thumbnail', () => {
     render(<DocumentCard document={makeDoc()} onDelete={vi.fn()} />)
-    expect(screen.getByText('PDF')).toBeTruthy()
+    expect(screen.getByText('PDF')).toBeInTheDocument()
   })
 
   it('renders IMG badge for image mime type', () => {
     render(<DocumentCard document={makeDoc({ mime_type: 'image/jpeg' })} onDelete={vi.fn()} />)
-    expect(screen.getByText('IMG')).toBeTruthy()
+    expect(screen.getByText('IMG')).toBeInTheDocument()
   })
 
   it('renders FILE badge for unknown mime type', () => {
     render(<DocumentCard document={makeDoc({ mime_type: 'text/plain' })} onDelete={vi.fn()} />)
-    expect(screen.getByText('FILE')).toBeTruthy()
+    expect(screen.getByText('FILE')).toBeInTheDocument()
   })
 
   it('renders thumbnail image when thumbnail_path is set', () => {
     const { container } = render(<DocumentCard document={makeDoc({ thumbnail_path: '/thumbs/doc1.webp' })} onDelete={vi.fn()} />)
     const img = container.querySelector('img')
-    expect(img).toBeTruthy()
+    expect(img).toBeInTheDocument()
     expect((img as HTMLImageElement).src).toContain('doc1.webp')
   })
 
   it('renders tags', () => {
     render(<DocumentCard document={makeDoc({ tags: ['annual', 'blood'] })} onDelete={vi.fn()} />)
-    expect(screen.getByText('#annual')).toBeTruthy()
-    expect(screen.getByText('#blood')).toBeTruthy()
+    expect(screen.getByText('#annual')).toBeInTheDocument()
+    expect(screen.getByText('#blood')).toBeInTheDocument()
   })
 
   it('does not render tag list when tags is empty', () => {

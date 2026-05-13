@@ -46,9 +46,9 @@ describe('DoctorSuggestionBanner', () => {
     render(
       <DoctorSuggestionBanner candidates={[makeSuggestion('Dr. John Doe')]} onAccept={vi.fn()} onDismiss={vi.fn()} />,
     )
-    await waitFor(() => expect(screen.getByText(/Dr\. John Doe/)).toBeTruthy())
-    expect(screen.getByRole('button', { name: /add to contacts/i })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /dismiss/i })).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/Dr\. John Doe/)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /add to contacts/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument()
   })
 
   it('calls contacts_find_similar for each candidate', async () => {
@@ -76,7 +76,7 @@ describe('DoctorSuggestionBanner', () => {
         onDismiss={vi.fn()}
       />,
     )
-    await waitFor(() => expect(screen.getByText(/Dr\. Alice Brown/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Dr\. Alice Brown/)).toBeInTheDocument())
     expect(screen.queryByText(/Dr\. Bob Green/)).toBeNull()
   })
 
@@ -115,7 +115,7 @@ describe('DoctorSuggestionBanner', () => {
         onDismiss={vi.fn()}
       />,
     )
-    await waitFor(() => expect(screen.getByText(/Dr\. Bob Green/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Dr\. Bob Green/)).toBeInTheDocument())
     expect(screen.queryByText(/Dr\. Alice Brown/)).toBeNull()
   })
 
@@ -132,9 +132,9 @@ describe('DoctorSuggestionBanner', () => {
       )
       await waitFor(() => screen.getByRole('button', { name: /dismiss/i }))
       await userEvent.click(screen.getByRole('button', { name: /dismiss/i }))
-      expect(screen.getByText(/is there a doctor for this appointment/i)).toBeTruthy()
-      expect(screen.getByRole('button', { name: /yes, keep name/i })).toBeTruthy()
-      expect(screen.getByRole('button', { name: /no.*service/i })).toBeTruthy()
+      expect(screen.getByText(/is there a doctor for this appointment/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /yes, keep name/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /no.*service/i })).toBeInTheDocument()
     })
 
     it('Yes keep name calls onDismiss without invoking clear', async () => {

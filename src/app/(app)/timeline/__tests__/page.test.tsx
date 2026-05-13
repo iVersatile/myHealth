@@ -162,7 +162,7 @@ describe('TimelinePage', () => {
     fireEvent.click(screen.getByText('By Category'))
     await waitFor(() => expect(screen.getByTitle('Click to change category color')).toBeDefined())
     const colorInput = document.querySelector('input[type="color"]') as HTMLInputElement
-    expect(colorInput).toBeTruthy()
+    expect(colorInput).toBeInTheDocument()
     fireEvent.change(colorInput, { target: { value: '#00ff00' } })
     await waitFor(() =>
       expect(mockInvoke).toHaveBeenCalledWith('categories_update', {

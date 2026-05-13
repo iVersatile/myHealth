@@ -28,8 +28,8 @@ describe('ApptSuggestionBanner', () => {
         onDismiss={vi.fn()}
       />,
     )
-    expect(screen.getByText('PHYSIOTHERAPY with Dr. Smith')).toBeTruthy()
-    expect(screen.getByText(/2022-01-21/)).toBeTruthy()
+    expect(screen.getByText('PHYSIOTHERAPY with Dr. Smith')).toBeInTheDocument()
+    expect(screen.getByText(/2022-01-21/)).toBeInTheDocument()
   })
 
   it('renders Create Appointment and Dismiss buttons', () => {
@@ -40,8 +40,8 @@ describe('ApptSuggestionBanner', () => {
         onDismiss={vi.fn()}
       />,
     )
-    expect(screen.getByRole('button', { name: /create appointment/i })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /dismiss/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /create appointment/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument()
   })
 
   it('calls onConfirm with doctor name when Create Appointment is clicked', () => {
@@ -111,7 +111,7 @@ describe('ApptSuggestionBanner', () => {
         onDismiss={vi.fn()}
       />,
     )
-    expect(screen.getByText(/London Clinic/)).toBeTruthy()
+    expect(screen.getByText(/London Clinic/)).toBeInTheDocument()
   })
 
   it('does not render a clinic row when clinic_name is null', () => {
@@ -160,7 +160,7 @@ describe('ApptSuggestionBanner', () => {
         isLoading
       />,
     )
-    expect(screen.getByText('Creating…')).toBeTruthy()
+    expect(screen.getByText('Creating…')).toBeInTheDocument()
     const buttons = screen.getAllByRole('button')
     for (const btn of buttons) {
       expect((btn as HTMLButtonElement).disabled).toBe(true)

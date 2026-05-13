@@ -31,7 +31,7 @@ describe('ContentSearchPage — entity-type filter chips', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), term)
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Lab Report')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Lab Report')).toBeInTheDocument())
   }
 
   it('renders all chip options', async () => {
@@ -112,13 +112,13 @@ describe('ContentSearchPage — date range filter', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), term)
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Lab Report')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Lab Report')).toBeInTheDocument())
   }
 
   it('date range inputs are rendered', async () => {
     render(<ContentSearchPage />)
-    expect(screen.getByTestId('date-from')).toBeTruthy()
-    expect(screen.getByTestId('date-to')).toBeTruthy()
+    expect(screen.getByTestId('date-from')).toBeInTheDocument()
+    expect(screen.getByTestId('date-to')).toBeInTheDocument()
   })
 
   it('entering dateFrom triggers invoke with dateFrom param', async () => {
@@ -150,13 +150,13 @@ describe('ContentSearchPage — date range filter', () => {
     expect(screen.queryByTestId('clear-dates')).toBeNull()
 
     await userEvent.type(screen.getByTestId('date-from'), '2024-01-01')
-    await waitFor(() => expect(screen.getByTestId('clear-dates')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clear-dates')).toBeInTheDocument())
   })
 
   it('clicking Clear resets dates and re-searches with null dates', async () => {
     await searchFor('fever')
     await userEvent.type(screen.getByTestId('date-from'), '2024-01-01')
-    await waitFor(() => expect(screen.getByTestId('clear-dates')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clear-dates')).toBeInTheDocument())
 
     mockInvoke.mockClear()
     mockInvoke.mockResolvedValue({ results: ALL_RESULTS, summary: SUMMARY_ALL })

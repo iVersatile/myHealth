@@ -54,7 +54,7 @@ describe('ExportDialog', () => {
   it('renders dialog title', async () => {
     const { ExportDialog } = await import('./ExportDialog')
     render(<ExportDialog onClose={vi.fn()} />)
-    expect(screen.getByText('Export PDF Bundle')).toBeTruthy()
+    expect(screen.getByText('Export PDF Bundle')).toBeInTheDocument()
   })
 
   it('calls onClose when Cancel is clicked', async () => {
@@ -76,7 +76,7 @@ describe('ExportDialog', () => {
   it('shows empty-state message when no documents', async () => {
     const { ExportDialog } = await import('./ExportDialog')
     render(<ExportDialog onClose={vi.fn()} />)
-    expect(screen.getByText('No documents available.')).toBeTruthy()
+    expect(screen.getByText('No documents available.')).toBeInTheDocument()
   })
 
   it('lists documents when store has items', async () => {
@@ -91,7 +91,7 @@ describe('ExportDialog', () => {
       error: null,
     })
     render(<ExportDialog onClose={vi.fn()} />)
-    expect(screen.getByText('report.pdf')).toBeTruthy()
+    expect(screen.getByText('report.pdf')).toBeInTheDocument()
   })
 
   it('Export PDF button is disabled when nothing selected', async () => {
@@ -141,10 +141,10 @@ describe('ExportDialog', () => {
     render(<ExportDialog onClose={vi.fn()} />)
 
     await userEvent.click(screen.getByRole('button', { name: /select all/i }))
-    expect(screen.getByText(/2 selected/)).toBeTruthy()
+    expect(screen.getByText(/2 selected/)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /deselect all/i }))
-    expect(screen.getByText(/0 selected/)).toBeTruthy()
+    expect(screen.getByText(/0 selected/)).toBeInTheDocument()
   })
 
   it('Browse button calls pickOutputPath and displays returned path', async () => {
@@ -216,7 +216,7 @@ describe('ExportDialog', () => {
       error: null,
     })
     render(<ExportDialog onClose={vi.fn()} />)
-    expect(screen.getByText(/unknown_type/)).toBeTruthy()
+    expect(screen.getByText(/unknown_type/)).toBeInTheDocument()
   })
 
   it('shows success state after export completes', async () => {
@@ -244,6 +244,6 @@ describe('ExportDialog', () => {
     await userEvent.click(screen.getByRole('checkbox'))
     await userEvent.click(screen.getByRole('button', { name: /export pdf/i }))
 
-    await waitFor(() => expect(screen.getByText('PDF exported successfully.')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('PDF exported successfully.')).toBeInTheDocument())
   })
 })

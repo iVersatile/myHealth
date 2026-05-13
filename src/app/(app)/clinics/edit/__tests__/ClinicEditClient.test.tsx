@@ -34,13 +34,13 @@ describe('ClinicEditClient — no id', () => {
 
   it('shows error when id is null', () => {
     render(<ClinicEditClient />)
-    expect(screen.getByText('No clinic ID specified.')).toBeTruthy()
+    expect(screen.getByText('No clinic ID specified.')).toBeInTheDocument()
   })
 
   it('shows error when id is empty string', () => {
     mockId = ''
     render(<ClinicEditClient />)
-    expect(screen.getByText('No clinic ID specified.')).toBeTruthy()
+    expect(screen.getByText('No clinic ID specified.')).toBeInTheDocument()
   })
 
   it('back link navigates to /clinics', () => {
@@ -60,14 +60,14 @@ describe('ClinicEditClient — loading & error', () => {
   it('shows loading state while fetching', () => {
     mockInvoke.mockImplementation(() => new Promise(() => {}))
     render(<ClinicEditClient />)
-    expect(screen.getByText('Loading…')).toBeTruthy()
+    expect(screen.getByText('Loading…')).toBeInTheDocument()
   })
 
   it('shows error message when clinics_get fails', async () => {
     mockInvoke.mockRejectedValue(new Error('Not found'))
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Not found')).toBeTruthy()
+    expect(screen.getByText('Not found')).toBeInTheDocument()
   })
 
   it('back link in error state navigates to /clinics', async () => {
@@ -82,7 +82,7 @@ describe('ClinicEditClient — loading & error', () => {
     mockInvoke.mockRejectedValue('raw string')
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Failed to load clinic')).toBeTruthy()
+    expect(screen.getByText('Failed to load clinic')).toBeInTheDocument()
   })
 })
 
@@ -130,7 +130,7 @@ describe('ClinicEditClient — edit form', () => {
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
     mockInvoke.mockRejectedValueOnce(new Error('Save failed'))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(screen.getByText('Save failed')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Save failed')).toBeInTheDocument())
   })
 
   it('Cancel button navigates to /clinics', async () => {
@@ -191,7 +191,7 @@ describe('ClinicEditClient — edit form', () => {
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
     mockInvoke.mockRejectedValueOnce('raw string error')
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(screen.getByText('Failed to save clinic')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Failed to save clinic')).toBeInTheDocument())
   })
 })
 
@@ -219,23 +219,23 @@ describe('ClinicEditClient — linked contacts & documents', () => {
     setupInvoke({ contacts: [{ id: 'c1', name: 'Dr Smith', role: 'gp', specialty: null, phone: null }] })
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Linked Contacts')).toBeTruthy()
-    expect(screen.getByText('Dr Smith')).toBeTruthy()
-    expect(screen.getByText('gp')).toBeTruthy()
+    expect(screen.getByText('Linked Contacts')).toBeInTheDocument()
+    expect(screen.getByText('Dr Smith')).toBeInTheDocument()
+    expect(screen.getByText('gp')).toBeInTheDocument()
   })
 
   it('renders role and specialty together when both present', async () => {
     setupInvoke({ contacts: [{ id: 'c2', name: 'Dr Jones', role: 'consultant', specialty: 'cardiology', phone: null }] })
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('consultant · cardiology')).toBeTruthy()
+    expect(screen.getByText('consultant · cardiology')).toBeInTheDocument()
   })
 
   it('hides role/specialty span when both are null', async () => {
     setupInvoke({ contacts: [{ id: 'c3', name: 'Nurse Patel', role: null, specialty: null, phone: null }] })
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Nurse Patel')).toBeTruthy()
+    expect(screen.getByText('Nurse Patel')).toBeInTheDocument()
     expect(screen.queryByText(' · ')).toBeNull()
   })
 
@@ -250,16 +250,16 @@ describe('ClinicEditClient — linked contacts & documents', () => {
     setupInvoke({ documents: [{ id: 'd1', filename: 'scan.pdf', category: null, document_date: '2026-01-15' }] })
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Linked Documents')).toBeTruthy()
-    expect(screen.getByText('scan.pdf')).toBeTruthy()
-    expect(screen.getByText('2026-01-15')).toBeTruthy()
+    expect(screen.getByText('Linked Documents')).toBeInTheDocument()
+    expect(screen.getByText('scan.pdf')).toBeInTheDocument()
+    expect(screen.getByText('2026-01-15')).toBeInTheDocument()
   })
 
   it('hides document_date span when date is null', async () => {
     setupInvoke({ documents: [{ id: 'd2', filename: 'report.pdf', category: null, document_date: null }] })
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('report.pdf')).toBeTruthy()
+    expect(screen.getByText('report.pdf')).toBeInTheDocument()
     expect(screen.queryByText('null')).toBeNull()
   })
 

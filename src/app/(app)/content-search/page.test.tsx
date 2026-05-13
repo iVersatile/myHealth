@@ -37,8 +37,8 @@ describe('ContentSearchPage', () => {
 
   it('renders search input and button', () => {
     render(<ContentSearchPage />)
-    expect(screen.getByTestId('content-search-input')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /search/i })).toBeTruthy()
+    expect(screen.getByTestId('content-search-input')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument()
   })
 
   it('search button disabled when input empty', () => {
@@ -62,7 +62,7 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'xyz')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText(/no results found/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/no results found/i)).toBeInTheDocument())
     expect(screen.queryByTestId('summary-bar')).toBeNull()
   })
 
@@ -71,7 +71,7 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByTestId('summary-bar')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('summary-bar')).toBeInTheDocument())
     const bar = screen.getByTestId('summary-bar')
     expect(bar.textContent).toContain('2')
   })
@@ -81,7 +81,7 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeInTheDocument())
     const links = screen.getAllByRole('link')
     const hrefs = links.map((c) => c.getAttribute('href'))
     const idxA = hrefs.findIndex((h) => h?.includes('doc-1'))
@@ -94,7 +94,7 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeInTheDocument())
     expect(screen.getAllByText('Document').length).toBeGreaterThanOrEqual(1)
   })
 
@@ -103,11 +103,11 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText(/Patient has/)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Patient has/)).toBeInTheDocument())
     expect(document.body.innerHTML).not.toContain('&lt;mark&gt;')
     expect(document.body.innerHTML).not.toContain('<mark>hypertension</mark>')
     const mark = document.querySelector('mark')
-    expect(mark).toBeTruthy()
+    expect(mark).toBeInTheDocument()
     expect(mark?.textContent).toBe('hypertension')
   })
 
@@ -116,7 +116,7 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Blood Pressure Check')).toBeInTheDocument())
     const links = screen.getAllByRole('link')
     expect(links.some((l) => l.getAttribute('href')?.includes('doc-1'))).toBe(true)
     expect(links.some((l) => l.getAttribute('href')?.includes('sym-2'))).toBe(true)
@@ -127,7 +127,7 @@ describe('ContentSearchPage', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'hypertension')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('FTS not available')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('FTS not available')).toBeInTheDocument())
   })
 
   it('invokes documents_content_search with trimmed query', async () => {

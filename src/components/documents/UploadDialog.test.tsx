@@ -49,7 +49,7 @@ function setupInvoke() {
 async function pickFileAndReachReview() {
   mockOpen.mockResolvedValue('/home/user/report.pdf')
   await userEvent.click(screen.getByRole('button', { name: /select files/i }))
-  await waitFor(() => expect(screen.getByText('report.pdf')).toBeTruthy())
+  await waitFor(() => expect(screen.getByText('report.pdf')).toBeInTheDocument())
 }
 
 describe('UploadDialog', () => {
@@ -63,13 +63,13 @@ describe('UploadDialog', () => {
 
   it('renders Upload Document title in pick step', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    expect(await screen.findByText('Upload Document')).toBeTruthy()
+    expect(await screen.findByText('Upload Document')).toBeInTheDocument()
   })
 
   it('shows Select Files and Select Folder buttons in pick step', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
-    expect(await screen.findByRole('button', { name: /select files/i })).toBeTruthy()
-    expect(await screen.findByRole('button', { name: /select folder/i })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: /select files/i })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /select folder/i })).toBeInTheDocument()
   })
 
   it('calls onClose when close (✕) button clicked in pick step', async () => {
@@ -89,7 +89,7 @@ describe('UploadDialog', () => {
   it('shows filename in review step after file picked', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    expect(screen.getByText('report.pdf')).toBeTruthy()
+    expect(screen.getByText('report.pdf')).toBeInTheDocument()
   })
 
   it('renders category select with lab as default in review step', async () => {
@@ -142,7 +142,7 @@ describe('UploadDialog', () => {
     mockOpen.mockResolvedValue('/home/user/report.pdf')
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /select files/i }))
-    await waitFor(() => expect(screen.getByText('disk full')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('disk full')).toBeInTheDocument())
   })
 
   it('passes notes via documents_update on confirm', async () => {
@@ -199,12 +199,12 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     await waitFor(() => expect(screen.getAllByText('Dr. House').length).toBeGreaterThan(0))
-    expect(screen.getByText('Diagnostics')).toBeTruthy()
-    expect(screen.getByText('PPTH')).toBeTruthy()
+    expect(screen.getByText('Diagnostics')).toBeInTheDocument()
+    expect(screen.getByText('PPTH')).toBeInTheDocument()
     const saveBtn = screen.getByRole('button', { name: /save as contact/i })
     await userEvent.click(saveBtn)
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('contacts_create', expect.objectContaining({ input: expect.objectContaining({ name: 'Dr. House' }) })))
-    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeInTheDocument())
   })
 
   it('shows duplicate merge prompt when similar contact found on save', async () => {
@@ -227,18 +227,18 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
-    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
-    expect(screen.getByText('Dr. Greg House')).toBeTruthy()
-    expect(screen.getByText(/92%/)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeInTheDocument())
+    expect(screen.getByText('Dr. Greg House')).toBeInTheDocument()
+    expect(screen.getByText(/92%/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /^merge$/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('merge_contacts', {
       userId: '',
       primaryId: 'existing-c1',
       duplicateIds: ['new-c1'],
     }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeInTheDocument())
   })
 
   it('keep both on duplicate prompt marks contact saved without merging', async () => {
@@ -259,11 +259,11 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
-    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /keep both/i }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeInTheDocument())
     expect(mockInvoke).not.toHaveBeenCalledWith('merge_contacts', expect.anything())
   })
 
@@ -281,8 +281,8 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByText('Prescription', { selector: 'p' })).toBeTruthy())
-    expect(screen.getByText(/detected from document content/i)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Prescription', { selector: 'p' })).toBeInTheDocument())
+    expect(screen.getByText(/detected from document content/i)).toBeInTheDocument()
     const dismissBtn = screen.getByRole('button', { name: /dismiss/i })
     await userEvent.click(dismissBtn)
     await waitFor(() => expect(screen.queryByText('Prescription', { selector: 'p' })).toBeNull())
@@ -304,7 +304,7 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /accept/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /accept/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /accept/i }))
     await waitFor(() =>
       expect(mockInvoke).toHaveBeenCalledWith('categories_create_if_not_exists', { name: 'physiotherapy' })
@@ -340,13 +340,13 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
-    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeInTheDocument())
     const cancelBtns = screen.getAllByRole('button', { name: /^cancel$/i })
     await userEvent.click(cancelBtns[0]!)
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'new-c1' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
   })
 
   it('calls documents_link_contact after no-duplicate contact save', async () => {
@@ -367,13 +367,13 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_contact', {
       documentId: 'new-doc',
       contactId: 'new-c1',
     }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeInTheDocument())
   })
 
   it('calls documents_link_contact with primary contact id after merge', async () => {
@@ -397,15 +397,15 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
-    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /^merge$/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_contact', {
       documentId: 'new-doc',
       contactId: 'existing-c1',
     }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /saved/i })).toBeInTheDocument())
   })
 
   it('cancel on duplicate prompt returns to idle even if delete fails', async () => {
@@ -427,12 +427,12 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
-    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Possible duplicate/i)).toBeInTheDocument())
     const cancelBtns = screen.getAllByRole('button', { name: /^cancel$/i })
     await userEvent.click(cancelBtns[0]!)
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
   })
 
   it('shows clinic card with name, reg no, and address count from extraction', async () => {
@@ -451,13 +451,13 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-card')).toBeTruthy())
-    expect(screen.getByText('John Green Physiotherapy Ltd')).toBeTruthy()
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-card')).toBeInTheDocument())
+    expect(screen.getByText('John Green Physiotherapy Ltd')).toBeInTheDocument()
     const regInput = screen.getByTestId('clinic-suggestion-reg-number') as HTMLInputElement
     expect(regInput.value).toBe('6780032')
     const addressItems = screen.getAllByTestId('clinic-address-item')
     expect(addressItems).toHaveLength(3)
-    expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /save as clinic/i })).toBeInTheDocument()
   })
 
   it('clicking Save as Clinic calls clinics_create_if_not_exists and shows Saved', async () => {
@@ -477,7 +477,7 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as clinic/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('clinics_create_if_not_exists', {
       input: {
@@ -488,7 +488,7 @@ describe('UploadDialog', () => {
         addresses: ['1 Clinic Rd, London, SW1A 1AA'],
       },
     }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /^saved$/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /^saved$/i })).toBeInTheDocument())
   })
 
   it('auto-links saved contact to clinic when contact was saved in the same session', async () => {
@@ -514,11 +514,11 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     // Save contact first
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as contact/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as contact/i }))
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /saved/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /saved/i })[0]).toBeInTheDocument())
     // Now save clinic — should auto-link contact
-    await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /save as clinic/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /save as clinic/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('clinics_link_contact', {
       clinicId: 'clinic-1',
@@ -566,12 +566,12 @@ describe('UploadDialog', () => {
       ocrCallback!({ payload: { page: 3, total: 8, elapsed_ms: 4000 } })
     })
 
-    await waitFor(() => expect(screen.getByRole('progressbar')).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('progressbar')).toBeInTheDocument())
     const bar = screen.getByRole('progressbar')
     expect(bar.getAttribute('aria-valuenow')).toBe('3')
     expect(bar.getAttribute('aria-valuemax')).toBe('8')
-    expect(screen.getByText(/page 3 of 8/i)).toBeTruthy()
-    expect(screen.getByText(/4s elapsed/i)).toBeTruthy()
+    expect(screen.getByText(/page 3 of 8/i)).toBeInTheDocument()
+    expect(screen.getByText(/4s elapsed/i)).toBeInTheDocument()
 
     // Finish extraction so component doesn't hang
     resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
@@ -639,13 +639,13 @@ describe('UploadDialog', () => {
     await waitFor(() => expect(ocrCallback).not.toBeNull())
 
     ocrCallback!({ payload: { page: 1, total: 3, elapsed_ms: 1000 } })
-    await waitFor(() => expect(screen.getByRole('progressbar')).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('progressbar')).toBeInTheDocument())
 
     resolveExtraction({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
 
     await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull())
     // Component should now be in review step
-    await waitFor(() => expect(screen.getByText('report.pdf')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('report.pdf')).toBeInTheDocument())
   })
 
   it('pre-fills timeline entry from physio extraction with title prefix', async () => {
@@ -747,8 +747,8 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByTestId('upload-extracted-text-preview')).toBeTruthy())
-    expect(screen.getByText('Blood pressure: 130/85')).toBeTruthy()
+    await waitFor(() => expect(screen.getByTestId('upload-extracted-text-preview')).toBeInTheDocument())
+    expect(screen.getByText('Blood pressure: 130/85')).toBeInTheDocument()
     const notesTextarea = screen.getByLabelText(/notes/i) as HTMLTextAreaElement
     expect(notesTextarea.value).toBe('')
   })
@@ -772,7 +772,7 @@ describe('UploadDialog', () => {
     await pickFileAndReachReview()
     const tagsInput = screen.getByTestId('tag-input')
     await userEvent.type(tagsInput, 'blood{Enter}')
-    await waitFor(() => expect(screen.getByTestId('tag-chip')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('tag-chip')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /remove tag blood/i }))
     await waitFor(() => expect(screen.queryByTestId('tag-chip')).toBeNull())
   })
@@ -782,14 +782,14 @@ describe('UploadDialog', () => {
     await pickFileAndReachReview()
     expect(screen.queryByLabelText(/timeline entry/i)).toBeNull()
     fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '2026-03-15' } })
-    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeInTheDocument())
   })
 
   it('hides timeline entry when activity date cleared (empty string → null)', async () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '2026-03-15' } })
-    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeInTheDocument())
     fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '' } })
     await waitFor(() => expect(screen.queryByLabelText(/timeline entry/i)).toBeNull())
   })
@@ -798,9 +798,9 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     fireEvent.change(screen.getByTestId('activity-date-field'), { target: { value: '2026-03-15' } })
-    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByLabelText(/timeline entry/i)).toBeInTheDocument())
     await userEvent.clear(screen.getByLabelText(/timeline entry/i))
-    expect(screen.getByLabelText(/timeline entry/i)).toBeTruthy()
+    expect(screen.getByLabelText(/timeline entry/i)).toBeInTheDocument()
   })
 
   it('shows clinic duplicate merge UI when extracted clinic already exists in DB', async () => {
@@ -823,7 +823,7 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-merge')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-merge')).toBeInTheDocument())
   })
 
   it('links existing clinic and transitions to saved when "Link existing" clicked', async () => {
@@ -847,7 +847,7 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-merge')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-merge')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /link existing/i }))
     await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_clinic', expect.objectContaining({ clinicId: 'existing-clinic-id' })))
     await waitFor(() => expect(screen.queryByTestId('clinic-suggestion-merge')).toBeNull())
@@ -873,7 +873,7 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-card')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-card')).toBeInTheDocument())
     await userEvent.click(screen.getByTestId('clinic-suggestion-dismiss'))
     await waitFor(() => expect(screen.queryByTestId('clinic-suggestion-card')).toBeNull())
   })
@@ -892,7 +892,7 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     expect(mockInvoke).not.toHaveBeenCalledWith('documents_run_extraction', expect.anything())
-    expect(screen.getByText('report.pdf')).toBeTruthy()
+    expect(screen.getByText('report.pdf')).toBeInTheDocument()
   })
 
   it('goes back to pick step with error when extraction throws', async () => {
@@ -907,7 +907,7 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     mockOpen.mockResolvedValue('/home/user/report.pdf')
     await userEvent.click(screen.getByRole('button', { name: /select files/i }))
-    await waitFor(() => expect(screen.getByText(/OCR service unavailable/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/OCR service unavailable/i)).toBeInTheDocument())
   })
 
   it('shows error state when clinic save fails on documents_set_clinic', async () => {
@@ -931,9 +931,9 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-save')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-save')).toBeInTheDocument())
     await userEvent.click(screen.getByTestId('clinic-suggestion-save'))
-    await waitFor(() => expect(screen.getByText(/Clinic saved but could not be linked/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Clinic saved but could not be linked/i)).toBeInTheDocument())
   })
 
   it('reverts clinic to idle when clinics_create_if_not_exists throws', async () => {
@@ -956,9 +956,9 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-save')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-save')).toBeInTheDocument())
     await userEvent.click(screen.getByTestId('clinic-suggestion-save'))
-    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-dismiss')).toBeTruthy())
+    await waitFor(() => expect(screen.getByTestId('clinic-suggestion-dismiss')).toBeInTheDocument())
   })
 
   it('shows confirm error when documents_update throws', async () => {
@@ -974,7 +974,7 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
     await userEvent.click(screen.getByRole('button', { name: /confirm/i }))
-    await waitFor(() => expect(screen.getByText(/save failed/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/save failed/i)).toBeInTheDocument())
   })
 
   it('shows allCategories picker when categories_list returns items', async () => {
@@ -991,7 +991,7 @@ describe('UploadDialog', () => {
     })
     render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
     await pickFileAndReachReview()
-    await waitFor(() => expect(screen.getByText('Medical Categories')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Medical Categories')).toBeInTheDocument())
   })
 })
 
@@ -1056,8 +1056,8 @@ describe('UploadDialog — batch mode', () => {
     await userEvent.click(screen.getByRole('button', { name: /select files/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/2 documents uploaded/i)).toBeTruthy()
-      expect(screen.getByText(/5 entities pending review/i)).toBeTruthy()
+      expect(screen.getByText(/2 documents uploaded/i)).toBeInTheDocument()
+      expect(screen.getByText(/5 entities pending review/i)).toBeInTheDocument()
     })
   })
 
@@ -1078,7 +1078,7 @@ describe('UploadDialog — batch mode', () => {
     await userEvent.click(screen.getByRole('button', { name: /select files/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/documents uploaded/i)).toBeTruthy()
+      expect(screen.getByText(/documents uploaded/i)).toBeInTheDocument()
       expect(screen.queryByText(/entities pending review/i)).toBeNull()
     })
   })

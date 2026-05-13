@@ -30,22 +30,22 @@ beforeEach(() => {
 describe('AddressList — display', () => {
   it('renders address line1', () => {
     render(<AddressList addresses={[makeAddress()]} entityId="e1" entityType="clinic" onChanged={noop} />)
-    expect(screen.getByText('1 Test St')).toBeTruthy()
+    expect(screen.getByText('1 Test St')).toBeInTheDocument()
   })
 
   it('shows label when present', () => {
     render(<AddressList addresses={[makeAddress({ label: 'RECEPTION' })]} entityId="e1" entityType="clinic" onChanged={noop} />)
-    expect(screen.getByText('RECEPTION')).toBeTruthy()
+    expect(screen.getByText('RECEPTION')).toBeInTheDocument()
   })
 
   it('renders city and postcode together', () => {
     render(<AddressList addresses={[makeAddress()]} entityId="e1" entityType="clinic" onChanged={noop} />)
-    expect(screen.getByText('London, EC1A 1BB')).toBeTruthy()
+    expect(screen.getByText('London, EC1A 1BB')).toBeInTheDocument()
   })
 
   it('shows non-GB country', () => {
     render(<AddressList addresses={[makeAddress({ country: 'FR' })]} entityId="e1" entityType="clinic" onChanged={noop} />)
-    expect(screen.getByText('FR')).toBeTruthy()
+    expect(screen.getByText('FR')).toBeInTheDocument()
   })
 
   it('hides GB country', () => {
@@ -55,7 +55,7 @@ describe('AddressList — display', () => {
 
   it('shows Add address button when not adding', () => {
     render(<AddressList addresses={[]} entityId="e1" entityType="clinic" onChanged={noop} />)
-    expect(screen.getByText('+ Add address')).toBeTruthy()
+    expect(screen.getByText('+ Add address')).toBeInTheDocument()
   })
 })
 
@@ -102,7 +102,7 @@ describe('AddressList — edit', () => {
     fireEvent.click(screen.getByTitle('Edit'))
     fireEvent.change(screen.getByPlaceholderText('Line 1 *'), { target: { value: '' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(screen.getByText('Line 1 is required')).toBeTruthy()
+    expect(screen.getByText('Line 1 is required')).toBeInTheDocument()
   })
 
   it('saveEdit shows error on invoke rejection', async () => {
@@ -110,7 +110,7 @@ describe('AddressList — edit', () => {
     render(<AddressList addresses={[makeAddress()]} entityId="e1" entityType="clinic" onChanged={noop} />)
     fireEvent.click(screen.getByTitle('Edit'))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(screen.getByText('save error')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('save error')).toBeInTheDocument())
   })
 
   it('Cancel button hides edit form', () => {
@@ -125,7 +125,7 @@ describe('AddressList — add', () => {
   it('clicking Add address shows the add form', () => {
     render(<AddressList addresses={[]} entityId="e1" entityType="clinic" onChanged={noop} />)
     fireEvent.click(screen.getByText('+ Add address'))
-    expect(screen.getByRole('button', { name: 'Add' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
   })
 
   it('saveAdd calls clinic_address_create with clinicId and nested input', async () => {
@@ -156,7 +156,7 @@ describe('AddressList — add', () => {
     render(<AddressList addresses={[]} entityId="e1" entityType="clinic" onChanged={noop} />)
     fireEvent.click(screen.getByText('+ Add address'))
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    expect(screen.getByText('Line 1 is required')).toBeTruthy()
+    expect(screen.getByText('Line 1 is required')).toBeInTheDocument()
   })
 
   it('saveAdd shows error on invoke rejection', async () => {
@@ -165,14 +165,14 @@ describe('AddressList — add', () => {
     fireEvent.click(screen.getByText('+ Add address'))
     fireEvent.change(screen.getByPlaceholderText('Line 1 *'), { target: { value: 'Valid St' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-    await waitFor(() => expect(screen.getByText('add error')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('add error')).toBeInTheDocument())
   })
 
   it('Cancel in add form hides the form', () => {
     render(<AddressList addresses={[]} entityId="e1" entityType="clinic" onChanged={noop} />)
     fireEvent.click(screen.getByText('+ Add address'))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.getByText('+ Add address')).toBeTruthy()
+    expect(screen.getByText('+ Add address')).toBeInTheDocument()
   })
 })
 
@@ -211,6 +211,6 @@ describe('AddressList — delete & set primary', () => {
     mockInvoke.mockRejectedValueOnce('delete error')
     render(<AddressList addresses={[makeAddress()]} entityId="e1" entityType="clinic" onChanged={noop} />)
     fireEvent.click(screen.getByTitle('Delete'))
-    await waitFor(() => expect(screen.getByText('delete error')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('delete error')).toBeInTheDocument())
   })
 })

@@ -39,31 +39,31 @@ describe('AiInsightsPanel', () => {
 
   it('renders panel with data-testid', async () => {
     render(<AiInsightsPanel doc={makeDoc()} entities={ENTITIES} docId="doc1" />)
-    expect(screen.getByText('AI Insights')).toBeTruthy()
+    expect(screen.getByText('AI Insights')).toBeInTheDocument()
   })
 
   it('shows "No summary available" when extracted_text is null', async () => {
     render(<AiInsightsPanel doc={makeDoc({ extracted_text: null })} entities={ENTITIES} docId="doc1" />)
-    expect(screen.getByText(/no summary available/i)).toBeTruthy()
+    expect(screen.getByText(/no summary available/i)).toBeInTheDocument()
   })
 
   it('renders full summary text when under 300 chars', async () => {
     const text = 'A'.repeat(250)
     render(<AiInsightsPanel doc={makeDoc({ extracted_text: text })} entities={ENTITIES} docId="doc1" />)
-    expect(screen.getByText(text)).toBeTruthy()
+    expect(screen.getByText(text)).toBeInTheDocument()
   })
 
   it('truncates summary and shows expand toggle when over 300 chars', async () => {
     const text = 'B'.repeat(400)
     render(<AiInsightsPanel doc={makeDoc({ extracted_text: text })} entities={ENTITIES} docId="doc1" />)
-    expect(screen.getByText(/show more/i)).toBeTruthy()
+    expect(screen.getByText(/show more/i)).toBeInTheDocument()
   })
 
   it('expands summary on "Show more" click', async () => {
     const text = 'C'.repeat(400)
     render(<AiInsightsPanel doc={makeDoc({ extracted_text: text })} entities={ENTITIES} docId="doc1" />)
     await userEvent.click(screen.getByText(/show more/i))
-    expect(screen.getByText(/show less/i)).toBeTruthy()
+    expect(screen.getByText(/show less/i)).toBeInTheDocument()
   })
 
   it('hides Flagged Lab Values section for non-lab docs', async () => {
@@ -81,8 +81,8 @@ describe('AiInsightsPanel', () => {
       return Promise.resolve([])
     })
     render(<AiInsightsPanel doc={makeDoc({ category: 'lab' })} entities={ENTITIES} docId="doc1" />)
-    await waitFor(() => expect(screen.getByText('Haemoglobin')).toBeTruthy())
-    expect(screen.getByText(/18\.5/)).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Haemoglobin')).toBeInTheDocument())
+    expect(screen.getByText(/18\.5/)).toBeInTheDocument()
   })
 
   it('renders HIGH badge with correct testid and label', async () => {
@@ -96,7 +96,7 @@ describe('AiInsightsPanel', () => {
     })
     render(<AiInsightsPanel doc={makeDoc({ category: 'lab' })} entities={ENTITIES} docId="doc1" />)
     await waitFor(() => expect(screen.getAllByTestId('flagged-status-pill').length).toBeGreaterThan(0))
-    expect(screen.getByText('HIGH')).toBeTruthy()
+    expect(screen.getByText('HIGH')).toBeInTheDocument()
   })
 
   it('shows clinic name in Extracted Details', async () => {
@@ -107,7 +107,7 @@ describe('AiInsightsPanel', () => {
         docId="doc1"
       />,
     )
-    await waitFor(() => expect(screen.getByText('City Health Clinic')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('City Health Clinic')).toBeInTheDocument())
   })
 
   it('shows doctor name from entities', async () => {
@@ -115,7 +115,7 @@ describe('AiInsightsPanel', () => {
       { id: 'e1', document_id: 'doc1', entity_type: 'contact', name: 'Dr. House', created_at: '' },
     ]
     render(<AiInsightsPanel doc={makeDoc()} entities={entities} docId="doc1" />)
-    expect(screen.getByText('Dr. House')).toBeTruthy()
+    expect(screen.getByText('Dr. House')).toBeInTheDocument()
   })
 
   it('shows tags as pills', async () => {
@@ -126,14 +126,14 @@ describe('AiInsightsPanel', () => {
         docId="doc1"
       />,
     )
-    expect(screen.getByText('cardiology')).toBeTruthy()
-    expect(screen.getByText('urgent')).toBeTruthy()
+    expect(screen.getByText('cardiology')).toBeInTheDocument()
+    expect(screen.getByText('urgent')).toBeInTheDocument()
   })
 
   it('shows "No related documents" when linked docs empty', async () => {
     mockInvoke.mockResolvedValue([])
     render(<AiInsightsPanel doc={makeDoc()} entities={ENTITIES} docId="doc1" />)
-    await waitFor(() => expect(screen.getByText(/no related documents/i)).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/no related documents/i)).toBeInTheDocument())
   })
 
   it('renders linked docs as links', async () => {
@@ -147,8 +147,8 @@ describe('AiInsightsPanel', () => {
       return Promise.resolve([])
     })
     render(<AiInsightsPanel doc={makeDoc()} entities={ENTITIES} docId="doc1" />)
-    await waitFor(() => expect(screen.getByText('Blood Test 2024')).toBeTruthy())
-    expect(screen.getByText('Referral Letter')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Blood Test 2024')).toBeInTheDocument())
+    expect(screen.getByText('Referral Letter')).toBeInTheDocument()
   })
 
   it('shows "Show all" button when more than 5 linked docs', async () => {
@@ -163,8 +163,8 @@ describe('AiInsightsPanel', () => {
       return Promise.resolve([])
     })
     render(<AiInsightsPanel doc={makeDoc()} entities={ENTITIES} docId="doc1" />)
-    await waitFor(() => expect(screen.getByTestId('show-all-linked')).toBeTruthy())
-    expect(screen.getByText(/show all \(7\)/i)).toBeTruthy()
+    await waitFor(() => expect(screen.getByTestId('show-all-linked')).toBeInTheDocument())
+    expect(screen.getByText(/show all \(7\)/i)).toBeInTheDocument()
   })
 
   it('expands all linked docs on "Show all" click', async () => {
@@ -182,7 +182,7 @@ describe('AiInsightsPanel', () => {
     await waitFor(() => screen.getByTestId('show-all-linked'))
     await userEvent.click(screen.getByTestId('show-all-linked'))
     expect(screen.queryByTestId('show-all-linked')).toBeNull()
-    expect(screen.getByText('Doc 7')).toBeTruthy()
+    expect(screen.getByText('Doc 7')).toBeInTheDocument()
   })
 
   it('collapses panel body on chevron click', async () => {

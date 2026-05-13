@@ -12,7 +12,7 @@ describe('LinkSuggestionBanner', () => {
         onDismiss={vi.fn()}
       />,
     )
-    expect(screen.getByText('Annual Checkup')).toBeTruthy()
+    expect(screen.getByText('Annual Checkup')).toBeInTheDocument()
   })
 
   it('renders Link and Dismiss buttons', () => {
@@ -24,8 +24,8 @@ describe('LinkSuggestionBanner', () => {
         onDismiss={vi.fn()}
       />,
     )
-    expect(screen.getByRole('button', { name: /link/i })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /dismiss/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /dismiss/i })).toBeInTheDocument()
   })
 
   it('calls onConfirm with appointmentId when Link clicked', () => {

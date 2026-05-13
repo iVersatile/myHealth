@@ -77,26 +77,26 @@ describe('DocumentList', () => {
   it('shows loading state', () => {
     mockHookReturn.loading = true
     render(<DocumentList />)
-    expect(screen.getByText(/loading/i)).toBeTruthy()
+    expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
   it('shows error message', () => {
     mockHookReturn.error = 'Failed to load'
     render(<DocumentList />)
-    expect(screen.getByText('Failed to load')).toBeTruthy()
+    expect(screen.getByText('Failed to load')).toBeInTheDocument()
   })
 
   it('shows empty state when no documents', () => {
     render(<DocumentList />)
-    expect(screen.getByText(/no documents yet/i)).toBeTruthy()
+    expect(screen.getByText(/no documents yet/i)).toBeInTheDocument()
   })
 
   it('renders a document card for each document', () => {
     mockHookReturn.documents = [makeDoc('a'), makeDoc('b')]
     mockHookReturn.total = 2
     render(<DocumentList />)
-    expect(screen.getByText('a.pdf')).toBeTruthy()
-    expect(screen.getByText('b.pdf')).toBeTruthy()
+    expect(screen.getByText('a.pdf')).toBeInTheDocument()
+    expect(screen.getByText('b.pdf')).toBeInTheDocument()
   })
 
   it('renders category filter chips from categories_list', async () => {
@@ -108,7 +108,7 @@ describe('DocumentList', () => {
       return Promise.resolve([])
     })
     render(<DocumentList />)
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Lab' })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Lab' })).toBeInTheDocument())
   })
 
   it('toggles category filter chip on click', async () => {
@@ -156,7 +156,7 @@ describe('DocumentList', () => {
     mockInvoke.mockResolvedValue({ items: [], total: 0 })
     render(<DocumentList />)
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
-    await waitFor(() => expect(screen.getByRole('button', { name: /clear/i })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /clear/i }))
     expect(screen.queryByRole('button', { name: /clear/i })).toBeNull()
   })
@@ -173,8 +173,8 @@ describe('DocumentList', () => {
     mockHookReturn.total = 25
     mockHookReturn.page = 1
     render(<DocumentList />)
-    expect(screen.getByRole('navigation', { name: /document pages/i })).toBeTruthy()
-    expect(screen.getByText('Page 1 of 2')).toBeTruthy()
+    expect(screen.getByRole('navigation', { name: /document pages/i })).toBeInTheDocument()
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument()
   })
 
   it('calls goToPage(2) when next page clicked', async () => {
@@ -199,8 +199,8 @@ describe('DocumentList', () => {
     mockHookReturn.documents = [makeDoc('a'), makeDoc('b')]
     mockHookReturn.total = 2
     render(<DocumentList />)
-    expect(screen.getByRole('checkbox', { name: /select a\.pdf/i })).toBeTruthy()
-    expect(screen.getByRole('checkbox', { name: /select b\.pdf/i })).toBeTruthy()
+    expect(screen.getByRole('checkbox', { name: /select a\.pdf/i })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /select b\.pdf/i })).toBeInTheDocument()
   })
 
   it('shows action bar when a document is selected', async () => {
@@ -209,8 +209,8 @@ describe('DocumentList', () => {
     mockHookReturn.total = 1
     render(<DocumentList />)
     await user.click(screen.getByRole('checkbox', { name: /select a\.pdf/i }))
-    expect(screen.getByRole('toolbar', { name: /bulk actions/i })).toBeTruthy()
-    expect(screen.getByText(/1 document selected/i)).toBeTruthy()
+    expect(screen.getByRole('toolbar', { name: /bulk actions/i })).toBeInTheDocument()
+    expect(screen.getByText(/1 document selected/i)).toBeInTheDocument()
   })
 
   it('hides action bar after cancel', async () => {
@@ -229,7 +229,7 @@ describe('DocumentList', () => {
     mockHookReturn.total = 2
     render(<DocumentList />)
     await user.click(screen.getByRole('checkbox', { name: /select all documents/i }))
-    expect(screen.getByText(/2 documents selected/i)).toBeTruthy()
+    expect(screen.getByText(/2 documents selected/i)).toBeInTheDocument()
   })
 
   it('calls categories_bulk_link with selected ids and chosen category', async () => {

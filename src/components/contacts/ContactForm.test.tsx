@@ -26,12 +26,12 @@ describe('ContactForm', () => {
 
   it('shows "New Contact" title when initial is null', () => {
     render(<ContactForm initial={null} onSave={vi.fn()} onCancel={vi.fn()} />)
-    expect(screen.getByText('New Contact')).toBeTruthy()
+    expect(screen.getByText('New Contact')).toBeInTheDocument()
   })
 
   it('shows "Edit Contact" title when initial contact provided', () => {
     render(<ContactForm initial={fakeContact} onSave={vi.fn()} onCancel={vi.fn()} />)
-    expect(screen.getByText('Edit Contact')).toBeTruthy()
+    expect(screen.getByText('Edit Contact')).toBeInTheDocument()
   })
 
   it('pre-fills name field from initial contact', () => {
@@ -39,7 +39,7 @@ describe('ContactForm', () => {
     const nameInput = screen.getAllByRole('textbox').find(
       (el) => (el as HTMLInputElement).value === 'Dr. Jane Smith',
     )
-    expect(nameInput).toBeTruthy()
+    expect(nameInput).toBeInTheDocument()
   })
 
   it('pre-fills name when initial has only name set', () => {
@@ -61,7 +61,7 @@ describe('ContactForm', () => {
     const nameInput = screen.getAllByRole('textbox').find(
       (el) => (el as HTMLInputElement).value === 'Dr. John Doe',
     )
-    expect(nameInput).toBeTruthy()
+    expect(nameInput).toBeInTheDocument()
   })
 
   it('calls onCancel when Cancel button clicked', async () => {
@@ -74,7 +74,7 @@ describe('ContactForm', () => {
   it('shows error when submitted with empty name', async () => {
     render(<ContactForm initial={null} onSave={vi.fn()} onCancel={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /save/i }))
-    await waitFor(() => expect(screen.getByText('Name is required')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Name is required')).toBeInTheDocument())
   })
 
   it('calls onSave with trimmed values on valid submit', async () => {
@@ -116,7 +116,7 @@ describe('ContactForm', () => {
     const inputs = screen.getAllByRole('textbox')
     await userEvent.type(inputs[0]!, 'Dr. Test')
     await userEvent.click(screen.getByRole('button', { name: /save/i }))
-    await waitFor(() => expect(screen.getByText('server error')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('server error')).toBeInTheDocument())
   })
 
   it('disables Save button while saving', async () => {

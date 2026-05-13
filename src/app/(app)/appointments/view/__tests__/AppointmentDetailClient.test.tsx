@@ -489,8 +489,8 @@ describe('AppointmentDetailClient — symptom linking', () => {
     setupWithSymptoms()
     render(<AppointmentDetailClient />)
     await waitFor(() => screen.getByText('Annual Checkup'))
-    expect(screen.getByText('Select symptom…')).toBeTruthy()
-    expect(screen.getByText('Headache')).toBeTruthy()
+    expect(screen.getByText('Select symptom…')).toBeInTheDocument()
+    expect(screen.getByText('Headache')).toBeInTheDocument()
   })
 
   it('calls symptom_link with correct args on Link click', async () => {
@@ -522,7 +522,7 @@ describe('AppointmentDetailClient — symptom linking', () => {
     )
     render(<AppointmentDetailClient />)
     await waitFor(() => screen.getByText('Annual Checkup'))
-    expect(screen.getByText('Headache')).toBeTruthy()
+    expect(screen.getByText('Headache')).toBeInTheDocument()
 
     mockInvoke.mockResolvedValueOnce(undefined)
     fireEvent.click(screen.getByRole('button', { name: 'Unlink symptom' }))
@@ -546,8 +546,8 @@ describe('AppointmentDetailClient — medication linking', () => {
     setupWithMedications()
     render(<AppointmentDetailClient />)
     await waitFor(() => screen.getByText('Annual Checkup'))
-    expect(screen.getByText('Select medication…')).toBeTruthy()
-    expect(screen.getByText('Ibuprofen')).toBeTruthy()
+    expect(screen.getByText('Select medication…')).toBeInTheDocument()
+    expect(screen.getByText('Ibuprofen')).toBeInTheDocument()
   })
 
   it('calls medication_link with correct args on Link click', async () => {
@@ -579,7 +579,7 @@ describe('AppointmentDetailClient — medication linking', () => {
     )
     render(<AppointmentDetailClient />)
     await waitFor(() => screen.getByText('Annual Checkup'))
-    expect(screen.getByText('Ibuprofen')).toBeTruthy()
+    expect(screen.getByText('Ibuprofen')).toBeInTheDocument()
 
     mockInvoke.mockResolvedValueOnce(undefined)
     fireEvent.click(screen.getByRole('button', { name: 'Unlink medication' }))

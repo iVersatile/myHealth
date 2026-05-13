@@ -107,7 +107,7 @@ describe('DOCUMENT_CATEGORIES', () => {
 
   it('has a label for every category', () => {
     for (const cat of DOCUMENT_CATEGORIES) {
-      expect(CATEGORY_LABELS[cat]).toBeTruthy()
+      expect(CATEGORY_LABELS[cat]).toBeDefined()
     }
   })
 })

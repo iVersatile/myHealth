@@ -124,7 +124,7 @@ describe('DocumentDetailClient — document preview (AC-F1.6)', () => {
     const { container } = render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
     const iframe = container.querySelector('iframe')
-    expect(iframe).toBeTruthy()
+    expect(iframe).toBeInTheDocument()
     expect(iframe?.getAttribute('src')).toContain('original.pdf')
   })
 
@@ -142,7 +142,7 @@ describe('DocumentDetailClient — document preview (AC-F1.6)', () => {
     const { container } = render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
     const img = container.querySelector('img[alt="scan.jpg"]')
-    expect(img).toBeTruthy()
+    expect(img).toBeInTheDocument()
     expect(img?.getAttribute('src')).toContain('original.pdf')
   })
 
@@ -150,7 +150,7 @@ describe('DocumentDetailClient — document preview (AC-F1.6)', () => {
     setupInvoke({ mime_type: 'text/plain', filename: 'note.txt' })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Preview not available for this file type.')).toBeTruthy()
+    expect(screen.getByText('Preview not available for this file type.')).toBeInTheDocument()
   })
 
   it('does not render iframe for image documents', async () => {
@@ -170,7 +170,7 @@ describe('DocumentDetailClient — error and loading states', () => {
   it('shows loading state initially', () => {
     mockInvoke.mockReturnValue(new Promise(() => {}))
     render(<DocumentDetailClient />)
-    expect(screen.getByText('Loading…')).toBeTruthy()
+    expect(screen.getByText('Loading…')).toBeInTheDocument()
   })
 
   it('shows error when documents_get rejects', async () => {
@@ -180,7 +180,7 @@ describe('DocumentDetailClient — error and loading states', () => {
     })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('DB error')).toBeTruthy()
+    expect(screen.getByText('DB error')).toBeInTheDocument()
   })
 
   it('shows error string when non-Error is thrown', async () => {
@@ -190,7 +190,7 @@ describe('DocumentDetailClient — error and loading states', () => {
     })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('string error')).toBeTruthy()
+    expect(screen.getByText('string error')).toBeInTheDocument()
   })
 })
 
@@ -204,42 +204,42 @@ describe('DocumentDetailClient — document details panel', () => {
     setupInvoke({ filename: 'blood-test.pdf' })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('blood-test.pdf')).toBeTruthy()
+    expect(screen.getByText('blood-test.pdf')).toBeInTheDocument()
   })
 
   it('displays file size in bytes for small files', async () => {
     setupInvoke({ file_size_bytes: 500 })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('500 B')).toBeTruthy()
+    expect(screen.getByText('500 B')).toBeInTheDocument()
   })
 
   it('displays file size in KB for medium files', async () => {
     setupInvoke({ file_size_bytes: 2048 })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('2.0 KB')).toBeTruthy()
+    expect(screen.getByText('2.0 KB')).toBeInTheDocument()
   })
 
   it('displays file size in MB for large files', async () => {
     setupInvoke({ file_size_bytes: 2 * 1024 * 1024 })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('2.0 MB')).toBeTruthy()
+    expect(screen.getByText('2.0 MB')).toBeInTheDocument()
   })
 
   it('shows category label from CATEGORY_LABELS', async () => {
     setupInvoke({ category: 'lab' })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Lab')).toBeTruthy()
+    expect(screen.getByText('Lab')).toBeInTheDocument()
   })
 
   it('falls back to raw category when label not in map', async () => {
     setupInvoke({ category: 'unknown_cat' })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('unknown_cat')).toBeTruthy()
+    expect(screen.getByText('unknown_cat')).toBeInTheDocument()
   })
 })
 
@@ -253,8 +253,8 @@ describe('DocumentDetailClient — tags', () => {
     setupInvoke({ tags: ['cardiology', '2024-03-15'] })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('#cardiology')).toBeTruthy()
-    expect(screen.getByText('#2024-03-15')).toBeTruthy()
+    expect(screen.getByText('#cardiology')).toBeInTheDocument()
+    expect(screen.getByText('#2024-03-15')).toBeInTheDocument()
   })
 
   it('adds a tag on button click', async () => {
@@ -393,7 +393,7 @@ describe('DocumentDetailClient — categories section', () => {
     })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Pick Category')).toBeTruthy()
+    expect(screen.getByText('Pick Category')).toBeInTheDocument()
   })
 
   it('does not show CategoryPicker when no categories', async () => {
@@ -482,14 +482,14 @@ describe('DocumentDetailClient — appointment links', () => {
     )
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Annual Checkup')).toBeTruthy()
+    expect(screen.getByText('Annual Checkup')).toBeInTheDocument()
   })
 
   it('shows appointment id when appointment not found', async () => {
     setupInvoke({}, { links: [makeLink()], appointments: [] })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('appt-1')).toBeTruthy()
+    expect(screen.getByText('appt-1')).toBeInTheDocument()
   })
 
   it('unlinks appointment on ✕ click', async () => {
@@ -520,8 +520,8 @@ describe('DocumentDetailClient — appointment links', () => {
     )
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Select appointment…')).toBeTruthy()
-    expect(screen.getByText('Annual Checkup')).toBeTruthy()
+    expect(screen.getByText('Select appointment…')).toBeInTheDocument()
+    expect(screen.getByText('Annual Checkup')).toBeInTheDocument()
   })
 
   it('hides select when all appointments already linked', async () => {
@@ -607,8 +607,8 @@ describe('DocumentDetailClient — suggested links', () => {
     })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Cardiology Review')).toBeTruthy()
-    expect(screen.getByText('Score: 5')).toBeTruthy()
+    expect(screen.getByText('Cardiology Review')).toBeInTheDocument()
+    expect(screen.getByText('Score: 5')).toBeInTheDocument()
   })
 
   it('hides suggestion for already-linked appointment', async () => {
@@ -650,7 +650,7 @@ describe('DocumentDetailClient — suggested links', () => {
       return Promise.resolve(undefined)
     })
     render(<DocumentDetailClient />)
-    await waitFor(() => expect(screen.getByText('Score: 5')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Score: 5')).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Link suggestion' }))
 
@@ -680,7 +680,7 @@ describe('DocumentDetailClient — suggested links', () => {
       return Promise.resolve(undefined)
     })
     render(<DocumentDetailClient />)
-    await waitFor(() => expect(screen.getByText('Score: 5')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Score: 5')).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Not Related' }))
 
@@ -705,8 +705,8 @@ describe('DocumentDetailClient — suggested links', () => {
     })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Date proximity')).toBeTruthy()
-    expect(screen.getByText('Category match')).toBeTruthy()
+    expect(screen.getByText('Date proximity')).toBeInTheDocument()
+    expect(screen.getByText('Category match')).toBeInTheDocument()
   })
 })
 
@@ -778,7 +778,7 @@ describe('DocumentDetailClient — clinic entity section', () => {
     setupWithClinic(true)
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('City Clinic')).toBeTruthy()
+    expect(screen.getByText('City Clinic')).toBeInTheDocument()
   })
 
   it('hides Save as Clinic button when clinic already exists', async () => {
@@ -792,7 +792,7 @@ describe('DocumentDetailClient — clinic entity section', () => {
     setupWithClinic(false)
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByTestId('detail-save-clinic-btn')).toBeTruthy()
+    expect(screen.getByTestId('detail-save-clinic-btn')).toBeInTheDocument()
   })
 
   it('calls clinics_create_if_not_exists on Save as Clinic click', async () => {
@@ -815,7 +815,7 @@ describe('DocumentDetailClient — clinic entity section', () => {
     mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('DB error')))
     fireEvent.click(screen.getByTestId('detail-save-clinic-btn'))
     await waitFor(() =>
-      expect(screen.getByText('Failed to create clinic. Please try again.')).toBeTruthy()
+      expect(screen.getByText('Failed to create clinic. Please try again.')).toBeInTheDocument()
     )
   })
 })
@@ -831,7 +831,7 @@ describe('DocumentDetailClient — linked notes', () => {
     setupInvoke()
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('No linked notes yet.')).toBeTruthy()
+    expect(screen.getByText('No linked notes yet.')).toBeInTheDocument()
   })
 
   it('renders linked note titles', async () => {
@@ -853,7 +853,7 @@ describe('DocumentDetailClient — linked notes', () => {
     })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('My Note')).toBeTruthy()
+    expect(screen.getByText('My Note')).toBeInTheDocument()
   })
 
   it('falls back to Untitled for notes without a title', async () => {
@@ -874,7 +874,7 @@ describe('DocumentDetailClient — linked notes', () => {
     })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Untitled')).toBeTruthy()
+    expect(screen.getByText('Untitled')).toBeInTheDocument()
   })
 })
 
@@ -900,7 +900,7 @@ describe('DocumentDetailClient — save feedback states', () => {
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
     mockInvoke.mockResolvedValueOnce(undefined)
     fireEvent.click(screen.getByRole('button', { name: 'Save Notes' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: '✓ Saved' })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: '✓ Saved' })).toBeInTheDocument())
   })
 })
 
@@ -921,7 +921,7 @@ describe('DocumentDetailClient — unlink error path', () => {
     mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('unlink failed')))
     fireEvent.click(screen.getByRole('button', { name: /unlink/i }))
     await waitFor(() =>
-      expect(screen.getByText('unlink failed')).toBeTruthy()
+      expect(screen.getByText('unlink failed')).toBeInTheDocument()
     )
   })
 })
@@ -937,8 +937,8 @@ describe('DocumentDetailClient — extracted text section', () => {
     setupInvoke({ extracted_text: 'Invoice total: £120.00\nDate: 01 Jan 2026' })
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Extracted Text')).toBeTruthy()
-    expect(screen.getByText(/Invoice total/)).toBeTruthy()
+    expect(screen.getByText('Extracted Text')).toBeInTheDocument()
+    expect(screen.getByText(/Invoice total/)).toBeInTheDocument()
   })
 
   it('hides Extracted Text section when extracted_text is null', async () => {
@@ -1023,8 +1023,8 @@ describe('DocumentDetailClient — symptom linking', () => {
     setupInvokeWithSymptoms()
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Select symptom…')).toBeTruthy()
-    expect(screen.getByText('Headache')).toBeTruthy()
+    expect(screen.getByText('Select symptom…')).toBeInTheDocument()
+    expect(screen.getByText('Headache')).toBeInTheDocument()
   })
 
   it('calls symptom_link with correct args on Link click', async () => {
@@ -1053,8 +1053,8 @@ describe('DocumentDetailClient — symptom linking', () => {
     setupInvokeWithSymptoms([makeSymptom({ id: 'sym-2', name: 'Fatigue' })], [makeSymptom({ id: 'sym-2', name: 'Fatigue' })])
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Fatigue')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Unlink symptom' })).toBeTruthy()
+    expect(screen.getByText('Fatigue')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unlink symptom' })).toBeInTheDocument()
   })
 
   it('calls symptom_unlink when ✕ button clicked', async () => {
@@ -1090,8 +1090,8 @@ describe('DocumentDetailClient — medication linking', () => {
     setupInvokeWithMedications()
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Select medication…')).toBeTruthy()
-    expect(screen.getByText('Ibuprofen')).toBeTruthy()
+    expect(screen.getByText('Select medication…')).toBeInTheDocument()
+    expect(screen.getByText('Ibuprofen')).toBeInTheDocument()
   })
 
   it('calls medication_link with correct args on Link click', async () => {
@@ -1123,8 +1123,8 @@ describe('DocumentDetailClient — medication linking', () => {
     )
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByText('Aspirin')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Unlink medication' })).toBeTruthy()
+    expect(screen.getByText('Aspirin')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unlink medication' })).toBeInTheDocument()
   })
 
   it('calls medication_unlink when ✕ button clicked', async () => {
@@ -1170,7 +1170,7 @@ describe('DocumentDetailClient — symptom error paths', () => {
     )!
     fireEvent.click(linkBtn)
 
-    await waitFor(() => expect(screen.getByText('sym link failed')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('sym link failed')).toBeInTheDocument())
   })
 
   it('shows error when symptom_unlink rejects', async () => {
@@ -1181,7 +1181,7 @@ describe('DocumentDetailClient — symptom error paths', () => {
     mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('sym unlink failed')))
     fireEvent.click(screen.getByRole('button', { name: 'Unlink symptom' }))
 
-    await waitFor(() => expect(screen.getByText('sym unlink failed')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('sym unlink failed')).toBeInTheDocument())
   })
 })
 
@@ -1207,7 +1207,7 @@ describe('DocumentDetailClient — medication error paths', () => {
     )!
     fireEvent.click(linkBtn)
 
-    await waitFor(() => expect(screen.getByText('link failed')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('link failed')).toBeInTheDocument())
   })
 
   it('shows error when medication_unlink rejects', async () => {
@@ -1218,7 +1218,7 @@ describe('DocumentDetailClient — medication error paths', () => {
     mockInvoke.mockImplementationOnce(() => Promise.reject(new Error('unlink failed')))
     fireEvent.click(screen.getByRole('button', { name: 'Unlink medication' }))
 
-    await waitFor(() => expect(screen.getByText('unlink failed')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('unlink failed')).toBeInTheDocument())
   })
 })
 
@@ -1296,7 +1296,7 @@ describe('DocumentDetailClient — export PDF report (task 50.4)', () => {
   it('renders export-report-btn', async () => {
     render(<DocumentDetailClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    expect(screen.getByTestId('export-report-btn')).toBeTruthy()
+    expect(screen.getByTestId('export-report-btn')).toBeInTheDocument()
   })
 
   it('invokes documents_export_report and calls downloadReport on click', async () => {

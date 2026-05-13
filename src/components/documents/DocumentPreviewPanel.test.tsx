@@ -31,16 +31,16 @@ const makeDoc = (overrides: Partial<Document> = {}): Document => ({
 describe('DocumentPreviewPanel', () => {
   it('renders empty state when document is null', () => {
     render(<DocumentPreviewPanel document={null} />)
-    expect(screen.getByTestId('document-preview-panel')).toBeTruthy()
-    expect(screen.getByText(/select a document/i)).toBeTruthy()
+    expect(screen.getByTestId('document-preview-panel')).toBeInTheDocument()
+    expect(screen.getByText(/select a document/i)).toBeInTheDocument()
   })
 
   it('renders preview panel with toolbar for PDF', () => {
     render(<DocumentPreviewPanel document={makeDoc()} />)
-    expect(screen.getByTestId('document-preview-panel')).toBeTruthy()
-    expect(screen.getByTestId('preview-toolbar')).toBeTruthy()
-    expect(screen.getByTestId('preview-iframe')).toBeTruthy()
-    expect(screen.getByTestId('zoom-label')).toBeTruthy()
+    expect(screen.getByTestId('document-preview-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('preview-toolbar')).toBeInTheDocument()
+    expect(screen.getByTestId('preview-iframe')).toBeInTheDocument()
+    expect(screen.getByTestId('zoom-label')).toBeInTheDocument()
   })
 
   it('sets iframe src to asset URL', () => {
@@ -52,7 +52,7 @@ describe('DocumentPreviewPanel', () => {
 
   it('renders image tag for image mime type', () => {
     render(<DocumentPreviewPanel document={makeDoc({ mime_type: 'image/png', filename: 'scan.png' })} />)
-    expect(screen.getByTestId('preview-image')).toBeTruthy()
+    expect(screen.getByTestId('preview-image')).toBeInTheDocument()
   })
 
   it('renders extracted text fallback for non-pdf non-image', () => {
@@ -61,18 +61,18 @@ describe('DocumentPreviewPanel', () => {
         document={makeDoc({ mime_type: 'text/plain', extracted_text: 'hello world' })}
       />,
     )
-    expect(screen.getByTestId('text-preview')).toBeTruthy()
-    expect(screen.getByText('hello world')).toBeTruthy()
+    expect(screen.getByTestId('text-preview')).toBeInTheDocument()
+    expect(screen.getByText('hello world')).toBeInTheDocument()
   })
 
   it('renders unavailable message when no extracted text for unsupported type', () => {
     render(<DocumentPreviewPanel document={makeDoc({ mime_type: 'application/zip', extracted_text: null })} />)
-    expect(screen.getByTestId('preview-unavailable')).toBeTruthy()
+    expect(screen.getByTestId('preview-unavailable')).toBeInTheDocument()
   })
 
   it('shows filename in toolbar', () => {
     render(<DocumentPreviewPanel document={makeDoc({ filename: 'my-lab-result.pdf' })} />)
-    expect(screen.getByText('my-lab-result.pdf')).toBeTruthy()
+    expect(screen.getByText('my-lab-result.pdf')).toBeInTheDocument()
   })
 
   it('shows zoom label at 100% initially', () => {

@@ -29,15 +29,15 @@ describe('ContentSearchPage — multi-type results', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'result')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Blood Test')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Blood Test')).toBeInTheDocument())
   }
 
   it('renders one card per entity type', async () => {
     await search()
-    expect(screen.getByText('Blood Test')).toBeTruthy()
-    expect(screen.getByText('Visit Note')).toBeTruthy()
-    expect(screen.getByText('Headache')).toBeTruthy()
-    expect(screen.getByText('Ibuprofen')).toBeTruthy()
+    expect(screen.getByText('Blood Test')).toBeInTheDocument()
+    expect(screen.getByText('Visit Note')).toBeInTheDocument()
+    expect(screen.getByText('Headache')).toBeInTheDocument()
+    expect(screen.getByText('Ibuprofen')).toBeInTheDocument()
   })
 
   it('shows type badge for each entity', async () => {
@@ -76,7 +76,7 @@ describe('ContentSearchPage — multi-type results', () => {
     render(<ContentSearchPage />)
     await userEvent.type(screen.getByTestId('content-search-input'), 'test')
     await userEvent.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByText('Checkup')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Checkup')).toBeInTheDocument())
     const links = screen.getAllByRole('link')
     const hrefs = links.map((l) => l.getAttribute('href') ?? '')
     expect(hrefs.some((h) => h.includes('/appointments/view') && h.includes('appt-5'))).toBe(true)
