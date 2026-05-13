@@ -45,6 +45,7 @@ pub mod documents;
 pub mod drafts;
 pub mod entity_links;
 pub mod export;
+pub mod icd10;
 pub mod links;
 pub mod medications;
 pub mod notes;

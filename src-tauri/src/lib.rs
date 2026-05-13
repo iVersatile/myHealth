@@ -59,6 +59,7 @@ use commands::entity_links::{
     medications_for_entity, symptom_link, symptom_unlink, symptoms_for_entity,
 };
 use commands::export::{export_pdf_bundle, export_pdf_summary_bytes, export_save_bytes};
+use commands::icd10::{documents_get_icd10_tags, documents_tag_icd10};
 use commands::links::{
     get_appointment_links, get_document_links, link_document_to_appointment, links_create,
     links_delete, links_list_for_appointment, links_list_for_document, links_score_candidates,
@@ -278,6 +279,8 @@ pub fn run() {
             outlook_disconnect,
             summarize_appointment_notes,
             icd10_suggest,
+            documents_tag_icd10,
+            documents_get_icd10_tags,
             appointment_tags_get,
             appointment_tags_set,
             backup_export,

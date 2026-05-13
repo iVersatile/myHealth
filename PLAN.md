@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 104
-Task:  104.6 — Pre-commit checks + commit
+Phase: 105
+Task:  105.3 — Wire into upload pipeline
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -174,7 +174,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - E2E: `e2e/icalendar.spec.ts` — assert `export-ics-btn` and `import-ics-btn` visible on appointments page
    - Done when: all tests pass
 
-▶ [ ] **104.6 — Pre-commit checks + commit**
+[x] **104.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - Commit: `feat: iCalendar .ics import and export (Phase 104)`
@@ -194,20 +194,20 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 
 ### Sprint 105
 
-[ ] **105.1 — Bundle ICD-10 dataset as SQLite migration**
+[x] **105.1 — Bundle ICD-10 dataset as SQLite migration**
    - Source: CMS ICD-10-CM public domain data (CSV)
    - Migration creates `icd10_codes(code TEXT PRIMARY KEY, description TEXT)` + FTS5 virtual table `icd10_fts`
    - Seed script in `scripts/seed-icd10.mjs` — reads CSV, generates SQL migration file
    - Done when: migration runs cleanly; `SELECT COUNT(*) FROM icd10_codes` ≥ 70000
 
-[ ] **105.2 — Rust matching command `documents_tag_icd10(document_id)`**
+[x] **105.2 — Rust matching command `documents_tag_icd10(document_id)`**
    - Query `extracted_text` for the document
    - Run FTS5 search on `icd10_fts` for each extracted entity (`diagnoses` array from structured extraction)
    - Score matches; keep top result per entity if rank > threshold
    - Insert into `document_icd10_tags`; return matched codes
    - Done when: `cargo test` passes with fixture text containing known diagnosis terms
 
-[ ] **105.3 — Wire into upload pipeline**
+▶ [ ] **105.3 — Wire into upload pipeline**
    - Call `documents_tag_icd10` after structured entity extraction step in `upload_document` command
    - Done when: uploading a document with diagnosis text auto-populates `document_icd10_tags`
 
