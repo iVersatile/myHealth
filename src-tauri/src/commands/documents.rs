@@ -2561,9 +2561,12 @@ pub async fn documents_run_extraction(
                 ],
             )?;
             for addr in &clinic.addresses {
+                let addr_id = Uuid::new_v4().to_string();
                 conn.execute(
-                    "INSERT INTO clinic_addresses (clinic_id, address) VALUES (?1, ?2)",
-                    rusqlite::params![clinic_id, addr.line1],
+                    "INSERT INTO clinic_addresses \
+                     (id, clinic_id, label, line1, line2, city, postcode, country, is_primary, created_at) \
+                     VALUES (?1, ?2, ?3, ?4, NULL, NULL, NULL, NULL, 0, ?5)",
+                    rusqlite::params![addr_id, clinic_id, addr.label, addr.line1, now],
                 )?;
             }
         }
