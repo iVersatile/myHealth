@@ -152,6 +152,7 @@ describe('UploadReviewStep', () => {
 
   describe('contact suggestions', () => {
     const contact: ContactSuggestion = {
+      draft_id: null,
       name: 'Dr. Smith',
       title: 'Dr.',
       specialty: 'Cardiology',
@@ -378,6 +379,7 @@ describe('UploadReviewStep', () => {
 
   describe('async contact save flow', () => {
     const contact: ContactSuggestion = {
+      draft_id: null,
       name: 'Dr. Adams',
       title: null,
       specialty: null,
@@ -440,6 +442,7 @@ describe('UploadReviewStep', () => {
 
   describe('async merge flow', () => {
     const contact: ContactSuggestion = {
+      draft_id: null,
       name: 'Dr. Jones',
       title: null,
       specialty: null,

@@ -14,6 +14,7 @@ function extractMessage(err: unknown): string {
 }
 
 export interface ContactSuggestion {
+  draft_id: string | null
   name: string
   title: string | null
   specialty: string | null
@@ -42,7 +43,13 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
       const results: ContactSuggestion[] = []
       for (const suggestion of candidates) {
         const existing = await invoke<Contact | null>('contacts_find_similar', { name: suggestion.name })
-        if (!existing) results.push(suggestion)
+        if (existing) {
+          if (suggestion.draft_id) {
+            await invoke('reject_draft_entity', { entityType: 'contact', entityId: suggestion.draft_id }).catch(() => {})
+          }
+        } else {
+          results.push(suggestion)
+        }
       }
       if (!cancelled) {
         setUnmatched(results)
@@ -60,11 +67,19 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
   const suggestion = unmatched[0]
   if (!suggestion) return null
 
+  async function rejectUnmatchedDrafts() {
+    for (const s of unmatched) {
+      if (s.draft_id) {
+        await invoke('reject_draft_entity', { entityType: 'contact', entityId: s.draft_id }).catch(() => {})
+      }
+    }
+  }
+
   function handleDismiss() {
     if (appointmentId) {
       setFollowUp(true)
     } else {
-      onDismiss()
+      void rejectUnmatchedDrafts().then(() => onDismiss())
     }
   }
 
@@ -76,6 +91,7 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
         toast.show(extractMessage(err))
       }
     }
+    await rejectUnmatchedDrafts()
     onDismiss()
   }
 
@@ -85,7 +101,7 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
         <SuggestionBanner
           actions={
             <>
-              <button onClick={onDismiss} className={bannerPrimaryBtn}>
+              <button onClick={() => void rejectUnmatchedDrafts().then(() => onDismiss())} className={bannerPrimaryBtn}>
                 Yes, keep name
               </button>
               <button onClick={() => void handleNoDoctor()} className={bannerSecondaryBtn}>

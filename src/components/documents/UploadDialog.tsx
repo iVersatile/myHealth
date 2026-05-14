@@ -24,10 +24,11 @@ function extractMessage(err: unknown): string {
 
 interface UploadDialogProps {
   onClose: () => void
-  onUploaded: (doc: Document, unsavedClinicSuggestions: ClinicSuggestion[], unsavedContactSuggestions: ContactSuggestion[]) => void
+  onUploaded: (doc: Document, unsavedClinicSuggestions: ClinicSuggestion[], unsavedContactSuggestions: ContactSuggestion[], draftAppointmentId: string | null) => void
 }
 
 interface ExtractionSuggestions {
+  draft_appointment_id: string | null
   doctor_candidates: string[]
   category_suggestion: string | null
   document_tags: string[]
@@ -80,6 +81,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
   const [batchMode, setBatchMode] = useState(false)
   const [batchUploadId, setBatchUploadId] = useState<string | null>(null)
   const [batchDocIds, setBatchDocIds] = useState<string[]>([])
+  const [draftAppointmentId, setDraftAppointmentId] = useState<string | null>(null)
   const { message: toastMessage, show: showToast } = useToast(4000)
   const unlistenRef = useRef<(() => void) | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -133,6 +135,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           unlistenRef.current = null
           setOcrProgress(null)
 
+          setDraftAppointmentId(suggestions.draft_appointment_id ?? null)
           setCategorySuggestion(suggestions.category_suggestion)
           setContactSuggestions(suggestions.contact_suggestions)
           setClinicSuggestions(suggestions.clinic_suggestions ?? [])
@@ -309,7 +312,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       const unsavedContacts = contactSuggestions.filter(
         (cs) => !dismissedContacts.has(cs.name) && (contactPhases.get(cs.name) ?? { kind: 'idle' }).kind !== 'saved',
       )
-      onUploaded(final, unsaved, unsavedContacts)
+      onUploaded(final, unsaved, unsavedContacts, draftAppointmentId)
       onClose()
     } catch (err: unknown) {
       setConfirmError(extractMessage(err))

@@ -2265,6 +2265,7 @@ mod tests {
 
 #[derive(Debug, Serialize)]
 pub struct ContactSuggestionDto {
+    pub draft_id: Option<String>,
     pub name: String,
     pub title: Option<String>,
     pub specialty: Option<String>,
@@ -2283,6 +2284,7 @@ pub struct ClinicSuggestionDto {
 
 #[derive(Debug, Serialize)]
 pub struct ExtractionSuggestions {
+    pub draft_appointment_id: Option<String>,
     pub doctor_candidates: Vec<String>,
     pub category_suggestion: Option<String>,
     pub document_tags: Vec<String>,
@@ -2328,6 +2330,7 @@ pub async fn documents_run_extraction(
             let contact_dtos: Vec<ContactSuggestionDto> = contact_suggestions
                 .iter()
                 .map(|c| ContactSuggestionDto {
+                    draft_id: None,
                     name: c.name.clone(),
                     title: c.title.clone(),
                     specialty: c.specialty.clone(),
@@ -2367,6 +2370,7 @@ pub async fn documents_run_extraction(
             };
             let clinical_notes = crate::extraction::extract_clinical_notes(&text);
             return Ok(ExtractionSuggestions {
+                draft_appointment_id: None,
                 doctor_candidates,
                 category_suggestion,
                 document_tags,
@@ -2410,10 +2414,11 @@ pub async fn documents_run_extraction(
     .await
     .map_err(|e| CommandError::Internal(format!("extraction thread panicked: {e}")))?;
 
-    let contact_dtos: Vec<ContactSuggestionDto> = result
+    let mut contact_dtos: Vec<ContactSuggestionDto> = result
         .contact_suggestions
         .iter()
         .map(|c| ContactSuggestionDto {
+            draft_id: None,
             name: c.name.clone(),
             title: c.title.clone(),
             specialty: c.specialty.clone(),
@@ -2423,6 +2428,7 @@ pub async fn documents_run_extraction(
             email: c.email.clone(),
         })
         .collect();
+    let mut draft_appt_id: Option<String> = None;
 
     let clinic_suggestions = {
         let clinic_name = crate::extraction::contact::first_clinic(&result.text);
@@ -2509,7 +2515,7 @@ pub async fn documents_run_extraction(
         let _ = crate::commands::icd10::match_and_store(conn, &id, &result.text);
 
         // Auto-create draft contacts from extraction suggestions
-        for c in &contact_dtos {
+        for c in contact_dtos.iter_mut() {
             let existing_id: Option<String> = conn
                 .query_row(
                     "SELECT id FROM contacts WHERE name = ?1 AND is_draft = 0 LIMIT 1",
@@ -2536,6 +2542,7 @@ pub async fn documents_run_extraction(
                     now,
                 ],
             )?;
+            c.draft_id = Some(contact_id);
         }
 
         // Auto-create draft clinics from extraction suggestions
@@ -2564,8 +2571,8 @@ pub async fn documents_run_extraction(
                 let addr_id = Uuid::new_v4().to_string();
                 conn.execute(
                     "INSERT INTO clinic_addresses \
-                     (id, clinic_id, label, line1, line2, city, postcode, country, is_primary, created_at) \
-                     VALUES (?1, ?2, ?3, ?4, NULL, NULL, NULL, NULL, 0, ?5)",
+                     (id, clinic_id, label, line1, is_primary, created_at) \
+                     VALUES (?1, ?2, ?3, ?4, 0, ?5)",
                     rusqlite::params![addr_id, clinic_id, addr.label, addr.line1, now],
                 )?;
             }
@@ -2596,6 +2603,7 @@ pub async fn documents_run_extraction(
                      (appointment_id, document_id) VALUES (?1, ?2)",
                     rusqlite::params![appt_id, id],
                 )?;
+                draft_appt_id = Some(appt_id);
             }
         }
 
@@ -2682,6 +2690,7 @@ pub async fn documents_run_extraction(
     };
     let clinical_notes = crate::extraction::extract_clinical_notes(&result.text);
     Ok(ExtractionSuggestions {
+        draft_appointment_id: draft_appt_id,
         doctor_candidates: result.doctor_candidates,
         category_suggestion: result.category_suggestion,
         document_tags: result.document_tags,

@@ -10,6 +10,7 @@ export interface ClinicSuggestion {
 }
 
 export interface ContactSuggestion {
+  draft_id: string | null
   name: string
   title: string | null
   specialty: string | null

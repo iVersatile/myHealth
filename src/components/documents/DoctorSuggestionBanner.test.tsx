@@ -5,7 +5,7 @@ import { DoctorSuggestionBanner } from './DoctorSuggestionBanner'
 import type { ContactSuggestion } from './DoctorSuggestionBanner'
 
 function makeSuggestion(name: string): ContactSuggestion {
-  return { name, title: null, specialty: null, clinic: null, address: null, phone: null, email: null }
+  return { draft_id: null, name, title: null, specialty: null, clinic: null, address: null, phone: null, email: null }
 }
 
 const mockInvoke = vi.fn()

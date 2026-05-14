@@ -52,6 +52,7 @@ export default function DocumentsPage() {
     documentId: string
   } | null>(null)
   const [apptSuggestionLoading, setApptSuggestionLoading] = useState(false)
+  const [draftAppointmentId, setDraftAppointmentId] = useState<string | null>(null)
   const [pendingClinicSuggestions, setPendingClinicSuggestions] = useState<ClinicSuggestion[]>([])
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null)
   const documents = useDocumentsStore(s => s.documents)
@@ -60,9 +61,10 @@ export default function DocumentsPage() {
   const { createContactWithClinic } = useContacts()
   const upsertAppointment = useAppointmentsStore(s => s.upsertAppointment)
 
-  async function handleUploaded(doc: Document, unsavedClinics: ClinicSuggestion[], contactSuggestions: UploadContactSuggestion[]) {
+  async function handleUploaded(doc: Document, unsavedClinics: ClinicSuggestion[], contactSuggestions: UploadContactSuggestion[], apptDraftId: string | null) {
     if (contactSuggestions.length > 0) setExtractedContactSuggestions(contactSuggestions)
     if (unsavedClinics.length > 0) setPendingClinicSuggestions(unsavedClinics)
+    setDraftAppointmentId(apptDraftId)
     setDocuments([doc, ...documents], total + 1)
     try {
       const candidates = await invoke<Array<{
@@ -123,6 +125,10 @@ export default function DocumentsPage() {
         score: 100,
       })
       upsertAppointment(appt)
+      if (draftAppointmentId) {
+        await invoke('reject_draft_entity', { entityType: 'appointment', entityId: draftAppointmentId }).catch(() => {})
+        setDraftAppointmentId(null)
+      }
     } catch (err) {
       toast.show(extractMessage(err))
     } finally {
@@ -165,6 +171,9 @@ export default function DocumentsPage() {
       clinic_address: s?.address ?? null,
     }
     await createContactWithClinic(input)
+    if (s?.draft_id) {
+      await invoke('reject_draft_entity', { entityType: 'contact', entityId: s.draft_id }).catch(() => {})
+    }
     setShowContactForm(false)
     setPendingContactSuggestion(null)
   }
@@ -219,7 +228,7 @@ export default function DocumentsPage() {
           <DoctorSuggestionBanner
             candidates={extractedContactSuggestions.length > 0
               ? extractedContactSuggestions
-              : doctorCandidates.map(name => ({ name, title: null, specialty: null, clinic: null, address: null, phone: null, email: null }))}
+              : doctorCandidates.map(name => ({ draft_id: null, name, title: null, specialty: null, clinic: null, address: null, phone: null, email: null }))}
             onAccept={handleBannerAccept}
             onDismiss={() => { setDoctorCandidates([]); setExtractedContactSuggestions([]) }}
             appointmentId={linkSuggestion?.appointmentId ?? null}
@@ -243,7 +252,13 @@ export default function DocumentsPage() {
           <ApptSuggestionBanner
             suggestion={apptSuggestion.suggestion}
             onConfirm={(doctorName) => void handleApptSuggestionConfirm(doctorName)}
-            onDismiss={() => setApptSuggestion(null)}
+            onDismiss={() => {
+              if (draftAppointmentId) {
+                void invoke('reject_draft_entity', { entityType: 'appointment', entityId: draftAppointmentId }).catch(() => {})
+                setDraftAppointmentId(null)
+              }
+              setApptSuggestion(null)
+            }}
             isLoading={apptSuggestionLoading}
           />
         </div>
@@ -267,7 +282,7 @@ export default function DocumentsPage() {
       {uploadOpen && (
         <UploadDialog
           onClose={() => setUploadOpen(false)}
-          onUploaded={(doc, unsaved, contacts) => void handleUploaded(doc, unsaved, contacts)}
+          onUploaded={(doc, unsaved, contacts, apptDraftId) => void handleUploaded(doc, unsaved, contacts, apptDraftId)}
         />
       )}
       {exportOpen && (

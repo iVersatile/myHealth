@@ -182,7 +182,7 @@ describe('UploadDialog', () => {
   })
 
   it('shows contact suggestions from extraction and saves one (no duplicate)', async () => {
-    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
       if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
@@ -208,7 +208,7 @@ describe('UploadDialog', () => {
   })
 
   it('shows duplicate merge prompt when similar contact found on save', async () => {
-    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: '555-9999', email: null }
     const existingContact = { id: 'existing-c1', name: 'Dr. Greg House' }
     const dupCandidate = { primary_contact_id: 'new-c1', contact: existingContact, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
@@ -242,7 +242,7 @@ describe('UploadDialog', () => {
   })
 
   it('keep both on duplicate prompt marks contact saved without merging', async () => {
-    const contactSugg = { name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
     const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.9, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
@@ -322,7 +322,7 @@ describe('UploadDialog', () => {
   })
 
   it('cancel on duplicate prompt deletes new contact and returns to idle', async () => {
-    const contactSugg = { name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
     const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
@@ -350,7 +350,7 @@ describe('UploadDialog', () => {
   })
 
   it('calls documents_link_contact after no-duplicate contact save', async () => {
-    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: null, email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
       if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
@@ -377,7 +377,7 @@ describe('UploadDialog', () => {
   })
 
   it('calls documents_link_contact with primary contact id after merge', async () => {
-    const contactSugg = { name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. House', specialty: 'Diagnostics', clinic: 'PPTH', address: null, phone: null, email: null }
     const existingContact = { id: 'existing-c1', name: 'Dr. Greg House' }
     const dupCandidate = { primary_contact_id: 'new-c1', contact: existingContact, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
@@ -409,7 +409,7 @@ describe('UploadDialog', () => {
   })
 
   it('cancel on duplicate prompt returns to idle even if delete fails', async () => {
-    const contactSugg = { name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. House', specialty: null, clinic: null, address: null, phone: null, email: null }
     const dupCandidate = { primary_contact_id: 'new-c1', contact: { id: 'existing-c1', name: 'Dr. Greg House' }, similarity_score: 0.92, match_reason: 'name similarity' }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
@@ -492,7 +492,7 @@ describe('UploadDialog', () => {
   })
 
   it('auto-links saved contact to clinic when contact was saved in the same session', async () => {
-    const contactSugg = { name: 'Dr. John Green', specialty: 'Physiotherapy', clinic: 'John Green Physiotherapy Ltd', address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'Dr. John Green', specialty: 'Physiotherapy', clinic: 'John Green Physiotherapy Ltd', address: null, phone: null, email: null }
     const clinicSugg = { name: 'John Green Physiotherapy Ltd', company_registration_number: '6780032', addresses: ['1 Clinic Rd, London, SW1A 1AA'] }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
@@ -649,7 +649,7 @@ describe('UploadDialog', () => {
   })
 
   it('pre-fills timeline entry from physio extraction with title prefix', async () => {
-    const contactSugg = { name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
       if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
@@ -675,7 +675,7 @@ describe('UploadDialog', () => {
   })
 
   it('timeline entry field is editable after pre-fill', async () => {
-    const contactSugg = { name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
+    const contactSugg = { draft_id: null, name: 'John Green', title: 'Mr', specialty: 'Physiotherapy', clinic: null, address: null, phone: null, email: null }
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'categories_list') return Promise.resolve([])
       if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
