@@ -7,7 +7,7 @@ function uid() {
 }
 
 test.describe('Content search — multi-type results', () => {
-  test('TC-CS-MT-01: note indexed by content search', async ({ page }) => {
+  test('TC-CSMT-01: note indexed by content search', async ({ page }) => {
     await page.goto('/')
     await page.evaluate(({ key, id }) => {
       const raw = sessionStorage.getItem(key)
@@ -37,7 +37,7 @@ test.describe('Content search — multi-type results', () => {
     await expect(page.getByText('Note').first()).toBeVisible()
   })
 
-  test('TC-CS-MT-02: symptom indexed by content search', async ({ page }) => {
+  test('TC-CSMT-02: symptom indexed by content search', async ({ page }) => {
     await page.goto('/')
     await page.evaluate(({ key, id }) => {
       const raw = sessionStorage.getItem(key)
@@ -67,7 +67,7 @@ test.describe('Content search — multi-type results', () => {
     await expect(page.getByText('Symptom').first()).toBeVisible()
   })
 
-  test('TC-CS-MT-03: medication indexed by content search', async ({ page }) => {
+  test('TC-CSMT-03: medication indexed by content search', async ({ page }) => {
     await page.goto('/')
     await page.evaluate(({ key, id }) => {
       const raw = sessionStorage.getItem(key)
@@ -99,7 +99,7 @@ test.describe('Content search — multi-type results', () => {
     await expect(page.getByText('Medication').first()).toBeVisible()
   })
 
-  test('TC-CS-MT-04: mixed results show correct type badges', async ({ page }) => {
+  test('TC-CSMT-04: mixed results show correct type badges', async ({ page }) => {
     const noteId = uid()
     const symId = uid()
     const medId = uid()

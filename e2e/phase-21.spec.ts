@@ -4,7 +4,7 @@ const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31
 const NO_DATE_NO_FILENAME_PDF = 'src-tauri/tests/fixtures/no-date-no-filename.pdf'
 
 test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_date editing', () => {
-  test('TC-21-01 — title tag stored without "title:" prefix on upload review', async ({ page }) => {
+  test('TC-PHASE21-01 — title tag stored without "title:" prefix on upload review', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -18,7 +18,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     expect(hasTitlePrefix).toBe(false)
   })
 
-  test('TC-21-02 — title tag stored without "title:" prefix after save', async ({ page }) => {
+  test('TC-PHASE21-02 — title tag stored without "title:" prefix after save', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -36,12 +36,12 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     expect(hasTitlePrefix).toBe(false)
   })
 
-  test('TC-21-03 — "By Uploaded Date" tab exists in Timeline', async ({ page }) => {
+  test('TC-PHASE21-03 — "By Uploaded Date" tab exists in Timeline', async ({ page }) => {
     await page.goto('/timeline')
     await expect(page.getByRole('button', { name: /by uploaded date/i })).toBeVisible()
   })
 
-  test('TC-21-04 — "By Uploaded Date" view shows uploaded document entries', async ({ page }) => {
+  test('TC-PHASE21-04 — "By Uploaded Date" view shows uploaded document entries', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -54,7 +54,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     await expect(page.getByTestId('timeline-entry').first()).toBeVisible()
   })
 
-  test('TC-21-05 — Chronological view excludes upload-only events (no activity_date)', async ({ page }) => {
+  test('TC-PHASE21-05 — Chronological view excludes upload-only events (no activity_date)', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(NO_DATE_NO_FILENAME_PDF)
@@ -75,7 +75,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     }
   })
 
-  test('TC-21-06 — document detail page shows Activity Date input field', async ({ page }) => {
+  test('TC-PHASE21-06 — document detail page shows Activity Date input field', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(NO_DATE_NO_FILENAME_PDF)
@@ -92,7 +92,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     await expect(page.getByTestId('detail-activity-date-save')).toBeVisible()
   })
 
-  test('TC-21-07 — user can set and persist activity_date from document detail page', async ({ page }) => {
+  test('TC-PHASE21-07 — user can set and persist activity_date from document detail page', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(NO_DATE_NO_FILENAME_PDF)
@@ -114,7 +114,7 @@ test.describe('Phase 21 — Tag prefix removal, By Uploaded Date view, activity_
     await expect(page.getByTestId('detail-activity-date-input')).toHaveValue('2024-06-15')
   })
 
-  test('TC-21-08 — after setting activity_date, document appears in Chronological timeline', async ({ page }) => {
+  test('TC-PHASE21-08 — after setting activity_date, document appears in Chronological timeline', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(NO_DATE_NO_FILENAME_PDF)

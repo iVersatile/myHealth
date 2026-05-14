@@ -7,7 +7,7 @@ function uid() {
 }
 
 test.describe('Content search — entity-type filter chips + date range', () => {
-  test('TC-CS-F-01: Document chip filters out note results', async ({ page }) => {
+  test('TC-CSF-01: Document chip filters out note results', async ({ page }) => {
     const docId = uid()
     const noteId = uid()
 
@@ -55,7 +55,7 @@ test.describe('Content search — entity-type filter chips + date range', () => 
     await expect(page.getByTestId('summary-bar')).toContainText('Filtered results')
   })
 
-  test('TC-CS-F-02: All chip clears entity filter and restores all results', async ({ page }) => {
+  test('TC-CSF-02: All chip clears entity filter and restores all results', async ({ page }) => {
     const docId = uid()
     const noteId = uid()
 
@@ -103,7 +103,7 @@ test.describe('Content search — entity-type filter chips + date range', () => 
     await expect(page.getByTestId('summary-bar')).not.toContainText('Filtered results')
   })
 
-  test('TC-CS-F-03: date range excludes document outside range', async ({ page }) => {
+  test('TC-CSF-03: date range excludes document outside range', async ({ page }) => {
     const doc2022Id = uid()
     const doc2024Id = uid()
 
@@ -154,7 +154,7 @@ test.describe('Content search — entity-type filter chips + date range', () => 
     await expect(page.getByTestId('summary-bar')).toContainText('Filtered results')
   })
 
-  test('TC-CS-F-04: Clear dates button resets date filter and restores all results', async ({ page }) => {
+  test('TC-CSF-04: Clear dates button resets date filter and restores all results', async ({ page }) => {
     const doc2022Id = uid()
     const doc2024Id = uid()
 

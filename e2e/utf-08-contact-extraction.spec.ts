@@ -5,7 +5,7 @@ const GP_LABELLED_PDF = 'src-tauri/tests/fixtures/gp-labelled-sharma-2023-06-01.
 const LONDON_203_PDF = 'src-tauri/tests/fixtures/london-203-phone-2023-06-01.pdf'
 
 test.describe('UTF-08 — Contact Extraction Edge Cases', () => {
-  test('TC-UTF-08-01 — ALLCAPS surname contact name appears in suggestion card', async ({ page }) => {
+  test('TC-UTF08-01 — ALLCAPS surname contact name appears in suggestion card', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(ALLCAPS_PDF)
@@ -16,7 +16,7 @@ test.describe('UTF-08 — Contact Extraction Edge Cases', () => {
     await expect(card).toContainText('Mary Margaret MURPHY')
   })
 
-  test('TC-UTF-08-02 — ALLCAPS surname contact can be saved as a new contact', async ({ page }) => {
+  test('TC-UTF08-02 — ALLCAPS surname contact can be saved as a new contact', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(ALLCAPS_PDF)
@@ -29,7 +29,7 @@ test.describe('UTF-08 — Contact Extraction Edge Cases', () => {
     await expect(page.getByText('Mary Margaret MURPHY')).toBeVisible()
   })
 
-  test('TC-UTF-08-03 — GP-labelled contact name appears in suggestion card', async ({ page }) => {
+  test('TC-UTF08-03 — GP-labelled contact name appears in suggestion card', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(GP_LABELLED_PDF)
@@ -40,7 +40,7 @@ test.describe('UTF-08 — Contact Extraction Edge Cases', () => {
     await expect(card).toContainText('Vaibhav SHARMA')
   })
 
-  test('TC-UTF-08-04 — GP-labelled contact can be saved as a new contact', async ({ page }) => {
+  test('TC-UTF08-04 — GP-labelled contact can be saved as a new contact', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(GP_LABELLED_PDF)
@@ -53,7 +53,7 @@ test.describe('UTF-08 — Contact Extraction Edge Cases', () => {
     await expect(page.getByText('Vaibhav SHARMA')).toBeVisible()
   })
 
-  test('TC-UTF-08-05 — London +44 (0) 203 phone format shown in suggestion card', async ({ page }) => {
+  test('TC-UTF08-05 — London +44 (0) 203 phone format shown in suggestion card', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(LONDON_203_PDF)
@@ -64,7 +64,7 @@ test.describe('UTF-08 — Contact Extraction Edge Cases', () => {
     await expect(card).toContainText('+44 (0) 203 423 7500')
   })
 
-  test('TC-UTF-08-06 — London +44 (0) 203 phone is preserved when contact is saved', async ({ page }) => {
+  test('TC-UTF08-06 — London +44 (0) 203 phone is preserved when contact is saved', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(LONDON_203_PDF)

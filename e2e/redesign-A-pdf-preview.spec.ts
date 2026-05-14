@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 const PHYSIO_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('Redesign-A — PDF Preview Panel', () => {
-  test('TC-RA-01 — selecting a document row opens the preview panel', async ({ page }) => {
+  test('TC-RAPDF-01 — selecting a document row opens the preview panel', async ({ page }) => {
     await page.goto('/documents')
 
     // Upload a PDF so there is at least one document in the list
@@ -23,7 +23,7 @@ test.describe('Redesign-A — PDF Preview Panel', () => {
     await expect(page.getByTestId('document-preview-panel')).toBeVisible()
   })
 
-  test('TC-RA-02 — preview panel shows iframe for PDF documents', async ({ page }) => {
+  test('TC-RAPDF-02 — preview panel shows iframe for PDF documents', async ({ page }) => {
     await page.goto('/documents')
 
     await page.getByRole('button', { name: /upload/i }).click()
@@ -39,7 +39,7 @@ test.describe('Redesign-A — PDF Preview Panel', () => {
     await expect(panel.getByTestId('preview-iframe')).toBeVisible()
   })
 
-  test('TC-RA-03 — list panel remains visible alongside preview panel', async ({ page }) => {
+  test('TC-RAPDF-03 — list panel remains visible alongside preview panel', async ({ page }) => {
     await page.goto('/documents')
 
     await page.getByRole('button', { name: /upload/i }).click()

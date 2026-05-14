@@ -14,10 +14,10 @@ const NO_SUGGESTION_PDF = 'src-tauri/tests/fixtures/BloodTest_2024-01-15.pdf'
  * Fixture: BloodTest_2024-01-15.pdf
  *   → appointment_suggestion: null
  *
- * Test IDs: TC-V3-F6-01 … TC-V3-F6-04
+ * Test IDs: TC-F6-01 … TC-F6-04
  */
 test.describe('V3-F6 — Appointment Suggestion Banner', () => {
-  test('TC-V3-F6-01 — appt-suggestion-banner appears after uploading an invoice with provider', async ({
+  test('TC-F6-01 — appt-suggestion-banner appears after uploading an invoice with provider', async ({
     page,
   }) => {
     await page.goto('/documents')
@@ -33,7 +33,7 @@ test.describe('V3-F6 — Appointment Suggestion Banner', () => {
     await expect(banner).toBeVisible({ timeout: 15_000 })
   })
 
-  test('TC-V3-F6-02 — banner shows extracted date and title', async ({ page }) => {
+  test('TC-F6-02 — banner shows extracted date and title', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(INVOICE_PDF)
@@ -50,7 +50,7 @@ test.describe('V3-F6 — Appointment Suggestion Banner', () => {
     await expect(banner).toContainText(/Physiotherapy/i)
   })
 
-  test('TC-V3-F6-03 — accepting suggestion creates an appointment record', async ({ page }) => {
+  test('TC-F6-03 — accepting suggestion creates an appointment record', async ({ page }) => {
     await page.goto('/appointments')
     const initialCount = await page.getByTestId('appointment-card').count()
 
@@ -73,7 +73,7 @@ test.describe('V3-F6 — Appointment Suggestion Banner', () => {
     expect(finalCount).toBeGreaterThan(initialCount)
   })
 
-  test('TC-V3-F6-04 — no banner appears when document has no appointment suggestion', async ({
+  test('TC-F6-04 — no banner appears when document has no appointment suggestion', async ({
     page,
   }) => {
     await page.goto('/documents')

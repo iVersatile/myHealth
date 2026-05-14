@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 const SAMPLE_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('V3-F5 — Activity Date editing on Document Detail', () => {
-  test('TC-V3-F5-D01 — detail page pre-populates activity_date from extracted PDF date', async ({ page }) => {
+  test('TC-F5D-01 — detail page pre-populates activity_date from extracted PDF date', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_PDF)
@@ -20,7 +20,7 @@ test.describe('V3-F5 — Activity Date editing on Document Detail', () => {
     await expect(dateInput).toHaveValue('2023-03-09')
   })
 
-  test('TC-V3-F5-D02 — saving a new activity_date shows confirmation tick', async ({ page }) => {
+  test('TC-F5D-02 — saving a new activity_date shows confirmation tick', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_PDF)
@@ -41,7 +41,7 @@ test.describe('V3-F5 — Activity Date editing on Document Detail', () => {
     await expect(saveBtn).toContainText('✓', { timeout: 5_000 })
   })
 
-  test('TC-V3-F5-D03 — updated activity_date appears in timeline', async ({ page }) => {
+  test('TC-F5D-03 — updated activity_date appears in timeline', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_PDF)

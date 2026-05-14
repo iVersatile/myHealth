@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('V3-F3 — Clinic Extraction with Company Registration Number', () => {
-  test('TC-V3-F3-01 — clinic suggestion card shows name, company registration number, and all addresses', async ({ page }) => {
+  test('TC-F3CLIN-01 — clinic suggestion card shows name, company registration number, and all addresses', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -17,7 +17,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     await expect(addresses).toHaveCount(3)
   })
 
-  test('TC-V3-F3-02 — saving clinic creates record with company reg and three addresses', async ({ page }) => {
+  test('TC-F3CLIN-02 — saving clinic creates record with company reg and three addresses', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -33,7 +33,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     await expect(addresses).toHaveCount(3)
   })
 
-  test('TC-V3-F3-03 — saved clinic and saved contact are linked together', async ({ page }) => {
+  test('TC-F3CLIN-03 — saved clinic and saved contact are linked together', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -48,7 +48,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     await expect(page.getByText('JOHN GREEN PHYSIOTHERAPY LTD')).toBeVisible()
   })
 
-  test('TC-V3-F3-04 — company registration number extracted from "Company Registration No: XXXXXXXX" pattern', async ({ page }) => {
+  test('TC-F3CLIN-04 — company registration number extracted from "Company Registration No: XXXXXXXX" pattern', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -58,7 +58,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     await expect(regField).toHaveValue('6780032')
   })
 
-  test('TC-V3-F3-05 — no duplicate clinic created if clinic already exists', async ({ page }) => {
+  test('TC-F3CLIN-05 — no duplicate clinic created if clinic already exists', async ({ page }) => {
     // Pre-seed a clinic with the same name in mock state so duplicate detection fires
     await page.goto('/documents')
     await page.evaluate(() => {
@@ -83,7 +83,7 @@ test.describe('V3-F3 — Clinic Extraction with Company Registration Number', ()
     await expect(page.getByTestId('clinic-suggestion-merge')).toBeVisible()
   })
 
-  test('TC-V3-F3-06 — dismissing clinic suggestion does not create clinic', async ({ page }) => {
+  test('TC-F3CLIN-06 — dismissing clinic suggestion does not create clinic', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)

@@ -4,7 +4,7 @@ const WITH_PREVIEW = 'src-tauri/tests/fixtures/medical-invoice.pdf'
 const WITHOUT_PREVIEW = 'src-tauri/tests/fixtures/no-date-physio.pdf'
 
 test.describe('OCR Extracted Text Preview — upload review step', () => {
-  test('TC-OCR-PREVIEW-01 — preview block visible when extracted text exists', async ({ page }) => {
+  test('TC-OCRPREV-01 — preview block visible when extracted text exists', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(WITH_PREVIEW)
@@ -15,7 +15,7 @@ test.describe('OCR Extracted Text Preview — upload review step', () => {
     await expect(preview).toContainText('Hartfield Physiotherapy Clinic')
   })
 
-  test('TC-OCR-PREVIEW-02 — preview block absent when no extracted text', async ({ page }) => {
+  test('TC-OCRPREV-02 — preview block absent when no extracted text', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(WITHOUT_PREVIEW)

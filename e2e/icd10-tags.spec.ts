@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 const SAMPLE_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('Phase 105 — ICD-10 code tags on document detail', () => {
-  test('TC-105-01 — icd10-section hidden when document has no tags', async ({ page }) => {
+  test('TC-ICD10-01 — icd10-section hidden when document has no tags', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_PDF)
@@ -18,7 +18,7 @@ test.describe('Phase 105 — ICD-10 code tags on document detail', () => {
     await expect(page.getByTestId('icd10-section')).not.toBeVisible()
   })
 
-  test('TC-105-02 — icd10-section shows chips when tags are seeded', async ({ page }) => {
+  test('TC-ICD10-02 — icd10-section shows chips when tags are seeded', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(SAMPLE_PDF)

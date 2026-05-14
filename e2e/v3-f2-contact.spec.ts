@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31_26).pdf'
 
 test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
-  test('TC-V3-F2-01 — contact suggestion card shows name, UK mobile phone, and email', async ({ page }) => {
+  test('TC-F2-01 — contact suggestion card shows name, UK mobile phone, and email', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -16,7 +16,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
     await expect(card).toContainText('jg@johngreenphysio.com')
   })
 
-  test('TC-V3-F2-02 — saving contact suggestion creates a new contact', async ({ page }) => {
+  test('TC-F2-02 — saving contact suggestion creates a new contact', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -33,7 +33,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
     await expect(page.getByText('jg@johngreenphysio.com')).toBeVisible()
   })
 
-  test('TC-V3-F2-03 — UK mobile number in 07XXX XXXXXX format is extracted', async ({ page }) => {
+  test('TC-F2-03 — UK mobile number in 07XXX XXXXXX format is extracted', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -43,7 +43,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
     await expect(phoneField).toHaveValue('07544 370440')
   })
 
-  test('TC-V3-F2-04 — no duplicate contact created if contact already exists', async ({ page }) => {
+  test('TC-F2-04 — no duplicate contact created if contact already exists', async ({ page }) => {
     await page.goto('/contacts')
     await page.getByRole('button', { name: '+ New' }).click()
     await page.getByLabel(/name/i).fill('John Green')
@@ -57,7 +57,7 @@ test.describe('V3-F2 — Contact Extraction with UK Mobile Phone', () => {
     await expect(page.getByTestId('contact-suggestion-merge')).toBeVisible()
   })
 
-  test('TC-V3-F2-05 — dismissing contact suggestion does not create contact', async ({ page }) => {
+  test('TC-F2-05 — dismissing contact suggestion does not create contact', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)

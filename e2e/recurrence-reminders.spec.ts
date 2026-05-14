@@ -75,8 +75,8 @@ test('TC-REC-03 delete entire series removes all occurrences', async ({ page }) 
   await expect(page.locator('[data-testid="appointment-card"]')).toHaveCount(0)
 })
 
-// TC-REM-01: appointment with two reminder offsets shows 2 chips on detail view
-test('TC-REM-01 detail view shows reminder chips for enabled offsets', async ({ page }) => {
+// TC-REC-04: appointment with two reminder offsets shows 2 chips on detail view
+test('TC-REC-04 detail view shows reminder chips for enabled offsets', async ({ page }) => {
   await page.goto('/appointments')
   await createAppointment(page, {
     title: 'Dental Check',
@@ -92,8 +92,8 @@ test('TC-REM-01 detail view shows reminder chips for enabled offsets', async ({ 
   await expect(chips.nth(1)).toContainText('1 hour before')
 })
 
-// TC-REM-02: reminders tile shows correct count
-test('TC-REM-02 reminders tile shows count of appointments with reminders', async ({ page }) => {
+// TC-REC-05: reminders tile shows correct count
+test('TC-REC-05 reminders tile shows count of appointments with reminders', async ({ page }) => {
   await page.goto('/appointments')
   await createAppointment(page, { title: 'Appt With Reminders 1', date: '2027-10-01T08:00', remMin15: true })
   await createAppointment(page, { title: 'Appt With Reminders 2', date: '2027-10-08T08:00', remHr1: true })

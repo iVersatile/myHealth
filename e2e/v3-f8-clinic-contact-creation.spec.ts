@@ -8,10 +8,10 @@ const PHYSIO_MOCK_PDF = 'src-tauri/tests/fixtures/sample-Upload (09Mar2023-16_31
  * Regression target: atomic contacts_create_with_clinic command.
  * Previously a 3-step non-atomic flow left orphaned contacts on failure or cancel.
  *
- * Test IDs: TC-V3-F8-01 … TC-V3-F8-06
+ * Test IDs: TC-F8-01 … TC-F8-06
  */
 test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
-  test('TC-V3-F8-01 — accepting contact suggestion opens pre-filled ContactForm', async ({ page }) => {
+  test('TC-F8-01 — accepting contact suggestion opens pre-filled ContactForm', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -31,7 +31,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
     await expect(nameInput).not.toHaveValue('')
   })
 
-  test('TC-V3-F8-02 — saving creates exactly one person contact and one clinic contact', async ({ page }) => {
+  test('TC-F8-02 — saving creates exactly one person contact and one clinic contact', async ({ page }) => {
     await page.goto('/contacts')
     const initialCount = await page.getByTestId('contact-list-item').count()
 
@@ -56,7 +56,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
     expect(finalCount - initialCount).toBe(1)
   })
 
-  test('TC-V3-F8-03 — saved person contact has clinic linked via contact_clinic_id', async ({ page }) => {
+  test('TC-F8-03 — saved person contact has clinic linked via contact_clinic_id', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -82,7 +82,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
     await expect(clinicField).not.toHaveText('')
   })
 
-  test('TC-V3-F8-04 — cancelling the ContactForm creates zero contacts (no orphans)', async ({ page }) => {
+  test('TC-F8-04 — cancelling the ContactForm creates zero contacts (no orphans)', async ({ page }) => {
     await page.goto('/contacts')
     const initialCount = await page.getByTestId('contact-list-item').count()
 
@@ -107,7 +107,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
     expect(finalCount).toBe(initialCount)
   })
 
-  test('TC-V3-F8-05 — error from backend shows human-readable message, not [object Object]', async ({ page }) => {
+  test('TC-F8-05 — error from backend shows human-readable message, not [object Object]', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(PHYSIO_MOCK_PDF)
@@ -134,7 +134,7 @@ test.describe('V3-F8 — Clinic Contact Creation (Atomic)', () => {
     expect(errorText!.length).toBeGreaterThan(0)
   })
 
-  test('TC-V3-F8-06 — dismissing the suggestion banner creates zero contacts', async ({ page }) => {
+  test('TC-F8-06 — dismissing the suggestion banner creates zero contacts', async ({ page }) => {
     await page.goto('/contacts')
     const initialCount = await page.getByTestId('contact-list-item').count()
 

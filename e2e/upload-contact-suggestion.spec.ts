@@ -4,7 +4,7 @@ const INTL_PHONE_PDF =
   'src-tauri/tests/fixtures/DrSmith_intl_phone_2024-03-10.pdf'
 
 test.describe('Upload — contact suggestion card', () => {
-  test('TC-CS-01 — international phone +1 (555) 123-4567 appears in contact suggestion card', async ({
+  test('TC-UPCS-01 — international phone +1 (555) 123-4567 appears in contact suggestion card', async ({
     page,
   }) => {
     await page.goto('/documents')

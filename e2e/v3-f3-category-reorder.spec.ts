@@ -57,7 +57,7 @@ async function gotoSettings(page: import('@playwright/test').Page) {
 }
 
 test.describe('V3-F3 — Category drag-to-reorder', () => {
-  test('TC-V3-F3-01 — drag list renders with reorder hint', async ({ page }) => {
+  test('TC-F3CAT-01 — drag list renders with reorder hint', async ({ page }) => {
     await seedCategories(page)
     await gotoSettings(page)
 
@@ -67,7 +67,7 @@ test.describe('V3-F3 — Category drag-to-reorder', () => {
     await expect(page.getByText('Gamma')).toBeVisible()
   })
 
-  test('TC-V3-F3-02 — drag reorders categories in the UI', async ({ page }) => {
+  test('TC-F3CAT-02 — drag reorders categories in the UI', async ({ page }) => {
     await seedCategories(page)
     await gotoSettings(page)
 
@@ -84,7 +84,7 @@ test.describe('V3-F3 — Category drag-to-reorder', () => {
     expect(allNames[0]).not.toBe('Alpha')
   })
 
-  test('TC-V3-F3-03 — categories_reorder IPC called after drag', async ({ page }) => {
+  test('TC-F3CAT-03 — categories_reorder IPC called after drag', async ({ page }) => {
     await seedCategories(page)
 
     const reorderCalls: unknown[] = []

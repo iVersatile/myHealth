@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 const MEDICAL_INVOICE = 'src-tauri/tests/fixtures/medical-invoice.pdf'
 
 test.describe('Phase 42 — Content search indexes OCR extracted_text', () => {
-  test('TC-42-01 — searching "registration" returns document whose OCR text contains that word', async ({ page }) => {
+  test('TC-CSREG-01 — searching "registration" returns document whose OCR text contains that word', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
     await page.locator('input[type="file"]').setInputFiles(MEDICAL_INVOICE)
