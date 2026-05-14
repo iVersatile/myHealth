@@ -386,7 +386,7 @@ fn upload_one_document(
         )?;
         for tag in &prep.tags {
             conn.execute(
-                "INSERT OR IGNORE INTO document_tags (document_id, tag, is_draft) VALUES (?1, ?2, 1)",
+                "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
                 rusqlite::params![prep.id, tag],
             )?;
         }
@@ -2546,6 +2546,7 @@ pub async fn documents_run_extraction(
         }
 
         // Auto-create draft clinics from extraction suggestions
+        let mut created_clinic_ids: Vec<(String, String)> = Vec::new();
         for clinic in &clinic_suggestions {
             let existing_id: Option<String> = conn
                 .query_row(
@@ -2575,6 +2576,26 @@ pub async fn documents_run_extraction(
                      VALUES (?1, ?2, ?3, ?4, 0, ?5)",
                     rusqlite::params![addr_id, clinic_id, addr.label, addr.line1, now],
                 )?;
+            }
+            created_clinic_ids.push((clinic.name.clone(), clinic_id));
+        }
+
+        // Link draft contacts to their draft clinics via clinic_id + junction table
+        for c in &contact_dtos {
+            if let (Some(ref contact_id), Some(ref clinic_name)) = (&c.draft_id, &c.clinic) {
+                if let Some((_, ref cid)) =
+                    created_clinic_ids.iter().find(|(n, _)| n == clinic_name)
+                {
+                    conn.execute(
+                        "UPDATE contacts SET clinic_id = ?1 WHERE id = ?2",
+                        rusqlite::params![cid, contact_id],
+                    )?;
+                    conn.execute(
+                        "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) \
+                         VALUES (?1, ?2)",
+                        rusqlite::params![cid, contact_id],
+                    )?;
+                }
             }
         }
 
@@ -2660,6 +2681,15 @@ pub async fn documents_run_extraction(
                 }
                 _ => {}
             }
+        }
+
+        // Write clinical notes to documents.notes before FTS so search index picks them up
+        let clinical_notes = crate::extraction::extract_clinical_notes(&result.text);
+        if let Some(ref notes) = clinical_notes {
+            conn.execute(
+                "UPDATE documents SET notes = ?1 WHERE id = ?2",
+                rusqlite::params![notes, id],
+            )?;
         }
 
         // Propagate extracted_text into FTS5 so content search finds this document

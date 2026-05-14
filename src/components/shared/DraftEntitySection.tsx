@@ -71,7 +71,7 @@ export function DraftEntitySection({ entityType, onMerge }: Props) {
   async function handleAccept(draft: DraftEntityRow) {
     setDrafts((prev) => prev.filter((d) => d.id !== draft.id))
     try {
-      await invoke('accept_draft_entity', { entityType: draft.entity_type, id: draft.id })
+      await invoke('accept_draft_entity', { entityType: draft.entity_type, entityId: draft.id })
     } catch {
       loadDrafts()
     }
@@ -80,7 +80,7 @@ export function DraftEntitySection({ entityType, onMerge }: Props) {
   async function handleReject(draft: DraftEntityRow) {
     setDrafts((prev) => prev.filter((d) => d.id !== draft.id))
     try {
-      await invoke('reject_draft_entity', { entityType: draft.entity_type, id: draft.id })
+      await invoke('reject_draft_entity', { entityType: draft.entity_type, entityId: draft.id })
       showToast('Draft rejected')
     } catch {
       loadDrafts()

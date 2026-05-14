@@ -212,7 +212,8 @@ describe('DraftEntitySection', () => {
     await waitFor(() => screen.getByTestId('accept-draft-btn'))
     await userEvent.click(screen.getByTestId('accept-draft-btn'))
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith('accept_draft_entity', { entityType: 'contact', id: 'd1' })
+      // R1: IPC must use entityId (snake_case entity_id → camelCase at Tauri boundary), not bare id
+      expect(mockInvoke).toHaveBeenCalledWith('accept_draft_entity', { entityType: 'contact', entityId: 'd1' })
     })
     await waitFor(() => {
       expect(screen.queryByTestId('draft-entity-card')).toBeNull()
@@ -251,7 +252,8 @@ describe('DraftEntitySection', () => {
     await waitFor(() => screen.getAllByTestId('reject-draft-btn'))
     await userEvent.click(screen.getAllByTestId('reject-draft-btn')[0]!)
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith('reject_draft_entity', { entityType: 'contact', id: 'd1' })
+      // R2: IPC must use entityId (snake_case entity_id → camelCase at Tauri boundary), not bare id
+      expect(mockInvoke).toHaveBeenCalledWith('reject_draft_entity', { entityType: 'contact', entityId: 'd1' })
     })
     await waitFor(() => {
       expect(screen.getByText(/draft rejected/i)).toBeDefined()
