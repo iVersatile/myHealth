@@ -16,8 +16,6 @@ export default defineConfig({
         '**/dist/**',
         'e2e/**',
         'e2e-tauri/**',
-        // Rich-text editor: requires ProseMirror/Tiptap DOM env not supported in jsdom
-        '**/*NoteEditorClient*',
         // PDF renderer: uses @react-pdf/renderer which requires browser canvas, not jsdom
         '**/DocumentReport*',
         // Navigation shell — no business logic to cover

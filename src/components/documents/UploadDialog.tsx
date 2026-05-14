@@ -8,6 +8,7 @@ import { Document, DocumentCategory, DOCUMENT_CATEGORIES } from '../../store/doc
 import { useToast } from '../../hooks/useToast'
 import { Toast } from '../shared/Toast'
 import { UploadReviewStep } from './UploadReviewStep'
+import { UploadReviewContext } from './UploadReviewContext'
 import { buildTimelineDescription } from './uploadTypes'
 import type { ContactSuggestion, ClinicSuggestion, ContactPhase, ClinicPhase, FileQueueItem, FileQueueStatus } from './uploadTypes'
 import type { Category } from '../categories/CategoryPicker'
@@ -520,33 +521,35 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
 
           {/* ── Step 3: Review ── */}
           {step === 'review' && uploadedDoc && (
-            <UploadReviewStep
-              uploadedDoc={uploadedDoc}
-              category={category} setCategory={setCategory}
-              tags={tags} setTags={setTags}
-              tagInput={tagInput} setTagInput={setTagInput}
-              notes={notes} setNotes={setNotes}
-              allCategories={allCategories}
-              selectedCategoryIds={selectedCategoryIds} setSelectedCategoryIds={setSelectedCategoryIds}
-              categorySuggestion={categorySuggestion}
-              categorySuggestionDismissed={categorySuggestionDismissed}
-              setCategorySuggestionDismissed={setCategorySuggestionDismissed}
-              contactSuggestions={contactSuggestions}
-              contactPhases={contactPhases} setContactPhases={setContactPhases}
-              dismissedContacts={dismissedContacts} setDismissedContacts={setDismissedContacts}
-              clinicSuggestions={clinicSuggestions}
-              clinicPhase={clinicPhase} setClinicPhase={setClinicPhase}
-              dismissedClinics={dismissedClinics} setDismissedClinics={setDismissedClinics}
-              timelineDescription={timelineDescription} setTimelineDescription={setTimelineDescription}
-              activityDate={activityDate} setActivityDate={setActivityDate}
-              confirming={confirming}
-              confirmError={confirmError}
-              docCategories={docCategories}
-              extractedTextPreview={extractedTextPreview}
-              onAcceptCategorySuggestion={(suggestion) => void handleAcceptCategorySuggestion(suggestion)}
-              onSubmit={(e) => void handleConfirm(e)}
-              addTag={addTag}
-            />
+            <UploadReviewContext.Provider value={{
+              uploadedDoc,
+              category, setCategory,
+              tags, setTags,
+              tagInput, setTagInput,
+              notes, setNotes,
+              allCategories,
+              selectedCategoryIds, setSelectedCategoryIds,
+              categorySuggestion,
+              categorySuggestionDismissed, setCategorySuggestionDismissed,
+              contactSuggestions,
+              contactPhases, setContactPhases,
+              dismissedContacts, setDismissedContacts,
+              clinicSuggestions,
+              clinicPhase, setClinicPhase,
+              dismissedClinics, setDismissedClinics,
+              timelineDescription, setTimelineDescription,
+              activityDate, setActivityDate,
+              confirming,
+              confirmError,
+              docCategories,
+              extractedTextPreview,
+            }}>
+              <UploadReviewStep
+                onAcceptCategorySuggestion={(suggestion) => void handleAcceptCategorySuggestion(suggestion)}
+                onSubmit={(e) => void handleConfirm(e)}
+                addTag={addTag}
+              />
+            </UploadReviewContext.Provider>
           )}
         </div>
 

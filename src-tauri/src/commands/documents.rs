@@ -68,6 +68,77 @@ fn mime_from_ext(ext: &str) -> &'static str {
     }
 }
 
+struct PreparedUpload {
+    id: String,
+    filename: String,
+    mime: String,
+    file_size: i64,
+    dest_path: String,
+    dest_dir: std::path::PathBuf,
+    document_date: Option<String>,
+    tags: Vec<String>,
+}
+
+fn prepare_document_upload(file_path: &str) -> Result<PreparedUpload, CommandError> {
+    let src = std::path::Path::new(file_path);
+    if !src.exists() {
+        return Err(CommandError::Internal(format!(
+            "file not found: {file_path}"
+        )));
+    }
+
+    let ext = src
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_string();
+    let filename = src
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("document")
+        .to_string();
+    let mime = mime_from_ext(&ext).to_string();
+    let file_size = fs::metadata(src)
+        .map_err(|e| CommandError::Internal(e.to_string()))?
+        .len() as i64;
+
+    let stem = src
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&filename);
+    let parsed = parse_filename(stem);
+    let document_date: Option<String> = parsed
+        .document_date
+        .map(|d| d.format("%Y-%m-%d").to_string());
+
+    let id = Uuid::new_v4().to_string();
+    let dest_dir = storage_dir()?.join(&id);
+    fs::create_dir_all(&dest_dir).map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    let dest_filename = if ext.is_empty() {
+        "original".to_string()
+    } else {
+        format!("original.{ext}")
+    };
+    let dest_path_buf = dest_dir.join(&dest_filename);
+    fs::copy(src, &dest_path_buf).map_err(|e| CommandError::Internal(e.to_string()))?;
+    let dest_path = dest_path_buf
+        .to_str()
+        .ok_or(CommandError::Internal("invalid path encoding".to_string()))?
+        .to_string();
+
+    Ok(PreparedUpload {
+        id,
+        filename,
+        mime,
+        file_size,
+        dest_path,
+        dest_dir,
+        document_date,
+        tags: parsed.tags,
+    })
+}
+
 fn validate_category(cat: &str) -> Result<(), CommandError> {
     if VALID_CATEGORIES.contains(&cat) {
         Ok(())
@@ -185,53 +256,7 @@ pub fn documents_upload(
     notes: Option<String>,
 ) -> Result<Document, CommandError> {
     validate_category(&category)?;
-    let src = std::path::Path::new(&file_path);
-    if !src.exists() {
-        return Err(CommandError::Internal(format!(
-            "file not found: {file_path}"
-        )));
-    }
-
-    let ext = src
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_string();
-    let filename = src
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("document")
-        .to_string();
-    let mime = mime_from_ext(&ext).to_string();
-    let file_size = fs::metadata(src)
-        .map_err(|e| CommandError::Internal(e.to_string()))?
-        .len() as i64;
-
-    // Parse filename stem for date and tags.
-    let stem = src
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(&filename);
-    let parsed = parse_filename(stem);
-    let document_date: Option<String> = parsed
-        .document_date
-        .map(|d| d.format("%Y-%m-%d").to_string());
-
-    let id = Uuid::new_v4().to_string();
-    let dest_dir = storage_dir()?.join(&id);
-    fs::create_dir_all(&dest_dir).map_err(|e| CommandError::Internal(e.to_string()))?;
-
-    let dest_filename = if ext.is_empty() {
-        "original".to_string()
-    } else {
-        format!("original.{ext}")
-    };
-    let dest_path = dest_dir.join(&dest_filename);
-    fs::copy(src, &dest_path).map_err(|e| CommandError::Internal(e.to_string()))?;
-    let dest_str = dest_path
-        .to_str()
-        .ok_or(CommandError::Internal("invalid path encoding".to_string()))?
-        .to_string();
+    let prep = prepare_document_upload(&file_path)?;
 
     // TODO: generate 200×200 thumbnail for image/* types (requires `image` crate)
     let thumbnail_path: Option<String> = None;
@@ -245,28 +270,27 @@ pub fn documents_upload(
           thumbnail_path, notes, document_date, created_at, updated_at, is_deleted) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10, 0)",
         rusqlite::params![
-            id,
-            filename,
-            dest_str,
-            mime,
-            file_size,
+            prep.id,
+            prep.filename,
+            prep.dest_path,
+            prep.mime,
+            prep.file_size,
             category,
             thumbnail_path,
             notes,
-            document_date,
+            prep.document_date,
             now,
         ],
     )?;
 
-    // Insert tags parsed from the filename.
-    for tag in &parsed.tags {
+    for tag in &prep.tags {
         conn.execute(
             "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
-            rusqlite::params![id, tag],
+            rusqlite::params![prep.id, tag],
         )?;
     }
 
-    let doc = load_doc(conn, &id)?;
+    let doc = load_doc(conn, &prep.id)?;
     let body = doc.notes.as_deref().unwrap_or("").to_string();
     upsert_search_index(
         conn,
@@ -334,52 +358,7 @@ fn upload_one_document(
     batch_upload_id: &str,
     notes: Option<&str>,
 ) -> Result<String, CommandError> {
-    let src = std::path::Path::new(file_path);
-    if !src.exists() {
-        return Err(CommandError::Internal(format!(
-            "file not found: {file_path}"
-        )));
-    }
-
-    let ext = src
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_string();
-    let filename = src
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("document")
-        .to_string();
-    let mime = mime_from_ext(&ext).to_string();
-    let file_size = fs::metadata(src)
-        .map_err(|e| CommandError::Internal(e.to_string()))?
-        .len() as i64;
-
-    let stem = src
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(&filename);
-    let parsed = parse_filename(stem);
-    let document_date: Option<String> = parsed
-        .document_date
-        .map(|d| d.format("%Y-%m-%d").to_string());
-
-    let id = Uuid::new_v4().to_string();
-    let dest_dir = storage_dir()?.join(&id);
-    fs::create_dir_all(&dest_dir).map_err(|e| CommandError::Internal(e.to_string()))?;
-
-    let dest_filename = if ext.is_empty() {
-        "original".to_string()
-    } else {
-        format!("original.{ext}")
-    };
-    let dest_path = dest_dir.join(&dest_filename);
-    fs::copy(src, &dest_path).map_err(|e| CommandError::Internal(e.to_string()))?;
-    let dest_str = dest_path
-        .to_str()
-        .ok_or(CommandError::Internal("invalid path encoding".to_string()))?
-        .to_string();
+    let prep = prepare_document_upload(file_path)?;
 
     let now = Utc::now().to_rfc3339();
     let guard = state.db.lock()?;
@@ -393,22 +372,22 @@ fn upload_one_document(
               thumbnail_path, notes, document_date, batch_upload_id, created_at, updated_at, is_deleted) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, ?7, ?8, ?9, ?10, ?10, 0)",
             rusqlite::params![
-                id,
-                filename,
-                dest_str,
-                mime,
-                file_size,
+                prep.id,
+                prep.filename,
+                prep.dest_path,
+                prep.mime,
+                prep.file_size,
                 category,
                 notes,
-                document_date,
+                prep.document_date,
                 batch_upload_id,
                 now,
             ],
         )?;
-        for tag in &parsed.tags {
+        for tag in &prep.tags {
             conn.execute(
                 "INSERT OR IGNORE INTO document_tags (document_id, tag, is_draft) VALUES (?1, ?2, 1)",
-                rusqlite::params![id, tag],
+                rusqlite::params![prep.id, tag],
             )?;
         }
         Ok(())
@@ -417,11 +396,11 @@ fn upload_one_document(
     match tx_result {
         Ok(()) => {
             conn.execute("COMMIT", [])?;
-            Ok(id)
+            Ok(prep.id)
         }
         Err(e) => {
             let _ = conn.execute("ROLLBACK", []);
-            let _ = fs::remove_dir_all(&dest_dir);
+            let _ = fs::remove_dir_all(&prep.dest_dir);
             Err(e)
         }
     }

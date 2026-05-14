@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { useShallow } from 'zustand/shallow'
 import {
   Document,
   DocumentCategory,
@@ -7,19 +8,37 @@ import {
 } from '../store/documentsStore'
 
 export function useDocuments() {
-  const documents = useDocumentsStore(s => s.documents)
-  const total = useDocumentsStore(s => s.total)
-  const page = useDocumentsStore(s => s.page)
-  const limit = useDocumentsStore(s => s.limit)
-  const category = useDocumentsStore(s => s.category)
-  const loading = useDocumentsStore(s => s.loading)
-  const error = useDocumentsStore(s => s.error)
-  const setDocuments = useDocumentsStore(s => s.setDocuments)
-  const setPage = useDocumentsStore(s => s.setPage)
-  const setCategory = useDocumentsStore(s => s.setCategory)
-  const setLoading = useDocumentsStore(s => s.setLoading)
-  const setError = useDocumentsStore(s => s.setError)
-  const removeDocument = useDocumentsStore(s => s.removeDocument)
+  const {
+    documents,
+    total,
+    page,
+    limit,
+    category,
+    loading,
+    error,
+    setDocuments,
+    setPage,
+    setCategory,
+    setLoading,
+    setError,
+    removeDocument,
+  } = useDocumentsStore(
+    useShallow(s => ({
+      documents: s.documents,
+      total: s.total,
+      page: s.page,
+      limit: s.limit,
+      category: s.category,
+      loading: s.loading,
+      error: s.error,
+      setDocuments: s.setDocuments,
+      setPage: s.setPage,
+      setCategory: s.setCategory,
+      setLoading: s.setLoading,
+      setError: s.setError,
+      removeDocument: s.removeDocument,
+    })),
+  )
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true)

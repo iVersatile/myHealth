@@ -1,97 +1,60 @@
 'use client'
 
 import { invoke } from '@tauri-apps/api/core'
-import { Document, DocumentCategory, CATEGORY_LABELS } from '../../store/documentsStore'
-import { CategoryPicker, Category } from '../categories/CategoryPicker'
+import { DocumentCategory, CATEGORY_LABELS } from '../../store/documentsStore'
+import { CategoryPicker } from '../categories/CategoryPicker'
 import {
-  ContactSuggestion,
-  ClinicSuggestion,
   ContactPhase,
   ClinicPhase,
   DuplicateCandidate,
   buildTimelineDescription,
 } from './uploadTypes'
+import { useUploadReview } from './UploadReviewContext'
 
 const fieldCls =
   'rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-[var(--text-sm)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]'
 
 interface UploadReviewStepProps {
-  uploadedDoc: Document
-  category: DocumentCategory
-  setCategory: React.Dispatch<React.SetStateAction<DocumentCategory>>
-  tags: string[]
-  setTags: React.Dispatch<React.SetStateAction<string[]>>
-  tagInput: string
-  setTagInput: React.Dispatch<React.SetStateAction<string>>
-  notes: string
-  setNotes: React.Dispatch<React.SetStateAction<string>>
-  allCategories: Category[]
-  selectedCategoryIds: string[]
-  setSelectedCategoryIds: React.Dispatch<React.SetStateAction<string[]>>
-  categorySuggestion: string | null
-  categorySuggestionDismissed: boolean
-  setCategorySuggestionDismissed: React.Dispatch<React.SetStateAction<boolean>>
-  contactSuggestions: ContactSuggestion[]
-  contactPhases: Map<string, ContactPhase>
-  setContactPhases: React.Dispatch<React.SetStateAction<Map<string, ContactPhase>>>
-  dismissedContacts: Set<string>
-  setDismissedContacts: React.Dispatch<React.SetStateAction<Set<string>>>
-  clinicSuggestions: ClinicSuggestion[]
-  clinicPhase: ClinicPhase
-  setClinicPhase: React.Dispatch<React.SetStateAction<ClinicPhase>>
-  dismissedClinics: Set<string>
-  setDismissedClinics: React.Dispatch<React.SetStateAction<Set<string>>>
-  timelineDescription: string
-  setTimelineDescription: React.Dispatch<React.SetStateAction<string>>
-  activityDate: string | null
-  setActivityDate: React.Dispatch<React.SetStateAction<string | null>>
-  confirming: boolean
-  confirmError: string | null
-  docCategories: string[]
-  extractedTextPreview: string | null
   onAcceptCategorySuggestion: (suggestion: string) => void
   onSubmit: (e: React.FormEvent) => void
   addTag: (value: string) => void
 }
 
-export function UploadReviewStep({
-  uploadedDoc,
-  category,
-  setCategory,
-  tags,
-  setTags,
-  tagInput,
-  setTagInput,
-  notes,
-  setNotes,
-  allCategories,
-  selectedCategoryIds,
-  setSelectedCategoryIds,
-  categorySuggestion,
-  categorySuggestionDismissed,
-  setCategorySuggestionDismissed,
-  contactSuggestions,
-  contactPhases,
-  setContactPhases,
-  dismissedContacts,
-  setDismissedContacts,
-  clinicSuggestions,
-  clinicPhase,
-  setClinicPhase,
-  dismissedClinics,
-  setDismissedClinics,
-  timelineDescription,
-  setTimelineDescription,
-  activityDate,
-  setActivityDate,
-  confirming: _confirming,
-  confirmError,
-  docCategories,
-  extractedTextPreview,
-  onAcceptCategorySuggestion,
-  onSubmit,
-  addTag,
-}: UploadReviewStepProps) {
+export function UploadReviewStep({ onAcceptCategorySuggestion, onSubmit, addTag }: UploadReviewStepProps) {
+  const {
+    uploadedDoc,
+    category,
+    setCategory,
+    tags,
+    setTags,
+    tagInput,
+    setTagInput,
+    notes,
+    setNotes,
+    allCategories,
+    selectedCategoryIds,
+    setSelectedCategoryIds,
+    categorySuggestion,
+    categorySuggestionDismissed,
+    setCategorySuggestionDismissed,
+    contactSuggestions,
+    contactPhases,
+    setContactPhases,
+    dismissedContacts,
+    setDismissedContacts,
+    clinicSuggestions,
+    clinicPhase,
+    setClinicPhase,
+    dismissedClinics,
+    setDismissedClinics,
+    timelineDescription,
+    setTimelineDescription,
+    activityDate,
+    setActivityDate,
+    confirmError,
+    docCategories,
+    extractedTextPreview,
+  } = useUploadReview()
   const visibleContacts = contactSuggestions.filter((cs) => !dismissedContacts.has(cs.name))
   const visibleClinics = clinicSuggestions.filter((c) => !dismissedClinics.has(c.name))
 

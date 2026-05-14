@@ -4,10 +4,11 @@ import AppointmentDetailClient from '../AppointmentDetailClient'
 
 const mockInvoke = vi.fn()
 const mockRouterBack = vi.fn()
+let mockApptId = 'appt-1'
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: (...args: unknown[]) => mockInvoke(...args) }))
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => ({ get: () => 'appt-1' }),
+  useSearchParams: () => ({ get: () => mockApptId }),
   useRouter: () => ({ back: mockRouterBack }),
 }))
 
@@ -49,6 +50,7 @@ function setupInvoke(
     if (cmd === 'get_appointment_links') return Promise.resolve(linkedDocs)
     if (cmd === 'categories_list') return Promise.resolve([])
     if (cmd === 'categories_for_appointment') return Promise.resolve(assignedCategoryIds)
+    if (cmd === 'contacts_list') return Promise.resolve([])
     if (cmd === 'appointment_tags_get') return Promise.resolve([])
     if (cmd === 'notes_for_entity') return Promise.resolve([])
     if (cmd === 'symptoms_for_entity') return Promise.resolve([])
@@ -62,6 +64,7 @@ function setupInvoke(
 describe('AppointmentDetailClient', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockApptId = 'appt-1'
   })
 
   it('shows loading state initially', () => {
@@ -483,6 +486,7 @@ function setupWithMedications(medications = [makeApptMedication()], linked: type
 describe('AppointmentDetailClient — symptom linking', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockApptId = 'appt-1'
   })
 
   it('shows symptom select when unlinkable symptoms exist', async () => {
@@ -540,6 +544,7 @@ describe('AppointmentDetailClient — symptom linking', () => {
 describe('AppointmentDetailClient — medication linking', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockApptId = 'appt-1'
   })
 
   it('shows medication select when unlinkable medications exist', async () => {
@@ -591,5 +596,113 @@ describe('AppointmentDetailClient — medication linking', () => {
         toId: 'appt-1',
       })
     )
+  })
+})
+
+describe('AppointmentDetailClient — branch coverage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApptId = 'appt-1'
+  })
+
+  it('renders "No appointment selected." when id is empty', () => {
+    mockApptId = ''
+    setupInvoke()
+    render(<AppointmentDetailClient />)
+    expect(screen.getByText(/No appointment selected\./)).toBeDefined()
+  })
+
+  it('shows AppointmentForm when Edit button is clicked', async () => {
+    setupInvoke()
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Cancel/i })).toBeDefined()
+    )
+  })
+
+  it('renders reminder offset chips when reminder_offsets is set', async () => {
+    setupInvoke({ reminder_offsets: { min15: true, hr1: true, day1: true } })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => {
+      expect(screen.getByText('15 min before')).toBeDefined()
+      expect(screen.getByText('1 hour before')).toBeDefined()
+      expect(screen.getByText('1 day before')).toBeDefined()
+    })
+  })
+
+  it('shows suggestError alert when icd10_suggest fails', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt({ notes: 'back pain' }))
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'appointment_tags_get') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([])
+      if (cmd === 'symptoms_for_entity') return Promise.resolve([])
+      if (cmd === 'medications_for_entity') return Promise.resolve([])
+      if (cmd === 'symptoms_list') return Promise.resolve([])
+      if (cmd === 'medications_list') return Promise.resolve([])
+      if (cmd === 'icd10_suggest') return Promise.reject(new Error('suggest failed'))
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('button', { name: /Suggest ICD-10 Codes/i }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('suggest failed')
+    )
+  })
+
+  it('unchecks ICD-10 suggestion when checkbox clicked twice (delete branch)', async () => {
+    const suggestions = [{ code: 'M54.5', description: 'Low back pain', confidence: 0.9 }]
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt({ notes: 'back pain' }))
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'appointment_tags_get') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([])
+      if (cmd === 'symptoms_for_entity') return Promise.resolve([])
+      if (cmd === 'medications_for_entity') return Promise.resolve([])
+      if (cmd === 'symptoms_list') return Promise.resolve([])
+      if (cmd === 'medications_list') return Promise.resolve([])
+      if (cmd === 'icd10_suggest') return Promise.resolve(suggestions)
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => screen.getByText('Annual Checkup'))
+    fireEvent.click(screen.getByRole('button', { name: /Suggest ICD-10 Codes/i }))
+    await waitFor(() => screen.getByLabelText(/M54\.5/i))
+    const checkbox = screen.getByLabelText(/M54\.5/i) as HTMLInputElement
+    fireEvent.click(checkbox)
+    expect(checkbox.checked).toBe(true)
+    fireEvent.click(checkbox)
+    expect(checkbox.checked).toBe(false)
+  })
+
+  it('shows "Untitled" for note with empty title and hides snippet when content empty', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'appointments_get') return Promise.resolve(makeAppt())
+      if (cmd === 'get_appointment_links') return Promise.resolve([])
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'categories_for_appointment') return Promise.resolve([])
+      if (cmd === 'appointment_tags_get') return Promise.resolve([])
+      if (cmd === 'notes_for_entity') return Promise.resolve([{ id: 'note-2', title: '', content: '', created_at: '2026-01-01T00:00:00Z' }])
+      if (cmd === 'symptoms_for_entity') return Promise.resolve([])
+      if (cmd === 'medications_for_entity') return Promise.resolve([])
+      if (cmd === 'symptoms_list') return Promise.resolve([])
+      if (cmd === 'medications_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+    render(<AppointmentDetailClient />)
+    await waitFor(() => expect(screen.getByText('Untitled')).toBeDefined())
+  })
+
+  it('shows raw category when CATEGORY_LABELS has no matching key', async () => {
+    setupInvoke({}, [makeLinkedDoc({ category: 'unknown_cat' })])
+    render(<AppointmentDetailClient />)
+    await waitFor(() => expect(screen.getByText(/unknown_cat/)).toBeDefined())
   })
 })

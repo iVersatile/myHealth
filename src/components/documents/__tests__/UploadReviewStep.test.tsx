@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import React from 'react'
 import { UploadReviewStep } from '../UploadReviewStep'
+import { UploadReviewContext } from '../UploadReviewContext'
+import type { UploadReviewContextValue } from '../UploadReviewContext'
 import type { Document } from '../../../store/documentsStore'
 import type { ContactSuggestion, ClinicSuggestion, ContactPhase, ClinicPhase } from '../uploadTypes'
 
@@ -31,8 +33,21 @@ const baseDoc: Document = {
 
 const noopSet = () => {}
 
-function renderStep(overrides: Partial<Parameters<typeof UploadReviewStep>[0]> = {}) {
-  const defaults: Parameters<typeof UploadReviewStep>[0] = {
+type RenderStepOptions = Partial<UploadReviewContextValue> & {
+  onAcceptCategorySuggestion?: (suggestion: string) => void
+  onSubmit?: (e: React.FormEvent) => void
+  addTag?: (value: string) => void
+}
+
+function renderStep(overrides: RenderStepOptions = {}) {
+  const {
+    onAcceptCategorySuggestion = vi.fn(),
+    onSubmit = vi.fn(),
+    addTag = vi.fn(),
+    ...contextOverrides
+  } = overrides
+
+  const contextValue: UploadReviewContextValue = {
     uploadedDoc: baseDoc,
     category: 'other',
     setCategory: noopSet,
@@ -66,11 +81,18 @@ function renderStep(overrides: Partial<Parameters<typeof UploadReviewStep>[0]> =
     confirmError: null,
     docCategories: ['general'],
     extractedTextPreview: null,
-    onAcceptCategorySuggestion: vi.fn(),
-    onSubmit: vi.fn(),
-    addTag: vi.fn(),
+    ...contextOverrides,
   }
-  return render(<UploadReviewStep {...defaults} {...overrides} />)
+
+  return render(
+    <UploadReviewContext.Provider value={contextValue}>
+      <UploadReviewStep
+        onAcceptCategorySuggestion={onAcceptCategorySuggestion}
+        onSubmit={onSubmit}
+        addTag={addTag}
+      />
+    </UploadReviewContext.Provider>
+  )
 }
 
 describe('UploadReviewStep', () => {

@@ -8,8 +8,8 @@
 
 ```
 Phase: 112
-Task:  112.1 — DocumentDetailClient split (1020 → ≤800 lines)
-Note:  Phase 111 complete. Phase 112 starts: structural refactoring of oversized components.
+Task:  112.3 — AppointmentDetailClient split (834 → ≤800 lines)
+Note:  112.1 complete. DocumentDetailClient split done (702 lines, hook extracted).
 ```
 
 ---
@@ -427,20 +427,20 @@ Note:  Phase 111 complete. Phase 112 starts: structural refactoring of oversized
 
 ### Sprint 112
 
-▶ **112.1 — DocumentDetailClient split (1020 → ≤800 lines)**
+[x] **112.1 — DocumentDetailClient split (1020 → ≤800 lines)**
    - Extract: `DocumentLinks.tsx` (appointment/note linking state + UI)
    - Extract: `DocumentEntities.tsx` (symptoms, medications, clinic management)
    - Extract: `useDocumentDetail()` hook — consolidate 30+ useState calls
    - `DocumentDetailClient.tsx` becomes orchestrator only; delegates to sub-components
    - Done when: file ≤800 lines; `npx tsc --noEmit` passes; existing test suite passes unchanged
 
-[ ] **112.2 — UploadReviewStep prop drilling fix (55 props → Context)**
+[x] **112.2 — UploadReviewStep prop drilling fix (55 props → Context)**
    - Create `UploadReviewContext` in `src/components/documents/UploadReviewContext.tsx`
    - Move shared state into context; `UploadReviewStep` reads from context, not props
    - `UploadDialog` provides context; prop interface shrinks to ≤10 props
    - Done when: `npx tsc --noEmit` passes; UploadDialog tests pass; UploadReviewStep test file passes
 
-[ ] **112.3 — AppointmentDetailClient split (834 → ≤800 lines)**
+▶ **112.3 — AppointmentDetailClient split (834 → ≤800 lines)**
    - Extract: `AppointmentConflicts.tsx` (conflict detection + dismiss UI)
    - Extract: `useAppointmentDetail()` hook
    - Done when: file ≤800 lines; existing test suite passes unchanged

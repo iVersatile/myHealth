@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { useShallow } from 'zustand/shallow'
 import {
   Appointment,
   AppointmentStatus,
@@ -29,16 +30,31 @@ export interface AppointmentInput {
 }
 
 export function useAppointments() {
-  const appointments = useAppointmentsStore(s => s.appointments)
-  const statusFilter = useAppointmentsStore(s => s.statusFilter)
-  const loading = useAppointmentsStore(s => s.loading)
-  const error = useAppointmentsStore(s => s.error)
-  const setAppointments = useAppointmentsStore(s => s.setAppointments)
-  const setStatusFilter = useAppointmentsStore(s => s.setStatusFilter)
-  const setLoading = useAppointmentsStore(s => s.setLoading)
-  const setError = useAppointmentsStore(s => s.setError)
-  const upsertAppointment = useAppointmentsStore(s => s.upsertAppointment)
-  const removeAppointment = useAppointmentsStore(s => s.removeAppointment)
+  const {
+    appointments,
+    statusFilter,
+    loading,
+    error,
+    setAppointments,
+    setStatusFilter,
+    setLoading,
+    setError,
+    upsertAppointment,
+    removeAppointment,
+  } = useAppointmentsStore(
+    useShallow(s => ({
+      appointments: s.appointments,
+      statusFilter: s.statusFilter,
+      loading: s.loading,
+      error: s.error,
+      setAppointments: s.setAppointments,
+      setStatusFilter: s.setStatusFilter,
+      setLoading: s.setLoading,
+      setError: s.setError,
+      upsertAppointment: s.upsertAppointment,
+      removeAppointment: s.removeAppointment,
+    })),
+  )
 
   const fetchAppointments = useCallback(async () => {
     setLoading(true)
