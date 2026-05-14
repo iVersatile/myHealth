@@ -332,6 +332,46 @@
       appointment_suggestion: null,
       extracted_text_preview: null,
     },
+    'Upload (22Nov2021-13_16_15).pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [
+        {
+          name: 'Belgrove Cardiac Clinic',
+          company_registration_number: null,
+          addresses: [
+            { line1: '14 Langford Place', city: 'London', postcode: 'NW8 0NX' },
+            { line1: '8 Cavendish Way', city: 'London', postcode: 'W1M 4AB' },
+          ],
+        },
+      ],
+      category_suggestion: 'Cardiography',
+      document_tags: ['2021-11-22', 'Belgrove Cardiac Clinic', 'Invoice', 'Cardiography', '19/11/21', 'Patient account number M24195380/1'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2021-11-22',
+      appointment_suggestion: null,
+      extracted_text_preview: 'Belgrove Cardiac Clinic. Date of Service: 19/11/21. Cardiography assessment. Patient account number M24195380/1.',
+    },
+    '2021-Nov-22_12_34.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [
+        {
+          name: 'The Cambridge Clinic',
+          company_registration_number: null,
+          addresses: [
+            { line1: '1 Hills Road', city: 'Cambridge', postcode: 'CB2 1GE' },
+            { line1: '2 Trumpington Street', city: 'Cambridge', postcode: 'CB2 1QA' },
+          ],
+        },
+      ],
+      category_suggestion: 'Cardiography',
+      document_tags: ['2021-11-22', 'The Cambridge Clinic', 'invoice', 'Cardiography', '19/11/21', 'patient account number :A12345/21'],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: '2021-11-19',
+      appointment_suggestion: { date: '2021-11-19', type: 'Cardiography' },
+      extracted_text_preview: 'The Cambridge Clinic. 1 Hills Road, Cambridge CB2 1GE. Also at: 2 Trumpington Street, Cambridge CB2 1QA. Sort Code: 40-47-84. Date of Service: 19/11/21. Cardiography service charge £345.00. Patient account number :A12345/21.',
+    },
   };
 
   function extractionForFilename(filename) {

@@ -242,3 +242,57 @@ Payment due within 14 days of receipt.`
 const gynBytes = await createPdf(gynContent)
 writeFileSync(join(e2eFixturesDir, 'gynaecology-invoice-2023.pdf'), gynBytes)
 console.log('Created e2e/fixtures/gynaecology-invoice-2023.pdf')
+
+// Upload (22Nov2021-13_16_15).pdf — London Clinic, Cardiography, 19/11/21
+const londonClinicContent = `INVOICE
+
+Belgrove Cardiac Clinic
+14 Langford Place
+London NW8 0NX
+United Kingdom
+Also at: 8 Cavendish Way, London W1M 4AB, United Kingdom
+
+Date of Service: 19/11/21
+
+Provider: Dr James Edwards MBBS FRCP
+Specialty: Cardiography
+
+Description: Cardiography assessment and ECG interpretation
+
+Patient account number M24195380/1
+
+Amount Due: GBP 280.00
+
+Please settle within 14 days of receipt.`
+
+const londonClinicBytes = await createPdf(londonClinicContent)
+writeFileSync(join(e2eFixturesDir, 'Upload (22Nov2021-13_16_15).pdf'), londonClinicBytes)
+console.log('Created e2e/fixtures/Upload (22Nov2021-13_16_15).pdf')
+
+// 2021-Nov-22_12_34.pdf — Cambridge Clinic, Cardiography, 19/11/21, 2 addresses, patient account A12345/21
+const cambridgeClinicContent = `INVOICE
+
+The Cambridge Clinic
+1 Hills Road
+Cambridge CB2 1GE
+United Kingdom
+Also at: 2 Trumpington Street, Cambridge CB2 1QA
+Email: info@cambridgeclinic.co.uk
+Sort Code: 40-47-84
+
+Date of Service: 19/11/21
+
+Provider: Cardiography Department
+Specialty: Cardiography
+
+Description: Cardiography service charge
+
+Amount Due: £345.00
+
+Patient account number :A12345/21
+
+Please settle within 14 days of receipt.`
+
+const cambridgeClinicBytes = await createPdf(cambridgeClinicContent)
+writeFileSync(join(e2eFixturesDir, '2021-Nov-22_12_34.pdf'), cambridgeClinicBytes)
+console.log('Created e2e/fixtures/2021-Nov-22_12_34.pdf')

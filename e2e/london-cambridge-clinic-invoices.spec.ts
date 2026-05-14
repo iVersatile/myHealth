@@ -15,7 +15,7 @@ test.describe('London & Cambridge Clinic Invoices', () => {
     const tagSet = allTags.map((t) => t.replace(/×/g, '').trim().toLowerCase())
 
     expect(tagSet).toContain('2021-11-22')
-    expect(tagSet).toContain('the london clinic')
+    expect(tagSet).toContain('belgrove cardiac clinic')
     expect(tagSet).toContain('invoice')
     expect(tagSet).toContain('cardiography')
     expect(tagSet).toContain('19/11/21')
