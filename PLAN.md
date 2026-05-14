@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 108
-Task:  108.5 — COMPLETE. Phase 108 done.
-Note:  Phases 108, 109, and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
+Phase: 112
+Task:  112.1 — DocumentDetailClient split (1020 → ≤800 lines)
+Note:  Phase 111 complete. Phase 112 starts: structural refactoring of oversized components.
 ```
 
 ---
@@ -366,3 +366,95 @@ Note:  Phases 108, 109, and 110 complete. All completed phases archived in docs/
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx tsc --noEmit`
    - Commit: `feat: add ALLCAPS surname and role-label contact extraction patterns (F4.8+F4.9, Phase 108)`
+
+---
+
+## Phase 111 — Test Coverage Hardening (Pre-Refactor Gate)
+
+**Goal:** Fill coverage gaps identified in code review before any structural refactoring. Ensures refactoring in Phase 112 is safe across all layers.
+
+**Context:** System-wide coverage audit (2026-05-14) found overall 87.81% stmt / 80.44% branch. Three specific files have insufficient coverage to refactor safely.
+
+**Done when:**
+- `NoteEditorClient.tsx` has ≥80% branch coverage via new unit test file
+- `AppointmentDetailClient.tsx` branch coverage raised from 70% → ≥80%
+- `UploadReviewStep.tsx` has a dedicated standalone test file (extracted from UploadDialog tests)
+- `npx vitest run --coverage` confirms all three targets meet threshold
+- `npx tsc --noEmit` passes
+
+### Sprint 111
+
+[x] **111.1 — NoteEditorClient unit tests (from zero)**
+   - Create `src/app/(app)/notes/view/__tests__/NoteEditorClient.test.tsx`
+   - Cover: toolbar renders, bold/italic/bullet/ordered-list toggles, save triggers `invoke('notes_update')`, unsaved-changes warning on navigation, empty-note validation
+   - Mock Tiptap editor via `vi.mock('@tiptap/react')`; mock `invoke` via existing test utilities
+   - Done when: ≥80% stmt + branch coverage on `NoteEditorClient.tsx`; `npx vitest run` passes
+
+[x] **111.2 — AppointmentDetailClient branch coverage expansion**
+   - File: `src/app/(app)/appointments/view/__tests__/AppointmentDetailClient.test.tsx` (already exists)
+   - Identify uncovered branches via `npx vitest run --coverage` output
+   - Add test cases for: conflict-badge render path, dismiss-conflict optimistic update, ICS export error path, form validation edge cases
+   - Done when: branch coverage ≥80% on `AppointmentDetailClient.tsx`
+   - Result: 81.88% branch coverage, 38 tests all passing
+
+[x] **111.3 — UploadReviewStep dedicated test file**
+   - Create `src/components/documents/__tests__/UploadReviewStep.test.tsx`
+   - Extract relevant cases from `UploadDialog.test.tsx` that exercise UploadReviewStep in isolation
+   - Add: contact-suggestion-card renders correct name, category picker interaction, tag add/remove, clinic suggestion banner visibility
+   - Done when: dedicated file passes; no duplication with UploadDialog tests
+   - Result: 49 tests pass, branch coverage 84.52%
+
+[x] **111.4 — Pre-commit checks + commit**
+   - `npx vitest run --coverage` — confirm all three targets ≥80% branch
+   - `npx tsc --noEmit`
+   - Commit: `test: harden coverage on NoteEditorClient, AppointmentDetailClient, UploadReviewStep (Phase 111)`
+   - Result: tsc clean, branches 81.4%, functions 84.06%, statements 88.29%; pushed, CI green
+
+---
+
+## Phase 112 — Structural Refactoring
+
+**Goal:** Reduce complexity in three oversized components identified in code review. Improve maintainability without changing behaviour.
+
+**Context:** Code review (2026-05-14) flagged three HIGH issues. Phase 111 must be complete (coverage gate) before starting this phase.
+
+**Done when:**
+- `DocumentDetailClient.tsx` split into focused sub-components; file ≤800 lines
+- `UploadReviewStep.tsx` prop count reduced from 55 via Context + hook pattern
+- `AppointmentDetailClient.tsx` split; file ≤800 lines
+- All existing tests pass unchanged after refactoring
+- `npx tsc --noEmit` passes; `npx vitest run` passes; E2E smoke passes
+
+### Sprint 112
+
+▶ **112.1 — DocumentDetailClient split (1020 → ≤800 lines)**
+   - Extract: `DocumentLinks.tsx` (appointment/note linking state + UI)
+   - Extract: `DocumentEntities.tsx` (symptoms, medications, clinic management)
+   - Extract: `useDocumentDetail()` hook — consolidate 30+ useState calls
+   - `DocumentDetailClient.tsx` becomes orchestrator only; delegates to sub-components
+   - Done when: file ≤800 lines; `npx tsc --noEmit` passes; existing test suite passes unchanged
+
+[ ] **112.2 — UploadReviewStep prop drilling fix (55 props → Context)**
+   - Create `UploadReviewContext` in `src/components/documents/UploadReviewContext.tsx`
+   - Move shared state into context; `UploadReviewStep` reads from context, not props
+   - `UploadDialog` provides context; prop interface shrinks to ≤10 props
+   - Done when: `npx tsc --noEmit` passes; UploadDialog tests pass; UploadReviewStep test file passes
+
+[ ] **112.3 — AppointmentDetailClient split (834 → ≤800 lines)**
+   - Extract: `AppointmentConflicts.tsx` (conflict detection + dismiss UI)
+   - Extract: `useAppointmentDetail()` hook
+   - Done when: file ≤800 lines; existing test suite passes unchanged
+
+[ ] **112.4 — Rust upload deduplication**
+   - `src-tauri/src/commands/documents.rs`: extract `prepare_document_upload()` helper shared by `documents_upload()` and `upload_one_document()`
+   - Done when: `cargo test` passes; `cargo clippy -- -D warnings` clean
+
+[ ] **112.5 — Zustand selector consolidation**
+   - `src/hooks/useDocuments.ts` + `src/hooks/useAppointments.ts`: replace 10–11 individual `useStore(s => s.x)` calls with single `useShallow` selector
+   - Done when: `npx tsc --noEmit` passes; tests pass
+
+[ ] **112.6 — Pre-commit checks + commit**
+   - `npx tsc --noEmit`
+   - `cargo fmt --all` + `cargo clippy -- -D warnings`
+   - `npx vitest run`
+   - Commit: `refactor: split large components, fix prop drilling, dedup Rust upload logic (Phase 112)`
