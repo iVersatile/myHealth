@@ -47,11 +47,11 @@ Note:  Phases 108, 109, and 110 complete. All completed phases archived in docs/
 |---------|-------|----------|--------|--------|
 | Clinical notes auto-extraction (F3.6) | 109 | MED | Medium | ✅ |
 | Test quality & coverage hardening | 110 | HIGH | Medium | ✅ |
-| System-wide theme switcher (Calm / Coffee / Mint) | 103 | LOW | Small | ⬜ |
-| iCalendar import/export (.ics) | 104 | MED | Medium | ⬜ |
-| Medical code tagging (ICD-10) | 105 | LOW | Medium | ⬜ |
-| Calendar conflict resolution UI | 106 | SHOULD | Medium | ⬜ |
-| Multi-user vault support | 107 | LOW | Large | ⬜ |
+| System-wide theme switcher (Calm / Coffee / Mint) | 103 | LOW | Small | ✅ |
+| iCalendar import/export (.ics) | 104 | MED | Medium | ✅ |
+| Medical code tagging (ICD-10) | 105 | LOW | Medium | ✅ |
+| Calendar conflict resolution UI | 106 | SHOULD | Medium | ✅ |
+| Multi-user vault support | 107 | LOW | Large | ✅ |
 | Contact extraction: ALLCAPS surname + role-labelled names (F4.8+F4.9) | 108 | MED | Small | ✅ |
 
 **v1.6+ (deferred)**
