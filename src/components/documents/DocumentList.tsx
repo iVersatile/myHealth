@@ -64,9 +64,11 @@ function DocRow({ index, style, data }: ListChildComponentProps<RowData>) {
 export function DocumentList({
   onPreview,
   previewDocId,
+  onDeleted,
 }: {
   onPreview?: (doc: Document) => void
   previewDocId?: string
+  onDeleted?: (id: string) => void
 } = {}) {
   const {
     documents,
@@ -78,6 +80,10 @@ export function DocumentList({
     deleteDocument,
     goToPage,
   } = useDocuments()
+
+  function handleDelete(id: string): void {
+    void deleteDocument(id).then(() => onDeleted?.(id))
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
 
@@ -304,7 +310,7 @@ export function DocumentList({
               itemCount={displayDocs.length}
               itemSize={ITEM_HEIGHT}
               width="100%"
-              itemData={{ docs: displayDocs, selectedIds, toggleSelect, deleteDocument, onPreview, previewDocId }}
+              itemData={{ docs: displayDocs, selectedIds, toggleSelect, deleteDocument: handleDelete, onPreview, previewDocId }}
             >
               {DocRow}
             </FixedSizeList>
@@ -326,7 +332,7 @@ export function DocumentList({
                       className="mt-4 h-4 w-4 shrink-0 cursor-pointer rounded border-[var(--color-border)]"
                     />
                     <div className="min-w-0 flex-1">
-                      <DocumentCard document={doc} onDelete={deleteDocument} />
+                      <DocumentCard document={doc} onDelete={handleDelete} />
                     </div>
                   </li>
                 )

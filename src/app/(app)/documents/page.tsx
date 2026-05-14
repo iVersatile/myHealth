@@ -245,6 +245,7 @@ export default function DocumentsPage() {
           <DocumentList
             onPreview={setPreviewDoc}
             previewDocId={previewDoc?.id}
+            onDeleted={(id) => { if (previewDoc?.id === id) setPreviewDoc(null) }}
           />
         </div>
         {previewDoc && (
