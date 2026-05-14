@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 112
-Task:  112 COMPLETE — all tasks done and committed
-Note:  All refactoring tasks 112.1–112.6 complete. CI green.
+Phase: 113
+Task:  113.6 — Test cases for bugs 1–5
+Note:  113.1–113.5 complete. 113.5 resolved as N/A (suggestions are ephemeral, no draft DB rows).
 ```
 
 ---
@@ -458,3 +458,67 @@ Note:  All refactoring tasks 112.1–112.6 complete. CI green.
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx vitest run`
    - Commit: `refactor: split large components, fix prop drilling, dedup Rust upload logic (Phase 112)`
+
+---
+
+## Phase 113 — Smoke-Test Bug Fixes (6 Issues)
+
+**Goal:** Fix 6 bugs found during manual smoke testing. All root causes confirmed.
+
+**Done when:** All 6 tasks pass their "Done when" criteria; `npx tsc --noEmit` clean; `npx vitest run` passes; `cargo clippy -- -D warnings` clean.
+
+### Sprint 113
+
+[x] **113.1 — Bug #1: Multi-doc upload shows "✗[object Object]" on first two files**
+
+   **Root cause:** `UploadDialog.tsx` catches Tauri IPC errors and falls back to `String(err)`. Tauri errors are plain JS objects `{ message: string, ... }`, not `Error` instances — `String(obj)` → `"[object Object]"`.
+
+   **Fix:** Extract `extractMessage(err: unknown): string` helper at top of file. Use `(err as { message?: string })?.message ?? JSON.stringify(err)` as the implementation. Replace all `String(err)` and bare error-stringify calls in `UploadDialog.tsx` with `extractMessage(err)`.
+
+   - File: `src/components/documents/UploadDialog.tsx`
+   - Done when: multi-doc upload error shows human-readable string; `npx tsc --noEmit` passes; test covers the plain-object-error path
+
+[x] **113.2 — Bug #2: Single-doc upload crashes with "table clinic_addresses has no column named address"**
+
+   **Root cause:** `documents.rs` auto-creates a draft clinic then inserts its address with stale SQL:
+   ```sql
+   INSERT INTO clinic_addresses (clinic_id, address) VALUES (?1, ?2)
+   ```
+   Real schema (migration v18): `id, clinic_id, label, line1, line2, city, postcode, country, is_primary, created_at`. No `address` column exists.
+
+   **Fix:** Rewrite INSERT to match real schema — generate UUID for `id`, use `addr.line1` for `line1`, all other fields default to empty/false/now.
+
+   - File: `src-tauri/src/commands/documents.rs` (INSERT inside `documents_upload`)
+   - Done when: single-doc upload with extracted clinic completes without SQL error; `cargo test` passes; `cargo clippy -- -D warnings` clean
+
+[x] **113.3 — Bug #3: Document preview persists after soft-delete in multi-doc upload**
+
+   **Root cause:** `previewDoc` state in `documents/page.tsx` is never cleared when a document is soft-deleted, so the detail panel stays visible after deletion.
+
+   **Fix:** In the soft-delete handler, add `if (previewDoc?.id === deletedId) setPreviewDoc(null)`.
+
+   - File: `src/app/(app)/documents/page.tsx`
+   - Done when: soft-deleting the currently-previewed document closes the detail panel; `npx tsc --noEmit` passes
+
+[x] **113.4 — Bug #4 & #5: Reject/Accept buttons in appointment and contact suggestion banners have no effect**
+
+   **Root cause:** `handleApptSuggestionConfirm` (and contact banner handler) in `page.tsx` wraps Tauri calls in `catch { // best-effort }` — all errors silently swallowed. In multi-doc upload a draft appointment already exists, so `appointments_create` fails silently.
+
+   **Option A (recommended):** Replace silent catches with visible error toasts: `catch (err) { toast.error(extractMessage(err)) }`. Then diagnose whether the duplicate-draft path needs an upsert.
+
+   **Option B:** Add `appointment_find_draft(doc_id)` Tauri command; if draft exists, call `appointment_activate(id)` instead of create.
+
+   - Files: `src/app/(app)/documents/page.tsx`, `src/components/documents/ApptSuggestionBanner.tsx`, `src/components/documents/DoctorSuggestionBanner.tsx`
+   - Done when: Accept button either succeeds visibly or shows readable error toast; Dismiss clears the banner; `npx tsc --noEmit` passes
+
+[x] **113.5 — Bug #6: Dismissed draft entities do not appear in Trash**
+
+   **Resolution: N/A — Option C.** Investigation confirmed no draft contact/clinic/appointment rows are inserted during the upload flow. `ContactSuggestionDto` / `ClinicSuggestionDto` are ephemeral OCR structs with no `id` field. All `IS_DRAFT=1` inserts for those tables are in test-only code. `dismiss` correctly clears React state; there is nothing in the DB to soft-delete.
+
+▶ **113.6 — Test cases for bugs 1–5**
+
+   - `UploadDialog.test.tsx`: Tauri returns `{ message: 'some error' }` object → status shows `"some error"`, not `"[object Object]"` (Bug #1)
+   - `page.test.tsx`: soft-delete currently-previewed doc → `previewDoc` becomes `null` (Bug #3)
+   - `page.test.tsx`: Accept on ApptSuggestionBanner when `appointments_create` throws → error toast shown (Bug #4)
+   - Rust test in `src-tauri/tests/`: `documents_upload` with clinic extraction → no SQL error after 113.2 fix (Bug #2)
+   - Done when: all new cases pass; coverage ≥80% maintained; `npx tsc --noEmit` clean; `cargo test` passes

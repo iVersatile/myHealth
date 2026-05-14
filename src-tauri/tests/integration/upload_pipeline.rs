@@ -85,6 +85,27 @@ fn test_extract_suggestions_returns_tags() {
 }
 
 #[test]
+fn clinic_addresses_insert_uses_correct_schema() {
+    let db = TempDb::new();
+    db.conn
+        .execute(
+            "INSERT INTO clinics (id, name) VALUES ('c1', 'Test Clinic')",
+            [],
+        )
+        .unwrap();
+    let result = db.conn.execute(
+        "INSERT INTO clinic_addresses (id, clinic_id, label, line1) \
+         VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params!["addr-1", "c1", "main", "123 Test St"],
+    );
+    assert!(
+        result.is_ok(),
+        "clinic_addresses INSERT with correct schema columns should succeed; got: {:?}",
+        result.err()
+    );
+}
+
+#[test]
 fn test_duplicate_upload_creates_new_row() {
     let db = TempDb::new();
     for id in ["dup-1", "dup-2"] {
