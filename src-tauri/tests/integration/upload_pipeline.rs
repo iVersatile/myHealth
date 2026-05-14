@@ -10,7 +10,7 @@ const DOCTOR_TEXT: &str =
 const DATE_TEXT: &str = "Invoice Date: 2024-03-15\nBlood pressure 120/80. Follow-up in 4 weeks.";
 
 #[test]
-fn test_upload_batch_single_file() {
+fn upload_batch_single_file() {
     let db = TempDb::new();
     db.conn
         .execute(
@@ -33,7 +33,7 @@ fn test_upload_batch_single_file() {
 }
 
 #[test]
-fn test_upload_batch_three_files() {
+fn upload_batch_three_files() {
     let db = TempDb::new();
     let batch = "batch-xyz";
     for i in 0..3 {
@@ -61,7 +61,7 @@ fn test_upload_batch_three_files() {
 }
 
 #[test]
-fn test_extract_suggestions_returns_contact() {
+fn extract_suggestions_returns_contact() {
     let contacts = extract_contact_suggestions(DOCTOR_TEXT);
     assert!(
         !contacts.is_empty(),
@@ -75,7 +75,7 @@ fn test_extract_suggestions_returns_contact() {
 }
 
 #[test]
-fn test_extract_suggestions_returns_tags() {
+fn extract_suggestions_returns_tags() {
     let activity_date = extract_activity_date(DATE_TEXT);
     let tags = auto_extract_tags(DATE_TEXT, &[], activity_date.as_deref());
     assert!(
@@ -106,7 +106,7 @@ fn clinic_addresses_insert_uses_correct_schema() {
 }
 
 #[test]
-fn test_duplicate_upload_creates_new_row() {
+fn duplicate_upload_creates_new_row() {
     let db = TempDb::new();
     for id in ["dup-1", "dup-2"] {
         db.conn

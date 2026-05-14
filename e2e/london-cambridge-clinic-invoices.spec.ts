@@ -98,4 +98,60 @@ test.describe('London & Cambridge Clinic Invoices', () => {
     await expect(rows.nth(0)).toHaveAttribute('data-status', 'done', { timeout: 30_000 })
     await expect(rows.nth(1)).toHaveAttribute('data-status', 'done', { timeout: 30_000 })
   })
+
+  // TC-LCC-05 — Cambridge Clinic: all 6 tags persist on document card after confirm
+  test('TC-LCC-05 — Cambridge Clinic tags persist on document card after upload confirmed', async ({
+    page,
+  }) => {
+    await page.goto('/documents')
+    await page.getByRole('button', { name: /upload/i }).click()
+    await page.locator('input[type="file"][accept]').setInputFiles(CAMBRIDGE_PDF)
+    await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
+    await page.getByRole('button', { name: /confirm upload/i }).click()
+    await expect(page.locator('[data-testid="upload-review-step"]')).not.toBeVisible({
+      timeout: 10_000,
+    })
+
+    // Return to document list and open the saved document
+    await page.goto('/documents')
+    await page.getByTestId('document-card').first().click()
+
+    const allTags = await page.getByTestId('tag-chip').allTextContents()
+    const tagSet = allTags.map((t) => t.replace(/×/g, '').trim().toLowerCase())
+
+    expect(tagSet).toContain('2021-11-22')
+    expect(tagSet).toContain('the cambridge clinic')
+    expect(tagSet).toContain('invoice')
+    expect(tagSet).toContain('cardiography')
+    expect(tagSet).toContain('19/11/21')
+    expect(tagSet).toContain('patient account number :a12345/21')
+  })
+
+  // TC-LCC-06 — Cambridge Clinic: all 6 tags visible on document detail page
+  test('TC-LCC-06 — Cambridge Clinic tags appear on document detail page', async ({ page }) => {
+    await page.goto('/documents')
+    await page.getByRole('button', { name: /upload/i }).click()
+    await page.locator('input[type="file"][accept]').setInputFiles(CAMBRIDGE_PDF)
+    await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
+    await page.getByRole('button', { name: /confirm upload/i }).click()
+    await expect(page.locator('[data-testid="upload-review-step"]')).not.toBeVisible({
+      timeout: 10_000,
+    })
+
+    // Navigate to document detail via View link
+    await page.goto('/documents')
+    const viewLink = page.getByTestId('document-card').first().getByRole('link', { name: /view/i })
+    await viewLink.click()
+    await page.waitForURL(/\/documents\/view/, { timeout: 10_000 })
+
+    const allTags = await page.getByTestId('tag-chip').allTextContents()
+    const tagSet = allTags.map((t) => t.replace(/×/g, '').trim().toLowerCase())
+
+    expect(tagSet).toContain('2021-11-22')
+    expect(tagSet).toContain('the cambridge clinic')
+    expect(tagSet).toContain('invoice')
+    expect(tagSet).toContain('cardiography')
+    expect(tagSet).toContain('19/11/21')
+    expect(tagSet).toContain('patient account number :a12345/21')
+  })
 })

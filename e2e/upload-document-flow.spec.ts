@@ -23,7 +23,7 @@ test.describe('Upload Document — full extraction flow', () => {
   test('TC-UPLOAD-01 — clinic suggestion card shows CRN and address', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(FIXTURE_PDF)
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
 
     const card = page.getByTestId('clinic-suggestion-card').first()
@@ -43,7 +43,7 @@ test.describe('Upload Document — full extraction flow', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(FIXTURE_PDF)
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
 
     const card = page.getByTestId('clinic-suggestion-card').first()
@@ -60,7 +60,7 @@ test.describe('Upload Document — full extraction flow', () => {
   test('TC-UPLOAD-03 — contact suggestion card shows Dr Sarah Mitchell with phone', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(FIXTURE_PDF)
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
 
     const card = page.getByTestId('contact-suggestion-card').first()
@@ -78,7 +78,7 @@ test.describe('Upload Document — full extraction flow', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(FIXTURE_PDF)
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
 
     const contactCard = page.getByTestId('contact-suggestion-card').first()
@@ -105,7 +105,7 @@ test.describe('Upload Document — full extraction flow', () => {
   test('TC-UPLOAD-05 — review step shows invoice and PHYSIOTHERAPY tags', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(FIXTURE_PDF)
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
 
     const chips = page.getByTestId('tag-chip')
@@ -118,7 +118,7 @@ test.describe('Upload Document — full extraction flow', () => {
   test('TC-UPLOAD-06 — appointment suggestion banner appears after upload with 2024 date', async ({ page }) => {
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(FIXTURE_PDF)
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
     await page.getByRole('button', { name: /confirm upload/i }).click()
     await expect(page.locator('[data-testid="upload-review-step"]')).not.toBeVisible({ timeout: 10_000 })
@@ -135,7 +135,7 @@ test.describe('Upload Document — full extraction flow', () => {
 
     await page.goto('/documents')
     await page.getByRole('button', { name: /upload/i }).click()
-    await page.locator('input[type="file"]').setInputFiles(FIXTURE_PDF)
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
     await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
     await page.getByRole('button', { name: /confirm upload/i }).click()
     await expect(page.locator('[data-testid="upload-review-step"]')).not.toBeVisible({ timeout: 10_000 })
@@ -148,5 +148,27 @@ test.describe('Upload Document — full extraction flow', () => {
     await page.goto('/appointments')
     const finalCount = await page.getByTestId('appointment-card').count()
     expect(finalCount).toBeGreaterThan(initialCount)
+  })
+
+  test('TC-UPLOAD-08 — confirming appointment suggestion links document to appointment on detail page', async ({ page }) => {
+    await page.goto('/documents')
+    await page.getByRole('button', { name: /upload/i }).click()
+    await page.locator('input[type="file"][accept]').setInputFiles(FIXTURE_PDF)
+    await page.waitForSelector('[data-testid="upload-review-step"]', { timeout: 20_000 })
+    await page.getByRole('button', { name: /confirm upload/i }).click()
+    await expect(page.locator('[data-testid="upload-review-step"]')).not.toBeVisible({ timeout: 10_000 })
+
+    await expect(page.getByText(/appointment detected/i)).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('button', { name: /create appointment/i }).click()
+    await expect(page.getByText(/appointment detected/i)).not.toBeVisible({ timeout: 8_000 })
+
+    // Navigate to the uploaded document's detail page
+    const viewLink = page.getByTestId('document-card').first().getByRole('link', { name: /view/i })
+    await viewLink.click()
+    await page.waitForURL(/\/documents\/view/, { timeout: 10_000 })
+
+    // The "Linked Appointments" section must list the appointment
+    await expect(page.getByText(/linked appointments/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/physiotherapy appointment/i)).toBeVisible({ timeout: 5_000 })
   })
 })

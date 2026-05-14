@@ -34,6 +34,7 @@
       draft_contacts: [],
       draft_clinics: [],
       draft_appointments: [],
+      document_appointments: [],
       settings: {},
     };
   }
@@ -613,11 +614,60 @@
 
     if (cmd === 'documents_link_contact') return Promise.resolve(null);
     if (cmd === 'documents_link_clinic') return Promise.resolve(null);
-    if (cmd === 'link_document_to_appointment') return Promise.resolve(null);
-    if (cmd === 'unlink_document_from_appointment') return Promise.resolve(null);
-    if (cmd === 'links_create') return Promise.resolve(null);
-    if (cmd === 'links_delete') return Promise.resolve(null);
-    if (cmd === 'links_list_for_document') return Promise.resolve([]);
+    if (cmd === 'link_document_to_appointment') {
+      const docId = args?.documentId || args?.document_id;
+      const apptId = args?.appointmentId || args?.appointment_id;
+      if (docId && apptId) {
+        if (!state.document_appointments) state.document_appointments = [];
+        state.document_appointments.push({
+          id: uid(),
+          document_id: docId,
+          appointment_id: apptId,
+          link_type: 'related',
+          confidence: 'auto',
+          created_at: nowIso(),
+        });
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+    if (cmd === 'unlink_document_from_appointment') {
+      const linkId = args?.linkId || args?.link_id;
+      if (linkId && state.document_appointments) {
+        state.document_appointments = state.document_appointments.filter((l) => l.id !== linkId);
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+    if (cmd === 'links_create') {
+      const input = args?.input || args;
+      if (input?.document_id && input?.appointment_id) {
+        if (!state.document_appointments) state.document_appointments = [];
+        state.document_appointments.push({
+          id: uid(),
+          document_id: input.document_id,
+          appointment_id: input.appointment_id,
+          link_type: input.link_type || 'related',
+          confidence: input.confidence || 'manual',
+          created_at: nowIso(),
+        });
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+    if (cmd === 'links_delete') {
+      const linkId = args?.linkId || args?.link_id || args?.id;
+      if (linkId && state.document_appointments) {
+        state.document_appointments = state.document_appointments.filter((l) => l.id !== linkId);
+        saveState(state);
+      }
+      return Promise.resolve(null);
+    }
+    if (cmd === 'links_list_for_document') {
+      const docId = args?.documentId || args?.document_id;
+      const links = (state.document_appointments || []).filter((l) => l.document_id === docId);
+      return Promise.resolve(links);
+    }
     if (cmd === 'links_list_for_appointment') return Promise.resolve([]);
 
     if (cmd === 'links_score_candidates') return Promise.resolve([]);

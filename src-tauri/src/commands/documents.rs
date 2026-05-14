@@ -1692,16 +1692,18 @@ mod tests {
         conn
     }
 
-    /// document_tags inserted during upload must have is_draft = 1
+    /// document_tags inserted during upload must NOT have is_draft = 1.
+    /// Tags default to is_draft = 0 (visible immediately). See R4 regression.
     #[test]
-    fn document_tags_upload_sets_is_draft() {
+    fn document_tags_upload_does_not_set_is_draft() {
         let conn = migrated_conn();
         conn.execute_batch(
             "INSERT INTO documents (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
              VALUES ('doc-1', 'test.pdf', '/tmp/test.pdf', 'application/pdf', 0, 'other', '2024-01-01', '2024-01-01');",
         ).unwrap();
+        // Correct upload INSERT: no explicit is_draft column → defaults to 0
         conn.execute(
-            "INSERT OR IGNORE INTO document_tags (document_id, tag, is_draft) VALUES (?1, ?2, 1)",
+            "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
             rusqlite::params!["doc-1", "blood-test"],
         )
         .unwrap();
@@ -1712,7 +1714,10 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(is_draft, 1);
+        assert_eq!(
+            is_draft, 0,
+            "upload tag must be immediately visible (is_draft=0)"
+        );
     }
 
     /// draft contact insert sets is_draft = 1 and returns 1 on SELECT

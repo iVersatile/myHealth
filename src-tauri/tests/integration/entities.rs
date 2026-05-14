@@ -1,7 +1,7 @@
 use super::helpers::TempDb;
 
 #[test]
-fn test_contacts_upsert_no_dup() {
+fn contacts_upsert_no_dup() {
     let db = TempDb::new();
     for _ in 0..2 {
         db.conn
@@ -21,7 +21,7 @@ fn test_contacts_upsert_no_dup() {
 }
 
 #[test]
-fn test_clinics_insert_and_link() {
+fn clinics_insert_and_link() {
     let db = TempDb::new();
     db.conn
         .execute(
@@ -48,7 +48,7 @@ fn test_clinics_insert_and_link() {
 }
 
 #[test]
-fn test_tags_bulk_insert() {
+fn tags_bulk_insert() {
     let db = TempDb::new();
     db.conn
         .execute(
@@ -78,7 +78,7 @@ fn test_tags_bulk_insert() {
 }
 
 #[test]
-fn test_appointment_status_transition() {
+fn appointment_status_transition() {
     let db = TempDb::new();
     db.conn
         .execute(
@@ -103,7 +103,7 @@ fn test_appointment_status_transition() {
 }
 
 #[test]
-fn test_trash_purge_expired() {
+fn trash_purge_expired() {
     let db = TempDb::new();
     db.conn
         .execute(

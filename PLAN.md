@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 114
-Task:  complete
-Note:  Phase 114 complete. All 5 tasks done — 4 bug fixes + integration tests for Bugs A–D.
+Phase: 115
+Task:  115.1
+Note:  Phase 114 complete. Phase 115 — regression fixes committed; awaiting manual test confirmation.
 ```
 
 ---
@@ -582,3 +582,63 @@ Note:  Phase 114 complete. All 5 tasks done — 4 bug fixes + integration tests 
    - Bug D: `delete_draft_contact` called after upload dismiss → contact row deleted
 
    - Done when: `cargo test` passes; `cargo clippy -- -D warnings` clean
+
+---
+
+## Phase 115 — Regression Fixes Round 3 (5 Manual-Test Issues)
+
+**Goal:** Fix 5 behaviours repeatedly reported in manual smoke tests but never resolved. Integration tests written first (RED), then code fixed (GREEN). Phase is complete only after manual test confirmation.
+
+**Background:** These regressions were reported across multiple sessions. Root causes confirmed in session 2026-05-14; fixes committed in same session. Phase tasks below track manual verification status — do NOT mark complete without a human confirming the fix in the running app.
+
+**Done when:** All 5 tasks confirmed by manual test; `npx tsc --noEmit` clean; `cargo clippy -- -D warnings` clean; `cargo test` passes.
+
+### Root Causes (confirmed before coding)
+
+- **R1 (contacts stay draft):** `accept_draft_entity` / `reject_draft_entity` IPC calls passed `id:` instead of `entityId:` — Tauri converts Rust `snake_case` params to `camelCase` at the IPC boundary, so the entity was never found.
+- **R2 (appointments stay draft):** Same IPC arg name bug in the reject path of `DraftEntitySection.tsx`.
+- **R3 (clinic-contact link lost):** Extraction loop created draft clinics and draft contacts independently; no code linked them via `contacts.clinic_id` or the `clinic_contacts` junction table.
+- **R4 (tags missing):** Batch upload tag INSERT had explicit `is_draft = 1`; those tags are filtered out by standard tag queries, making them invisible.
+- **R5 (notes empty):** `extract_clinical_notes()` computed a value from OCR text but the result was never written to `documents.notes`.
+
+### Sprint 115
+
+▶ [ ] **115.1 — Manual test: R1 — Accepted contacts appear as regular contacts; rejected go to Trash**
+
+   **Scenario:** Upload a PDF that yields at least one contact suggestion. Accept the contact via the draft review UI. Verify the contact appears in the Contacts list with no "Draft" badge. Also reject a draft contact — it should disappear from the draft list and appear in Trash UI.
+
+   **Fix committed:** `src/components/shared/DraftEntitySection.tsx` — `accept_draft_entity` and `reject_draft_entity` IPC arg renamed from `id` to `entityId`.
+
+   - Done when: user confirms accepted contact visible in Contacts; rejected contact visible in Trash.
+
+[ ] **115.2 — Manual test: R2 — Accepted appointments appear in timeline; rejected go to Trash**
+
+   **Scenario:** Upload a PDF that yields an appointment suggestion. Accept via draft review. Verify appointment appears in the timeline / appointments list without "Draft" status. Reject a draft appointment — it should appear in Trash.
+
+   **Fix committed:** same `DraftEntitySection.tsx` IPC arg fix as R1.
+
+   - Done when: user confirms accepted appointment visible in timeline; rejected appointment in Trash.
+
+[ ] **115.3 — Manual test: R3 — Clinic-contact link preserved after extraction**
+
+   **Scenario:** Upload a PDF containing a named clinician and their clinic (e.g. "John Green" at "JOHN GREEN PHYSIOTHERAPY LTD"). Accept both entities. Verify the contact record shows the clinic association (contact detail shows clinic name; clinic page lists the contact).
+
+   **Fix committed:** `src-tauri/src/commands/documents.rs` — after clinic creation loop, draft contacts are linked via `UPDATE contacts SET clinic_id` and `INSERT INTO clinic_contacts`.
+
+   - Done when: user confirms contact detail shows correct clinic; clinic page shows contact.
+
+[ ] **115.4 — Manual test: R4 — Tags visible after upload**
+
+   **Scenario:** Upload document "Upload (22Nov2021-13_16_15).pdf". After extraction, verify the document shows tags including at minimum: `2023-11-22` (from filename), `Invoice` (from extraction), `London Clinic`, `Cardiography`, `19/11/21`. Bonus: `Patient Number: M24195380/1`.
+
+   **Fix committed:** `src-tauri/src/commands/documents.rs` — batch tag INSERT no longer sets `is_draft = 1`; tags default to visible.
+
+   - Done when: user confirms expected tags visible on the document.
+
+[ ] **115.5 — Manual test: R5 — Clinical notes populated after extraction**
+
+   **Scenario:** Upload document "Upload (11Nov2021-12_39_20).pdf". After extraction completes, open the document detail. Verify the Notes field is non-empty and contains clinically relevant text extracted from the PDF.
+
+   **Fix committed:** `src-tauri/src/commands/documents.rs` — `extract_clinical_notes()` result now written to `documents.notes` inside the DB-locked block before the FTS index update.
+
+   - Done when: user confirms Notes field shows extracted clinical content.

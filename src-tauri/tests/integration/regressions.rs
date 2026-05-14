@@ -283,6 +283,161 @@ fn r6_old_buggy_table_write_is_invisible_to_links_query() {
     );
 }
 
+// ── Entity links: document-contact ───────────────────────────────────────────
+//
+// After upload confirmation, a document must be queryable via the contact it was
+// linked to through document_contacts. Loss of this row means the contact's
+// document list shows nothing for the uploaded document.
+
+#[test]
+fn entity_link_document_contact_row_survives_after_upload() {
+    let db = TempDb::new();
+    let now = "2026-01-01T00:00:00Z";
+    let doc_id = "doc-link-dc";
+    let contact_id = "contact-link-dc";
+
+    db.conn
+        .execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES (?1, 'invoice.pdf', '/files/invoice.pdf', 'application/pdf', 1024, 'other', ?2, ?2)",
+            params![doc_id, now],
+        )
+        .unwrap();
+
+    db.conn
+        .execute(
+            "INSERT INTO contacts \
+             (id, name, role, is_draft, created_at, updated_at) \
+             VALUES (?1, 'Dr Smith', 'specialist', 0, ?2, ?2)",
+            params![contact_id, now],
+        )
+        .unwrap();
+
+    // Simulate upload pipeline linking document to contact
+    db.conn
+        .execute(
+            "INSERT OR IGNORE INTO document_contacts (document_id, contact_id) VALUES (?1, ?2)",
+            params![doc_id, contact_id],
+        )
+        .unwrap();
+
+    // Query as the UI would: find all documents linked to this contact
+    let count: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM document_contacts WHERE document_id = ?1 AND contact_id = ?2",
+            params![doc_id, contact_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        count, 1,
+        "document_contacts must retain the link between document and contact after upload"
+    );
+}
+
+#[test]
+fn entity_link_two_documents_share_contact_found_by_join() {
+    let db = TempDb::new();
+    let now = "2026-01-01T00:00:00Z";
+    let contact_id = "contact-shared";
+
+    db.conn
+        .execute(
+            "INSERT INTO contacts (id, name, role, is_draft, created_at, updated_at) \
+             VALUES (?1, 'Dr House', 'specialist', 0, ?2, ?2)",
+            params![contact_id, now],
+        )
+        .unwrap();
+
+    for (doc_id, filename) in [("doc-dc-a", "a.pdf"), ("doc-dc-b", "b.pdf")] {
+        db.conn
+            .execute(
+                "INSERT INTO documents \
+                 (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+                 VALUES (?1, ?2, '/files/x.pdf', 'application/pdf', 1024, 'other', ?3, ?3)",
+                params![doc_id, filename, now],
+            )
+            .unwrap();
+        db.conn
+            .execute(
+                "INSERT OR IGNORE INTO document_contacts (document_id, contact_id) VALUES (?1, ?2)",
+                params![doc_id, contact_id],
+            )
+            .unwrap();
+    }
+
+    // Both documents must be reachable via the shared contact
+    let doc_count: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM documents d \
+             INNER JOIN document_contacts dc ON dc.document_id = d.id \
+             WHERE dc.contact_id = ?1",
+            params![contact_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        doc_count, 2,
+        "both documents linked to the same contact must appear in the joined query"
+    );
+}
+
+// ── Entity links: note-document ───────────────────────────────────────────────
+//
+// note_links ties a note to a document. After linking, querying note_links with
+// entity_type='document' must return the row.
+
+#[test]
+fn entity_link_note_to_document_via_note_links() {
+    let db = TempDb::new();
+    let now = "2026-01-01T00:00:00Z";
+    let doc_id = "doc-note-link";
+    let note_id = "note-link-1";
+    let link_id = "nl-1";
+
+    db.conn
+        .execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES (?1, 'report.pdf', '/files/report.pdf', 'application/pdf', 1024, 'lab', ?2, ?2)",
+            params![doc_id, now],
+        )
+        .unwrap();
+
+    db.conn
+        .execute(
+            "INSERT INTO notes (id, title, content, created_at, updated_at) \
+             VALUES (?1, 'Post-op notes', 'Patient doing well.', ?2, ?2)",
+            params![note_id, now],
+        )
+        .unwrap();
+
+    db.conn
+        .execute(
+            "INSERT INTO note_links (id, note_id, entity_type, entity_id, created_at) \
+             VALUES (?1, ?2, 'document', ?3, ?4)",
+            params![link_id, note_id, doc_id, now],
+        )
+        .unwrap();
+
+    let count: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM note_links \
+             WHERE note_id = ?1 AND entity_type = 'document' AND entity_id = ?2",
+            params![note_id, doc_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        count, 1,
+        "note_links must retain the note-document link after insertion"
+    );
+}
+
 // ── R5: Clinical notes from extraction never written to documents.notes ───────
 //
 // extract_clinical_notes() returns a non-empty string for documents with clinical
