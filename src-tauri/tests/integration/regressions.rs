@@ -171,6 +171,118 @@ fn r4_tag_with_is_draft_1_is_invisible_to_standard_query() {
     );
 }
 
+// ── R6: Upload pipeline writes appointment-document link to wrong table ───────
+//
+// When extraction creates a draft appointment during document upload, it writes
+// the appointment-document link to `appointment_documents` (wrong table).
+// The `links_list_for_document` command reads from `document_appointments`
+// (correct table per schema migration). The link is therefore lost — the document
+// detail page shows no linked appointments after confirming the upload.
+//
+// Fix: change the INSERT in documents.rs confirm_document_upload from
+// `appointment_documents` to `document_appointments` with correct columns.
+
+#[test]
+fn r6_upload_pipeline_draft_appointment_link_visible_via_document_appointments_table() {
+    let db = TempDb::new();
+    let now = "2026-01-01T00:00:00Z";
+    let doc_id = "doc-r6";
+    let appt_id = "appt-r6";
+
+    db.conn
+        .execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES (?1, 'invoice.pdf', '/files/invoice.pdf', 'application/pdf', 1024, 'other', ?2, ?2)",
+            params![doc_id, now],
+        )
+        .unwrap();
+
+    db.conn
+        .execute(
+            "INSERT INTO appointments \
+             (id, title, doctor_name, appt_date, status, is_draft, created_at, updated_at) \
+             VALUES (?1, 'Physio appt', 'Dr Smith', '2024-01-15', 'completed', 1, ?2, ?2)",
+            params![appt_id, now],
+        )
+        .unwrap();
+
+    // Simulate what the FIXED upload pipeline does: write to document_appointments
+    // with the correct schema (id, document_id, appointment_id, link_type, confidence, created_at).
+    let link_id = "link-r6";
+    db.conn
+        .execute(
+            "INSERT OR IGNORE INTO document_appointments \
+             (id, document_id, appointment_id, link_type, confidence, created_at) \
+             VALUES (?1, ?2, ?3, 'related', 'auto', ?4)",
+            params![link_id, doc_id, appt_id, now],
+        )
+        .unwrap();
+
+    // links_list_for_document reads from document_appointments — must return 1.
+    let count: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM document_appointments WHERE document_id = ?1",
+            params![doc_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        count, 1,
+        "R6: appointment-document link created during upload must be readable via \
+         document_appointments table (used by links_list_for_document)"
+    );
+}
+
+#[test]
+fn r6_old_buggy_table_write_is_invisible_to_links_query() {
+    let db = TempDb::new();
+    let now = "2026-01-01T00:00:00Z";
+    let doc_id = "doc-r6b";
+    let appt_id = "appt-r6b";
+
+    db.conn
+        .execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES (?1, 'invoice.pdf', '/files/invoice.pdf', 'application/pdf', 1024, 'other', ?2, ?2)",
+            params![doc_id, now],
+        )
+        .unwrap();
+    db.conn
+        .execute(
+            "INSERT INTO appointments \
+             (id, title, doctor_name, appt_date, status, is_draft, created_at, updated_at) \
+             VALUES (?1, 'Physio appt', 'Dr Smith', '2024-01-15', 'completed', 1, ?2, ?2)",
+            params![appt_id, now],
+        )
+        .unwrap();
+
+    // Buggy path: write to appointment_documents (wrong table).
+    db.conn
+        .execute(
+            "INSERT OR IGNORE INTO appointment_documents \
+             (appointment_id, document_id) VALUES (?1, ?2)",
+            params![appt_id, doc_id],
+        )
+        .unwrap();
+
+    // document_appointments (read by UI) returns 0 — demonstrates the bug.
+    let count: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM document_appointments WHERE document_id = ?1",
+            params![doc_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        count, 0,
+        "R6 (demonstrates bug): writing to appointment_documents is invisible to the UI query"
+    );
+}
+
 // ── R5: Clinical notes from extraction never written to documents.notes ───────
 //
 // extract_clinical_notes() returns a non-empty string for documents with clinical

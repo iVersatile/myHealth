@@ -2619,10 +2619,12 @@ pub async fn documents_run_extraction(
                      VALUES (?1, ?2, ?3, ?4, 'completed', 1, ?5, ?5)",
                     rusqlite::params![appt_id, title, doctor_name, resolved_activity_date, now],
                 )?;
+                let link_id = Uuid::new_v4().to_string();
                 conn.execute(
-                    "INSERT OR IGNORE INTO appointment_documents \
-                     (appointment_id, document_id) VALUES (?1, ?2)",
-                    rusqlite::params![appt_id, id],
+                    "INSERT OR IGNORE INTO document_appointments \
+                     (id, document_id, appointment_id, link_type, confidence, created_at) \
+                     VALUES (?1, ?2, ?3, 'related', 'auto', ?4)",
+                    rusqlite::params![link_id, id, appt_id, now],
                 )?;
                 draft_appt_id = Some(appt_id);
             }
