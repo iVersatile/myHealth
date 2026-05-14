@@ -209,7 +209,7 @@ export default function ProfilesPage() {
                 id="delete-dialog-title"
                 className="text-[var(--text-base)] font-semibold text-[var(--color-text)]"
               >
-                Delete "{deleteTarget.name}"?
+                Delete &ldquo;{deleteTarget.name}&rdquo;?
               </h2>
               <p className="mt-2 text-[var(--text-sm)] text-[var(--color-text-secondary)]">
                 This permanently deletes all data in this profile and cannot be undone.

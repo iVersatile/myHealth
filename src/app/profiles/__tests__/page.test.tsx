@@ -128,7 +128,7 @@ describe('ProfilesPage — delete flow', () => {
     const [firstDeleteBtn] = screen.getAllByTestId('delete-profile-btn')
     await userEvent.click(firstDeleteBtn!)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText(/delete "Alice"/i)).toBeInTheDocument()
+    expect(screen.getByText(/delete “Alice”/i)).toBeInTheDocument()
   })
 
   it('removes profile from list on confirm', async () => {
