@@ -8,9 +8,6 @@ export const test = base.extend({
     await use(context)
   },
   page: async ({ page }, use) => {
-    await page.addInitScript(() => {
-      sessionStorage.removeItem('tauri_mock_state')
-    })
     // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page)
   },
