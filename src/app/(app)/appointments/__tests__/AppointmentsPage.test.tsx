@@ -260,7 +260,7 @@ describe('ICS import/export', () => {
     mockOpenDialog.mockResolvedValue('/some/path/file.ics')
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'appointments_list') return Promise.resolve([])
-      if (cmd === 'icalendar_import') return Promise.resolve(3)
+      if (cmd === 'icalendar_import') return Promise.resolve({ imported: 3, skipped: 0 })
       if (cmd === 'contacts_list') return Promise.resolve([])
       if (cmd === 'clinics_list') return Promise.resolve([])
       if (cmd === 'get_draft_entities') return Promise.resolve([])
