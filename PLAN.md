@@ -8,8 +8,8 @@
 
 ```
 Phase: 114
-Task:  114.1
-Note:  Phase 113 complete. Phase 114 covers 4 bugs found in second manual test round.
+Task:  complete
+Note:  Phase 114 complete. All 5 tasks done — 4 bug fixes + integration tests for Bugs A–D.
 ```
 
 ---
@@ -573,7 +573,7 @@ Note:  Phase 113 complete. Phase 114 covers 4 bugs found in second manual test r
    - File: `src-tauri/src/commands/documents.rs` (line ~2332)
    - Done when: `cargo clippy -- -D warnings` passes with zero errors
 
-▶ **114.5 — Integration tests for Bugs A–D**
+[x] **114.5 — Integration tests for Bugs A–D**
 
    Write Rust integration tests in `src-tauri/tests/` covering:
    - Bug A: multi-doc upload with clinic extraction → no null constraint error (passes without panic)
