@@ -113,7 +113,7 @@ describe('UploadDialog', () => {
     render(<UploadDialog onClose={onClose} onUploaded={onUploaded} />)
     await pickFileAndReachReview()
     await userEvent.click(screen.getByRole('button', { name: /confirm upload/i }))
-    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(fakeDoc, [], []))
+    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(fakeDoc, [], [], null))
     expect(onClose).toHaveBeenCalled()
   })
 
