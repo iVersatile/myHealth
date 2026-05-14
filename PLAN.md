@@ -8,8 +8,8 @@
 
 ```
 Phase: 112
-Task:  112.3 — AppointmentDetailClient split (834 → ≤800 lines)
-Note:  112.1 complete. DocumentDetailClient split done (702 lines, hook extracted).
+Task:  112 COMPLETE — all tasks done and committed
+Note:  All refactoring tasks 112.1–112.6 complete. CI green.
 ```
 
 ---
@@ -440,20 +440,20 @@ Note:  112.1 complete. DocumentDetailClient split done (702 lines, hook extracte
    - `UploadDialog` provides context; prop interface shrinks to ≤10 props
    - Done when: `npx tsc --noEmit` passes; UploadDialog tests pass; UploadReviewStep test file passes
 
-▶ **112.3 — AppointmentDetailClient split (834 → ≤800 lines)**
+[x] **112.3 — AppointmentDetailClient split (834 → ≤800 lines)**
    - Extract: `AppointmentConflicts.tsx` (conflict detection + dismiss UI)
    - Extract: `useAppointmentDetail()` hook
    - Done when: file ≤800 lines; existing test suite passes unchanged
 
-[ ] **112.4 — Rust upload deduplication**
+[x] **112.4 — Rust upload deduplication**
    - `src-tauri/src/commands/documents.rs`: extract `prepare_document_upload()` helper shared by `documents_upload()` and `upload_one_document()`
    - Done when: `cargo test` passes; `cargo clippy -- -D warnings` clean
 
-[ ] **112.5 — Zustand selector consolidation**
+[x] **112.5 — Zustand selector consolidation**
    - `src/hooks/useDocuments.ts` + `src/hooks/useAppointments.ts`: replace 10–11 individual `useStore(s => s.x)` calls with single `useShallow` selector
    - Done when: `npx tsc --noEmit` passes; tests pass
 
-[ ] **112.6 — Pre-commit checks + commit**
+[x] **112.6 — Pre-commit checks + commit**
    - `npx tsc --noEmit`
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx vitest run`
