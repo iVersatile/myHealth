@@ -295,7 +295,7 @@
     // UTF-08 contact extraction edge-case fixtures
     'allcaps-surname-2023-06-01.pdf': {
       contact_suggestions: [
-        { name: 'Mary Margaret MURPHY', phone: null, email: null, role: 'doctor' },
+        { name: 'Mary Margaret Murphy', phone: null, email: null, role: 'doctor' },
       ],
       clinic_suggestions: [],
       category_suggestion: null,
@@ -308,7 +308,7 @@
     },
     'gp-labelled-sharma-2023-06-01.pdf': {
       contact_suggestions: [
-        { name: 'Vaibhav SHARMA', phone: null, email: null, role: 'doctor' },
+        { name: 'Vaibhav Sharma', phone: null, email: null, role: 'doctor' },
       ],
       clinic_suggestions: [],
       category_suggestion: null,

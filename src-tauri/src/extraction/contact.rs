@@ -45,10 +45,11 @@ fn allcaps_name_re() -> &'static Regex {
 
 fn gp_label_re() -> &'static Regex {
     GP_LABEL_PATTERN.get_or_init(|| {
-        // Matches "GP: Vaibhav SHARMA", "Consultant James BROWN", etc.
-        // Capture group 1 = the name portion after the role label.
+        // Matches "GP: Vaibhav SHARMA", "GP: Dr Jane Lee", "Consultant: Mr Ahmed Al-Rashid".
+        // Optional title prefix is consumed but NOT captured; capture group 1 = name only.
+        // Uses [ \t]+ (not \s+) to stop at line boundaries and avoid absorbing clinic names.
         Regex::new(
-            r"\b(?:GP|Consultant|Registrar|Physiotherapist?|Nurse|Specialist):?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+[A-Z]{2,})+)",
+            r"\b(?:GP|Consultant|Registrar|Physiotherapist?|Nurse|Specialist|Surgeon):?[ \t]+(?:(?:Dr\.?|Prof\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Sir)[ \t]+)?([A-Z][a-zA-Z\-']+(?:[ \t]+[A-Z][a-zA-Z\-']+)*)",
         )
         .expect("gp label regex valid")
     })
@@ -100,6 +101,27 @@ fn title_re() -> &'static Regex {
         Regex::new(r"^(Dr\.?|Prof\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Sir)(?:\s|$)")
             .expect("title regex valid")
     })
+}
+
+/// Converts tokens that are entirely ASCII uppercase (≥ 2 chars) to title-case.
+/// All other tokens (mixed-case, hyphenated, abbreviated, etc.) are returned unchanged.
+fn normalize_name(name: &str) -> String {
+    name.split_whitespace()
+        .map(|token| {
+            if token.len() >= 2 && token.bytes().all(|b| b.is_ascii_uppercase()) {
+                let mut chars = token.chars();
+                match chars.next() {
+                    Some(first) => {
+                        first.to_uppercase().to_string() + &chars.as_str().to_lowercase()
+                    }
+                    None => String::new(),
+                }
+            } else {
+                token.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn extract_title_from_name(name: &str) -> Option<String> {
@@ -236,24 +258,33 @@ pub fn extract_contact_suggestions(text: &str) -> Vec<ContactSuggestion> {
         });
     };
 
-    // Pass 1: title-prefixed names (Dr., Prof., Mr., etc.)
-    for cap in dr_re().captures_iter(text) {
-        let m = cap.get(0).unwrap();
-        push(m.as_str().trim().to_string(), m.end());
-    }
-
-    // Pass 2: role-labelled names ("GP: Vaibhav SHARMA").
-    // Pre-insert into seen so Pass 3 does not duplicate them.
+    // Pass 1: role-labelled names ("GP: Vaibhav SHARMA", "GP: Dr Jane Lee").
+    // Collect full-match byte ranges so Pass 2 can skip title matches inside them.
+    let mut gp_ranges: Vec<std::ops::Range<usize>> = Vec::new();
     for cap in gp_label_re().captures_iter(text) {
-        let name = cap.get(1).unwrap().as_str().trim().to_string();
+        let full = cap.get(0).unwrap();
+        gp_ranges.push(full.start()..full.end());
+        let name = normalize_name(cap.get(1).unwrap().as_str().trim());
         let end = cap.get(1).unwrap().end();
         push(name, end);
     }
 
-    // Pass 3: ALLCAPS-surname names ("Mary Margaret MURPHY").
+    // Pass 2: title-prefixed names (Dr., Prof., Mr., etc.), skipping regions
+    // already claimed by a role-label match in Pass 1.
+    for cap in dr_re().captures_iter(text) {
+        let m = cap.get(0).unwrap();
+        let overlaps = gp_ranges
+            .iter()
+            .any(|r| m.start() < r.end && m.end() > r.start);
+        if !overlaps {
+            push(m.as_str().trim().to_string(), m.end());
+        }
+    }
+
+    // Pass 3: ALLCAPS-surname names ("Mary Margaret MURPHY", "Dr John SMITH").
     // Already-seen names from passes 1-2 are skipped automatically.
     for cap in allcaps_name_re().captures_iter(text) {
-        let name = cap.get(1).unwrap().as_str().trim().to_string();
+        let name = normalize_name(cap.get(1).unwrap().as_str().trim());
         let end = cap.get(1).unwrap().end();
         push(name, end);
     }
@@ -497,7 +528,7 @@ mod tests {
         let text = "Referred by Mary Margaret MURPHY for further assessment.";
         let suggestions = extract_contact_suggestions(text);
         assert_eq!(suggestions.len(), 1);
-        assert_eq!(suggestions[0].name, "Mary Margaret MURPHY");
+        assert_eq!(suggestions[0].name, "Mary Margaret Murphy");
     }
 
     #[test]
@@ -505,7 +536,43 @@ mod tests {
         let text = "GP: Vaibhav SHARMA\nInstitute Of Preventative Medicine\n29 Old Gloucester Street\nLondon WC1N 3AX";
         let suggestions = extract_contact_suggestions(text);
         assert_eq!(suggestions.len(), 1);
-        assert_eq!(suggestions[0].name, "Vaibhav SHARMA");
+        assert_eq!(suggestions[0].name, "Vaibhav Sharma");
+    }
+
+    #[test]
+    fn extracts_allcaps_surname() {
+        // "Dr John SMITH" — no role label; matched by allcaps_name_re and normalized
+        let text = "Referred by Dr John SMITH for orthopaedic review.";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(suggestions.len(), 1);
+        assert!(
+            suggestions[0].name.contains("Smith"),
+            "expected 'Smith' in name, got: {}",
+            suggestions[0].name
+        );
+    }
+
+    #[test]
+    fn extracts_role_labelled_name() {
+        // Role label without ALLCAPS — "GP: Dr Jane Lee"
+        let text = "GP: Dr Jane Lee";
+        let suggestions = extract_contact_suggestions(text);
+        assert_eq!(
+            suggestions.len(),
+            1,
+            "expected 1 suggestion, got: {suggestions:#?}"
+        );
+        assert_eq!(suggestions[0].name, "Jane Lee");
+
+        // Role label with ALLCAPS surname — "GP: Dr Jane Lee" variant
+        let text2 = "Consultant: Mr Ahmed Al-Rashid";
+        let suggestions2 = extract_contact_suggestions(text2);
+        assert_eq!(
+            suggestions2.len(),
+            1,
+            "expected 1 suggestion, got: {suggestions2:#?}"
+        );
+        assert_eq!(suggestions2[0].name, "Ahmed Al-Rashid");
     }
 
     #[test]

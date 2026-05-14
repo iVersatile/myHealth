@@ -7,8 +7,8 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 107
-Task:  108.1 — ALLCAPS surname pattern (Rust)
+Phase: 108
+Task:  108.4 — Fixture PDF + E2E test
 Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
@@ -338,18 +338,18 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 
 ### Sprint 108
 
-▶ [ ] **108.1 — ALLCAPS surname pattern (Rust)**
+[x] **108.1 — ALLCAPS surname pattern (Rust)**
    - In `src-tauri/src/commands/contact.rs` (or `src-tauri/src/extraction/contact.rs`), add regex: title prefix + given name + ALLCAPS token (≥2 uppercase letters, no lowercase)
    - Example: `r"(?i)\b(Dr|Mr|Mrs|Ms|Prof)\.?\s+[A-Z][a-z]+\s+([A-Z]{2,})\b"` → group 2 is surname
    - Normalise captured surname to title-case before returning
    - Done when: unit test `extracts_allcaps_surname` passes
 
-[ ] **108.2 — Role-label prefix pattern (Rust)**
+[x] **108.2 — Role-label prefix pattern (Rust)**
    - Add regex matching `"<Role>:\s*<title> <name>"` where Role ∈ {GP, Consultant, Physiotherapist, Nurse, Registrar, Specialist, Surgeon}
    - Example: `r"(?i)\b(GP|Consultant|Physiotherapist|Nurse|Registrar|Specialist|Surgeon)\s*:\s*(Dr|Mr|Mrs|Ms|Prof)\.?\s+([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)*)"` → group 3 is full name
    - Done when: unit test `extracts_role_labelled_name` passes
 
-[ ] **108.3 — Unit tests**
+[x] **108.3 — Unit tests**
    - Add test cases to `src-tauri/tests/contact_extraction.rs` (or inline `#[cfg(test)]` module):
      - `"Referred by Dr John SMITH"` → name contains "Smith"
      - `"GP: Dr Jane Lee"` → name = "Jane Lee"
@@ -357,12 +357,12 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
      - Existing pattern tests unchanged
    - Done when: `cargo test` passes with new cases
 
-[ ] **108.4 — Fixture PDF + E2E test**
+[x] **108.4 — Fixture PDF + E2E test**
    - Add a small fixture PDF (or reuse existing) whose text includes ALLCAPS surname and role-label
    - `e2e/v3-f4-contact-patterns.spec.ts`: upload fixture → assert `[data-testid="contact-suggestion"]` shows correct extracted name
    - Done when: E2E passes in mock/browser mode
 
-[ ] **108.5 — Pre-commit checks + commit**
+▶ [ ] **108.5 — Pre-commit checks + commit**
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx tsc --noEmit`
    - Commit: `feat: add ALLCAPS surname and role-label contact extraction patterns (F4.8+F4.9, Phase 108)`
