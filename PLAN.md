@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 113
-Task:  COMPLETE — all 113.x tasks done
-Note:  113.6 complete. All smoke-test bug regression tests pass (Bugs #1–#4).
+Phase: 114
+Task:  114.1
+Note:  Phase 113 complete. Phase 114 covers 4 bugs found in second manual test round.
 ```
 
 ---
@@ -522,3 +522,63 @@ Note:  113.6 complete. All smoke-test bug regression tests pass (Bugs #1–#4).
    - `page.test.tsx`: Accept on ApptSuggestionBanner when `appointments_create` throws → error toast shown (Bug #4)
    - Rust test in `src-tauri/tests/`: `documents_upload` with clinic extraction → no SQL error after 113.2 fix (Bug #2)
    - Done when: all new cases pass; coverage ≥80% maintained; `npx tsc --noEmit` clean; `cargo test` passes
+
+---
+
+## Phase 114 — Upload Flow Bug Fixes (Round 2, 4 Issues)
+
+**Goal:** Fix 4 bugs found during second manual smoke-test round (multi-doc upload, draft appointments, draft contacts, note auto-generation).
+
+**Done when:** All 4 tasks pass their "Done when" criteria; `npx tsc --noEmit` clean; `cargo clippy -- -D warnings` clean; `npx vitest run` passes.
+
+### Root Causes (confirmed before coding)
+
+- **Bug A** (null constraint on multi-doc): `INSERT INTO clinic_addresses` included `country = NULL` explicitly; SQLite rejects NOT NULL column even with a default. Fixed: remove explicit NULL columns from INSERT so DB default applies.
+- **Bug B** (draft appointments stay draft): `draft_appointment_id` was never threaded from Rust `ContactSuggestionDto` through TS layers; Accept/Dismiss calls had no ID to confirm or delete.
+- **Bug C** (only 1/3 appointments): Root cause was Bug A — the other 2 PDFs failed with null constraint before reaching appointment extraction.
+- **Bug D** (contacts stay draft): `draft_id` field missing from `ContactSuggestion` interface; Rust returned None/null so frontend couldn't identify which draft contact to confirm or delete.
+
+### Sprint 114
+
+[x] **114.1 — Fix Bug A: null constraint on multi-doc upload (clinic_addresses.country)**
+
+   **Fix:** Remove `country = NULL` (and any other explicit NULL non-nullable columns) from `documents.rs` clinic_address INSERT so the DB NOT NULL default applies.
+
+   - File: `src-tauri/src/commands/documents.rs`
+   - Done when: multi-doc upload with clinic extraction completes without null constraint error; `cargo clippy -- -D warnings` clean
+
+[x] **114.2 — Fix Bug B/D: thread draft_appointment_id and draft_id through IPC**
+
+   **Fix:**
+   - Add `draft_appointment_id: Option<String>` to `ContactSuggestionDto` Rust struct; populate from DB insert
+   - Add `draft_id: string | null` to `ContactSuggestion` TS interface (`uploadTypes.ts`)
+   - Thread both fields through `UploadDialog` → `DoctorSuggestionBanner` → `ApptSuggestionBanner`
+   - On accept: call `confirm_draft_appointment(draft_appointment_id)` + `confirm_draft_contact(draft_id)`
+   - On reject/dismiss: call `delete_draft_appointment(draft_appointment_id)` + `delete_draft_contact(draft_id)`
+
+   - Files: `src-tauri/src/commands/documents.rs`, `src/components/documents/uploadTypes.ts`, `src/components/documents/UploadDialog.tsx`, `src/components/documents/DoctorSuggestionBanner.tsx`, `src/components/documents/ApptSuggestionBanner.tsx`, `src/app/(app)/documents/page.tsx`
+   - Done when: Accept confirms draft entities in DB; Dismiss removes them; `npx tsc --noEmit` clean
+
+[x] **114.3 — Update TypeScript test fixtures for draft_id field**
+
+   **Fix:** Add `draft_id: null` to all `contactSugg` object literals in `UploadDialog.test.tsx` and inline `doctorCandidates.map()` in `page.tsx`.
+
+   - Files: `src/components/documents/UploadDialog.test.tsx`, `src/app/(app)/documents/page.tsx`
+   - Done when: `npx tsc --noEmit` passes with zero errors; `npx vitest run` passes
+
+[x] **114.4 — Fix second Rust ContactSuggestionDto initializer missing draft_id**
+
+   **Fix:** Plain-text extraction code path in `documents.rs` (distinct from clinic-based path) also constructs `ContactSuggestionDto` without `draft_id: None`. Add field.
+
+   - File: `src-tauri/src/commands/documents.rs` (line ~2332)
+   - Done when: `cargo clippy -- -D warnings` passes with zero errors
+
+▶ **114.5 — Integration tests for Bugs A–D**
+
+   Write Rust integration tests in `src-tauri/tests/` covering:
+   - Bug A: multi-doc upload with clinic extraction → no null constraint error (passes without panic)
+   - Bug B: `confirm_draft_appointment` called after upload accept → appointment row has IS_DRAFT=0
+   - Bug D: `confirm_draft_contact` called after upload accept → contact row has IS_DRAFT=0
+   - Bug D: `delete_draft_contact` called after upload dismiss → contact row deleted
+
+   - Done when: `cargo test` passes; `cargo clippy -- -D warnings` clean
