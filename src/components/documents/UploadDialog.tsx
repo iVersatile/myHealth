@@ -14,6 +14,14 @@ import type { ContactSuggestion, ClinicSuggestion, ContactPhase, ClinicPhase, Fi
 import type { Category } from '../categories/CategoryPicker'
 export type { ClinicSuggestion, ContactSuggestion } from './uploadTypes'
 
+function extractMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  const obj = err as Record<string, unknown>
+  if (obj?.message && typeof obj.message === 'string') return obj.message
+  return JSON.stringify(err)
+}
+
 interface UploadDialogProps {
   onClose: () => void
   onUploaded: (doc: Document, unsavedClinicSuggestions: ClinicSuggestion[], unsavedContactSuggestions: ContactSuggestion[]) => void
@@ -154,15 +162,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           unlistenRef.current?.()
           unlistenRef.current = null
           setOcrProgress(null)
-          const msg =
-            extractionErr instanceof Error
-              ? extractionErr.message
-              : typeof extractionErr === 'string'
-                ? extractionErr
-                : (extractionErr as Record<string, unknown>)?.message
-                    ? String((extractionErr as Record<string, unknown>).message)
-                    : JSON.stringify(extractionErr)
-          setAnalyzeError(msg)
+          setAnalyzeError(extractMessage(extractionErr))
           setStep('pick')
           return
         }
@@ -171,7 +171,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       setTags(extractedTags.filter(Boolean))
       setStep('review')
     } catch (err: unknown) {
-      setAnalyzeError(err instanceof Error ? err.message : String(err))
+      setAnalyzeError(extractMessage(err))
       setStep('pick')
     }
   }
@@ -198,7 +198,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           prev.map((f) => (f.path === item.path ? { ...f, status: 'done' } : f))
         )
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err)
+        const msg = extractMessage(err)
         setFileQueue((prev) =>
           prev.map((f) =>
             f.path === item.path ? { ...f, status: 'error', errorMessage: msg } : f
@@ -312,7 +312,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       onUploaded(final, unsaved, unsavedContacts)
       onClose()
     } catch (err: unknown) {
-      setConfirmError(err instanceof Error ? err.message : String(err))
+      setConfirmError(extractMessage(err))
     } finally {
       setConfirming(false)
     }

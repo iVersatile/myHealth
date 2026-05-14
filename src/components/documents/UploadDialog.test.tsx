@@ -1062,6 +1062,35 @@ describe('UploadDialog — batch mode', () => {
     })
   })
 
+  it('shows human-readable error (not [object Object]) when Tauri rejects with plain object', async () => {
+    const fakeDoc1 = { ...fakeDoc, id: 'doc-1', filename: 'file1.pdf', file_path: '/f/file1.pdf' }
+
+    mockInvoke.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({ doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [], contact_suggestions: [] })
+      if (cmd === 'documents_upload') {
+        const path = (args as { filePath: string }).filePath
+        if (path === '/f/file1.pdf') return Promise.resolve(fakeDoc1)
+        return Promise.reject({ message: 'disk quota exceeded' })
+      }
+      if (cmd === 'get_pending_review_count') return Promise.resolve(0)
+      return Promise.resolve(undefined)
+    })
+
+    mockOpen.mockResolvedValue(['/f/file1.pdf', '/f/file2.pdf'])
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
+
+    await waitFor(() => {
+      const rows = screen.getAllByTestId('upload-file-row')
+      const errorRow = rows.find((r) => r.getAttribute('data-status') === 'error')
+      expect(errorRow).toBeTruthy()
+      expect(errorRow!.textContent).toContain('disk quota exceeded')
+      expect(errorRow!.textContent).not.toContain('[object Object]')
+    })
+  })
+
   it('shows toast with document count and pending entity count after batch completes', async () => {
     const fakeDoc1 = { ...fakeDoc, id: 'doc-1', filename: 'a.pdf', file_path: '/f/a.pdf' }
     const fakeDoc2 = { ...fakeDoc, id: 'doc-2', filename: 'b.pdf', file_path: '/f/b.pdf' }
