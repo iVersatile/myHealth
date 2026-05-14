@@ -8,8 +8,8 @@
 
 ```
 Phase: 108
-Task:  108.4 — Fixture PDF + E2E test
-Note:  Phases 109 and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
+Task:  108.5 — COMPLETE. Phase 108 done.
+Note:  Phases 108, 109, and 110 complete. All completed phases archived in docs/archive/PLAN_20260513.md.
 ```
 
 ---
@@ -52,7 +52,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
 | Medical code tagging (ICD-10) | 105 | LOW | Medium | ⬜ |
 | Calendar conflict resolution UI | 106 | SHOULD | Medium | ⬜ |
 | Multi-user vault support | 107 | LOW | Large | ⬜ |
-| Contact extraction: ALLCAPS surname + role-labelled names (F4.8+F4.9) | 108 | MED | Small | ⬜ |
+| Contact extraction: ALLCAPS surname + role-labelled names (F4.8+F4.9) | 108 | MED | Small | ✅ |
 
 **v1.6+ (deferred)**
 
@@ -362,7 +362,7 @@ Note:  Phases 109 and 110 complete. All completed phases archived in docs/archiv
    - `e2e/v3-f4-contact-patterns.spec.ts`: upload fixture → assert `[data-testid="contact-suggestion"]` shows correct extracted name
    - Done when: E2E passes in mock/browser mode
 
-▶ [ ] **108.5 — Pre-commit checks + commit**
+[x] **108.5 — Pre-commit checks + commit**
    - `cargo fmt --all` + `cargo clippy -- -D warnings`
    - `npx tsc --noEmit`
    - Commit: `feat: add ALLCAPS surname and role-label contact extraction patterns (F4.8+F4.9, Phase 108)`
