@@ -22,11 +22,9 @@ fn accept_draft_contact_sets_is_draft_zero() {
 
     let is_draft: i64 = db
         .conn
-        .query_row(
-            "SELECT is_draft FROM contacts WHERE id = 'c1'",
-            [],
-            |r| r.get(0),
-        )
+        .query_row("SELECT is_draft FROM contacts WHERE id = 'c1'", [], |r| {
+            r.get(0)
+        })
         .unwrap();
     assert_eq!(is_draft, 0, "accepted draft contact must have is_draft = 0");
 }
@@ -59,7 +57,10 @@ fn reject_draft_contact_soft_deletes_via_integration_db() {
         )
         .unwrap();
     assert_eq!(is_deleted, 1, "rejected draft contact must be soft-deleted");
-    assert!(deleted_at.is_some(), "deleted_at must be populated on reject");
+    assert!(
+        deleted_at.is_some(),
+        "deleted_at must be populated on reject"
+    );
 }
 
 #[test]
@@ -88,7 +89,10 @@ fn rejected_draft_contact_excluded_from_active_list() {
             |r| r.get(0),
         )
         .unwrap();
-    assert_eq!(count, 1, "only the active non-draft contact must appear in active list");
+    assert_eq!(
+        count, 1,
+        "only the active non-draft contact must appear in active list"
+    );
 }
 
 // ── appointments ─────────────────────────────────────────────────────────────
@@ -119,7 +123,10 @@ fn accept_draft_appointment_sets_is_draft_zero() {
             |r| r.get(0),
         )
         .unwrap();
-    assert_eq!(is_draft, 0, "accepted draft appointment must have is_draft = 0");
+    assert_eq!(
+        is_draft, 0,
+        "accepted draft appointment must have is_draft = 0"
+    );
 }
 
 #[test]
@@ -150,8 +157,14 @@ fn reject_draft_appointment_soft_deletes_via_integration_db() {
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .unwrap();
-    assert_eq!(is_deleted, 1, "rejected draft appointment must be soft-deleted");
-    assert!(deleted_at.is_some(), "deleted_at must be populated on reject");
+    assert_eq!(
+        is_deleted, 1,
+        "rejected draft appointment must be soft-deleted"
+    );
+    assert!(
+        deleted_at.is_some(),
+        "deleted_at must be populated on reject"
+    );
 }
 
 // ── clinic_addresses (Bug A regression) ──────────────────────────────────────
