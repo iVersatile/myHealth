@@ -67,7 +67,8 @@ export default function AppointmentsPage() {
   }, [])
 
   useEffect(() => {
-    void fetchConflicts()
+    async function run() { await fetchConflicts() }
+    void run()
   }, [fetchConflicts, appointments])
 
   async function handleDismissConflict(idA: string, idB: string) {
