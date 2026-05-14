@@ -167,6 +167,38 @@ fn reject_draft_appointment_soft_deletes_via_integration_db() {
     );
 }
 
+#[test]
+fn rejected_draft_appointment_excluded_from_active_list() {
+    let db = TempDb::new();
+    db.conn
+        .execute(
+            "INSERT INTO appointments (id, title, appt_date, is_draft, is_deleted) \
+             VALUES ('a3', 'Active', '2024-01-01T09:00:00Z', 0, 0)",
+            [],
+        )
+        .unwrap();
+    db.conn
+        .execute(
+            "INSERT INTO appointments (id, title, appt_date, is_draft, is_deleted) \
+             VALUES ('a4', 'Rejected', '2024-01-02T09:00:00Z', 1, 1)",
+            [],
+        )
+        .unwrap();
+
+    let count: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM appointments WHERE is_deleted = 0 AND is_draft = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        count, 1,
+        "only the active non-draft appointment must appear in active list"
+    );
+}
+
 // ── clinic_addresses (Bug A regression) ──────────────────────────────────────
 
 #[test]
