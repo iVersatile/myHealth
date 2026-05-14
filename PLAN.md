@@ -8,8 +8,8 @@
 
 ```
 Phase: 113
-Task:  113.6 — Test cases for bugs 1–5
-Note:  113.1–113.5 complete. 113.5 resolved as N/A (suggestions are ephemeral, no draft DB rows).
+Task:  COMPLETE — all 113.x tasks done
+Note:  113.6 complete. All smoke-test bug regression tests pass (Bugs #1–#4).
 ```
 
 ---
@@ -515,7 +515,7 @@ Note:  113.1–113.5 complete. 113.5 resolved as N/A (suggestions are ephemeral,
 
    **Resolution: N/A — Option C.** Investigation confirmed no draft contact/clinic/appointment rows are inserted during the upload flow. `ContactSuggestionDto` / `ClinicSuggestionDto` are ephemeral OCR structs with no `id` field. All `IS_DRAFT=1` inserts for those tables are in test-only code. `dismiss` correctly clears React state; there is nothing in the DB to soft-delete.
 
-▶ **113.6 — Test cases for bugs 1–5**
+[x] **113.6 — Test cases for bugs 1–5**
 
    - `UploadDialog.test.tsx`: Tauri returns `{ message: 'some error' }` object → status shows `"some error"`, not `"[object Object]"` (Bug #1)
    - `page.test.tsx`: soft-delete currently-previewed doc → `previewDoc` becomes `null` (Bug #3)
