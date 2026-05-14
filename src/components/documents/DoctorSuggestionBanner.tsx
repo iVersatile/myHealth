@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { Contact } from '../../store/contactsStore'
 import { SuggestionBanner, bannerPrimaryBtn, bannerSecondaryBtn } from './SuggestionBanner'
+import { useToast } from '../../hooks/useToast'
+import { Toast } from '../shared/Toast'
+
+function extractMessage(err: unknown): string {
+  if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message)
+  if (err instanceof Error) return err.message
+  return 'An error occurred'
+}
 
 export interface ContactSuggestion {
   name: string
@@ -23,6 +31,7 @@ interface Props {
 }
 
 export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appointmentId }: Props) {
+  const toast = useToast()
   const [unmatched, setUnmatched] = useState<ContactSuggestion[]>([])
   const [checked, setChecked] = useState(false)
   const [followUp, setFollowUp] = useState(false)
@@ -63,8 +72,8 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
     if (appointmentId) {
       try {
         await invoke('appointments_clear_doctor', { appointmentId })
-      } catch {
-        // best-effort
+      } catch (err) {
+        toast.show(extractMessage(err))
       }
     }
     onDismiss()
@@ -72,40 +81,46 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
 
   if (followUp) {
     return (
-      <SuggestionBanner
-        actions={
-          <>
-            <button onClick={onDismiss} className={bannerPrimaryBtn}>
-              Yes, keep name
-            </button>
-            <button onClick={() => void handleNoDoctor()} className={bannerSecondaryBtn}>
-              No, it&apos;s a service
-            </button>
-          </>
-        }
-      >
-        <span className="text-[var(--color-text)]">Is there a doctor for this appointment?</span>
-      </SuggestionBanner>
+      <>
+        <SuggestionBanner
+          actions={
+            <>
+              <button onClick={onDismiss} className={bannerPrimaryBtn}>
+                Yes, keep name
+              </button>
+              <button onClick={() => void handleNoDoctor()} className={bannerSecondaryBtn}>
+                No, it&apos;s a service
+              </button>
+            </>
+          }
+        >
+          <span className="text-[var(--color-text)]">Is there a doctor for this appointment?</span>
+        </SuggestionBanner>
+        <Toast message={toast.message} />
+      </>
     )
   }
 
   return (
-    <SuggestionBanner
-      testId="doctor-suggestion-banner"
-      actions={
-        <>
-          <button onClick={() => onAccept(suggestion)} className={bannerPrimaryBtn}>
-            Add to contacts
-          </button>
-          <button onClick={handleDismiss} className={bannerSecondaryBtn}>
-            Dismiss
-          </button>
-        </>
-      }
-    >
-      <span className="text-[var(--color-text)]">
-        Create contact for <strong data-testid="suggestion-name">{suggestion.name}</strong>?
-      </span>
-    </SuggestionBanner>
+    <>
+      <SuggestionBanner
+        testId="doctor-suggestion-banner"
+        actions={
+          <>
+            <button onClick={() => onAccept(suggestion)} className={bannerPrimaryBtn}>
+              Add to contacts
+            </button>
+            <button onClick={handleDismiss} className={bannerSecondaryBtn}>
+              Dismiss
+            </button>
+          </>
+        }
+      >
+        <span className="text-[var(--color-text)]">
+          Create contact for <strong data-testid="suggestion-name">{suggestion.name}</strong>?
+        </span>
+      </SuggestionBanner>
+      <Toast message={toast.message} />
+    </>
   )
 }

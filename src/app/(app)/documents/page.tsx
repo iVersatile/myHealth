@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { useToast } from '../../../hooks/useToast'
+import { Toast } from '../../../components/shared/Toast'
 import { DocumentList } from '../../../components/documents/DocumentList'
 import { UploadDialog } from '../../../components/documents/UploadDialog'
 import { ExportDialog } from '../../../components/export/ExportDialog'
@@ -25,7 +27,14 @@ import type { Document } from '../../../store/documentsStore'
 import type { Appointment } from '../../../store/appointmentsStore'
 import type { ContactCreateInput, ContactCreateWithClinicInput } from '../../../hooks/useContacts'
 
+function extractMessage(err: unknown): string {
+  if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message)
+  if (err instanceof Error) return err.message
+  return 'An error occurred'
+}
+
 export default function DocumentsPage() {
+  const toast = useToast()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [summaryExportOpen, setSummaryExportOpen] = useState(false)
@@ -77,12 +86,12 @@ export default function DocumentsPage() {
           if (appt) {
             setApptSuggestion({ suggestion: appt, documentId: doc.id })
           }
-        } catch {
-          // best-effort
+        } catch (err) {
+          toast.show(extractMessage(err))
         }
       }
-    } catch {
-      // scoring is best-effort; ignore failures
+    } catch (err) {
+      toast.show(extractMessage(err))
     }
   }
 
@@ -114,8 +123,8 @@ export default function DocumentsPage() {
         score: 100,
       })
       upsertAppointment(appt)
-    } catch {
-      // best-effort
+    } catch (err) {
+      toast.show(extractMessage(err))
     } finally {
       setApptSuggestionLoading(false)
       setApptSuggestion(null)
@@ -133,8 +142,8 @@ export default function DocumentsPage() {
           confidence: 'auto',
         },
       })
-    } catch {
-      // best-effort
+    } catch (err) {
+      toast.show(extractMessage(err))
     }
     setLinkSuggestion(null)
   }
@@ -267,6 +276,7 @@ export default function DocumentsPage() {
       {summaryExportOpen && (
         <SummaryExportDialog onClose={() => setSummaryExportOpen(false)} />
       )}
+      <Toast message={toast.message} />
       {showContactForm && (
         <ContactForm
           initial={pendingContactSuggestion ? { id: '', name: pendingContactSuggestion.name, role: 'gp', specialty: pendingContactSuggestion.specialty, phone: pendingContactSuggestion.phone, email: pendingContactSuggestion.email, clinic: pendingContactSuggestion.clinic, address: pendingContactSuggestion.address, notes: null, created_at: '', updated_at: '', contact_clinic_id: null } : null}
