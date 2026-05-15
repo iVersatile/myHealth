@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useContactsStore } from '../../store/contactsStore'
 import type { Contact } from '../../store/contactsStore'
+import { useAppointmentsStore } from '../../store/appointmentsStore'
+import type { Appointment } from '../../store/appointmentsStore'
 
 const mockInvoke = vi.fn()
 
@@ -25,9 +27,31 @@ const makeContact = (overrides: Partial<Contact> = {}): Contact => ({
   ...overrides,
 })
 
+const makeAppointment = (overrides: Partial<Appointment> = {}): Appointment => ({
+  id: 'a1',
+  title: 'Checkup',
+  doctor_name: null,
+  clinic_name: null,
+  specialty: null,
+  appt_date: '2026-06-01T09:00:00Z',
+  duration_min: 30,
+  location: null,
+  notes: null,
+  status: 'scheduled',
+  reminder_min: 60,
+  reminder_offsets: null,
+  created_at: '2026-04-20T10:00:00Z',
+  updated_at: '2026-04-20T10:00:00Z',
+  document_ids: [],
+  contact_ids: [],
+  recurrence_series_id: null,
+  ...overrides,
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
   useContactsStore.setState({ contacts: [], loading: false, error: null })
+  useAppointmentsStore.setState({ appointments: [], loading: false, error: null, statusFilter: 'all' })
 })
 
 async function getHook(roleFilter?: string) {
@@ -173,7 +197,6 @@ describe('deleteContact', () => {
 
   it('refreshes appointments after deleting a contact so stale doctor/clinic names are cleared', async () => {
     const c = makeContact({ id: 'c1', name: 'Dr. Smith' })
-    // contacts_list on mount, then contacts_delete, then appointments_list refresh
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === 'contacts_list') return Promise.resolve([c])
       if (cmd === 'contacts_delete') return Promise.resolve(undefined)
@@ -189,9 +212,36 @@ describe('deleteContact', () => {
     })
 
     expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'c1' })
-    // After contact deletion, appointments must be re-fetched so that any
-    // doctor_name / clinic_name cleared by the Rust cascade is reflected in the UI.
     expect(mockInvoke).toHaveBeenCalledWith('appointments_list', {})
+  })
+
+  it('clears clinic_name on linked appointment when a hospital contact is deleted', async () => {
+    const clinic = makeContact({ id: 'clinic1', name: 'St. Mary Clinic', role: 'hospital' })
+    // Appointment initially has clinic_name populated from the linked clinic contact.
+    const apptBefore = makeAppointment({ id: 'a1', clinic_name: 'St. Mary Clinic', contact_ids: ['clinic1'] })
+    // Rust cascade NULLs clinic_name; appointments_list returns the updated row.
+    const apptAfter = makeAppointment({ id: 'a1', clinic_name: null, contact_ids: [] })
+
+    useAppointmentsStore.setState({ appointments: [apptBefore], loading: false, error: null, statusFilter: 'all' })
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([clinic])
+      if (cmd === 'contacts_delete') return Promise.resolve(undefined)
+      if (cmd === 'appointments_list') return Promise.resolve([apptAfter])
+      return Promise.resolve(undefined)
+    })
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.deleteContact('clinic1')
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'clinic1' })
+    expect(mockInvoke).toHaveBeenCalledWith('appointments_list', {})
+    // Store must reflect the cleared clinic_name so the UI shows no stale clinic title.
+    expect(useAppointmentsStore.getState().appointments[0]?.clinic_name).toBeNull()
   })
 })
 
