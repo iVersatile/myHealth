@@ -170,6 +170,29 @@ describe('deleteContact', () => {
       }),
     ).rejects.toThrow('delete failed')
   })
+
+  it('refreshes appointments after deleting a contact so stale doctor/clinic names are cleared', async () => {
+    const c = makeContact({ id: 'c1', name: 'Dr. Smith' })
+    // contacts_list on mount, then contacts_delete, then appointments_list refresh
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([c])
+      if (cmd === 'contacts_delete') return Promise.resolve(undefined)
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.deleteContact('c1')
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'c1' })
+    // After contact deletion, appointments must be re-fetched so that any
+    // doctor_name / clinic_name cleared by the Rust cascade is reflected in the UI.
+    expect(mockInvoke).toHaveBeenCalledWith('appointments_list', {})
+  })
 })
 
 describe('refresh', () => {

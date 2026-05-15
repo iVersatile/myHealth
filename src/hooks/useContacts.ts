@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Contact, useContactsStore } from '../store/contactsStore'
+import { Appointment, useAppointmentsStore } from '../store/appointmentsStore'
 import { extractTauriError } from '../lib/ipc'
 
 export interface DuplicateCandidate {
@@ -91,6 +92,8 @@ export function useContacts(roleFilter?: string) {
   async function deleteContact(id: string): Promise<void> {
     await invoke('contacts_delete', { id })
     removeContact(id)
+    const appointments = await invoke<Appointment[]>('appointments_list', {})
+    useAppointmentsStore.getState().setAppointments(appointments)
   }
 
   async function findDuplicateContacts(contactId?: string): Promise<DuplicateCandidate[]> {

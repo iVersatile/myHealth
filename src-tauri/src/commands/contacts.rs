@@ -423,6 +423,15 @@ pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), Com
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
     let now = Utc::now().to_rfc3339();
+
+    let role: Option<String> = conn
+        .query_row(
+            "SELECT role FROM contacts WHERE id = ?1 AND is_deleted = 0",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
+        .optional()?;
+
     let affected = conn.execute(
         "UPDATE contacts SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_deleted = 0",
         rusqlite::params![now, id],
@@ -432,6 +441,27 @@ pub fn contacts_delete(id: String, state: State<'_, AppState>) -> Result<(), Com
             "contact not found or already deleted: {id}"
         )));
     }
+
+    if let Some(ref r) = role {
+        if r == "hospital" {
+            conn.execute(
+                "UPDATE appointments SET clinic_name = NULL, updated_at = CURRENT_TIMESTAMP \
+                 WHERE id IN (SELECT appointment_id FROM appointment_contacts WHERE contact_id = ?1)",
+                rusqlite::params![id],
+            )?;
+        } else {
+            conn.execute(
+                "UPDATE appointments SET doctor_name = NULL, updated_at = CURRENT_TIMESTAMP \
+                 WHERE id IN (SELECT appointment_id FROM appointment_contacts WHERE contact_id = ?1)",
+                rusqlite::params![id],
+            )?;
+        }
+    }
+    conn.execute(
+        "DELETE FROM appointment_contacts WHERE contact_id = ?1",
+        rusqlite::params![id],
+    )?;
+
     remove_from_search_index(conn, &id);
     Ok(())
 }
