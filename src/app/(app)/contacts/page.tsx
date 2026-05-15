@@ -356,7 +356,6 @@ export default function ContactsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!await confirm('Delete this contact?')) return
     await deleteContact(id)
     showToast('Moved to Trash')
   }
