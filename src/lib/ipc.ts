@@ -151,3 +151,11 @@ export const IPC = {
 } as const
 
 export type IpcCommand = (typeof IPC)[keyof typeof IPC]
+
+export function extractTauriError(err: unknown, fallback = 'Unknown error'): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    return String((err as { message: unknown }).message)
+  }
+  return fallback
+}

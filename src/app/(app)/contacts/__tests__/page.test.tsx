@@ -272,6 +272,16 @@ describe('ContactsPage', () => {
     await waitFor(() => expect(screen.queryByTestId('contact-form')).not.toBeInTheDocument())
   })
 
+  it('shows readable error (not [object Object]) when contacts_list rejects with Tauri plain object', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.reject({ message: 'database error' })
+      return Promise.resolve([])
+    })
+    await renderPage()
+    await waitFor(() => expect(screen.getByText('database error')).toBeInTheDocument())
+    expect(screen.queryByText('[object Object]')).not.toBeInTheDocument()
+  })
+
   it('Save Contact in new mode calls contacts_create', async () => {
     const created = { ...CONTACT_A, id: 'c-new', name: 'New' }
     mockInvoke.mockImplementation((cmd: string) => {

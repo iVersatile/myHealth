@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Contact, useContactsStore } from '../store/contactsStore'
+import { extractTauriError } from '../lib/ipc'
 
 export interface DuplicateCandidate {
   primary_contact_id: string
@@ -59,7 +60,7 @@ export function useContacts(roleFilter?: string) {
       const result = await invoke<Contact[]>('contacts_list', roleFilter ? { role: roleFilter } : {})
       setContacts(result)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setLoading(false)
     }

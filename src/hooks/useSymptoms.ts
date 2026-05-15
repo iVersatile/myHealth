@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { extractTauriError } from '../lib/ipc'
 
 export interface Symptom {
   id: string
@@ -40,7 +41,7 @@ export function useSymptoms() {
       const data = await invoke<Symptom[]>('symptoms_list')
       setSymptoms(data)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load symptoms')
+      setError(extractTauriError(err, 'Failed to load symptoms'))
     } finally {
       setLoading(false)
     }

@@ -19,7 +19,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { IPC } from '@/lib/ipc'
+import { IPC, extractTauriError } from '@/lib/ipc'
 
 interface Category {
   id: string
@@ -129,7 +129,7 @@ export default function CategoriesPage() {
       const result = await invoke<Category[]>(IPC.categoriesList)
       setCategories(result)
     } catch (e) {
-      setError(String(e))
+      setError(extractTauriError(e))
     }
   }, [])
 
@@ -168,7 +168,7 @@ export default function CategoriesPage() {
         newPosition,
       })
     } catch (e) {
-      setError(String(e))
+      setError(extractTauriError(e))
       loadCategories()
     }
   }
@@ -182,7 +182,7 @@ export default function CategoriesPage() {
       })
       loadCategories()
     } catch (e) {
-      setError(String(e))
+      setError(extractTauriError(e))
     }
   }
 
@@ -191,7 +191,7 @@ export default function CategoriesPage() {
       await invoke(IPC.categoriesDelete, { id })
       loadCategories()
     } catch (e) {
-      setError(String(e))
+      setError(extractTauriError(e))
     }
   }
 
@@ -209,7 +209,7 @@ export default function CategoriesPage() {
       setNewParentId('')
       loadCategories()
     } catch (e) {
-      setError(String(e))
+      setError(extractTauriError(e))
     } finally {
       setCreating(false)
     }

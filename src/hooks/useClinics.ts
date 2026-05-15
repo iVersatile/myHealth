@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { extractTauriError } from '../lib/ipc'
 
 export interface LinkedContact {
   id: string
@@ -31,7 +32,7 @@ export function useClinics() {
       const data = await invoke<ClinicWithContacts[]>('clinics_list_with_contacts')
       setClinics(data)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load clinics')
+      setError(extractTauriError(err, 'Failed to load clinics'))
     } finally {
       setLoading(false)
     }

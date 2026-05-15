@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { extractTauriError } from '../lib/ipc'
 
 export interface Medication {
   id: string
@@ -46,7 +47,7 @@ export function useMedications() {
       const data = await invoke<Medication[]>('medications_list')
       setMedications(data)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load medications')
+      setError(extractTauriError(err, 'Failed to load medications'))
     } finally {
       setLoading(false)
     }
