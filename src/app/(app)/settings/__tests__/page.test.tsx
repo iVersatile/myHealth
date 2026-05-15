@@ -204,7 +204,7 @@ describe('SettingsPage', () => {
     await user.type(screen.getByLabelText(/^new password/i), 'newpass456')
     await user.type(screen.getByLabelText(/confirm new password/i), 'newpass456')
 
-    fireEvent.click(screen.getByText('Change password'))
+    await user.click(screen.getByText('Change password'))
 
     await waitFor(() => expect(screen.getByText('Wrong password')).toBeDefined(), { timeout: 5000 })
   })
@@ -573,7 +573,7 @@ describe('SettingsPage', () => {
     })
     await renderPage()
 
-    fireEvent.click(screen.getByText('Export Backup'))
+    await userEvent.click(screen.getByText('Export Backup'))
 
     await waitFor(() =>
       expect(screen.getByText('Disk full')).toBeDefined()
@@ -653,9 +653,9 @@ describe('SettingsPage', () => {
     })
     await renderPage()
 
-    fireEvent.click(screen.getByText('Import Backup'))
+    await userEvent.click(screen.getByText('Import Backup'))
     await waitFor(() => expect(screen.getByText('Yes, replace my data')).toBeDefined())
-    fireEvent.click(screen.getByText('Yes, replace my data'))
+    await userEvent.click(screen.getByText('Yes, replace my data'))
 
     await waitFor(() =>
       expect(screen.getByText('Corrupt file')).toBeDefined()

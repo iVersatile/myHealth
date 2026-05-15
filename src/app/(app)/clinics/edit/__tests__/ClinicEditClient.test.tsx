@@ -79,7 +79,7 @@ describe('ClinicEditClient — loading & error', () => {
   })
 
   it('shows generic error for non-Error load rejection', async () => {
-    mockInvoke.mockRejectedValue('raw string')
+    mockInvoke.mockRejectedValue({ message: 'raw string' })
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.getByText('raw string')).toBeInTheDocument())
   })
@@ -188,7 +188,7 @@ describe('ClinicEditClient — edit form', () => {
   it('shows generic save error for non-Error rejection', async () => {
     render(<ClinicEditClient />)
     await waitFor(() => expect(screen.queryByText('Loading…')).toBeNull())
-    mockInvoke.mockRejectedValueOnce('raw string error')
+    mockInvoke.mockRejectedValueOnce({ message: 'raw string error' })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.getByText('raw string error')).toBeInTheDocument(), { timeout: 5000 })
   })
