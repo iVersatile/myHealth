@@ -289,6 +289,12 @@ pub fn documents_upload(
             rusqlite::params![prep.id, tag],
         )?;
     }
+    if let Some(ref date) = prep.document_date {
+        conn.execute(
+            "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
+            rusqlite::params![prep.id, date],
+        )?;
+    }
 
     let doc = load_doc(conn, &prep.id)?;
     let body = doc.notes.as_deref().unwrap_or("").to_string();

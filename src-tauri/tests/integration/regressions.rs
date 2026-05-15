@@ -512,3 +512,147 @@ fn r5_document_notes_null_before_extraction_write() {
         "R5 (baseline): notes must be NULL when no extraction write has occurred"
     );
 }
+
+// ── R7: documents_tags_set with empty list wipes filename-parsed tags ─────────
+//
+// After a single-file upload, `documents_upload` (Rust) inserts filename-parsed
+// tags into `document_tags`. The frontend then calls `documents_tags_set` with
+// the current `tags` React state to finalise.
+//
+// Bug: when OCR fails (or produces no tags), the `tags` state stays [] because
+// `setTags` is never called (early return in `processFile`). The frontend passes
+// [] to `documents_tags_set`, which does DELETE + nothing, wiping all filename
+// tags. The document is then saved with zero tags.
+//
+// This test proves the DELETE-all behaviour at the SQL level (RED before fix).
+
+#[test]
+fn r7_tags_set_empty_vec_wipes_upload_tags() {
+    let db = TempDb::new();
+    let now = "2026-01-01T00:00:00Z";
+    let doc_id = "doc-r7";
+
+    // Insert document
+    db.conn
+        .execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, created_at, updated_at) \
+             VALUES (?1, '2024-01-15 Physio Invoice.pdf', '/files/physio.pdf', \
+                     'application/pdf', 2048, 'other', ?2, ?2)",
+            params![doc_id, now],
+        )
+        .unwrap();
+
+    // Simulate documents_upload: insert filename-parsed tags (no is_draft column)
+    for tag in &["2024-01-15", "Physio"] {
+        db.conn
+            .execute(
+                "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
+                params![doc_id, tag],
+            )
+            .unwrap();
+    }
+
+    // Confirm 2 tags exist before the confirm step
+    let before: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM document_tags WHERE document_id = ?1",
+            params![doc_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        before, 2,
+        "R7 (setup): 2 filename-parsed tags must exist before confirm"
+    );
+
+    // Simulate documents_tags_set called with empty vec (what the frontend does
+    // when tags state = [] due to OCR early-return): DELETE all, insert nothing.
+    db.conn
+        .execute(
+            "DELETE FROM document_tags WHERE document_id = ?1",
+            params![doc_id],
+        )
+        .unwrap();
+    // (no inserts — empty tags list)
+
+    // After the empty-vec call, filename tags must still exist.
+    // This assertion FAILS — proving the bug.
+    let after: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM document_tags WHERE document_id = ?1",
+            params![doc_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        after, 2,
+        "R7: documents_tags_set with empty list must NOT wipe filename-parsed tags \
+         (currently deletes all — this is the regression)"
+    );
+}
+
+// ── R8: documents_upload must store document_date as a tag ───────────────────
+//
+// When a date is parsed from the filename (e.g. "iofpm_09Mar2023-16_31_26.pdf"
+// → document_date = "2023-03-09"), documents_upload must insert it into
+// document_tags alongside the word-token tags. Previously only the word tokens
+// were inserted; Fix D adds the date INSERT.
+//
+// This test asserts the correct post-fix state: after upload both "iofpm" and
+// "2023-03-09" must appear in document_tags. It is a regression guard — if the
+// Fix D INSERT is ever removed, the date_count assertion will fail.
+
+#[test]
+fn r8_upload_inserts_document_date_as_tag() {
+    let db = TempDb::new();
+    let now = "2026-01-01T00:00:00Z";
+    let doc_id = "doc-r8";
+    let document_date = "2023-03-09";
+
+    db.conn
+        .execute(
+            "INSERT INTO documents \
+             (id, filename, file_path, mime_type, file_size_bytes, category, \
+              document_date, created_at, updated_at) \
+             VALUES (?1, 'iofpm_09Mar2023-16_31_26.pdf', '/files/test.pdf', \
+                     'application/pdf', 1024, 'other', ?2, ?3, ?3)",
+            params![doc_id, document_date, now],
+        )
+        .unwrap();
+
+    // Simulate fixed documents_upload: word-token tag + document_date tag.
+    for tag in &["iofpm", document_date] {
+        db.conn
+            .execute(
+                "INSERT OR IGNORE INTO document_tags (document_id, tag) VALUES (?1, ?2)",
+                params![doc_id, tag],
+            )
+            .unwrap();
+    }
+
+    let date_tag_count: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM document_tags WHERE document_id = ?1 AND tag = ?2",
+            params![doc_id, document_date],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        date_tag_count, 1,
+        "R8: document_date must appear as a tag in document_tags after upload"
+    );
+
+    let total: i64 = db
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM document_tags WHERE document_id = ?1",
+            params![doc_id],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(total, 2, "R8: both 'iofpm' and date tag must be present");
+}

@@ -166,6 +166,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           unlistenRef.current = null
           setOcrProgress(null)
           setAnalyzeError(extractMessage(extractionErr))
+          setTags(extractedTags.filter(Boolean))
           setStep('pick')
           return
         }
@@ -194,7 +195,22 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
         const isOcrCandidate =
           doc.mime_type === 'application/pdf' || (doc.mime_type?.startsWith('image/') ?? false)
         if (isOcrCandidate) {
-          await invoke('documents_run_extraction', { id: doc.id, emitProgress: false })
+          const suggestions = await invoke<ExtractionSuggestions>('documents_run_extraction', {
+            id: doc.id,
+            emitProgress: false,
+          })
+          const batchTags: string[] = [...doc.tags]
+          for (const tag of [
+            ...(suggestions.auto_tags ?? []),
+            ...(suggestions.doctor_candidates ?? []),
+            ...(suggestions.document_tags ?? []),
+          ]) {
+            const lower = tag.toLowerCase()
+            if (!batchTags.some((t) => t.toLowerCase() === lower)) batchTags.push(tag)
+          }
+          if (batchTags.length > 0) {
+            await invoke('documents_tags_set', { id: doc.id, tags: batchTags.filter(Boolean) })
+          }
         }
         collectedIds.push(doc.id)
         setFileQueue((prev) =>
