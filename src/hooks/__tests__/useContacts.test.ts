@@ -66,8 +66,8 @@ describe('fetch on mount', () => {
     expect(result.current.contacts).toEqual([])
   })
 
-  it('sets error state as string when rejection is not an Error instance', async () => {
-    mockInvoke.mockRejectedValueOnce('connection timeout')
+  it('sets error state as string when rejection is a Tauri plain object', async () => {
+    mockInvoke.mockRejectedValueOnce({ message: 'connection timeout' })
 
     const { result } = await getHook()
     await waitFor(() => expect(result.current.loading).toBe(false))
