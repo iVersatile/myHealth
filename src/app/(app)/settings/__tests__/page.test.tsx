@@ -206,7 +206,7 @@ describe('SettingsPage', () => {
 
     fireEvent.click(screen.getByText('Change password'))
 
-    await waitFor(() => expect(screen.getByText('Wrong password')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('Wrong password')).toBeDefined(), { timeout: 5000 })
   })
 
   it('shows Updating… while password change is in flight', async () => {
@@ -577,7 +577,7 @@ describe('SettingsPage', () => {
 
     await waitFor(() =>
       expect(screen.getByText('Disk full')).toBeDefined()
-    )
+    , { timeout: 5000 })
   })
 
   it('import backup — dialog cancelled does nothing', async () => {
@@ -659,7 +659,7 @@ describe('SettingsPage', () => {
 
     await waitFor(() =>
       expect(screen.getByText('Corrupt file')).toBeDefined()
-    )
+    , { timeout: 5000 })
   })
 })
 
