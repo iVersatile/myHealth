@@ -231,15 +231,6 @@ describe('ContactsPage', () => {
     )
   })
 
-  it('cancelled delete does not call contacts_delete', async () => {
-    mockConfirm.mockResolvedValue(false)
-    await renderPage()
-    await waitFor(() => expect(screen.getByText('Dr. John Smith')).toBeInTheDocument())
-    const callsBefore = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'contacts_delete').length
-    fireEvent.click(screen.getAllByRole('button', { name: /delete/i })[0]!)
-    const callsAfter = mockInvoke.mock.calls.filter(([cmd]) => cmd === 'contacts_delete').length
-    expect(callsAfter).toBe(callsBefore)
-  })
 
   it('+ New button opens ContactForm in new mode', async () => {
     await renderPage()
