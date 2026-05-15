@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { AppointmentForm } from '../AppointmentForm'
 import type { Appointment } from '../../../store/appointmentsStore'
 
+const mockInvoke = vi.fn()
+vi.mock('@tauri-apps/api/core', () => ({ invoke: (...args: unknown[]) => mockInvoke(...args) }))
+
 const makeAppt = (overrides: Partial<Appointment> = {}): Appointment => ({
   id: 'a1',
   title: 'Annual Checkup',
@@ -30,6 +33,7 @@ describe('AppointmentForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockInvoke.mockResolvedValue([])
   })
 
   it('renders title input', () => {
@@ -136,5 +140,34 @@ describe('AppointmentForm', () => {
     fireEvent.click(screen.getByText('Save Appointment'))
 
     await waitFor(() => expect(screen.getByText('Save failed')).toBeDefined())
+  })
+})
+
+describe('AppointmentForm — clinic contact linking', () => {
+  const clinicContact = { id: 'clinic-1', name: 'City Hospital', role: 'hospital', specialty: null, phone: null }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([clinicContact])
+      return Promise.resolve([])
+    })
+  })
+
+  it('includes linked clinic contact id in onSave payload for new appointments', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    render(<AppointmentForm onSave={onSave} onCancel={vi.fn()} />)
+
+    await userEvent.type(screen.getByLabelText(/Title/i), 'Checkup')
+    fireEvent.change(screen.getByLabelText(/Date & Time/i), { target: { value: '2026-06-01T10:00' } })
+
+    const picker = await screen.findByRole('combobox', { name: /select clinic from contacts/i })
+    await userEvent.selectOptions(picker, 'clinic-1')
+
+    fireEvent.click(screen.getByText('Save Appointment'))
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
+
+    const input = onSave.mock.calls[0]?.[0]
+    expect(input.linked_contact_ids).toContain('clinic-1')
   })
 })

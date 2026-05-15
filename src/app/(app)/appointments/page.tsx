@@ -90,6 +90,13 @@ export default function AppointmentsPage() {
 
   async function handleSave(input: AppointmentInput) {
     const saved = await createAppointment(input)
+    if (input.linked_contact_ids?.length) {
+      await Promise.all(
+        input.linked_contact_ids.map((contactId) =>
+          invoke('appointment_link_contact', { appointmentId: saved.id, contactId }).catch(() => {})
+        )
+      )
+    }
     const offsets = input.reminder_offsets
     const anyEnabled = offsets && (offsets.min15 || offsets.hr1 || offsets.day1)
     if (anyEnabled) {

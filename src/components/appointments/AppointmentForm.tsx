@@ -182,6 +182,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
     setError(null)
     setSaving(true)
     try {
+      const linkedContactIds = [linkedDoctorContactId, linkedClinicContactId].filter((id): id is string => id !== null)
       await onSave({
         title: title.trim(),
         doctor_name: doctorName.trim() || null,
@@ -200,6 +201,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
           untilDate: repeatUntil ? `${repeatUntil}T00:00:00` : undefined,
           occurrences: repeatOccurrences,
         } : undefined,
+        linked_contact_ids: linkedContactIds.length > 0 ? linkedContactIds : undefined,
       })
     } catch (err: unknown) {
       setError(extractTauriError(err))

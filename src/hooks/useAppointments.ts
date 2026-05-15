@@ -28,6 +28,7 @@ export interface AppointmentInput {
   reminder_min: number | null
   reminder_offsets?: { min15: boolean; hr1: boolean; day1: boolean }
   recurrence?: RecurrenceInput
+  linked_contact_ids?: string[]
 }
 
 export function useAppointments() {
