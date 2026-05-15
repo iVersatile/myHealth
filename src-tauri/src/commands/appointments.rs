@@ -1,4 +1,5 @@
 use chrono::Utc;
+use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
@@ -451,6 +452,43 @@ pub fn appointments_clear_doctor(
     }
 }
 
+fn link_contact_core(
+    conn: &rusqlite::Connection,
+    appointment_id: &str,
+    contact_id: &str,
+) -> Result<(), rusqlite::Error> {
+    conn.execute(
+        "INSERT OR IGNORE INTO appointment_contacts (appointment_id, contact_id) VALUES (?1, ?2)",
+        rusqlite::params![appointment_id, contact_id],
+    )?;
+
+    let result: Option<(String, String)> = conn
+        .query_row(
+            "SELECT name, role FROM contacts WHERE id = ?1 AND is_deleted = 0",
+            rusqlite::params![contact_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+
+    if let Some((name, role)) = result {
+        if role == "hospital" {
+            conn.execute(
+                "UPDATE appointments SET clinic_name = ?1, updated_at = CURRENT_TIMESTAMP \
+                 WHERE id = ?2",
+                rusqlite::params![name, appointment_id],
+            )?;
+        } else {
+            conn.execute(
+                "UPDATE appointments SET doctor_name = ?1, updated_at = CURRENT_TIMESTAMP \
+                 WHERE id = ?2",
+                rusqlite::params![name, appointment_id],
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn appointment_link_contact(
     appointment_id: String,
@@ -462,12 +500,7 @@ pub fn appointment_link_contact(
         .lock()
         .map_err(|_| CommandError::Internal("failed to lock db".into()))?;
     let conn = CommandContext::new(&guard)?.conn;
-
-    conn.execute(
-        "INSERT OR IGNORE INTO appointment_contacts (appointment_id, contact_id) VALUES (?1, ?2)",
-        rusqlite::params![appointment_id, contact_id],
-    )?;
-
+    link_contact_core(conn, &appointment_id, &contact_id)?;
     Ok(())
 }
 
@@ -1125,5 +1158,38 @@ mod tests {
         )
         .unwrap();
         assert_eq!(list_conflicts_excluding_dismissed(&conn).len(), 0);
+    }
+
+    #[test]
+    fn link_hospital_contact_sets_clinic_name_on_appointment() {
+        let conn = open_migrations_db();
+        let now = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES ('clinic1', 'St. Mary Clinic', 'hospital', ?1, ?2)",
+            rusqlite::params![now, now],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO appointments \
+             (id, title, appt_date, duration_min, reminder_min, is_draft, created_at, updated_at) \
+             VALUES ('a1', 'Checkup', '2026-06-01T10:00:00Z', 30, 60, 0, ?1, ?2)",
+            rusqlite::params![now, now],
+        )
+        .unwrap();
+
+        link_contact_core(&conn, "a1", "clinic1").unwrap();
+
+        let clinic_name: Option<String> = conn
+            .query_row(
+                "SELECT clinic_name FROM appointments WHERE id = 'a1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(clinic_name.as_deref(), Some("St. Mary Clinic"));
     }
 }
