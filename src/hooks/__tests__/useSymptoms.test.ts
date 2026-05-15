@@ -54,7 +54,7 @@ describe('useSymptoms', () => {
     const { result } = renderHook(() => useSymptoms())
 
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.error).toBe('Failed to load symptoms')
+    expect(result.current.error).toBe('network failure')
   })
 
   it('createSymptom invokes symptoms_create and reloads list', async () => {

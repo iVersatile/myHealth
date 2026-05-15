@@ -56,7 +56,7 @@ describe('useMedications', () => {
     const { result } = renderHook(() => useMedications())
 
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.error).toBe('Failed to load medications')
+    expect(result.current.error).toBe('network failure')
   })
 
   it('createMedication invokes medications_create and reloads list', async () => {

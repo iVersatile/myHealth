@@ -55,11 +55,11 @@ describe('useClinics', () => {
     expect(result.current.clinics).toEqual([])
   })
 
-  it('sets fallback error message when non-Error is thrown', async () => {
+  it('sets raw string error when non-Error is thrown', async () => {
     mockInvoke.mockRejectedValue('string error')
     const { result } = renderHook(() => useClinics())
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.error).toBe('Failed to load clinics')
+    expect(result.current.error).toBe('string error')
   })
 
   it('reload re-fetches data', async () => {

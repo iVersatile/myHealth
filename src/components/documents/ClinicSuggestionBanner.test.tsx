@@ -112,7 +112,7 @@ describe('ClinicSuggestionBanner', () => {
     mockInvoke.mockRejectedValue('unknown error')
     render(<ClinicSuggestionBanner suggestions={[makeSuggestion('City Health Clinic')]} onDismiss={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /save clinic/i }))
-    await waitFor(() => expect(screen.getByText(/failed to save clinic/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/unknown error/i)).toBeInTheDocument())
   })
 
   it('re-enables Save button after failed save', async () => {

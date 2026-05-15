@@ -206,7 +206,7 @@ describe('SettingsPage', () => {
 
     fireEvent.click(screen.getByText('Change password'))
 
-    await waitFor(() => expect(screen.getByText('Error: Wrong password')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('Wrong password')).toBeDefined())
   })
 
   it('shows Updating… while password change is in flight', async () => {
@@ -576,7 +576,7 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByText('Export Backup'))
 
     await waitFor(() =>
-      expect(screen.getByText('Error: Disk full')).toBeDefined()
+      expect(screen.getByText('Disk full')).toBeDefined()
     )
   })
 
@@ -658,7 +658,7 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByText('Yes, replace my data'))
 
     await waitFor(() =>
-      expect(screen.getByText('Error: Corrupt file')).toBeDefined()
+      expect(screen.getByText('Corrupt file')).toBeDefined()
     )
   })
 })
