@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Field, SectionTitle, btnPrimary, btnSecondary, inputStyle, sectionStyle } from './settingsShared'
+import { extractTauriError } from '@/lib/ipc'
 
 export function OutlookSection() {
   const isWindows = typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows')
@@ -35,7 +36,7 @@ export function OutlookSection() {
       window.open(res.url, '_blank')
       setOutlookAuthStep('awaiting_code')
     } catch (err) {
-      setOutlookMsg({ text: String(err), ok: false })
+      setOutlookMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setOutlookBusy(false)
     }
@@ -57,7 +58,7 @@ export function OutlookSection() {
       setOutlookCode('')
       setOutlookMsg({ text: 'Connected to Outlook successfully.', ok: true })
     } catch (err) {
-      setOutlookMsg({ text: String(err), ok: false })
+      setOutlookMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setOutlookBusy(false)
     }
@@ -70,7 +71,7 @@ export function OutlookSection() {
       const count = await invoke<number>('outlook_sync', { userId: 'default' })
       setOutlookMsg({ text: `Synced ${count} event${count === 1 ? '' : 's'} from Outlook.`, ok: true })
     } catch (err) {
-      setOutlookMsg({ text: String(err), ok: false })
+      setOutlookMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setOutlookBusy(false)
     }
@@ -86,7 +87,7 @@ export function OutlookSection() {
       setOutlookCode('')
       setOutlookMsg({ text: 'Disconnected from Outlook.', ok: true })
     } catch (err) {
-      setOutlookMsg({ text: String(err), ok: false })
+      setOutlookMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setOutlookBusy(false)
     }

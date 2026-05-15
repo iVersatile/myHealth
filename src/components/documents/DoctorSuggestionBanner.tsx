@@ -6,12 +6,7 @@ import type { Contact } from '../../store/contactsStore'
 import { SuggestionBanner, bannerPrimaryBtn, bannerSecondaryBtn } from './SuggestionBanner'
 import { useToast } from '../../hooks/useToast'
 import { Toast } from '../shared/Toast'
-
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message)
-  if (err instanceof Error) return err.message
-  return 'An error occurred'
-}
+import { extractTauriError } from '../../lib/ipc'
 
 export interface ContactSuggestion {
   draft_id: string | null
@@ -88,7 +83,7 @@ export function DoctorSuggestionBanner({ candidates, onAccept, onDismiss, appoin
       try {
         await invoke('appointments_clear_doctor', { appointmentId })
       } catch (err) {
-        toast.show(extractMessage(err))
+        toast.show(extractTauriError(err))
       }
     }
     await rejectUnmatchedDrafts()

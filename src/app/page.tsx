@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth, UserEntry } from '../hooks/useAuth'
+import { extractTauriError } from '@/lib/ipc'
 
 type Mode = 'unlock' | 'setup' | 'pick-user' | 'switch-user'
 
@@ -30,15 +31,6 @@ function validatePasswordStrength(password: string): string | null {
   return null
 }
 
-function tauriErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (err && typeof err === 'object') {
-    const obj = err as Record<string, unknown>
-    if (typeof obj['Internal'] === 'string') return obj['Internal']
-    if (typeof obj['message'] === 'string') return obj['message']
-  }
-  return String(err)
-}
 
 export default function LockScreen() {
   const router = useRouter()
@@ -94,7 +86,7 @@ export default function LockScreen() {
       }
       router.push('/dashboard')
     } catch (err: unknown) {
-      const msg = tauriErrorMessage(err)
+      const msg = extractTauriError(err)
       if (mode === 'unlock' && msg.includes('failed to read salt')) {
         setMode('setup')
         setPassword('')

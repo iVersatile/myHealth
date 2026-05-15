@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { invoke } from '@tauri-apps/api/core'
 import { AddressList, type Address } from '@/components/shared/AddressList'
 import { ENTITY_CONFIG } from '../../../../lib/entities'
+import { extractTauriError } from '@/lib/ipc'
 
 interface Clinic {
   id: string
@@ -64,7 +65,7 @@ export function ClinicEditClient() {
         setCrn(c.company_registration_number ?? '')
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Failed to load clinic')
+        setError(extractTauriError(err, 'Failed to load clinic'))
       })
       .finally(() => setLoading(false))
 
@@ -103,7 +104,7 @@ export function ClinicEditClient() {
       })
       router.push('/clinics')
     } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save clinic')
+      setSaveError(extractTauriError(err, 'Failed to save clinic'))
     } finally {
       setSaving(false)
     }

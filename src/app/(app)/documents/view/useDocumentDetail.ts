@@ -7,6 +7,7 @@ import type { Category } from '../../../../components/categories/CategoryPicker'
 import type { Appointment } from '../../../../store/appointmentsStore'
 import type { Note } from '../../../../store/notesStore'
 import { downloadReport, type ReportData } from '../../../../components/documents/DocumentReport'
+import { extractTauriError } from '@/lib/ipc'
 
 export interface DocumentEntity {
   id: string
@@ -171,7 +172,7 @@ export function useDocumentDetail(id: string) {
         setAllMedications(allMed.filter((m) => !m.deleted_at))
         setIcd10Tags(fetchedIcd10Tags)
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : String(err))
+        setError(extractTauriError(err))
       } finally {
         setLoading(false)
       }
@@ -265,7 +266,7 @@ export function useDocumentDetail(id: string) {
       ])
       setSelectedCategoryIds(nextIds)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -279,7 +280,7 @@ export function useDocumentDetail(id: string) {
       setLinks((prev) => [...prev, link])
       setSelectedApptId('')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setLinkingAppt(false)
     }
@@ -290,7 +291,7 @@ export function useDocumentDetail(id: string) {
       await invoke('links_delete', { id: linkId })
       setLinks((prev) => prev.filter((l) => l.id !== linkId))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -302,7 +303,7 @@ export function useDocumentDetail(id: string) {
       setLinkedSymptoms(refreshed)
       setSelectedSymptomId('')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -312,7 +313,7 @@ export function useDocumentDetail(id: string) {
       await invoke('symptom_unlink', { symptomId, toType: 'document', toId: doc.id })
       setLinkedSymptoms((prev) => prev.filter((s) => s.id !== symptomId))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -324,7 +325,7 @@ export function useDocumentDetail(id: string) {
       setLinkedMedications(refreshed)
       setSelectedMedicationId('')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -334,7 +335,7 @@ export function useDocumentDetail(id: string) {
       await invoke('medication_unlink', { medicationId, toType: 'document', toId: doc.id })
       setLinkedMedications((prev) => prev.filter((m) => m.id !== medicationId))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -351,7 +352,7 @@ export function useDocumentDetail(id: string) {
       setLinks(refreshed)
       setSuggestions((prev) => prev.filter((s) => s.appointment_id !== suggestion.appointment_id))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -366,7 +367,7 @@ export function useDocumentDetail(id: string) {
       const data = await invoke<ReportData>('documents_export_report', { documentId: doc.id })
       await downloadReport(data)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setExportingReport(false)
     }

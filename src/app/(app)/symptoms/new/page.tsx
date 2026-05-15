@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSymptoms } from '../../../../hooks/useSymptoms'
+import { extractTauriError } from '../../../../lib/ipc'
 
 export default function NewSymptomPage() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export default function NewSymptomPage() {
       })
       router.push('/symptoms')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save symptom')
+      setError(extractTauriError(err, 'Failed to save symptom'))
     } finally {
       setSaving(false)
     }

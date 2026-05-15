@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { save } from '@tauri-apps/plugin-dialog'
-import { IPC } from '../../lib/ipc'
+import { IPC, extractTauriError } from '../../lib/ipc'
 
 interface SummaryDocumentItem {
   id: string
@@ -78,7 +78,7 @@ export function SummaryExportDialog({ onClose }: SummaryExportDialogProps) {
       await invoke(IPC.exportSaveBytes, { outputPath, bytesB64 })
       setDone(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setExporting(false)
     }

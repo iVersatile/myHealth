@@ -3,23 +3,13 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { invoke } from '@tauri-apps/api/core'
+import { extractTauriError } from '@/lib/ipc'
 
 interface ProfileEntry {
   id: string
   name: string
   db_path: string
   created_at: string
-}
-
-function tauriErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (err && typeof err === 'object') {
-    const obj = err as Record<string, unknown>
-    if (typeof obj['InvalidInput'] === 'string') return obj['InvalidInput']
-    if (typeof obj['Internal'] === 'string') return obj['Internal']
-    if (typeof obj['message'] === 'string') return obj['message']
-  }
-  return String(err)
 }
 
 export default function ProfilesPage() {
@@ -58,7 +48,7 @@ export default function ProfilesPage() {
       setProfiles((prev) => prev.filter((p) => p.id !== deleteTarget.id))
       setDeleteTarget(null)
     } catch (err: unknown) {
-      setError(tauriErrorMessage(err) || 'Failed to delete profile.')
+      setError(extractTauriError(err) || 'Failed to delete profile.')
       setDeleteTarget(null)
     } finally {
       setIsDeleting(false)
@@ -74,7 +64,7 @@ export default function ProfilesPage() {
       await invoke('profiles_switch', { id: selected.id, password })
       router.push('/documents')
     } catch (err: unknown) {
-      const msg = tauriErrorMessage(err)
+      const msg = extractTauriError(err)
       if (msg.includes('incorrect password')) {
         setError('Incorrect password. Please try again.')
       } else {

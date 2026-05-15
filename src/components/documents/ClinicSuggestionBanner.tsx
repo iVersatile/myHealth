@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { ClinicSuggestion } from './UploadDialog'
 import { SuggestionBanner, bannerPrimaryBtn, bannerSecondaryBtn } from './SuggestionBanner'
+import { extractTauriError } from '../../lib/ipc'
 
 interface Props {
   suggestions: ClinicSuggestion[]
@@ -36,7 +37,7 @@ export function ClinicSuggestionBanner({ suggestions, onDismiss }: Props) {
       })
       setSaved(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save clinic')
+      setError(extractTauriError(err, 'Failed to save clinic'))
     } finally {
       setSaving(false)
     }

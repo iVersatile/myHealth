@@ -6,6 +6,7 @@ import {
   DocumentCategory,
   useDocumentsStore,
 } from '../store/documentsStore'
+import { extractTauriError } from '@/lib/ipc'
 
 export function useDocuments() {
   const {
@@ -54,7 +55,7 @@ export function useDocuments() {
         docs.length < limit ? (page - 1) * limit + docs.length : page * limit + 1
       setDocuments(docs, estimatedTotal)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setLoading(false)
     }

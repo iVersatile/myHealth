@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { type CalendarSourceRow, type CalendarEventDto, type ConflictPair, btnPrimary, btnSecondary, sectionStyle } from './settingsShared'
+import { extractTauriError } from '@/lib/ipc'
 
 export function CalendarSyncSection() {
   const [calendars, setCalendars] = useState<CalendarSourceRow[]>([])
@@ -22,7 +23,7 @@ export function CalendarSyncSection() {
         const sources = await invoke<CalendarSourceRow[]>('calendar_list_sources')
         setCalendars(sources)
       } catch (err) {
-        setCalendarsError(String(err))
+        setCalendarsError(extractTauriError(err))
       } finally {
         setCalendarsLoading(false)
       }
@@ -37,7 +38,7 @@ export function CalendarSyncSection() {
         prev.map(cal => (cal.id === id ? { ...cal, enabled } : cal))
       )
     } catch (err) {
-      setSyncMsg({ text: String(err), ok: false })
+      setSyncMsg({ text: extractTauriError(err), ok: false })
     }
   }
 
@@ -49,7 +50,7 @@ export function CalendarSyncSection() {
       const synced = await invoke<number>('calendar_sync', { sourceIds: enabledIds })
       setSyncMsg({ text: `Synced ${synced} event${synced === 1 ? '' : 's'}`, ok: true })
     } catch (err) {
-      setSyncMsg({ text: String(err), ok: false })
+      setSyncMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setSyncBusy(false)
     }
@@ -62,7 +63,7 @@ export function CalendarSyncSection() {
       setConflicts(pairs)
       setShowConflicts(true)
     } catch (err) {
-      setSyncMsg({ text: String(err), ok: false })
+      setSyncMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setConflictsLoading(false)
     }
@@ -73,7 +74,7 @@ export function CalendarSyncSection() {
       await invoke('calendar_event_delete', { id: deleteId })
       setConflicts(prev => prev.filter((_, i) => i !== pairIndex))
     } catch (err) {
-      setSyncMsg({ text: String(err), ok: false })
+      setSyncMsg({ text: extractTauriError(err), ok: false })
     }
   }
 

@@ -19,6 +19,7 @@ import { ContactForm } from '../../../components/contacts/ContactForm'
 import { DocumentPreviewPanel } from '../../../components/documents/DocumentPreviewPanel'
 import { VaultLayout } from '../../../components/layout/VaultLayout'
 import { useDocumentsStore } from '../../../store/documentsStore'
+import { extractTauriError } from '../../../lib/ipc'
 
 const REDESIGN_A = process.env.NEXT_PUBLIC_REDESIGN_A === 'true'
 import { useContacts } from '../../../hooks/useContacts'
@@ -27,11 +28,6 @@ import type { Document } from '../../../store/documentsStore'
 import type { Appointment } from '../../../store/appointmentsStore'
 import type { ContactCreateInput, ContactCreateWithClinicInput } from '../../../hooks/useContacts'
 
-function extractMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message)
-  if (err instanceof Error) return err.message
-  return 'An error occurred'
-}
 
 export default function DocumentsPage() {
   const toast = useToast()
@@ -89,11 +85,11 @@ export default function DocumentsPage() {
             setApptSuggestion({ suggestion: appt, documentId: doc.id })
           }
         } catch (err) {
-          toast.show(extractMessage(err))
+          toast.show(extractTauriError(err))
         }
       }
     } catch (err) {
-      toast.show(extractMessage(err))
+      toast.show(extractTauriError(err))
     }
   }
 
@@ -130,7 +126,7 @@ export default function DocumentsPage() {
         setDraftAppointmentId(null)
       }
     } catch (err) {
-      toast.show(extractMessage(err))
+      toast.show(extractTauriError(err))
     } finally {
       setApptSuggestionLoading(false)
       setApptSuggestion(null)
@@ -149,7 +145,7 @@ export default function DocumentsPage() {
         },
       })
     } catch (err) {
-      toast.show(extractMessage(err))
+      toast.show(extractTauriError(err))
     }
     setLinkSuggestion(null)
   }

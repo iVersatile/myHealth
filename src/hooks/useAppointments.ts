@@ -6,6 +6,7 @@ import {
   AppointmentStatus,
   useAppointmentsStore,
 } from '../store/appointmentsStore'
+import { extractTauriError } from '@/lib/ipc'
 
 export interface RecurrenceInput {
   rule: 'weekly' | 'monthly'
@@ -67,7 +68,7 @@ export function useAppointments() {
       })
       setAppointments(appts)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setLoading(false)
     }

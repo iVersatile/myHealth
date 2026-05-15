@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Note, useNotesStore } from '../store/notesStore'
+import { extractTauriError } from '@/lib/ipc'
 
 export function useNotes() {
   const notes = useNotesStore(s => s.notes)
@@ -21,7 +22,7 @@ export function useNotes() {
       const result = await invoke<Note[]>('notes_list')
       setNotes(result)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setLoading(false)
     }

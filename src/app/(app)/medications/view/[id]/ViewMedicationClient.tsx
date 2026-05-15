@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useMedications, type Medication } from '../../../../../hooks/useMedications'
+import { extractTauriError } from '../../../../../lib/ipc'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -57,7 +58,7 @@ export default function ViewMedicationClient() {
       })
       router.push('/medications')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update medication')
+      setError(extractTauriError(err, 'Failed to update medication'))
     } finally {
       setSaving(false)
     }
@@ -71,7 +72,7 @@ export default function ViewMedicationClient() {
       await deleteMedication(id)
       router.push('/medications')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to delete medication')
+      setError(extractTauriError(err, 'Failed to delete medication'))
       setDeleting(false)
     }
   }

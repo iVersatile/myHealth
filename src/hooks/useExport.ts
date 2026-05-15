@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { save } from '@tauri-apps/plugin-dialog'
+import { extractTauriError } from '@/lib/ipc'
 
 export interface ExportDocumentItem {
   id: string
@@ -50,7 +51,7 @@ export function useExport() {
       await invoke('export_save_bytes', { outputPath, bytesB64 })
       return true
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
       return false
     } finally {
       setExporting(false)

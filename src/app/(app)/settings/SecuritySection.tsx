@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { AUTO_LOCK_OPTIONS, Field, SectionTitle, btnPrimary, inputStyle, sectionStyle } from './settingsShared'
+import { extractTauriError } from '@/lib/ipc'
 
 export function SecuritySection() {
   const [currentPw, setCurrentPw] = useState('')
@@ -39,7 +40,7 @@ export function SecuritySection() {
       setNewPw('')
       setConfirmPw('')
     } catch (err) {
-      setPwMsg({ text: String(err), ok: false })
+      setPwMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setPwBusy(false)
     }

@@ -197,14 +197,13 @@ describe('SettingsPage', () => {
       if (cmd === 'auth_change_password') return Promise.reject(new Error('Wrong password'))
       return Promise.resolve()
     })
-    const user = userEvent.setup()
     await renderPage()
 
-    await user.type(screen.getByLabelText(/current password/i), 'wrongpass')
-    await user.type(screen.getByLabelText(/^new password/i), 'newpass456')
-    await user.type(screen.getByLabelText(/confirm new password/i), 'newpass456')
+    await userEvent.type(screen.getByLabelText(/current password/i), 'wrongpass')
+    await userEvent.type(screen.getByLabelText(/^new password/i), 'newpass456')
+    await userEvent.type(screen.getByLabelText(/confirm new password/i), 'newpass456')
 
-    await user.click(screen.getByText('Change password'))
+    await userEvent.click(screen.getByText('Change password'))
 
     await waitFor(() => expect(screen.getByText('Wrong password')).toBeDefined(), { timeout: 5000 })
   })

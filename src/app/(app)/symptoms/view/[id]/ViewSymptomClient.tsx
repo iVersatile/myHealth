@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useSymptoms, type Symptom } from '../../../../../hooks/useSymptoms'
+import { extractTauriError } from '../../../../../lib/ipc'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -55,7 +56,7 @@ export default function ViewSymptomClient() {
       })
       router.push('/symptoms')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update symptom')
+      setError(extractTauriError(err, 'Failed to update symptom'))
     } finally {
       setSaving(false)
     }
@@ -69,7 +70,7 @@ export default function ViewSymptomClient() {
       await deleteSymptom(id)
       router.push('/symptoms')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to delete symptom')
+      setError(extractTauriError(err, 'Failed to delete symptom'))
       setDeleting(false)
     }
   }

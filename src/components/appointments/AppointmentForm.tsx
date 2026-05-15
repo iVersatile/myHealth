@@ -12,6 +12,7 @@ import {
 import { AppointmentInput } from '../../hooks/useAppointments'
 import { CategoryPicker, type Category } from '../categories/CategoryPicker'
 import { Contact, DOCTOR_ROLES, CLINIC_ROLES } from '../../store/contactsStore'
+import { extractTauriError } from '@/lib/ipc'
 
 interface AppointmentFormProps {
   initial?: Appointment
@@ -124,7 +125,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
       setSelectedCategoryIds(nextIds)
       onCategoriesChange?.(nextIds)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 
@@ -201,7 +202,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
         } : undefined,
       })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
       setSaving(false)
     }
   }

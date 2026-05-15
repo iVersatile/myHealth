@@ -16,6 +16,7 @@ import type { Appointment } from '../../../../store/appointmentsStore'
 import type { Document } from '../../../../store/documentsStore'
 import { useToast } from '../../../../hooks/useToast'
 import { Toast } from '../../../../components/shared/Toast'
+import { extractTauriError } from '@/lib/ipc'
 
 interface NoteLinkDto {
   id: string
@@ -147,7 +148,7 @@ export default function NoteEditorClient() {
           }
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : String(err))
+        setError(extractTauriError(err))
       }
     }
     if (editor) void load()
@@ -168,7 +169,7 @@ export default function NoteEditorClient() {
       setNote(saved)
       setLastSaved(saved.updated_at)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     } finally {
       setSaving(false)
     }
@@ -240,7 +241,7 @@ export default function NoteEditorClient() {
       const vers = await invoke<NoteVersionDto[]>('note_versions_list', { noteId: id })
       setVersions(vers)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(extractTauriError(err))
     }
   }
 

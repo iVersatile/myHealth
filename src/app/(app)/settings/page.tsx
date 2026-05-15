@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Field, SectionTitle, btnSecondary, inputStyle, sectionStyle } from './settingsShared'
+import { extractTauriError } from '@/lib/ipc'
 import { SecuritySection } from './SecuritySection'
 import { AppearanceSection } from './AppearanceSection'
 import { DataSection } from './DataSection'
@@ -117,7 +118,7 @@ export default function SettingsPage() {
       const count = await invoke<number>('categories_archive_stale', { monthsInactive: archiveMonths })
       setArchiveMsg({ text: `Archived ${count} inactive categor${count === 1 ? 'y' : 'ies'}.`, ok: true })
     } catch (err) {
-      setArchiveMsg({ text: String(err), ok: false })
+      setArchiveMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setArchiveBusy(false)
     }

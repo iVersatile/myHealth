@@ -109,7 +109,7 @@ describe('ClinicSuggestionBanner', () => {
   })
 
   it('shows generic error when save throws non-Error', async () => {
-    mockInvoke.mockRejectedValue({ message: 'unknown error' })
+    mockInvoke.mockRejectedValue(new Error('unknown error'))
     render(<ClinicSuggestionBanner suggestions={[makeSuggestion('City Health Clinic')]} onDismiss={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /save clinic/i }))
     await waitFor(() => expect(screen.getByText(/unknown error/i)).toBeInTheDocument(), { timeout: 5000 })

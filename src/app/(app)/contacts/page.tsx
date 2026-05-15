@@ -12,6 +12,7 @@ import { useToast } from '../../../hooks/useToast'
 import { Toast } from '../../../components/shared/Toast'
 import { DraftEntitySection, type DraftEntityRow } from '../../../components/shared/DraftEntitySection'
 import { MergeEntityDialog } from '../../../components/shared/MergeEntityDialog'
+import { extractTauriError } from '@/lib/ipc'
 
 interface Clinic {
   id: string
@@ -384,7 +385,7 @@ export default function ContactsPage() {
       setDuplicates(results)
       setShowDuplicates(true)
     } catch (err: unknown) {
-      setDupError(err instanceof Error ? err.message : String(err))
+      setDupError(extractTauriError(err))
     } finally {
       setScanning(false)
     }

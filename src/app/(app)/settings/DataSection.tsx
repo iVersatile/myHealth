@@ -6,6 +6,7 @@ import { save, open } from '@tauri-apps/plugin-dialog'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../../hooks/useAuth'
 import { Field, SectionTitle, btnDanger, btnPrimary, btnSecondary, sectionStyle } from './settingsShared'
+import { extractTauriError } from '@/lib/ipc'
 
 export function DataSection() {
   const { lock } = useAuth()
@@ -70,7 +71,7 @@ export function DataSection() {
       await invoke('backup_export', { destPath })
       setBackupMsg({ text: 'Backup exported successfully.', ok: true })
     } catch (err) {
-      setBackupMsg({ text: String(err), ok: false })
+      setBackupMsg({ text: extractTauriError(err), ok: false })
     } finally {
       setBackupBusy(false)
     }
@@ -98,7 +99,7 @@ export function DataSection() {
       lock()
       router.push('/unlock')
     } catch (err) {
-      setBackupMsg({ text: String(err), ok: false })
+      setBackupMsg({ text: extractTauriError(err), ok: false })
       setBackupBusy(false)
     }
   }

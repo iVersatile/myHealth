@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMedications } from '../../../../hooks/useMedications'
+import { extractTauriError } from '../../../../lib/ipc'
 
 export default function NewMedicationPage() {
   const router = useRouter()
@@ -32,7 +33,7 @@ export default function NewMedicationPage() {
       })
       router.push('/medications')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save medication')
+      setError(extractTauriError(err, 'Failed to save medication'))
     } finally {
       setSaving(false)
     }

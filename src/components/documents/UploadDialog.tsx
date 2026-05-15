@@ -13,14 +13,7 @@ import { buildTimelineDescription } from './uploadTypes'
 import type { ContactSuggestion, ClinicSuggestion, ContactPhase, ClinicPhase, FileQueueItem, FileQueueStatus } from './uploadTypes'
 import type { Category } from '../categories/CategoryPicker'
 export type { ClinicSuggestion, ContactSuggestion } from './uploadTypes'
-
-function extractMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  const obj = err as Record<string, unknown>
-  if (obj?.message && typeof obj.message === 'string') return obj.message
-  return JSON.stringify(err)
-}
+import { extractTauriError } from '../../lib/ipc'
 
 interface UploadDialogProps {
   onClose: () => void
@@ -165,7 +158,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           unlistenRef.current?.()
           unlistenRef.current = null
           setOcrProgress(null)
-          setAnalyzeError(extractMessage(extractionErr))
+          setAnalyzeError(extractTauriError(extractionErr))
           setTags(extractedTags.filter(Boolean))
           setStep('pick')
           return
@@ -175,7 +168,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       setTags(extractedTags.filter(Boolean))
       setStep('review')
     } catch (err: unknown) {
-      setAnalyzeError(extractMessage(err))
+      setAnalyzeError(extractTauriError(err))
       setStep('pick')
     }
   }
@@ -217,7 +210,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           prev.map((f) => (f.path === item.path ? { ...f, status: 'done' } : f))
         )
       } catch (err: unknown) {
-        const msg = extractMessage(err)
+        const msg = extractTauriError(err)
         setFileQueue((prev) =>
           prev.map((f) =>
             f.path === item.path ? { ...f, status: 'error', errorMessage: msg } : f
@@ -331,7 +324,7 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
       onUploaded(final, unsaved, unsavedContacts, draftAppointmentId)
       onClose()
     } catch (err: unknown) {
-      setConfirmError(extractMessage(err))
+      setConfirmError(extractTauriError(err))
     } finally {
       setConfirming(false)
     }
