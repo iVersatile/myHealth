@@ -442,12 +442,9 @@ pub fn clinics_link_contact(
 
 #[tauri::command]
 #[allow(dead_code)]
-pub fn clinics_list_with_contacts(
-    state: State<'_, AppState>,
+fn clinics_list_with_contacts_conn(
+    conn: &rusqlite::Connection,
 ) -> Result<Vec<ClinicWithContacts>, CommandError> {
-    let guard = state.db.lock()?;
-    let conn = CommandContext::new(&guard)?.conn;
-
     let mut stmt = conn.prepare(
         "SELECT c.id, c.name, c.address, c.phone, c.created_at, c.company_registration_number,
                 co.id AS contact_id, co.name AS contact_name, co.role AS contact_role
@@ -488,6 +485,15 @@ pub fn clinics_list_with_contacts(
     }
 
     Ok(result)
+}
+
+#[tauri::command]
+pub fn clinics_list_with_contacts(
+    state: State<'_, AppState>,
+) -> Result<Vec<ClinicWithContacts>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    clinics_list_with_contacts_conn(&conn)
 }
 
 #[cfg(test)]
@@ -1139,14 +1145,13 @@ mod tests {
             rusqlite::params![id, now],
         )
         .unwrap();
-        let count: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM clinics WHERE is_deleted = 0 AND is_draft = 0",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(count, 0);
+        // Call the actual production query so any column or filter regression is caught here.
+        let result = clinics_list_with_contacts_conn(&conn).unwrap();
+        assert_eq!(
+            result.len(),
+            0,
+            "draft clinic must not appear in the regular list"
+        );
     }
 
     #[test]
@@ -1159,13 +1164,13 @@ mod tests {
             rusqlite::params![id, now],
         )
         .unwrap();
-        let count: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM clinics WHERE is_deleted = 0 AND is_draft = 0",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(count, 1);
+        // Call the actual production query so any column or filter regression is caught here.
+        let result = clinics_list_with_contacts_conn(&conn).unwrap();
+        assert_eq!(
+            result.len(),
+            1,
+            "confirmed clinic must appear in the regular list"
+        );
+        assert_eq!(result[0].name, "Real Clinic");
     }
 }

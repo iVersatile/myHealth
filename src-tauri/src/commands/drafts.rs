@@ -81,7 +81,7 @@ pub fn get_draft_entities(
         }
         "clinic" => {
             let mut stmt = conn.prepare(
-                "SELECT id, name, address, phone, email, notes, merge_candidate_id, created_at
+                "SELECT id, name, address, phone, email, merge_candidate_id, created_at
                  FROM clinics
                  WHERE is_draft = 1 AND is_deleted = 0
                  ORDER BY created_at DESC",
@@ -96,9 +96,9 @@ pub fn get_draft_entities(
                         phone: r.get(3)?,
                         email: r.get(4)?,
                         specialty: None,
-                        notes: r.get(5)?,
-                        merge_candidate_id: r.get(6)?,
-                        created_at: r.get(7)?,
+                        notes: None,
+                        merge_candidate_id: r.get(5)?,
+                        created_at: r.get(6)?,
                         role: None,
                         clinic: None,
                         appt_date: None,
@@ -568,8 +568,6 @@ mod tests {
                 address TEXT,
                 phone TEXT,
                 email TEXT,
-                specialty TEXT,
-                notes TEXT,
                 merge_candidate_id TEXT,
                 created_at TEXT NOT NULL DEFAULT '',
                 is_draft INTEGER NOT NULL DEFAULT 0,
@@ -815,9 +813,12 @@ mod tests {
         )
         .unwrap();
 
+        // Use the exact production query from get_draft_entities so column mismatches
+        // are caught here rather than at runtime.
         let mut stmt = conn
             .prepare(
-                "SELECT id FROM clinics WHERE is_draft = 1 AND is_deleted = 0 \
+                "SELECT id, name, address, phone, email, merge_candidate_id, created_at
+                 FROM clinics WHERE is_draft = 1 AND is_deleted = 0
                  ORDER BY created_at DESC",
             )
             .unwrap();
