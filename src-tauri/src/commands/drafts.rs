@@ -81,7 +81,7 @@ pub fn get_draft_entities(
         }
         "clinic" => {
             let mut stmt = conn.prepare(
-                "SELECT id, name, address, phone, email, specialty, notes, merge_candidate_id, created_at
+                "SELECT id, name, address, phone, email, notes, merge_candidate_id, created_at
                  FROM clinics
                  WHERE is_draft = 1 AND is_deleted = 0
                  ORDER BY created_at DESC",
@@ -95,10 +95,10 @@ pub fn get_draft_entities(
                         address: r.get(2)?,
                         phone: r.get(3)?,
                         email: r.get(4)?,
-                        specialty: r.get(5)?,
-                        notes: r.get(6)?,
-                        merge_candidate_id: r.get(7)?,
-                        created_at: r.get(8)?,
+                        specialty: None,
+                        notes: r.get(5)?,
+                        merge_candidate_id: r.get(6)?,
+                        created_at: r.get(7)?,
                         role: None,
                         clinic: None,
                         appt_date: None,
