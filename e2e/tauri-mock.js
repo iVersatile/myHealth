@@ -769,7 +769,33 @@
       const id = args?.contact_id || args?.contactId || args?.id;
       const idx = state.contacts.findIndex((c) => c.id === id);
       if (idx >= 0) {
-        state.contacts[idx] = { ...state.contacts[idx], ...args, id, updated_at: nowIso() };
+        const prev = state.contacts[idx];
+        state.contacts[idx] = { ...prev, ...args, id, updated_at: nowIso() };
+
+        // Mirror junction table: maintain clinic.linked_contacts when contactClinicId changes.
+        const newClinicId = args?.contactClinicId ?? args?.contact_clinic_id;
+        if (newClinicId !== undefined) {
+          // Remove from old clinic
+          const oldClinicId = prev.contact_clinic_id ?? prev.contactClinicId;
+          if (oldClinicId) {
+            const oldClinic = state.clinics.find((c) => c.id === oldClinicId);
+            if (oldClinic) {
+              oldClinic.linked_contacts = (oldClinic.linked_contacts || []).filter((cid) => cid !== id);
+            }
+          }
+          // Add to new clinic (empty string = unlink)
+          if (newClinicId) {
+            const newClinic = state.clinics.find((c) => c.id === newClinicId);
+            if (newClinic) {
+              newClinic.linked_contacts = newClinic.linked_contacts || [];
+              if (!newClinic.linked_contacts.includes(id)) {
+                newClinic.linked_contacts.push(id);
+              }
+            }
+          }
+          state.contacts[idx].contact_clinic_id = newClinicId || null;
+        }
+
         saveState(state);
         return Promise.resolve(state.contacts[idx]);
       }
@@ -827,6 +853,16 @@
     if (cmd === 'clinics_list') {
       const clinics = state.clinics.filter((c) => !c._deleted);
       return Promise.resolve(clinics);
+    }
+
+    if (cmd === 'clinics_list_including_drafts') {
+      const accepted = state.clinics
+        .filter((c) => !c._deleted)
+        .map((c) => ({ id: c.id, name: c.name, is_draft: false }));
+      const drafts = (state.draft_clinics || [])
+        .filter((c) => !c._deleted)
+        .map((c) => ({ id: c.id, name: c.name || c.clinic_name || '', is_draft: true }));
+      return Promise.resolve([...accepted, ...drafts]);
     }
 
     if (cmd === 'clinics_list_with_contacts') {

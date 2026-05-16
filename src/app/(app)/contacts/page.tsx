@@ -116,7 +116,7 @@ function LinkedClinicCard({ clinicId }: { clinicId: string | null }) {
   return (
     <div className="mb-2 flex items-center gap-2 flex-wrap">
       <Link
-        href={`/clinics/${clinic.id}`}
+        href={`/clinics/edit?id=${clinic.id}`}
         className="flex items-center gap-1 text-xs text-[var(--color-tag-text)] bg-[var(--color-tag-bg)] rounded px-2 py-0.5 hover:opacity-80 transition-opacity"
       >
         <span>🏥</span>

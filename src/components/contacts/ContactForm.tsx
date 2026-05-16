@@ -21,7 +21,7 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
   const [clinic, setClinic] = useState(initial?.clinic ?? '')
   const [address, setAddress] = useState(initial?.address ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
-  const [contactClinicId, setContactClinicId] = useState<string | null>(initial?.contact_clinic_id ?? null)
+  const [contactClinicId, setContactClinicId] = useState<string>(initial?.contact_clinic_id ?? '')
   const [clinics, setClinics] = useState<Array<{ id: string; name: string; is_draft: boolean }>>([])
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -110,10 +110,10 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
             <label className={labelCls}>Clinic / Hospital</label>
             <select
               className={fieldCls}
-              value={contactClinicId ?? ''}
+              value={contactClinicId}
               onChange={(e) => {
                 const selected = clinics.find((c) => c.id === e.target.value)
-                setContactClinicId(selected?.id ?? null)
+                setContactClinicId(selected?.id ?? '')
                 setClinic(selected?.name ?? '')
               }}
               aria-label="Clinic / Hospital"

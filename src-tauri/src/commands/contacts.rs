@@ -82,7 +82,7 @@ pub fn contacts_list(
     let contacts: Vec<Contact> = if let Some(r) = role {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts \
+                 created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c \
                  WHERE is_deleted = 0 AND is_draft = 0 AND role = ? ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
@@ -93,7 +93,7 @@ pub fn contacts_list(
     } else {
         let mut stmt = conn.prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts \
+                 created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c \
                  WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name",
         )?;
         let rows: Vec<Contact> = stmt
@@ -113,7 +113,7 @@ pub fn contacts_get(id: String, state: State<'_, AppState>) -> Result<Contact, C
 
     conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-         created_at, updated_at, title, contact_clinic_id FROM contacts \
+         created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c \
          WHERE id = ? AND is_deleted = 0",
         [&id],
         row_to_contact,
@@ -159,7 +159,7 @@ pub fn contacts_create(
 
     let c = conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+             created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
         [&id],
         row_to_contact,
     )?;
@@ -288,7 +288,7 @@ pub fn contacts_create_with_clinic(
         let person = tx
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+                 created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
                 [&person_id],
                 row_to_contact,
             )
@@ -394,16 +394,22 @@ pub fn contacts_update(
             rusqlite::params![title, now, input.id],
         )?;
     }
-    if let Some(contact_clinic_id) = input.contact_clinic_id {
+    if let Some(clinic_id_val) = input.contact_clinic_id {
         conn.execute(
-            "UPDATE contacts SET contact_clinic_id = ?, updated_at = ? WHERE id = ?",
-            rusqlite::params![contact_clinic_id, now, input.id],
+            "DELETE FROM clinic_contacts WHERE contact_id = ?",
+            rusqlite::params![input.id],
         )?;
+        if !clinic_id_val.is_empty() {
+            conn.execute(
+                "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES (?, ?)",
+                rusqlite::params![clinic_id_val, input.id],
+            )?;
+        }
     }
 
     let c = conn.query_row(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+             created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
         [&input.id],
         row_to_contact,
     )?;
@@ -611,7 +617,7 @@ pub fn find_duplicate_contacts(
 
     let mut stmt = conn.prepare(
         "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title, contact_clinic_id FROM contacts \
+             created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c \
              WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name",
     )?;
     let contacts: Vec<Contact> = stmt
@@ -667,7 +673,7 @@ pub fn merge_contacts(
         let primary = tx
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+                 created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
                 [&primary_id],
                 row_to_contact,
             )
@@ -684,7 +690,7 @@ pub fn merge_contacts(
             let dup = tx
                 .query_row(
                     "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                     created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+                     created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
                     [dup_id],
                     row_to_contact,
                 )
@@ -735,7 +741,7 @@ pub fn merge_contacts(
         // Return updated primary.
         tx.query_row(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+             created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
             [&primary_id],
             row_to_contact,
         )
@@ -790,7 +796,7 @@ pub fn find_similar_contact(name: &str, conn: &rusqlite::Connection) -> Option<C
     let mut stmt = conn
         .prepare(
             "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-             created_at, updated_at, title, contact_clinic_id FROM contacts \
+             created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c \
              WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name",
         )
         .ok()?;
@@ -843,7 +849,7 @@ mod tests {
         let c = conn
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+                 created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
                 [&id],
                 row_to_contact,
             )
@@ -867,7 +873,7 @@ mod tests {
         let mut stmt = conn
             .prepare(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE role = ? ORDER BY name",
+                 created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE role = ? ORDER BY name",
             )
             .unwrap();
         let gps: Vec<Contact> = stmt
@@ -1346,7 +1352,7 @@ mod tests {
         let c = conn
             .query_row(
                 "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
-                 created_at, updated_at, title, contact_clinic_id FROM contacts WHERE id = ?",
+                 created_at, updated_at, title, (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id FROM contacts c WHERE id = ?",
                 [&id],
                 row_to_contact,
             )
@@ -1395,5 +1401,88 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn link_clinic_via_junction_table_visible_in_contact_read() {
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+        let clinic_id = Uuid::new_v4().to_string();
+        let contact_id = Uuid::new_v4().to_string();
+
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'City Medical', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) VALUES (?, 'Dr Jones', 'gp', ?, ?)",
+            rusqlite::params![contact_id, now, now],
+        )
+        .unwrap();
+
+        // Link via junction table (the path taken by contacts_update after migration 32)
+        conn.execute(
+            "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES (?, ?)",
+            rusqlite::params![clinic_id, contact_id],
+        )
+        .unwrap();
+
+        let c = conn
+            .query_row(
+                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+                 created_at, updated_at, title, \
+                 (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id \
+                 FROM contacts c WHERE id = ?",
+                [&contact_id],
+                row_to_contact,
+            )
+            .unwrap();
+
+        assert_eq!(c.contact_clinic_id.as_deref(), Some(clinic_id.as_str()));
+    }
+
+    #[test]
+    fn unlink_clinic_clears_junction_row() {
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+        let clinic_id = Uuid::new_v4().to_string();
+        let contact_id = Uuid::new_v4().to_string();
+
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'City Medical', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) VALUES (?, 'Dr Jones', 'gp', ?, ?)",
+            rusqlite::params![contact_id, now, now],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES (?, ?)",
+            rusqlite::params![clinic_id, contact_id],
+        )
+        .unwrap();
+
+        // Simulate unlink: contacts_update receives Some("") → deletes from junction table
+        conn.execute(
+            "DELETE FROM clinic_contacts WHERE contact_id = ?",
+            rusqlite::params![contact_id],
+        )
+        .unwrap();
+
+        let c = conn
+            .query_row(
+                "SELECT id, name, role, specialty, phone, email, clinic, address, notes, \
+                 created_at, updated_at, title, \
+                 (SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = c.id LIMIT 1) AS contact_clinic_id \
+                 FROM contacts c WHERE id = ?",
+                [&contact_id],
+                row_to_contact,
+            )
+            .unwrap();
+
+        assert_eq!(c.contact_clinic_id, None);
     }
 }

@@ -630,6 +630,56 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 32 {
+        // Drop contact_clinic_id column; migrate existing data to clinic_contacts junction table.
+        // clinic_contacts is the sole source of truth for doctor-clinic links.
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id)
+             SELECT contact_clinic_id, id FROM contacts
+             WHERE contact_clinic_id IS NOT NULL;
+             CREATE TABLE contacts_v32 (
+                 id                 TEXT PRIMARY KEY,
+                 name               TEXT NOT NULL,
+                 role               TEXT NOT NULL CHECK(role IN (
+                                     'gp','specialist','dentist','physio',
+                                     'pharmacist','hospital','other')),
+                 specialty          TEXT,
+                 phone              TEXT,
+                 email              TEXT,
+                 clinic             TEXT,
+                 address            TEXT,
+                 notes              TEXT,
+                 created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+                 updated_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+                 clinic_id          TEXT REFERENCES clinics(id),
+                 is_deduped_with    TEXT,
+                 dedup_score        REAL,
+                 user_id            TEXT REFERENCES users(id) ON DELETE CASCADE,
+                 title              TEXT,
+                 is_deleted         INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0,1)),
+                 deleted_at         TEXT,
+                 is_draft           INTEGER NOT NULL DEFAULT 0,
+                 merge_candidate_id TEXT REFERENCES contacts_v32(id)
+             );
+             INSERT INTO contacts_v32 (id, name, role, specialty, phone, email, clinic,
+                                       address, notes, created_at, updated_at, clinic_id,
+                                       is_deduped_with, dedup_score, user_id, title,
+                                       is_deleted, deleted_at, is_draft, merge_candidate_id)
+             SELECT id, name, role, specialty, phone, email, clinic,
+                    address, notes, created_at, updated_at, clinic_id,
+                    is_deduped_with, dedup_score, user_id, title,
+                    is_deleted, deleted_at, is_draft, merge_candidate_id
+             FROM contacts;
+             DROP TABLE contacts;
+             ALTER TABLE contacts_v32 RENAME TO contacts;
+             CREATE INDEX IF NOT EXISTS idx_contacts_is_deduped_with ON contacts(is_deduped_with);
+             CREATE INDEX IF NOT EXISTS idx_contacts_is_deleted ON contacts(is_deleted);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [32])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -656,7 +706,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 31);
+        assert_eq!(version, 32);
     }
 
     #[test]
@@ -670,15 +720,13 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 31);
+        assert_eq!(version, 32);
     }
 
     #[test]
-    fn contact_clinic_id_references_clinics_not_contacts() {
+    fn contact_clinic_link_uses_junction_table() {
         let conn = migrated_conn();
-        // Insert a clinic, then link a contact to it via contact_clinic_id.
-        // Before migration 31, this would fail with FOREIGN KEY constraint error
-        // because contact_clinic_id incorrectly referenced contacts(id).
+        // Migration 32: contact_clinic_id column dropped; clinic_contacts is sole source of truth.
         conn.execute(
             "INSERT INTO clinics (id, name, created_at) VALUES ('clinic-1', 'Test Clinic', '2025-01-01')",
             [],
@@ -690,20 +738,32 @@ mod tests {
             [],
         )
         .unwrap();
-        // This UPDATE must succeed — contact_clinic_id now references clinics(id)
         conn.execute(
-            "UPDATE contacts SET contact_clinic_id = 'clinic-1' WHERE id = 'contact-1'",
+            "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES ('clinic-1', 'contact-1')",
             [],
         )
         .unwrap();
         let linked: Option<String> = conn
             .query_row(
-                "SELECT contact_clinic_id FROM contacts WHERE id = 'contact-1'",
+                "SELECT cc.clinic_id FROM clinic_contacts cc WHERE cc.contact_id = 'contact-1'",
                 [],
                 |r| r.get(0),
             )
             .unwrap();
         assert_eq!(linked, Some("clinic-1".to_string()));
+        // contacts table must NOT have contact_clinic_id column
+        let has_col: bool = conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('contacts') WHERE name = 'contact_clinic_id'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )
+            .unwrap()
+            == 1;
+        assert!(
+            !has_col,
+            "contact_clinic_id column should have been dropped in migration 32"
+        );
     }
 
     #[test]

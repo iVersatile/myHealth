@@ -493,7 +493,7 @@ pub fn clinics_list_with_contacts(
 ) -> Result<Vec<ClinicWithContacts>, CommandError> {
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
-    clinics_list_with_contacts_conn(&conn)
+    clinics_list_with_contacts_conn(conn)
 }
 
 #[cfg(test)]
@@ -1172,5 +1172,41 @@ mod tests {
             "confirmed clinic must appear in the regular list"
         );
         assert_eq!(result[0].name, "Real Clinic");
+    }
+
+    #[test]
+    fn contact_linked_via_junction_table_appears_in_clinic_list() {
+        // Regression test: contacts_update now writes clinic_contacts (not contacts.contact_clinic_id).
+        // Verify clinics_list_with_contacts_conn reflects that link correctly.
+        let conn = open_test_db();
+        let now = Utc::now().to_rfc3339();
+
+        let clinic_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES (?, 'Link Test Clinic', ?)",
+            rusqlite::params![clinic_id, now],
+        )
+        .unwrap();
+
+        let contact_id = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES (?, 'Dr Link', 'specialist', ?, ?)",
+            rusqlite::params![contact_id, now, now],
+        )
+        .unwrap();
+
+        // This is the path taken by contacts_update after migration 32
+        conn.execute(
+            "INSERT OR IGNORE INTO clinic_contacts (clinic_id, contact_id) VALUES (?, ?)",
+            rusqlite::params![clinic_id, contact_id],
+        )
+        .unwrap();
+
+        let result = clinics_list_with_contacts_conn(&conn).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].linked_contacts.len(), 1);
+        assert_eq!(result[0].linked_contacts[0].id, contact_id);
+        assert_eq!(result[0].linked_contacts[0].name, "Dr Link");
     }
 }

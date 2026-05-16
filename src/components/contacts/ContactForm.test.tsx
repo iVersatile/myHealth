@@ -5,7 +5,10 @@ import { ContactForm } from './ContactForm'
 import type { Contact } from '../../store/contactsStore'
 
 vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn().mockResolvedValue([]),
+  invoke: vi.fn((cmd: string) => {
+    if (cmd === 'clinics_list_including_drafts') return Promise.resolve([])
+    return Promise.resolve([])
+  }),
 }))
 
 const fakeContact: Contact = {
