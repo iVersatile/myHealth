@@ -2623,12 +2623,23 @@ pub async fn documents_run_extraction(
                 .optional()?;
             if existing_appt.is_none() {
                 let appt_id = Uuid::new_v4().to_string();
-                let title = format!("Appointment with {doctor_name}");
+                let first_clinic_name = created_clinic_ids.first().map(|(n, _)| n.as_str());
+                let title = match first_clinic_name {
+                    Some(clinic) => format!("Appointment with {doctor_name} in {clinic}"),
+                    None => format!("Appointment with {doctor_name}"),
+                };
                 conn.execute(
                     "INSERT INTO appointments \
-                     (id, title, doctor_name, appt_date, status, is_draft, created_at, updated_at) \
-                     VALUES (?1, ?2, ?3, ?4, 'completed', 1, ?5, ?5)",
-                    rusqlite::params![appt_id, title, doctor_name, resolved_activity_date, now],
+                     (id, title, doctor_name, clinic_name, appt_date, status, is_draft, created_at, updated_at) \
+                     VALUES (?1, ?2, ?3, ?4, ?5, 'completed', 1, ?6, ?6)",
+                    rusqlite::params![
+                        appt_id,
+                        title,
+                        doctor_name,
+                        first_clinic_name,
+                        resolved_activity_date,
+                        now
+                    ],
                 )?;
                 let link_id = Uuid::new_v4().to_string();
                 conn.execute(

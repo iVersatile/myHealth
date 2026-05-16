@@ -72,6 +72,13 @@ pub struct ClinicWithContacts {
     pub linked_contacts: Vec<LinkedContact>,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct ClinicForPicker {
+    pub id: String,
+    pub name: String,
+    pub is_draft: bool,
+}
+
 const SELECT_CLINIC: &str =
     "SELECT id, name, address, phone, email, created_at, company_registration_number FROM clinics";
 
@@ -96,6 +103,28 @@ pub fn clinics_list(state: State<'_, AppState>) -> Result<Vec<Clinic>, CommandEr
         "{SELECT_CLINIC} WHERE is_deleted = 0 AND is_draft = 0 ORDER BY name ASC"
     ))?;
     let rows = stmt.query_map([], row_to_clinic)?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| CommandError::Internal(e.to_string()))
+}
+
+#[tauri::command]
+pub fn clinics_list_including_drafts(
+    state: State<'_, AppState>,
+) -> Result<Vec<ClinicForPicker>, CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, name, is_draft FROM clinics \
+         WHERE is_deleted = 0 ORDER BY is_draft ASC, name ASC",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(ClinicForPicker {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            is_draft: row.get::<_, i64>(2)? != 0,
+        })
+    })?;
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| CommandError::Internal(e.to_string()))
 }

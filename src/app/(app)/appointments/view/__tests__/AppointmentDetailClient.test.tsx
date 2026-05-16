@@ -51,6 +51,7 @@ function setupInvoke(
     if (cmd === 'categories_list') return Promise.resolve([])
     if (cmd === 'categories_for_appointment') return Promise.resolve(assignedCategoryIds)
     if (cmd === 'contacts_list') return Promise.resolve([])
+    if (cmd === 'clinics_list_including_drafts') return Promise.resolve([])
     if (cmd === 'appointment_tags_get') return Promise.resolve([])
     if (cmd === 'notes_for_entity') return Promise.resolve([])
     if (cmd === 'symptoms_for_entity') return Promise.resolve([])

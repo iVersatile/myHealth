@@ -61,7 +61,7 @@ describe('AppointmentForm', () => {
       if (command === 'contacts_list') {
         return Promise.resolve([])
       }
-      if (command === 'clinics_list') {
+      if (command === 'clinics_list_including_drafts') {
         return Promise.resolve([])
       }
       return Promise.resolve(null)
@@ -80,7 +80,7 @@ describe('AppointmentForm', () => {
         expect(screen.getByLabelText(/date/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/duration/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/doctor/i)).toBeInTheDocument()
-        expect(screen.getByLabelText(/clinic/i)).toBeInTheDocument()
+        expect(screen.getByRole('combobox', { name: /select clinic/i })).toBeInTheDocument()
         expect(screen.getByLabelText(/specialty/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/status/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/location/i)).toBeInTheDocument()
@@ -134,7 +134,7 @@ describe('AppointmentForm', () => {
         if (command === 'contacts_list') {
           return Promise.resolve([])
         }
-        if (command === 'clinics_list') {
+        if (command === 'clinics_list_including_drafts') {
           return Promise.resolve([])
         }
         return Promise.resolve(null)
@@ -147,7 +147,7 @@ describe('AppointmentForm', () => {
       await waitFor(() => {
         expect(screen.getByLabelText(/title/i)).toHaveValue('Routine Checkup')
         expect(screen.getByLabelText(/doctor/i)).toHaveValue('Dr. Smith')
-        expect(screen.getByLabelText(/clinic/i)).toHaveValue('City Clinic')
+        expect(screen.getByRole('textbox', { name: /clinic name \(free text\)/i })).toHaveValue('City Clinic')
         expect(screen.getByLabelText(/specialty/i)).toHaveValue('General Practice')
         expect(screen.getByLabelText(/duration/i)).toHaveValue(30)
         expect(screen.getByLabelText(/location/i)).toHaveValue('123 Main St')
@@ -275,7 +275,7 @@ describe('AppointmentForm', () => {
       const dateInput = screen.getByLabelText(/date/i)
       const durationInput = screen.getByLabelText(/duration/i)
       const doctorInput = screen.getByLabelText(/doctor/i)
-      const clinicInput = screen.getByLabelText(/clinic/i)
+      const clinicInput = screen.getByRole('textbox', { name: /clinic name \(free text\)/i })
       const locationInput = screen.getByLabelText(/location/i)
       const notesInput = screen.getByLabelText(/notes/i)
 
@@ -481,7 +481,7 @@ describe('AppointmentForm', () => {
         if (command === 'contacts_list') {
           return Promise.resolve([])
         }
-        if (command === 'clinics_list') {
+        if (command === 'clinics_list_including_drafts') {
           return Promise.resolve([])
         }
         return Promise.resolve(null)
@@ -538,7 +538,7 @@ describe('AppointmentForm', () => {
         if (command === 'contacts_list') {
           return Promise.resolve([])
         }
-        if (command === 'clinics_list') {
+        if (command === 'clinics_list_including_drafts') {
           return Promise.resolve([])
         }
         return Promise.resolve(null)
@@ -707,7 +707,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
-        if (command === 'clinics_list') return Promise.resolve([])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([])
         return Promise.resolve(null)
       })
 
@@ -718,12 +718,12 @@ describe('AppointmentForm', () => {
       })
     })
 
-    it('renders clinic dropdown when clinics_list returns clinics', async () => {
+    it('renders clinic dropdown when clinics_list_including_drafts returns clinics', async () => {
       mockInvoke.mockImplementation((command: string) => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([])
-        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital', is_draft: false }])
         return Promise.resolve(null)
       })
 
@@ -734,11 +734,11 @@ describe('AppointmentForm', () => {
       })
     })
 
-    it('calls clinics_list on mount', async () => {
+    it('calls clinics_list_including_drafts on mount', async () => {
       render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
 
       await waitFor(() => {
-        expect(mockInvoke).toHaveBeenCalledWith('clinics_list')
+        expect(mockInvoke).toHaveBeenCalledWith('clinics_list_including_drafts')
       })
     })
 
@@ -747,7 +747,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
-        if (command === 'clinics_list') return Promise.resolve([])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([])
         return Promise.resolve(null)
       })
 
@@ -767,7 +767,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
-        if (command === 'clinics_list') return Promise.resolve([])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([])
         return Promise.resolve(null)
       })
 
@@ -787,7 +787,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([])
-        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital', is_draft: false }])
         return Promise.resolve(null)
       })
 
@@ -807,7 +807,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([])
-        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital', is_draft: false }])
         return Promise.resolve(null)
       })
 
@@ -848,7 +848,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([])
-        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital', is_draft: false }])
         return Promise.resolve(null)
       })
 
@@ -884,7 +884,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
-        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital', is_draft: false }])
         return Promise.resolve(null)
       })
 
@@ -922,7 +922,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
-        if (command === 'clinics_list') return Promise.resolve([])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([])
         if (command === 'appointment_link_contact') return Promise.resolve(null)
         return Promise.resolve(null)
       })
@@ -964,7 +964,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
-        if (command === 'clinics_list') return Promise.resolve([])
+        if (command === 'clinics_list_including_drafts') return Promise.resolve([])
         if (command === 'appointment_unlink_contact') return Promise.resolve(null)
         if (command === 'appointment_link_contact') return Promise.resolve(null)
         return Promise.resolve(null)

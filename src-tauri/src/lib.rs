@@ -37,7 +37,8 @@ use commands::categories::{
 use commands::clinics::{
     clinics_create, clinics_create_if_not_exists, clinics_delete, clinics_get,
     clinics_get_linked_contacts, clinics_get_linked_documents, clinics_hard_delete,
-    clinics_link_contact, clinics_list, clinics_list_with_contacts, clinics_update,
+    clinics_link_contact, clinics_list, clinics_list_including_drafts, clinics_list_with_contacts,
+    clinics_update,
 };
 use commands::contacts::{
     contacts_create, contacts_create_with_clinic, contacts_delete, contacts_find_similar,
@@ -236,6 +237,7 @@ pub fn run() {
             icalendar_import,
             icalendar_export,
             clinics_list,
+            clinics_list_including_drafts,
             clinics_list_with_contacts,
             clinics_get,
             clinics_create,

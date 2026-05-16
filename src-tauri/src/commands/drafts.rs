@@ -1,3 +1,4 @@
+use rusqlite::OptionalExtension;
 use tauri::State;
 
 use super::{AppState, CommandContext, CommandError};
@@ -250,10 +251,30 @@ pub fn accept_draft_entity(
             "UPDATE contacts SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
             [&entity_id],
         )?,
-        "clinic" => conn.execute(
-            "UPDATE clinics SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
-            [&entity_id],
-        )?,
+        "clinic" => {
+            let clinic_name: Option<String> = conn
+                .query_row(
+                    "SELECT name FROM clinics WHERE id = ?1 AND is_draft = 1",
+                    [&entity_id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            let rows = conn.execute(
+                "UPDATE clinics SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
+                [&entity_id],
+            )?;
+            if let Some(ref name) = clinic_name {
+                let now_str = chrono::Utc::now().to_rfc3339();
+                conn.execute(
+                    "UPDATE appointments \
+                     SET title = 'Appointment with ' || doctor_name || ' in ' || clinic_name, \
+                         updated_at = ?1 \
+                     WHERE clinic_name = ?2 AND is_deleted = 0",
+                    rusqlite::params![now_str, name],
+                )?;
+            }
+            rows
+        }
         "appointment" => conn.execute(
             "UPDATE appointments SET is_draft = 0 WHERE id = ?1 AND is_draft = 1",
             [&entity_id],
@@ -297,10 +318,30 @@ pub fn reject_draft_entity(
             "UPDATE contacts SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_draft = 1",
             rusqlite::params![now, entity_id],
         )?,
-        "clinic" => conn.execute(
-            "UPDATE clinics SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_draft = 1",
-            rusqlite::params![now, entity_id],
-        )?,
+        "clinic" => {
+            let clinic_name: Option<String> = conn
+                .query_row(
+                    "SELECT name FROM clinics WHERE id = ?1 AND is_draft = 1",
+                    [&entity_id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            let rows = conn.execute(
+                "UPDATE clinics SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_draft = 1",
+                rusqlite::params![now, entity_id],
+            )?;
+            if let Some(ref name) = clinic_name {
+                conn.execute(
+                    "UPDATE appointments \
+                     SET clinic_name = NULL, \
+                         title = 'Appointment with ' || doctor_name, \
+                         updated_at = ?1 \
+                     WHERE clinic_name = ?2 AND is_deleted = 0",
+                    rusqlite::params![now, name],
+                )?;
+            }
+            rows
+        }
         "appointment" => conn.execute(
             "UPDATE appointments SET is_deleted = 1, deleted_at = ?1 WHERE id = ?2 AND is_draft = 1",
             rusqlite::params![now, entity_id],

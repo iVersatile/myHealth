@@ -60,9 +60,20 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
   const [allContacts, setAllContacts] = useState<Contact[]>([])
   const [linkedDoctorContactId, setLinkedDoctorContactId] = useState<string | null>(null)
   const [linkedClinicContactId, setLinkedClinicContactId] = useState<string | null>(null)
-  const [allClinics, setAllClinics] = useState<Array<{ id: string; name: string }>>([])
+  const [allClinics, setAllClinics] = useState<Array<{ id: string; name: string; is_draft: boolean }>>([])
   const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null)
   const initContactsResolved = useRef(false)
+
+  function derivedTitle(doctor: string, clinic: string): string {
+    if (doctor && clinic) return `Appointment with ${doctor} in ${clinic}`
+    if (doctor) return `Appointment with ${doctor}`
+    return ''
+  }
+
+  const [titleIsAuto, setTitleIsAuto] = useState(() => {
+    if (!initial?.title) return true
+    return initial.title === derivedTitle(initial.doctor_name ?? '', initial.clinic_name ?? '')
+  })
 
   useEffect(() => {
     const loads: Promise<void>[] = [
@@ -96,7 +107,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
           }
         })
         .catch(() => {}),
-      invoke<Array<{ id: string; name: string }>>('clinics_list')
+      invoke<Array<{ id: string; name: string; is_draft: boolean }>>('clinics_list_including_drafts')
         .then((clinics) => {
           setAllClinics(clinics)
           if (initial?.clinic_name) {
@@ -115,6 +126,12 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
     }
     void Promise.all(loads)
   }, [initial?.id])
+
+  useEffect(() => {
+    if (titleIsAuto) {
+      setTitle(derivedTitle(doctorName, clinicName))
+    }
+  }, [doctorName, clinicName, titleIsAuto])
 
   async function handleCategoryChange(nextIds: string[]) {
     if (!initial?.id) {
@@ -241,7 +258,10 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
           type="text"
           required
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value)
+            setTitleIsAuto(false)
+          }}
           placeholder="e.g. Annual checkup"
           className={inputClass}
         />
@@ -322,56 +342,63 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
         </div>
         <div>
           <label htmlFor="appt-clinic" className={labelClass}>Clinic / Hospital</label>
-          {allClinics.length > 0 ? (
-            <div className="space-y-1">
+          <div className="space-y-1">
+            {allContacts.some((c) => CLINIC_ROLES.has(c.role)) && (
               <select
-                id="appt-clinic-picker"
-                value={selectedClinicId ?? ''}
+                id="appt-clinic-contact-picker"
+                value={linkedClinicContactId ?? ''}
                 onChange={(e) => {
-                  const id = e.target.value
-                  if (id) {
-                    const clinic = allClinics.find((c) => c.id === id)
-                    if (clinic) {
-                      setSelectedClinicId(id)
-                      setClinicName(clinic.name)
-                    }
-                  } else {
-                    setSelectedClinicId(null)
-                  }
+                  if (e.target.value) void handleClinicContactSelect(e.target.value)
+                  else void handleClinicContactClear()
                 }}
                 className={inputClass}
-                aria-label="Select clinic"
+                aria-label="Select clinic from contacts"
               >
-                <option value="">— Select clinic —</option>
-                {allClinics.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
+                <option value="">— Select from contacts —</option>
+                {allContacts.filter((c) => CLINIC_ROLES.has(c.role)).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
-              <input
-                id="appt-clinic"
-                type="text"
-                value={clinicName}
-                onChange={(e) => {
-                  setClinicName(e.target.value)
+            )}
+            <select
+              id="appt-clinic-picker"
+              value={selectedClinicId ?? ''}
+              onChange={(e) => {
+                const id = e.target.value
+                if (id) {
+                  const clinic = allClinics.find((c) => c.id === id)
+                  if (clinic) {
+                    setSelectedClinicId(id)
+                    setClinicName(clinic.name)
+                  }
+                } else {
                   setSelectedClinicId(null)
-                }}
-                placeholder="Or type a name"
-                className={inputClass}
-                aria-label="Clinic name (free text)"
-              />
-            </div>
-          ) : (
+                  setClinicName('')
+                }
+              }}
+              className={inputClass}
+              aria-label="Select clinic"
+            >
+              <option value="">— Select clinic —</option>
+              {allClinics.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.is_draft ? ' (pending)' : ''}
+                </option>
+              ))}
+            </select>
             <input
               id="appt-clinic"
               type="text"
               value={clinicName}
-              onChange={(e) => setClinicName(e.target.value)}
-              placeholder="City Medical Centre"
+              onChange={(e) => {
+                setClinicName(e.target.value)
+                setSelectedClinicId(null)
+              }}
+              placeholder="Or type a name"
               className={inputClass}
+              aria-label="Clinic name (free text)"
             />
-          )}
+          </div>
         </div>
       </div>
 
