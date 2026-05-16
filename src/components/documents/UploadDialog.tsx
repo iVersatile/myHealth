@@ -204,6 +204,29 @@ export function UploadDialog({ onClose, onUploaded }: UploadDialogProps) {
           if (batchTags.length > 0) {
             await invoke('documents_tags_set', { id: doc.id, tags: batchTags.filter(Boolean) })
           }
+          const clinicSugg = (suggestions.clinic_suggestions ?? [])[0]
+          if (clinicSugg) {
+            try {
+              const clinicList = await invoke<Array<{ id: string; name: string }>>('clinics_list').catch(() => [])
+              const match = clinicList.find(
+                (c) => c.name.toLowerCase() === clinicSugg.name.toLowerCase()
+              )
+              if (match) {
+                await invoke('documents_link_clinic', { documentId: doc.id, clinicId: match.id })
+              } else {
+                await invoke<{ id: string }>('clinics_create_if_not_exists', {
+                  input: {
+                    name: clinicSugg.name,
+                    address: null,
+                    phone: null,
+                    company_registration_number: clinicSugg.company_registration_number ?? null,
+                    addresses: clinicSugg.addresses ?? [],
+                  },
+                })
+                await invoke('documents_set_clinic', { documentId: doc.id, clinicName: clinicSugg.name })
+              }
+            } catch { /* non-fatal */ }
+          }
         }
         collectedIds.push(doc.id)
         setFileQueue((prev) =>

@@ -1139,4 +1139,64 @@ describe('UploadDialog — batch mode', () => {
       expect(screen.queryByText(/entities pending review/i)).toBeNull()
     })
   })
+
+  it('batch upload auto-links existing clinic when suggestion name matches', async () => {
+    const fakeDoc1 = { ...fakeDoc, id: 'doc-1', filename: 'file1.pdf', file_path: '/f/file1.pdf' }
+
+    mockInvoke.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc1)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [],
+        contact_suggestions: [],
+        clinic_suggestions: [{ name: 'City Clinic', company_registration_number: null, addresses: [] }],
+      })
+      if (cmd === 'clinics_list') return Promise.resolve([{ id: 'existing-clinic-id', name: 'City Clinic' }])
+      if (cmd === 'documents_link_clinic') return Promise.resolve(undefined)
+      if (cmd === 'get_pending_review_count') return Promise.resolve(0)
+      return Promise.resolve(undefined)
+    })
+
+    mockOpen.mockResolvedValue(['/f/file1.pdf', '/f/file2.pdf'])
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_link_clinic', {
+      documentId: 'doc-1',
+      clinicId: 'existing-clinic-id',
+    }))
+  })
+
+  it('batch upload creates and links new clinic when suggestion has no existing match', async () => {
+    const fakeDoc1 = { ...fakeDoc, id: 'doc-1', filename: 'file1.pdf', file_path: '/f/file1.pdf' }
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'categories_list') return Promise.resolve([])
+      if (cmd === 'documents_valid_categories') return Promise.resolve(VALID_CATEGORIES)
+      if (cmd === 'documents_upload') return Promise.resolve(fakeDoc1)
+      if (cmd === 'documents_run_extraction') return Promise.resolve({
+        doctor_candidates: [], category_suggestion: null, document_tags: [], auto_tags: [],
+        contact_suggestions: [],
+        clinic_suggestions: [{ name: 'New Clinic', company_registration_number: '12345', addresses: ['1 Road'] }],
+      })
+      if (cmd === 'clinics_list') return Promise.resolve([])
+      if (cmd === 'clinics_create_if_not_exists') return Promise.resolve({ id: 'new-clinic-id' })
+      if (cmd === 'documents_set_clinic') return Promise.resolve(undefined)
+      if (cmd === 'get_pending_review_count') return Promise.resolve(0)
+      return Promise.resolve(undefined)
+    })
+
+    mockOpen.mockResolvedValue(['/f/file1.pdf', '/f/file2.pdf'])
+    render(<UploadDialog onClose={vi.fn()} onUploaded={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: /select files/i }))
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('clinics_create_if_not_exists', expect.objectContaining({
+      input: expect.objectContaining({ name: 'New Clinic' }),
+    })))
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledWith('documents_set_clinic', {
+      documentId: 'doc-1',
+      clinicName: 'New Clinic',
+    }))
+  })
 })
