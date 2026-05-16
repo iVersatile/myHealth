@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { ContactForm } from './ContactForm'
 import type { Contact } from '../../store/contactsStore'
 
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn().mockResolvedValue([]),
+}))
+
 const fakeContact: Contact = {
   id: 'c1',
   name: 'Dr. Jane Smith',

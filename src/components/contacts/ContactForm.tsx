@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Contact, CONTACT_ROLES, ROLE_LABELS } from '../../store/contactsStore'
+import { useState, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { Contact, CONTACT_ROLES, ROLE_LABELS, CLINIC_ROLES } from '../../store/contactsStore'
 import type { ContactCreateInput, ContactUpdateInput } from '../../hooks/useContacts'
 import { extractTauriError } from '../../lib/ipc'
 
@@ -20,8 +21,16 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
   const [clinic, setClinic] = useState(initial?.clinic ?? '')
   const [address, setAddress] = useState(initial?.address ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
+  const [contactClinicId, setContactClinicId] = useState<string | null>(initial?.contact_clinic_id ?? null)
+  const [hospitalContacts, setHospitalContacts] = useState<Contact[]>([])
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    invoke<Contact[]>('contacts_list')
+      .then((list) => setHospitalContacts(list.filter((c) => CLINIC_ROLES.has(c.role))))
+      .catch(() => undefined)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -39,6 +48,7 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
         clinic: clinic.trim() || null,
         address: address.trim() || null,
         notes: notes.trim() || null,
+        ...(initial ? { contact_clinic_id: contactClinicId } : {}),
       }
       await onSave(payload as ContactCreateInput | ContactUpdateInput)
     } catch (e: unknown) {
@@ -98,7 +108,21 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
 
           <div className="col-span-2">
             <label className={labelCls}>Clinic / Hospital</label>
-            <input className={fieldCls} value={clinic} onChange={(e) => setClinic(e.target.value)} />
+            <select
+              className={fieldCls}
+              value={contactClinicId ?? ''}
+              onChange={(e) => {
+                const selected = hospitalContacts.find((c) => c.id === e.target.value)
+                setContactClinicId(selected?.id ?? null)
+                setClinic(selected?.name ?? '')
+              }}
+              aria-label="Clinic / Hospital"
+            >
+              <option value="">— None —</option>
+              {hospitalContacts.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="col-span-2">
