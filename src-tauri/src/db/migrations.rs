@@ -574,6 +574,62 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 31 {
+        // Fix: contact_clinic_id was defined in migrations 11 and 15 as
+        // REFERENCES contacts_v11/v15(id). After the RENAME, SQLite 3.26.0+ updated
+        // these to REFERENCES contacts(id), making the column self-referential.
+        // The column links a contact to a clinic, so it must reference clinics(id).
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "CREATE TABLE contacts_v31 (
+                 id                 TEXT PRIMARY KEY,
+                 name               TEXT NOT NULL,
+                 role               TEXT NOT NULL CHECK(role IN (
+                                     'gp','specialist','dentist','physio',
+                                     'pharmacist','hospital','other')),
+                 specialty          TEXT,
+                 phone              TEXT,
+                 email              TEXT,
+                 clinic             TEXT,
+                 address            TEXT,
+                 notes              TEXT,
+                 created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+                 updated_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+                 clinic_id          TEXT REFERENCES clinics(id),
+                 is_deduped_with    TEXT,
+                 dedup_score        REAL,
+                 user_id            TEXT REFERENCES users(id) ON DELETE CASCADE,
+                 title              TEXT,
+                 contact_clinic_id  TEXT REFERENCES clinics(id),
+                 is_deleted         INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0,1)),
+                 deleted_at         TEXT,
+                 is_draft           INTEGER NOT NULL DEFAULT 0,
+                 merge_candidate_id TEXT REFERENCES contacts_v31(id)
+             );
+             INSERT INTO contacts_v31 (id, name, role, specialty, phone, email, clinic,
+                                       address, notes, created_at, updated_at, clinic_id,
+                                       is_deduped_with, dedup_score, user_id, title,
+                                       contact_clinic_id, is_deleted, deleted_at,
+                                       is_draft, merge_candidate_id)
+             SELECT c.id, c.name, c.role, c.specialty, c.phone, c.email, c.clinic,
+                    c.address, c.notes, c.created_at, c.updated_at, c.clinic_id,
+                    c.is_deduped_with, c.dedup_score, c.user_id, c.title,
+                    CASE WHEN c.contact_clinic_id IS NOT NULL
+                              AND EXISTS(SELECT 1 FROM clinics WHERE id = c.contact_clinic_id)
+                         THEN c.contact_clinic_id
+                         ELSE NULL
+                    END,
+                    c.is_deleted, c.deleted_at, c.is_draft, c.merge_candidate_id
+             FROM contacts c;
+             DROP TABLE contacts;
+             ALTER TABLE contacts_v31 RENAME TO contacts;
+             CREATE INDEX IF NOT EXISTS idx_contacts_is_deduped_with ON contacts(is_deduped_with);
+             CREATE INDEX IF NOT EXISTS idx_contacts_is_deleted ON contacts(is_deleted);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [31])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -600,7 +656,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 30);
+        assert_eq!(version, 31);
     }
 
     #[test]
@@ -614,7 +670,40 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 30);
+        assert_eq!(version, 31);
+    }
+
+    #[test]
+    fn contact_clinic_id_references_clinics_not_contacts() {
+        let conn = migrated_conn();
+        // Insert a clinic, then link a contact to it via contact_clinic_id.
+        // Before migration 31, this would fail with FOREIGN KEY constraint error
+        // because contact_clinic_id incorrectly referenced contacts(id).
+        conn.execute(
+            "INSERT INTO clinics (id, name, created_at) VALUES ('clinic-1', 'Test Clinic', '2025-01-01')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO contacts (id, name, role, created_at, updated_at) \
+             VALUES ('contact-1', 'Dr Test', 'gp', '2025-01-01', '2025-01-01')",
+            [],
+        )
+        .unwrap();
+        // This UPDATE must succeed — contact_clinic_id now references clinics(id)
+        conn.execute(
+            "UPDATE contacts SET contact_clinic_id = 'clinic-1' WHERE id = 'contact-1'",
+            [],
+        )
+        .unwrap();
+        let linked: Option<String> = conn
+            .query_row(
+                "SELECT contact_clinic_id FROM contacts WHERE id = 'contact-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(linked, Some("clinic-1".to_string()));
     }
 
     #[test]
