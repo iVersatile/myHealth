@@ -33,7 +33,7 @@ function datetimeLocalToIso(local: string): string {
 const STATUS_OPTIONS: AppointmentStatus[] = ['scheduled', 'completed', 'cancelled', 'missed']
 
 export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange }: AppointmentFormProps) {
-  const [title, setTitle] = useState(initial?.title ?? '')
+  const [titleOverride, setTitleOverride] = useState(initial?.title ?? '')
   const [doctorName, setDoctorName] = useState(initial?.doctor_name ?? '')
   const [clinicName, setClinicName] = useState(initial?.clinic_name ?? '')
   const [specialty, setSpecialty] = useState(initial?.specialty ?? '')
@@ -127,11 +127,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
     void Promise.all(loads)
   }, [initial?.id])
 
-  useEffect(() => {
-    if (titleIsAuto) {
-      setTitle(derivedTitle(doctorName, clinicName))
-    }
-  }, [doctorName, clinicName, titleIsAuto])
+  const title = titleIsAuto ? derivedTitle(doctorName, clinicName) : titleOverride
 
   async function handleCategoryChange(nextIds: string[]) {
     if (!initial?.id) {
@@ -259,7 +255,7 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
           required
           value={title}
           onChange={(e) => {
-            setTitle(e.target.value)
+            setTitleOverride(e.target.value)
             setTitleIsAuto(false)
           }}
           placeholder="e.g. Annual checkup"
