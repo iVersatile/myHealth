@@ -454,7 +454,7 @@ pub fn clinics_list_with_contacts(
          FROM clinics c
          LEFT JOIN clinic_contacts cc ON cc.clinic_id = c.id
          LEFT JOIN contacts co ON co.id = cc.contact_id AND co.is_deleted = 0
-         WHERE c.is_deleted = 0
+         WHERE c.is_deleted = 0 AND c.is_draft = 0
          ORDER BY c.name COLLATE NOCASE, co.name COLLATE NOCASE",
     )?;
 
