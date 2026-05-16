@@ -27,6 +27,7 @@ import { useAppointmentsStore } from '../../../store/appointmentsStore'
 import type { Document } from '../../../store/documentsStore'
 import type { Appointment } from '../../../store/appointmentsStore'
 import type { ContactCreateInput, ContactCreateWithClinicInput } from '../../../hooks/useContacts'
+import type { Contact } from '../../../store/contactsStore'
 
 
 export default function DocumentsPage() {
@@ -120,6 +121,13 @@ export default function DocumentsPage() {
         appointmentId: appt.id,
         score: 100,
       })
+      if (suggestion.clinic_name) {
+        const clinicContacts = await invoke<Contact[]>('contacts_list', { role: 'hospital' })
+        const match = clinicContacts.find((c) => c.name === suggestion.clinic_name)
+        if (match) {
+          await invoke('appointment_link_contact', { appointmentId: appt.id, contactId: match.id }).catch(() => {})
+        }
+      }
       upsertAppointment(appt)
       if (draftAppointmentId) {
         await invoke('reject_draft_entity', { entityType: 'appointment', entityId: draftAppointmentId }).catch(() => {})

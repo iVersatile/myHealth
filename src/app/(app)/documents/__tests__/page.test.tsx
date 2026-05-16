@@ -161,6 +161,113 @@ describe('DocumentsPage', () => {
     })
   })
 
+  describe('handleApptSuggestionConfirm — clinic contact linking', () => {
+    const clinicContact = {
+      id: 'contact-clinic-1',
+      name: 'City Clinic',
+      role: 'hospital',
+      specialty: null,
+      phone: null,
+      email: null,
+      clinic: null,
+      address: null,
+      notes: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+      contact_clinic_id: null,
+    }
+    const createdAppt = {
+      id: 'appt-1',
+      title: 'Visit',
+      appt_date: '2026-03-15T00:00:00Z',
+      doctor_name: 'Dr Smith',
+      clinic_name: 'City Clinic',
+      specialty: 'Cardiology',
+      duration_min: 0,
+      location: null,
+      notes: null,
+      status: 'completed',
+      reminder_min: 60,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+      document_ids: [],
+      contact_ids: [],
+      recurrence_series_id: null,
+    }
+
+    it('calls appointment_link_contact when clinic_name matches an existing clinic contact', async () => {
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === 'links_score_candidates') return Promise.resolve([])
+        if (cmd === 'appointments_suggest_from_document')
+          return Promise.resolve({
+            id: 'draft-1',
+            title: 'Visit with Dr Smith',
+            appt_date: '2026-03-15',
+            doctor_name: 'Dr Smith',
+            clinic_name: 'City Clinic',
+            specialty: 'Cardiology',
+          })
+        if (cmd === 'appointments_create') return Promise.resolve(createdAppt)
+        if (cmd === 'contacts_list') return Promise.resolve([clinicContact])
+        return Promise.resolve(undefined)
+      })
+
+      render(<DocumentsPage />)
+
+      fireEvent.click(screen.getByTestId('upload-btn'))
+      fireEvent.click(screen.getByRole('button', { name: 'Simulate Upload' }))
+
+      await waitFor(() =>
+        expect(screen.getByTestId('appt-suggestion-banner')).toBeInTheDocument(),
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Create Appointment' }))
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('appointment_link_contact', {
+          appointmentId: 'appt-1',
+          contactId: 'contact-clinic-1',
+        }),
+      )
+    })
+
+    it('skips appointment_link_contact when no clinic contact name matches', async () => {
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === 'links_score_candidates') return Promise.resolve([])
+        if (cmd === 'appointments_suggest_from_document')
+          return Promise.resolve({
+            id: 'draft-1',
+            title: 'Visit with Dr Smith',
+            appt_date: '2026-03-15',
+            doctor_name: 'Dr Smith',
+            clinic_name: 'Unknown Clinic',
+            specialty: 'Cardiology',
+          })
+        if (cmd === 'appointments_create')
+          return Promise.resolve({ ...createdAppt, clinic_name: 'Unknown Clinic' })
+        if (cmd === 'contacts_list') return Promise.resolve([clinicContact])
+        return Promise.resolve(undefined)
+      })
+
+      render(<DocumentsPage />)
+
+      fireEvent.click(screen.getByTestId('upload-btn'))
+      fireEvent.click(screen.getByRole('button', { name: 'Simulate Upload' }))
+
+      await waitFor(() =>
+        expect(screen.getByTestId('appt-suggestion-banner')).toBeInTheDocument(),
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Create Appointment' }))
+
+      await waitFor(() =>
+        expect(mockInvoke).toHaveBeenCalledWith('appointments_create', expect.anything()),
+      )
+
+      expect(mockInvoke).not.toHaveBeenCalledWith('appointment_link_contact', expect.anything())
+    })
+  })
+
   describe('Bug #4 — appointments_create error shows toast', () => {
     it('displays the error message in a toast when appointments_create rejects', async () => {
       mockInvoke.mockImplementation((cmd: string) => {
