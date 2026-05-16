@@ -61,6 +61,9 @@ describe('AppointmentForm', () => {
       if (command === 'contacts_list') {
         return Promise.resolve([])
       }
+      if (command === 'clinics_list') {
+        return Promise.resolve([])
+      }
       return Promise.resolve(null)
     })
   })
@@ -129,6 +132,9 @@ describe('AppointmentForm', () => {
           return Promise.resolve(['cat-1'])
         }
         if (command === 'contacts_list') {
+          return Promise.resolve([])
+        }
+        if (command === 'clinics_list') {
           return Promise.resolve([])
         }
         return Promise.resolve(null)
@@ -475,6 +481,9 @@ describe('AppointmentForm', () => {
         if (command === 'contacts_list') {
           return Promise.resolve([])
         }
+        if (command === 'clinics_list') {
+          return Promise.resolve([])
+        }
         return Promise.resolve(null)
       })
 
@@ -527,6 +536,9 @@ describe('AppointmentForm', () => {
           return Promise.resolve(['cat-1'])
         }
         if (command === 'contacts_list') {
+          return Promise.resolve([])
+        }
+        if (command === 'clinics_list') {
           return Promise.resolve([])
         }
         return Promise.resolve(null)
@@ -695,6 +707,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'clinics_list') return Promise.resolve([])
         return Promise.resolve(null)
       })
 
@@ -705,18 +718,27 @@ describe('AppointmentForm', () => {
       })
     })
 
-    it('renders clinic picker select when clinic contacts exist', async () => {
+    it('renders clinic dropdown when clinics_list returns clinics', async () => {
       mockInvoke.mockImplementation((command: string) => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
-        if (command === 'contacts_list') return Promise.resolve([mockClinicContact])
+        if (command === 'contacts_list') return Promise.resolve([])
+        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
         return Promise.resolve(null)
       })
 
       render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
 
       await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: /select clinic from contacts/i })).toBeInTheDocument()
+        expect(screen.getByRole('combobox', { name: /select clinic/i })).toBeInTheDocument()
+      })
+    })
+
+    it('calls clinics_list on mount', async () => {
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
+
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('clinics_list')
       })
     })
 
@@ -725,6 +747,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'clinics_list') return Promise.resolve([])
         return Promise.resolve(null)
       })
 
@@ -744,6 +767,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'clinics_list') return Promise.resolve([])
         return Promise.resolve(null)
       })
 
@@ -758,18 +782,19 @@ describe('AppointmentForm', () => {
       })
     })
 
-    it('selecting a clinic contact populates clinic name field', async () => {
+    it('selecting clinic from dropdown sets clinic name text field', async () => {
       mockInvoke.mockImplementation((command: string) => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
-        if (command === 'contacts_list') return Promise.resolve([mockClinicContact])
+        if (command === 'contacts_list') return Promise.resolve([])
+        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
         return Promise.resolve(null)
       })
 
       render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
 
-      const clinicSelect = await screen.findByRole('combobox', { name: /select clinic from contacts/i })
-      await userEvent.selectOptions(clinicSelect, 'con-2')
+      const clinicSelect = await screen.findByRole('combobox', { name: /select clinic/i })
+      await userEvent.selectOptions(clinicSelect, 'cli-1')
 
       await waitFor(() => {
         const clinicInput = screen.getByRole('textbox', { name: /clinic name \(free text\)/i }) as HTMLInputElement
@@ -777,26 +802,65 @@ describe('AppointmentForm', () => {
       })
     })
 
-    it('clearing clinic picker resets linked contact id', async () => {
+    it('typing in clinic text field clears the dropdown selection', async () => {
       mockInvoke.mockImplementation((command: string) => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
-        if (command === 'contacts_list') return Promise.resolve([mockClinicContact])
+        if (command === 'contacts_list') return Promise.resolve([])
+        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
         return Promise.resolve(null)
       })
 
       render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} />)
 
-      const clinicSelect = await screen.findByRole('combobox', { name: /select clinic from contacts/i })
-      await userEvent.selectOptions(clinicSelect, 'con-2')
-      await userEvent.selectOptions(clinicSelect, '')
+      const clinicSelect = await screen.findByRole('combobox', { name: /select clinic/i })
+      await userEvent.selectOptions(clinicSelect, 'cli-1')
+
+      const clinicInput = screen.getByRole('textbox', { name: /clinic name \(free text\)/i })
+      await userEvent.type(clinicInput, ' Extra')
 
       await waitFor(() => {
         expect((clinicSelect as HTMLSelectElement).value).toBe('')
       })
     })
 
-    it('pre-fills doctor and clinic contact selectors from initial contact_ids', async () => {
+    it('pre-selects clinic matching appointment clinic_name on load', async () => {
+      const initial = {
+        id: 'apt-99',
+        title: 'Check-up',
+        doctor_name: '',
+        clinic_name: 'City Hospital',
+        specialty: null,
+        appt_date: '2025-06-01T09:00:00',
+        duration_min: 30,
+        location: null,
+        notes: null,
+        status: 'scheduled' as AppointmentStatus,
+        reminder_min: 60,
+        created_at: '2025-01-01T00:00:00',
+        updated_at: '2025-01-01T00:00:00',
+        document_ids: [],
+        contact_ids: [],
+        recurrence_series_id: null,
+      }
+
+      mockInvoke.mockImplementation((command: string) => {
+        if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
+        if (command === 'categories_for_appointment') return Promise.resolve([])
+        if (command === 'contacts_list') return Promise.resolve([])
+        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
+        return Promise.resolve(null)
+      })
+
+      render(<AppointmentForm onCancel={vi.fn()} onSave={vi.fn()} initial={initial} />)
+
+      await waitFor(() => {
+        const clinicSelect = screen.getByRole('combobox', { name: /select clinic/i }) as HTMLSelectElement
+        expect(clinicSelect.value).toBe('cli-1')
+      })
+    })
+
+    it('pre-fills doctor contact selector from initial contact_ids', async () => {
       const initial = {
         id: 'apt-99',
         title: 'Check-up',
@@ -812,14 +876,15 @@ describe('AppointmentForm', () => {
         created_at: '2025-01-01T00:00:00',
         updated_at: '2025-01-01T00:00:00',
         document_ids: [],
-        contact_ids: ['con-1', 'con-2'],
+        contact_ids: ['con-1'],
         recurrence_series_id: null,
       }
 
       mockInvoke.mockImplementation((command: string) => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
-        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact, mockClinicContact])
+        if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'clinics_list') return Promise.resolve([{ id: 'cli-1', name: 'City Hospital' }])
         return Promise.resolve(null)
       })
 
@@ -828,8 +893,8 @@ describe('AppointmentForm', () => {
       await waitFor(() => {
         const doctorSelect = screen.getByRole('combobox', { name: /select doctor from contacts/i }) as HTMLSelectElement
         expect(doctorSelect.value).toBe('con-1')
-        const clinicSelect = screen.getByRole('combobox', { name: /select clinic from contacts/i }) as HTMLSelectElement
-        expect(clinicSelect.value).toBe('con-2')
+        const clinicSelect = screen.getByRole('combobox', { name: /select clinic/i }) as HTMLSelectElement
+        expect(clinicSelect.value).toBe('cli-1')
       })
     })
 
@@ -857,6 +922,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'clinics_list') return Promise.resolve([])
         if (command === 'appointment_link_contact') return Promise.resolve(null)
         return Promise.resolve(null)
       })
@@ -898,6 +964,7 @@ describe('AppointmentForm', () => {
         if (command === 'categories_list') return Promise.resolve(mockCategoryRows)
         if (command === 'categories_for_appointment') return Promise.resolve([])
         if (command === 'contacts_list') return Promise.resolve([mockDoctorContact])
+        if (command === 'clinics_list') return Promise.resolve([])
         if (command === 'appointment_unlink_contact') return Promise.resolve(null)
         if (command === 'appointment_link_contact') return Promise.resolve(null)
         return Promise.resolve(null)

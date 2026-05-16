@@ -60,6 +60,8 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
   const [allContacts, setAllContacts] = useState<Contact[]>([])
   const [linkedDoctorContactId, setLinkedDoctorContactId] = useState<string | null>(null)
   const [linkedClinicContactId, setLinkedClinicContactId] = useState<string | null>(null)
+  const [allClinics, setAllClinics] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null)
   const initContactsResolved = useRef(false)
 
   useEffect(() => {
@@ -91,6 +93,15 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
             )
             if (doctorContact) setLinkedDoctorContactId(doctorContact.id)
             if (clinicContact) setLinkedClinicContactId(clinicContact.id)
+          }
+        })
+        .catch(() => {}),
+      invoke<Array<{ id: string; name: string }>>('clinics_list')
+        .then((clinics) => {
+          setAllClinics(clinics)
+          if (initial?.clinic_name) {
+            const match = clinics.find((c) => c.name === initial.clinic_name)
+            if (match) setSelectedClinicId(match.id)
           }
         })
         .catch(() => {}),
@@ -311,32 +322,41 @@ export function AppointmentForm({ initial, onSave, onCancel, onCategoriesChange 
         </div>
         <div>
           <label htmlFor="appt-clinic" className={labelClass}>Clinic / Hospital</label>
-          {allContacts.some((c) => CLINIC_ROLES.has(c.role)) ? (
+          {allClinics.length > 0 ? (
             <div className="space-y-1">
               <select
                 id="appt-clinic-picker"
-                value={linkedClinicContactId ?? ''}
+                value={selectedClinicId ?? ''}
                 onChange={(e) => {
-                  if (e.target.value) void handleClinicContactSelect(e.target.value)
-                  else void handleClinicContactClear()
+                  const id = e.target.value
+                  if (id) {
+                    const clinic = allClinics.find((c) => c.id === id)
+                    if (clinic) {
+                      setSelectedClinicId(id)
+                      setClinicName(clinic.name)
+                    }
+                  } else {
+                    setSelectedClinicId(null)
+                  }
                 }}
                 className={inputClass}
-                aria-label="Select clinic from contacts"
+                aria-label="Select clinic"
               >
-                <option value="">— Select from contacts —</option>
-                {allContacts
-                  .filter((c) => CLINIC_ROLES.has(c.role))
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
+                <option value="">— Select clinic —</option>
+                {allClinics.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
               <input
                 id="appt-clinic"
                 type="text"
                 value={clinicName}
-                onChange={(e) => setClinicName(e.target.value)}
+                onChange={(e) => {
+                  setClinicName(e.target.value)
+                  setSelectedClinicId(null)
+                }}
                 placeholder="Or type a name"
                 className={inputClass}
                 aria-label="Clinic name (free text)"
