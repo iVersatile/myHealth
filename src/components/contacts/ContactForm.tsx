@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { Contact, CONTACT_ROLES, ROLE_LABELS, CLINIC_ROLES } from '../../store/contactsStore'
+import { Contact, CONTACT_ROLES, ROLE_LABELS } from '../../store/contactsStore'
 import type { ContactCreateInput, ContactUpdateInput } from '../../hooks/useContacts'
 import { extractTauriError } from '../../lib/ipc'
 
@@ -22,13 +22,13 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
   const [address, setAddress] = useState(initial?.address ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [contactClinicId, setContactClinicId] = useState<string | null>(initial?.contact_clinic_id ?? null)
-  const [hospitalContacts, setHospitalContacts] = useState<Contact[]>([])
+  const [clinics, setClinics] = useState<Array<{ id: string; name: string; is_draft: boolean }>>([])
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
-    invoke<Contact[]>('contacts_list')
-      .then((list) => setHospitalContacts(list.filter((c) => CLINIC_ROLES.has(c.role))))
+    invoke<Array<{ id: string; name: string; is_draft: boolean }>>('clinics_list_including_drafts')
+      .then(setClinics)
       .catch(() => undefined)
   }, [])
 
@@ -112,17 +112,24 @@ export function ContactForm({ initial, onSave, onCancel }: ContactFormProps) {
               className={fieldCls}
               value={contactClinicId ?? ''}
               onChange={(e) => {
-                const selected = hospitalContacts.find((c) => c.id === e.target.value)
+                const selected = clinics.find((c) => c.id === e.target.value)
                 setContactClinicId(selected?.id ?? null)
                 setClinic(selected?.name ?? '')
               }}
               aria-label="Clinic / Hospital"
             >
               <option value="">— None —</option>
-              {hospitalContacts.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {clinics.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.is_draft ? ' (draft)' : ''}</option>
               ))}
             </select>
+            {clinics.some((c) => c.is_draft) && (
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                Some clinics are drafts. Go to{' '}
+                <span className="font-medium text-[var(--color-accent)]">Clinics</span>{' '}
+                to accept or reject them.
+              </p>
+            )}
           </div>
 
           <div className="col-span-2">
