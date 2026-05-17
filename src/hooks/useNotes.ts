@@ -43,7 +43,7 @@ export function useNotes() {
   }
 
   async function saveNote(id: string, title: string, content: string): Promise<Note> {
-    const note = await invoke<Note>('notes_update', { id, title, content })
+    const note = await invoke<Note>('notes_update', { id, input: { title, content } })
     upsertNote(note)
     return note
   }

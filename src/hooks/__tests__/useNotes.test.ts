@@ -92,8 +92,7 @@ describe('useNotes', () => {
 
     expect(mockInvoke).toHaveBeenCalledWith('notes_update', {
       id: 'n1',
-      title: 'New',
-      content: '<p>New</p>',
+      input: { title: 'New', content: '<p>New</p>' },
     })
     expect(result.current.notes.find((n) => n.id === 'n1')?.title).toBe('New')
   })

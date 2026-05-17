@@ -2739,19 +2739,47 @@ pub async fn documents_run_extraction(
             }
         }
 
-        // Create/update a linked note: prefer structured clinical section; fall back to raw text
-        let (note_title, notes_content_opt) =
+        // Format activity date as "18 Nov 2021" for note titles
+        let friendly_date = chrono::NaiveDate::parse_from_str(&resolved_activity_date, "%Y-%m-%d")
+            .map(|d| d.format("%-d %b %Y").to_string())
+            .unwrap_or_else(|_| resolved_activity_date.clone());
+
+        let first_clinic_name: Option<&str> = clinic_suggestions.first().map(|c| c.name.as_str());
+
+        // Build note content + title: invoice items → clinical notes → raw text
+        let invoice_items = crate::extraction::extract_invoice_line_items(&result.text);
+        let (note_title, notes_content_opt): (String, Option<String>) = if !invoice_items.is_empty()
+        {
+            let content = invoice_items.join("\n");
+            let title = match first_clinic_name {
+                Some(clinic) => format!("[{friendly_date}] Invoice - {clinic}"),
+                None => format!("[{friendly_date}] Invoice"),
+            };
+            (title, Some(content))
+        } else {
             match crate::extraction::extract_clinical_notes(&result.text) {
-                Some(s) => ("Clinical Notes", Some(s)),
+                Some(s) => {
+                    let title = match first_clinic_name {
+                        Some(clinic) => format!("[{friendly_date}] Clinical Notes - {clinic}"),
+                        None => format!("[{friendly_date}] Clinical Notes"),
+                    };
+                    (title, Some(s))
+                }
                 None => {
                     let raw: String = result.text.trim().chars().take(1000).collect();
+                    let title = match first_clinic_name {
+                        Some(clinic) => format!("[{friendly_date}] Document - {clinic}"),
+                        None => format!("[{friendly_date}] Document"),
+                    };
                     if raw.len() >= 10 {
-                        ("Document Notes", Some(raw))
+                        (title, Some(raw))
                     } else {
-                        ("Document Notes", None)
+                        (title, None)
                     }
                 }
-            };
+            }
+        };
+
         if let Some(ref notes_content) = notes_content_opt {
             let now = Utc::now().to_rfc3339();
             let existing_note_id: Option<String> = conn
@@ -2765,8 +2793,8 @@ pub async fn documents_run_extraction(
 
             let note_id = if let Some(ref nid) = existing_note_id {
                 conn.execute(
-                    "UPDATE notes SET content = ?1, updated_at = ?2 WHERE id = ?3",
-                    rusqlite::params![notes_content, now, nid],
+                    "UPDATE notes SET title = ?1, content = ?2, updated_at = ?3 WHERE id = ?4",
+                    rusqlite::params![note_title, notes_content, now, nid],
                 )?;
                 nid.clone()
             } else {
@@ -2789,7 +2817,7 @@ pub async fn documents_run_extraction(
                 conn,
                 "note",
                 &note_id,
-                note_title,
+                &note_title,
                 notes_content,
                 "",
                 "",
