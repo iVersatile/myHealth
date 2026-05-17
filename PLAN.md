@@ -8,8 +8,8 @@
 
 ```
 Phase: 117
-Task:  117.5
-Note:  117.1–117.4 done. Next: Rule 2 imaging implementation + tests.
+Task:  117.6
+Note:  117.1–117.5 done. Pre-commit + commit complete.
 ```
 
 ---
@@ -792,7 +792,7 @@ Note:  117.1–117.4 done. Next: Rule 2 imaging implementation + tests.
    - Add unit test `invoice_note_uses_full_body_text` in `clinical_notes.rs` asserting full text preserved
    - Done when: `cargo test` green; `tsc --noEmit` clean; physio invoice note has full text.
 
-[ ] **117.5 — Rule 2: imaging detection + tests**
+[x] **117.5 — Rule 2: imaging detection + tests**
 
    In `src-tauri/src/commands/documents.rs` note-creation block:
    - Remove `chars().take(3000)` from Rule 1 (invoice) — use `result.text.clone()`
@@ -803,7 +803,7 @@ Note:  117.1–117.4 done. Next: Rule 2 imaging implementation + tests.
    - Add unit test `imaging_note_is_not_invoice` in `clinical_notes.rs`
    - Done when: `cargo test` green; imaging report gets correct title + full content.
 
-▶ [ ] **117.6 — Pre-commit checks + commit**
+[x] **117.6 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
