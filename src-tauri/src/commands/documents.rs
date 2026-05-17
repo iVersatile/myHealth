@@ -2465,25 +2465,35 @@ pub async fn documents_run_extraction(
             if (phone.is_none() || email.is_none())
                 && file_path_for_ocr.to_lowercase().ends_with(".pdf")
             {
-                if let Ok(tmp) = tempfile::TempDir::new() {
-                    let images = crate::extraction::ocr::extract_embedded_images(
-                        std::path::Path::new(&file_path_for_ocr),
-                        tmp.path(),
-                    );
-                    let ocr_text: String = images
-                        .iter()
-                        .filter_map(|img| crate::extraction::ocr::extract_image_text(img).ok())
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    if !ocr_text.is_empty() {
-                        if phone.is_none() {
-                            phone = crate::extraction::clinic::extract_clinic_phone(&ocr_text);
+                let pdf_path_for_img = file_path_for_ocr.clone();
+                let (supplemental_phone, supplemental_email) =
+                    tokio::task::spawn_blocking(move || {
+                        let Ok(tmp) = tempfile::TempDir::new() else {
+                            return (None, None);
+                        };
+                        let images = crate::extraction::ocr::extract_embedded_images(
+                            std::path::Path::new(&pdf_path_for_img),
+                            tmp.path(),
+                        );
+                        let ocr_text: String = images
+                            .iter()
+                            .filter_map(|img| crate::extraction::ocr::extract_image_text(img).ok())
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        if ocr_text.is_empty() {
+                            return (None, None);
                         }
-                        if email.is_none() {
-                            email = crate::extraction::clinic::extract_clinic_email(&ocr_text);
-                        }
-                    }
-                    // tmp drops here — temp dir cleaned up automatically
+                        let p = crate::extraction::clinic::extract_clinic_phone(&ocr_text);
+                        let e = crate::extraction::clinic::extract_clinic_email(&ocr_text);
+                        (p, e)
+                    })
+                    .await
+                    .unwrap_or((None, None));
+                if phone.is_none() {
+                    phone = supplemental_phone;
+                }
+                if email.is_none() {
+                    email = supplemental_email;
                 }
             }
 
