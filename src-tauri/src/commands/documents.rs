@@ -2746,15 +2746,24 @@ pub async fn documents_run_extraction(
 
         let first_clinic_name: Option<&str> = clinic_suggestions.first().map(|c| c.name.as_str());
 
-        // Build note content + title: invoice (auto-tag) → clinical notes → first-line fallback
+        // Build note content + title: invoice → imaging → clinical notes → first-line fallback
         let is_invoice = auto_tags.iter().any(|t| t == "invoice");
+        let is_imaging = !is_invoice
+            && auto_tags
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case("Radiology"));
         let (note_title, notes_content_opt): (String, Option<String>) = if is_invoice {
-            let content: String = result.text.chars().take(3000).collect();
             let title = match first_clinic_name {
                 Some(clinic) => format!("[{friendly_date}] Invoice - {clinic}"),
                 None => format!("[{friendly_date}] Invoice"),
             };
-            (title, Some(content))
+            (title, Some(result.text.clone()))
+        } else if is_imaging {
+            let title = match first_clinic_name {
+                Some(clinic) => format!("[{friendly_date}] Diagnostic Imaging Report - {clinic}"),
+                None => format!("[{friendly_date}] Diagnostic Imaging Report"),
+            };
+            (title, Some(result.text.clone()))
         } else {
             match crate::extraction::extract_clinical_notes(&result.text) {
                 Some(s) => {

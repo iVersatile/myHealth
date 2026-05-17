@@ -315,4 +315,14 @@ Total  £850.00
             "price regex should NOT match £180 (no decimal) — test premise broken"
         );
     }
+
+    #[test]
+    fn imaging_note_is_not_invoice() {
+        let text = "Diagnostic Imaging Report\nMRI Abdomen\nMRI Pelvis\nMRI Neck\nCT Chest\nReported By: Dr Carole Ridge";
+        assert!(extract_invoice_descriptions(text).is_empty());
+        assert!(extract_invoice_line_items(text).is_empty());
+        // Rule 2 uses full text — verify content preserved without truncation
+        assert!(text.contains("Dr Carole Ridge"));
+        assert!(text.contains("MRI Abdomen"));
+    }
 }

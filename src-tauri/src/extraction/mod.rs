@@ -449,4 +449,29 @@ mod tests {
             "expected 'Cardiology' in auto_tags after merge; got {auto_tags:?}"
         );
     }
+
+    #[test]
+    fn imaging_report_produces_radiology_auto_tag() {
+        let text = "Diagnostic Imaging Report\nMRI Abdomen\nMRI Pelvis\nCT Chest\nReported By: Dr Carole Ridge";
+        let doctor_candidates = doctor::extract_doctor_candidates(text);
+        let activity_date = extract_activity_date(text);
+        let mut auto_tags = auto_extract_tags(text, &doctor_candidates, activity_date.as_deref());
+        let category_suggestion = category::suggest_category(text);
+        if let Some(ref suggestion) = category_suggestion {
+            let leaf = suggestion
+                .split('→')
+                .next_back()
+                .unwrap_or(suggestion)
+                .trim();
+            if !leaf.is_empty() && !auto_tags.iter().any(|t| t.eq_ignore_ascii_case(leaf)) {
+                auto_tags.push(leaf.to_string());
+            }
+        }
+        assert!(
+            auto_tags
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case("Radiology")),
+            "expected 'Radiology' in auto_tags; got {auto_tags:?}"
+        );
+    }
 }

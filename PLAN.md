@@ -9,7 +9,7 @@
 ```
 Phase: 117
 Task:  117.5
-Note:  117.1–117.4 done. Next: pre-commit checks + commit.
+Note:  117.1–117.4 done. Next: Rule 2 imaging implementation + tests.
 ```
 
 ---
@@ -734,20 +734,26 @@ Note:  117.1–117.4 done. Next: pre-commit checks + commit.
 
 ---
 
-## Phase 117 — Smart Note Content: Invoice Full Text + Clinical Notes + First-Line Fallback
+## Phase 117 — Smart Note Content: Invoice / Imaging / Clinical Notes / Fallback
 
 **Business rules (approved by user, 2026-05-17, revised same day):**
 
 **Rule 1 — Invoice detected** (`"invoice"` in `auto_tags`):
-- Note content = full document body text, trimmed to 3000 chars
+- Note content = full document body text (no char cap)
 - Title = `"[date] Invoice - [clinic name]"` (or `"[date] Invoice"` if no clinic)
 - Example: full physio invoice text preserved, including `£180` line
 
-**Rule 2 — Clinical notes section found** (`extract_clinical_notes()` returns Some):
-- Note content = extracted clinical notes section
+**Rule 2 — Imaging detected** (`"Radiology"` in `auto_tags`, case-insensitive):
+- Note content = full document body text (no char cap)
+- Title = `"[date] Diagnostic Imaging Report"` (or `"[date] Diagnostic Imaging Report - [clinic name]"` if clinic present)
+- Detection: `auto_tags` includes "Radiology" when text contains "mri", "ct scan", "ultrasound", "xray", "radiol" keywords
+- Example: MRI/CT scan report — full text preserved, specific title used
+
+**Rule 3 — Clinical notes section found** (`extract_clinical_notes()` returns Some):
+- Note content = extracted clinical notes section (no cap)
 - Title = `"[date] Clinical Notes - [clinic name]"`
 
-**Rule 3 — Fallback** (no invoice tag, no clinical notes):
+**Rule 4 — Fallback** (no invoice, no imaging, no clinical notes):
 - Collect consecutive non-empty lines from top of extracted text
 - Join with `", "` until accumulated length ≥120 chars or blank line hit
 - Title = `"[date] Document - [clinic name]"`
@@ -786,7 +792,18 @@ Note:  117.1–117.4 done. Next: pre-commit checks + commit.
    - Add unit test `invoice_note_uses_full_body_text` in `clinical_notes.rs` asserting full text preserved
    - Done when: `cargo test` green; `tsc --noEmit` clean; physio invoice note has full text.
 
-▶ [ ] **117.5 — Pre-commit checks + commit**
+[ ] **117.5 — Rule 2: imaging detection + tests**
+
+   In `src-tauri/src/commands/documents.rs` note-creation block:
+   - Remove `chars().take(3000)` from Rule 1 (invoice) — use `result.text.clone()`
+   - Add Rule 2 between invoice and clinical-notes checks:
+     `let is_imaging = !is_invoice && auto_tags.iter().any(|t| t.eq_ignore_ascii_case("Radiology"));`
+   - Rule 2 content: `result.text.clone()`, title: `[{friendly_date}] Diagnostic Imaging Report` (+ clinic suffix if present)
+   - Add unit test `imaging_report_produces_radiology_auto_tag` in `mod.rs`
+   - Add unit test `imaging_note_is_not_invoice` in `clinical_notes.rs`
+   - Done when: `cargo test` green; imaging report gets correct title + full content.
+
+▶ [ ] **117.6 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
@@ -796,6 +813,6 @@ Note:  117.1–117.4 done. Next: pre-commit checks + commit.
    ./node_modules/.bin/vitest run
    ```
 
-   Commit: `feat: invoice note uses full body text (auto-tag detection, not price regex)`
+   Commit: `feat: smart note content — invoice/imaging/clinical-notes/fallback (Rule 2 + remove caps)`
 
    - Done when: all checks green; pushed to `origin/develop`; CI green.
