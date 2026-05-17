@@ -2449,54 +2449,58 @@ pub async fn documents_run_extraction(
     let mut draft_appt_id: Option<String> = None;
 
     let clinic_suggestions = {
-        let clinic_name = crate::extraction::contact::first_clinic(&result.text).or_else(|| {
+        let text_name = crate::extraction::contact::first_clinic(&result.text).or_else(|| {
             crate::extraction::clinic::extract_clinic_name_by_company_suffix(&result.text)
         });
+        let text_phone = crate::extraction::clinic::extract_clinic_phone(&result.text);
+        let text_email = crate::extraction::clinic::extract_clinic_email(&result.text);
+
+        // Supplemental page-render OCR: when any clinic field is missing and the
+        // document is a PDF, render every page with pdftoppm and run Tesseract.
+        // This catches vector-drawn footers and other content invisible to pdfimages.
+        let (ocr_name, ocr_phone, ocr_email) = if file_path_for_ocr.to_lowercase().ends_with(".pdf")
+            && (text_name.is_none() || text_phone.is_none() || text_email.is_none())
+        {
+            let pdf_path_ocr = file_path_for_ocr.clone();
+            tokio::task::spawn_blocking(move || {
+                let Ok(tmp) = tempfile::TempDir::new() else {
+                    return (None, None, None);
+                };
+                let pages = crate::extraction::ocr::split_pdf_to_pages(
+                    std::path::Path::new(&pdf_path_ocr),
+                    tmp.path(),
+                )
+                .unwrap_or_default();
+                // Cap at 10 pages to bound latency on large documents.
+                let ocr_text: String = pages
+                    .iter()
+                    .take(10)
+                    .filter_map(|p| crate::extraction::ocr::extract_image_text(p).ok())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                if ocr_text.is_empty() {
+                    return (None, None, None);
+                }
+                let n = crate::extraction::contact::first_clinic(&ocr_text).or_else(|| {
+                    crate::extraction::clinic::extract_clinic_name_by_company_suffix(&ocr_text)
+                });
+                let p = crate::extraction::clinic::extract_clinic_phone(&ocr_text);
+                let e = crate::extraction::clinic::extract_clinic_email(&ocr_text);
+                (n, p, e)
+            })
+            .await
+            .unwrap_or((None, None, None))
+        } else {
+            (None, None, None)
+        };
+
+        let clinic_name = text_name.or(ocr_name);
         if let Some(name) = clinic_name {
             let company_registration_number =
                 crate::extraction::clinic::extract_company_registration_number(&result.text);
             let addresses = crate::extraction::clinic::extract_clinic_addresses(&result.text);
-            let mut phone = crate::extraction::clinic::extract_clinic_phone(&result.text);
-            let mut email = crate::extraction::clinic::extract_clinic_email(&result.text);
-
-            // Supplemental OCR: if phone or email missing and file is a PDF, extract
-            // embedded images and run Tesseract on them — some invoices render footer
-            // contact details as a JPEG rather than text.
-            if (phone.is_none() || email.is_none())
-                && file_path_for_ocr.to_lowercase().ends_with(".pdf")
-            {
-                let pdf_path_for_img = file_path_for_ocr.clone();
-                let (supplemental_phone, supplemental_email) =
-                    tokio::task::spawn_blocking(move || {
-                        let Ok(tmp) = tempfile::TempDir::new() else {
-                            return (None, None);
-                        };
-                        let images = crate::extraction::ocr::extract_embedded_images(
-                            std::path::Path::new(&pdf_path_for_img),
-                            tmp.path(),
-                        );
-                        let ocr_text: String = images
-                            .iter()
-                            .filter_map(|img| crate::extraction::ocr::extract_image_text(img).ok())
-                            .collect::<Vec<_>>()
-                            .join("\n");
-                        if ocr_text.is_empty() {
-                            return (None, None);
-                        }
-                        let p = crate::extraction::clinic::extract_clinic_phone(&ocr_text);
-                        let e = crate::extraction::clinic::extract_clinic_email(&ocr_text);
-                        (p, e)
-                    })
-                    .await
-                    .unwrap_or((None, None));
-                if phone.is_none() {
-                    phone = supplemental_phone;
-                }
-                if email.is_none() {
-                    email = supplemental_email;
-                }
-            }
-
+            let phone = text_phone.or(ocr_phone);
+            let email = text_email.or(ocr_email);
             vec![ClinicSuggestionDto {
                 name,
                 company_registration_number,
