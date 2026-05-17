@@ -42,10 +42,10 @@ icalendar = "0.17"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 base64 = "0.22"
 zip = { version = "2", default-features = false, features = ["deflate"] }
+tempfile = "3"
 
 [dev-dependencies]
 mockito = "1.4"
-tempfile = "3"
 rstest = "0.18"
 
 [[test]]

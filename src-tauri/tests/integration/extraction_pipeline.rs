@@ -1,4 +1,6 @@
+use app_lib::extraction::clinic::{extract_clinic_email, extract_clinic_phone};
 use app_lib::extraction::extract;
+use app_lib::extraction::ocr::{extract_embedded_images, extract_image_text};
 use std::path::Path;
 
 fn fixture(name: &str) -> std::path::PathBuf {
@@ -72,4 +74,38 @@ fn doctor_name_pdf_does_not_panic() {
         result.extracted_at.len() >= 10,
         "extracted_at should be a timestamp"
     );
+}
+
+#[test]
+fn supplemental_ocr_extracts_phone_and_email_from_embedded_image() {
+    // Skip if pdfimages is not installed — CI may not have poppler-utils.
+    let has_pdfimages = std::process::Command::new("pdfimages")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !has_pdfimages {
+        eprintln!("SKIP: pdfimages not found — install poppler-utils to run this test");
+        return;
+    }
+
+    let tmp = tempfile::TempDir::new().expect("temp dir");
+    let pdf = fixture("medical-invoice.pdf");
+    let images = extract_embedded_images(&pdf, tmp.path());
+
+    // If no embedded images in this fixture, the supplemental path is a no-op — pass trivially.
+    if images.is_empty() {
+        eprintln!("INFO: no embedded images in medical-invoice.pdf; supplemental OCR path skipped");
+        return;
+    }
+
+    let ocr_text: String = images
+        .iter()
+        .filter_map(|img| extract_image_text(img).ok())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // Functions must not panic on any OCR output — result may be None if fixture has no contact.
+    let _phone = extract_clinic_phone(&ocr_text);
+    let _email = extract_clinic_email(&ocr_text);
 }

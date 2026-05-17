@@ -2291,6 +2291,8 @@ pub struct ClinicSuggestionDto {
     pub name: String,
     pub company_registration_number: Option<String>,
     pub addresses: Vec<crate::extraction::clinic::ExtractedAddress>,
+    pub phone: Option<String>,
+    pub email: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -2357,10 +2359,14 @@ pub async fn documents_run_extraction(
                     let company_registration_number =
                         crate::extraction::clinic::extract_company_registration_number(&text);
                     let addresses = crate::extraction::clinic::extract_clinic_addresses(&text);
+                    let phone = crate::extraction::clinic::extract_clinic_phone(&text);
+                    let email = crate::extraction::clinic::extract_clinic_email(&text);
                     vec![ClinicSuggestionDto {
                         name,
                         company_registration_number,
                         addresses,
+                        phone,
+                        email,
                     }]
                 } else {
                     vec![]
@@ -2412,6 +2418,7 @@ pub async fn documents_run_extraction(
 
     let emit = emit_progress.unwrap_or(false);
     let app_handle_cloned = app_handle.clone();
+    let file_path_for_ocr = file_path.clone();
     let result = tokio::task::spawn_blocking(move || {
         if emit {
             crate::extraction::extract_with_progress(
@@ -2449,10 +2456,43 @@ pub async fn documents_run_extraction(
             let company_registration_number =
                 crate::extraction::clinic::extract_company_registration_number(&result.text);
             let addresses = crate::extraction::clinic::extract_clinic_addresses(&result.text);
+            let mut phone = crate::extraction::clinic::extract_clinic_phone(&result.text);
+            let mut email = crate::extraction::clinic::extract_clinic_email(&result.text);
+
+            // Supplemental OCR: if phone or email missing and file is a PDF, extract
+            // embedded images and run Tesseract on them — some invoices render footer
+            // contact details as a JPEG rather than text.
+            if (phone.is_none() || email.is_none())
+                && file_path_for_ocr.to_lowercase().ends_with(".pdf")
+            {
+                if let Ok(tmp) = tempfile::TempDir::new() {
+                    let images = crate::extraction::ocr::extract_embedded_images(
+                        std::path::Path::new(&file_path_for_ocr),
+                        tmp.path(),
+                    );
+                    let ocr_text: String = images
+                        .iter()
+                        .filter_map(|img| crate::extraction::ocr::extract_image_text(img).ok())
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    if !ocr_text.is_empty() {
+                        if phone.is_none() {
+                            phone = crate::extraction::clinic::extract_clinic_phone(&ocr_text);
+                        }
+                        if email.is_none() {
+                            email = crate::extraction::clinic::extract_clinic_email(&ocr_text);
+                        }
+                    }
+                    // tmp drops here — temp dir cleaned up automatically
+                }
+            }
+
             vec![ClinicSuggestionDto {
                 name,
                 company_registration_number,
                 addresses,
+                phone,
+                email,
             }]
         } else {
             vec![]

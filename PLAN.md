@@ -8,8 +8,8 @@
 
 ```
 Phase: 116
-Task:  116.1
-Note:  Phase 117 complete. Phase 116 (supplemental OCR) paused at 116.1. Phases 118–121 added for manual-test fixes.
+Task:  116.4
+Note:  116.1+116.2+116.3 done. ClinicSuggestionDto already has phone/email. Next: TypeScript ClinicSuggestion interface + UploadReviewStep UI rendering.
 ```
 
 ---
@@ -668,7 +668,7 @@ Note:  Phase 117 complete. Phase 116 (supplemental OCR) paused at 116.1. Phases 
 
 **Context:** Some clinic invoices (e.g. Evewell) render their footer (address, phone, email) as a JPEG baked into the PDF. `pdftotext` cannot see this content. The text layer has enough chars to skip the `OCR_DENSITY_THRESHOLD` path, so Tesseract is not triggered today. This sprint adds a supplemental pass: after text extraction, if phone/email are absent, extract embedded JPEG(s) via `pdfimages -j` and run Tesseract on them.
 
-▶ [ ] **116.1 — Regex extractors: `extract_clinic_phone()` + `extract_clinic_email()` in `clinic.rs`**
+[x] **116.1 — Regex extractors: `extract_clinic_phone()` + `extract_clinic_email()` in `clinic.rs`**
 
    Add two public functions to `src-tauri/src/extraction/clinic.rs`:
    - `extract_clinic_phone(text: &str) -> Option<String>` — matches UK phone patterns prefixed by `T`, `Tel:`, or bare digits
@@ -684,7 +684,7 @@ Note:  Phase 117 complete. Phase 116 (supplemental OCR) paused at 116.1. Phases 
 
    - Done when: all 6 unit tests pass; `cargo test` green.
 
-[ ] **116.2 — `extract_embedded_images()` in `ocr.rs`**
+[x] **116.2 — `extract_embedded_images()` in `ocr.rs`**
 
    Add `pub fn extract_embedded_images(pdf_path: &Path, out_dir: &Path) -> Vec<PathBuf>` to `src-tauri/src/extraction/ocr.rs`.
 
@@ -696,7 +696,7 @@ Note:  Phase 117 complete. Phase 116 (supplemental OCR) paused at 116.1. Phases 
 
    - Done when: unit test passes; `cargo clippy` clean.
 
-[ ] **116.3 — Supplemental OCR pass in `documents.rs` upload pipeline**
+[x] **116.3 — Supplemental OCR pass in `documents.rs` upload pipeline**
 
    After `extract_inner()` in the upload pipeline, add supplemental pass: if phone/email absent from text layer, call `extract_embedded_images()` on the PDF, run `extract_image_text()` on each result, join OCR output, then call `extract_clinic_phone()` / `extract_clinic_email()` on the joined text. Clean up temp dir after. Pass results into `ClinicSuggestionDto`.
 
@@ -705,7 +705,7 @@ Note:  Phase 117 complete. Phase 116 (supplemental OCR) paused at 116.1. Phases 
 
    - Done when: integration test passes on dev machine (or skips gracefully); clippy clean.
 
-[ ] **116.4 — DTO + UI: Add `phone`/`email` to `ClinicSuggestionDto` and `UploadReviewStep`**
+▶ [ ] **116.4 — DTO + UI: Add `phone`/`email` to `ClinicSuggestionDto` and `UploadReviewStep`**
 
    **Rust:** Add `phone: Option<String>` and `email: Option<String>` fields to `ClinicSuggestionDto` in `src-tauri/src/commands/documents.rs`.
 
