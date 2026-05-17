@@ -1,6 +1,7 @@
 pub mod helpers;
 
 mod clinic_extraction;
+mod clinic_rename;
 mod documents;
 mod draft_lifecycle;
 mod entities;

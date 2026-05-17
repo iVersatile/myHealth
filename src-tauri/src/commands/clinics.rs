@@ -198,30 +198,63 @@ pub fn clinics_update(
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
-    if let Some(name) = input.name {
-        conn.execute(
+    let old_name: Option<String> = conn
+        .query_row("SELECT name FROM clinics WHERE id = ?", [&input.id], |r| {
+            r.get(0)
+        })
+        .optional()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+
+    if let Some(ref name) = input.name {
+        tx.execute(
             "UPDATE clinics SET name = ? WHERE id = ?",
             rusqlite::params![name, input.id],
-        )?;
+        )
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
     }
-    if let Some(address) = input.address {
-        conn.execute(
+    if let Some(ref address) = input.address {
+        tx.execute(
             "UPDATE clinics SET address = ? WHERE id = ?",
             rusqlite::params![address, input.id],
-        )?;
+        )
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
     }
-    if let Some(phone) = input.phone {
-        conn.execute(
+    if let Some(ref phone) = input.phone {
+        tx.execute(
             "UPDATE clinics SET phone = ? WHERE id = ?",
             rusqlite::params![phone, input.id],
-        )?;
+        )
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
     }
-    if let Some(crn) = input.company_registration_number {
-        conn.execute(
+    if let Some(ref crn) = input.company_registration_number {
+        tx.execute(
             "UPDATE clinics SET company_registration_number = ? WHERE id = ?",
             rusqlite::params![crn, input.id],
-        )?;
+        )
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
     }
+
+    if let (Some(old), Some(ref new)) = (old_name, &input.name) {
+        if old != *new {
+            tx.execute(
+                "UPDATE documents SET clinic_name = ? WHERE clinic_name = ?",
+                rusqlite::params![new, old],
+            )
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
+            tx.execute(
+                "UPDATE appointments SET clinic_name = ? WHERE clinic_name = ?",
+                rusqlite::params![new, old],
+            )
+            .map_err(|e| CommandError::Internal(e.to_string()))?;
+        }
+    }
+
+    tx.commit()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
 
     conn.query_row(
         &format!("{SELECT_CLINIC} WHERE id = ?"),

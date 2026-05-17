@@ -921,10 +921,21 @@
     }
 
     if (cmd === 'clinics_update') {
-      const id = args?.clinic_id || args?.clinicId || args?.id;
+      const fields = args?.input ?? args;
+      const id = fields?.id || args?.clinic_id || args?.clinicId || args?.id;
       const idx = state.clinics.findIndex((c) => c.id === id);
       if (idx >= 0) {
-        state.clinics[idx] = { ...state.clinics[idx], ...args, id, updated_at: nowIso() };
+        const oldName = state.clinics[idx].name;
+        state.clinics[idx] = { ...state.clinics[idx], ...fields, id, updated_at: nowIso() };
+        const newName = state.clinics[idx].name;
+        if (oldName && newName && oldName !== newName) {
+          state.documents.forEach((d) => {
+            if (d.clinic_name === oldName) d.clinic_name = newName;
+          });
+          state.appointments.forEach((a) => {
+            if (a.clinic_name === oldName) a.clinic_name = newName;
+          });
+        }
         saveState(state);
         return Promise.resolve(state.clinics[idx]);
       }
@@ -966,7 +977,20 @@
 
     if (cmd === 'clinics_link_contact') return Promise.resolve(null);
     if (cmd === 'clinics_get_linked_contacts') return Promise.resolve([]);
-    if (cmd === 'clinics_get_linked_documents') return Promise.resolve([]);
+    if (cmd === 'clinics_get_linked_documents') {
+      const clinicId = args?.clinic_id || args?.clinicId;
+      const clinic = state.clinics.find((c) => c.id === clinicId);
+      if (!clinic) return Promise.resolve([]);
+      const docs = state.documents.filter(
+        (d) => !d._deleted && d.clinic_name === clinic.name,
+      ).map((d) => ({
+        id: d.id,
+        filename: d.filename,
+        category: d.category_name || null,
+        document_date: d.activity_date || null,
+      }));
+      return Promise.resolve(docs);
+    }
 
     if (cmd === 'clinic_addresses_list') {
       const id = args?.clinic_id || args?.clinicId;

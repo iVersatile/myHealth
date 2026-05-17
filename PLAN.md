@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 118
-Task:  118.3
-Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit tests green. Next: update notes_list ORDER BY.
+Phase: 121
+Task:  121.4
+Note:  121.1-121.3 done. E2E passing. Next: pre-commit checks + commit.
 ```
 
 ---
@@ -882,7 +882,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: integration test passes.
 
-▶ [ ] **118.5 — Pre-commit checks + commit**
+[x] **118.5 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
@@ -906,7 +906,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
 **Done when:** After accepting a draft contact or viewing a contact, the contacts list remains alphabetically sorted; `pnpm vitest run` green.
 
-[ ] **119.1 — Fix `upsertContact` in `contactsStore.ts`**
+[x] **119.1 — Fix `upsertContact` in `contactsStore.ts`**
 
    In `src/store/contactsStore.ts`, change `upsertContact` so that after inserting a new contact the array is re-sorted:
    ```typescript
@@ -926,7 +926,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: change applied; `npx tsc --noEmit` clean.
 
-[ ] **119.2 — Unit test: upsertContact keeps alphabetical order**
+[x] **119.2 — Unit test: upsertContact keeps alphabetical order**
 
    In contacts store test file (or new `contactsStore.test.ts`):
    - Test: insert contacts out of order (C, A, B) → list sorted A, B, C
@@ -935,7 +935,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: tests pass; `pnpm vitest run` green.
 
-[ ] **119.3 — Pre-commit checks + commit**
+[x] **119.3 — Pre-commit checks + commit**
 
    ```bash
    npx tsc --noEmit
@@ -956,7 +956,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
 **Done when:** Uploading a document with clinic name only in the footer correctly extracts that clinic; `cargo test` green.
 
-[ ] **120.1 — Refactor `first_clinic()` in `contact.rs`**
+[x] **120.1 — Refactor `first_clinic()` in `contact.rs`**
 
    In `src-tauri/src/extraction/contact.rs`, change `first_clinic(text: &str) -> Option<String>`:
    - Compute `tail_start = text.len() * 7 / 10` (last 30%)
@@ -969,7 +969,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: unit tests pass; `cargo test` green.
 
-[ ] **120.2 — Integration test: Cleveland Clinic extraction**
+[x] **120.2 — Integration test: Cleveland Clinic extraction**
 
    Rust integration test (or fixture-based test):
    - Construct text simulating the `Upload (30Jan2023-17_52_15).pdf` pattern: generic hospital refs in body, "Cleveland Clinic" + address + phone in last 30%
@@ -978,7 +978,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: test passes; `cargo test` green.
 
-[ ] **120.3 — Pre-commit checks + commit**
+[x] **120.3 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
@@ -1000,7 +1000,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
 **Done when:** Renaming a clinic in the Edit Clinic UI preserves all linked documents and appointments; `cargo test` green; E2E regression test passes.
 
-[ ] **121.1 — Cascade rename in `clinics_update`**
+[x] **121.1 — Cascade rename in `clinics_update`**
 
    In `src-tauri/src/commands/clinics.rs`, wrap the update in a transaction:
    1. `SELECT name FROM clinics WHERE id = ?` → `old_name`
@@ -1012,7 +1012,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: `cargo clippy -- -D warnings` clean; `cargo test` green.
 
-[ ] **121.2 — Rust integration test: rename preserves document link**
+[x] **121.2 — Rust integration test: rename preserves document link**
 
    In `src-tauri/tests/`:
    - Insert clinic `"Old Name"`, insert document with `clinic_name = "Old Name"`
@@ -1022,7 +1022,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: integration test passes; `cargo test` green.
 
-[ ] **121.3 — E2E regression test: Edit Clinic → save → documents still linked**
+[x] **121.3 — E2E regression test: Edit Clinic → save → documents still linked**
 
    File: `e2e/clinic-rename-preserves-links.spec.ts`
 
@@ -1034,7 +1034,7 @@ Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit te
 
    - Done when: `pnpm playwright test clinic-rename-preserves-links` passes.
 
-[ ] **121.4 — Pre-commit checks + commit**
+▶ [ ] **121.4 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
