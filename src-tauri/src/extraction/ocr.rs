@@ -95,6 +95,52 @@ pub fn split_pdf_to_pages(
     Ok(pages)
 }
 
+/// Extracts embedded images from a PDF using `pdfimages -j`.
+///
+/// Returns paths to extracted images (jpg/png/ppm/pbm) inside `out_dir`.
+/// Returns an empty `Vec` on any failure: binary missing, non-zero exit, or no images found.
+pub fn extract_embedded_images(pdf_path: &Path, out_dir: &Path) -> Vec<std::path::PathBuf> {
+    let prefix = match out_dir.join("img").to_str() {
+        Some(s) => s.to_string(),
+        None => return Vec::new(),
+    };
+    let pdf_str = match pdf_path.to_str() {
+        Some(s) => s,
+        None => return Vec::new(),
+    };
+
+    let status = std::process::Command::new("pdfimages")
+        .arg("-j")
+        .arg(pdf_str)
+        .arg(&prefix)
+        .status();
+
+    match status {
+        Ok(s) if s.success() => {}
+        _ => return Vec::new(),
+    }
+
+    let read = match std::fs::read_dir(out_dir) {
+        Ok(r) => r,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut images: Vec<_> = read
+        .filter_map(|entry| {
+            let path = entry.ok()?.path();
+            let ext = path.extension()?.to_str()?.to_lowercase();
+            if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "ppm" | "pbm") {
+                Some(path)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    images.sort();
+    images
+}
+
 /// Runs per-page OCR over `pages`, applying `PER_CALL_TIMEOUT` per page.
 ///
 /// Pages that time out contribute `OCR_TIMEOUT_MARKER` to the joined output.
@@ -182,6 +228,41 @@ mod tests {
     fn nonexistent_file_does_not_panic() {
         let path = PathBuf::from("/tmp/nonexistent_ocr_xyz_12345.png");
         let _ = extract_image_text(&path);
+    }
+
+    fn pdfimages_available() -> bool {
+        std::process::Command::new("pdfimages")
+            .arg("-v")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn extract_embedded_images_returns_empty_for_nonexistent_pdf() {
+        let temp = std::path::PathBuf::from("/tmp/myhealth_embedded_test");
+        let _ = std::fs::create_dir_all(&temp);
+        let result =
+            extract_embedded_images(&std::path::PathBuf::from("/tmp/nonexistent_xyz.pdf"), &temp);
+        let _ = std::fs::remove_dir_all(&temp);
+        assert!(
+            result.is_empty(),
+            "expected empty Vec for nonexistent PDF, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn extract_embedded_images_returns_empty_when_pdfimages_missing() {
+        if pdfimages_available() {
+            return;
+        }
+        let temp = std::path::PathBuf::from("/tmp/myhealth_embedded_missing");
+        let _ = std::fs::create_dir_all(&temp);
+        let result = extract_embedded_images(&std::path::PathBuf::from("/tmp/fake.pdf"), &temp);
+        let _ = std::fs::remove_dir_all(&temp);
+        assert!(result.is_empty());
     }
 
     fn pdftoppm_available() -> bool {
