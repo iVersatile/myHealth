@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 116
-Task:  116.1
-Note:  Phase 115 complete. Phase 116 — supplemental OCR for clinic phone/email from embedded JPEG images.
+Phase: 117
+Task:  117.5
+Note:  117.1–117.4 done. Next: pre-commit checks + commit.
 ```
 
 ---
@@ -59,6 +59,12 @@ Note:  Phase 115 complete. Phase 116 — supplemental OCR for clinic phone/email
 | Feature | Phase | Priority | Effort | Status |
 |---------|-------|----------|--------|--------|
 | Supplemental OCR: clinic phone + email from embedded PDF images (F5.4) | 116 | MED | Small | 🔲 |
+
+**Phase 117 (in progress)**
+
+| Feature | Phase | Priority | Effort | Status |
+|---------|-------|----------|--------|--------|
+| Smart note content: invoice description summary + first-line fallback | 117 | HIGH | Small | 🔲 |
 
 **v1.6+ (deferred)**
 
@@ -725,3 +731,71 @@ Note:  Phase 115 complete. Phase 116 — supplemental OCR for clinic phone/email
    Commit: `feat: supplemental OCR pass extracts clinic phone and email from embedded images`
 
    - Done when: all checks green; commit pushed to `origin/develop`; CI green.
+
+---
+
+## Phase 117 — Smart Note Content: Invoice Full Text + Clinical Notes + First-Line Fallback
+
+**Business rules (approved by user, 2026-05-17, revised same day):**
+
+**Rule 1 — Invoice detected** (`"invoice"` in `auto_tags`):
+- Note content = full document body text, trimmed to 3000 chars
+- Title = `"[date] Invoice - [clinic name]"` (or `"[date] Invoice"` if no clinic)
+- Example: full physio invoice text preserved, including `£180` line
+
+**Rule 2 — Clinical notes section found** (`extract_clinical_notes()` returns Some):
+- Note content = extracted clinical notes section
+- Title = `"[date] Clinical Notes - [clinic name]"`
+
+**Rule 3 — Fallback** (no invoice tag, no clinical notes):
+- Collect consecutive non-empty lines from top of extracted text
+- Join with `", "` until accumulated length ≥120 chars or blank line hit
+- Title = `"[date] Document - [clinic name]"`
+
+[x] **117.1 — `extract_invoice_descriptions()` in `clinical_notes.rs`**
+
+   Add to `src-tauri/src/extraction/clinical_notes.rs`:
+   ```rust
+   pub fn extract_invoice_descriptions(text: &str) -> Vec<String>
+   ```
+   - Capture group 1 (description only, no price/qty/currency)
+   - Same exclusion filter as `extract_invoice_line_items()`
+   - Unit tests: 3 passing tests
+   - Done when: unit tests pass; `cargo test` green.
+
+[x] **117.2 — `extract_first_lines()` in `clinical_notes.rs`**
+
+   Add to `src-tauri/src/extraction/clinical_notes.rs`:
+   ```rust
+   pub fn extract_first_lines(text: &str) -> Option<String>
+   ```
+   - Skip leading blank lines; collect consecutive non-empty lines joined with `", "`; stop at ≥120 chars or blank line
+   - Return `None` if result < 3 chars
+   - Done when: unit tests pass; `cargo test` green.
+
+[x] **117.3 — Wire into `documents.rs` note creation (initial — invoice descriptions)**
+
+   Wired `extract_invoice_descriptions()` and `extract_first_lines()`.
+   Note: Rule 1 used description-stripping, which failed for free-form invoices like physio (£180, no decimal).
+
+[x] **117.4 — Revise Rule 1: invoice detection via auto_tag + full body text**
+
+   In `src-tauri/src/commands/documents.rs` note-creation block:
+   - Change invoice detection: `result.auto_tags.iter().any(|t| t == "invoice")` (replaces `extract_invoice_descriptions().is_empty()`)
+   - Change invoice content: `result.text.chars().take(3000).collect::<String>()` (full body text, not joined descriptions)
+   - Add unit test `invoice_note_uses_full_body_text` in `clinical_notes.rs` asserting full text preserved
+   - Done when: `cargo test` green; `tsc --noEmit` clean; physio invoice note has full text.
+
+▶ [ ] **117.5 — Pre-commit checks + commit**
+
+   ```bash
+   cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+   cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+   cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1
+   npx tsc --noEmit
+   ./node_modules/.bin/vitest run
+   ```
+
+   Commit: `feat: invoice note uses full body text (auto-tag detection, not price regex)`
+
+   - Done when: all checks green; pushed to `origin/develop`; CI green.

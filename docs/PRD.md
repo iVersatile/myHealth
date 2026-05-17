@@ -72,6 +72,7 @@ myHealth is a local-first, offline-only desktop health records manager for macOS
 | F3.4 | Link notes to documents or appointments | ✅ |
 | F3.5 | Note edit history / version trail | ✅ |
 | F3.6 | Auto-extract clinical notes from uploaded PDF text and pre-populate notes field in upload dialog (detect "Notes:", "Clinical Notes:", "Assessment:", "Plan:", "Impression:" section headers in OCR text) | 🔲 |
+| F3.7 | Note content for uploaded documents follows three rules. Rule 1 (invoice detected via "invoice" auto-tag): note content = full document body text trimmed to 3000 chars; title = "[date] Invoice - [clinic name]". Rule 2 (clinical notes section found): note content = extracted clinical notes section; title = "[date] Clinical Notes - [clinic name]". Rule 3 (fallback): note content = first consecutive non-empty lines joined with ", " up to ~120 chars; title = "[date] Document - [clinic name]". | 🔲 |
 
 ### F4 — Contacts
 
@@ -94,6 +95,7 @@ myHealth is a local-first, offline-only desktop health records manager for macOS
 | F5.1 | Clinic record: name, company registration number, multi-address (`clinic_addresses` table) | ✅ |
 | F5.2 | Clinic ↔ Contact linking (clinic employs contacts) | ✅ |
 | F5.3 | Clinic tree view on `/clinics` page (clinics table unified) | ✅ |
+| F5.4 | Clinic phone + email auto-extraction: supplemental OCR pass on JPEG images embedded in PDFs (via `pdfimages -j` + Tesseract) when phone/email absent from text layer; phone and email surfaced on clinic suggestion card in upload review step | 🔲 |
 
 ### F6 — Timeline
 
@@ -382,6 +384,9 @@ Draft items appear **inline** on each existing entity page:
 | UTF-06 | Clinic address extraction fails on "London Clinic" style PDFs | Improved address regex in Rust extraction | ✅ |
 | UTF-07 | Upload dialog shows no clinical notes from "Upload (30Jan2023-17_52_15).pdf" despite document containing Notes/Assessment/Plan sections | Missing requirement → F3.6 added; V3-F10 implementation planned | 🔲 |
 | UTF-08 | Contact extraction missed untitled name (Mary Margaret MURPHY), GP-labelled name (GP: Vaibhav SHARMA), and phone "+44 (0) 203 423 7500" partially matched | Implementation gaps → F4.8, F4.9; phone regex fix in contact.rs | 🔲 |
+| UTF-09 | Evewell invoice upload yielded no clinic phone or email — footer "T 020 3974 0950 \| E info@evewell.com" is baked into an embedded JPEG; pdftotext cannot see it and OCR_DENSITY_THRESHOLD is not triggered because the text layer is dense enough | Missing requirement → F5.4 added; Phase 116 supplemental OCR pass planned | 🔲 |
+| UTF-10 | Note content showed full invoice line including price (e.g. "COVID-19 PCR Test  £120.00") instead of description only; non-invoice docs showed 3000-char raw text dump instead of brief first-line summary | Missing requirement → F3.7 added; Phase 117 smart note content rules planned | 🔲 |
+| UTF-11 | Physio invoice (Upload 09Mar2023) note content was wrong — "INVOICE – NO: IoPM001" only, not full text; root cause: price regex `\d+\.\d{2}` doesn't match `£180` (no decimal). Rule 1 revised: detect via "invoice" auto-tag, use full body text (up to 3000 chars) instead of stripped descriptions | Implementation gap → F3.7 revised; Phase 117 Rule 1 revised | 🔲 |
 
 ---
 

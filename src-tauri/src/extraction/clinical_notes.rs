@@ -291,4 +291,28 @@ Total  £850.00
         assert!(extract_first_lines("").is_none());
         assert!(extract_first_lines("  \n  \n").is_none());
     }
+
+    // --- Rule 1 revised: invoice note uses full body text, not stripped descriptions ---
+
+    #[test]
+    fn invoice_note_full_body_text_preserves_price_and_description() {
+        // Physio invoice: price has no decimal (£180), so extract_invoice_descriptions()
+        // returns empty — but the "invoice" auto_tag is present. Rule 1 must use full text.
+        let physio_text =
+            "INVOICE – NO: IoPM001\nAPPOINTMENT @ £180\nZoom Call 23.02.23\nTOTAL DUE £180";
+        let body: String = physio_text.chars().take(3000).collect();
+        assert!(
+            body.contains("£180"),
+            "price must be present in full body: {body}"
+        );
+        assert!(
+            body.contains("APPOINTMENT"),
+            "description must be present in full body: {body}"
+        );
+        // Full text is longer than extract_invoice_descriptions() would return (empty Vec)
+        assert!(
+            extract_invoice_descriptions(physio_text).is_empty(),
+            "price regex should NOT match £180 (no decimal) — test premise broken"
+        );
+    }
 }

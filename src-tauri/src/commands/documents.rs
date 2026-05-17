@@ -2746,11 +2746,10 @@ pub async fn documents_run_extraction(
 
         let first_clinic_name: Option<&str> = clinic_suggestions.first().map(|c| c.name.as_str());
 
-        // Build note content + title: invoice descriptions → clinical notes → first-line fallback
-        let invoice_descs = crate::extraction::extract_invoice_descriptions(&result.text);
-        let (note_title, notes_content_opt): (String, Option<String>) = if !invoice_descs.is_empty()
-        {
-            let content = invoice_descs.join("; ");
+        // Build note content + title: invoice (auto-tag) → clinical notes → first-line fallback
+        let is_invoice = auto_tags.iter().any(|t| t == "invoice");
+        let (note_title, notes_content_opt): (String, Option<String>) = if is_invoice {
+            let content: String = result.text.chars().take(3000).collect();
             let title = match first_clinic_name {
                 Some(clinic) => format!("[{friendly_date}] Invoice - {clinic}"),
                 None => format!("[{friendly_date}] Invoice"),
