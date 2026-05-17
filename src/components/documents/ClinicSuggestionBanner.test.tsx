@@ -5,7 +5,7 @@ import { ClinicSuggestionBanner } from './ClinicSuggestionBanner'
 import type { ClinicSuggestion } from './UploadDialog'
 
 function makeSuggestion(name: string): ClinicSuggestion {
-  return { name, company_registration_number: null, addresses: [] }
+  return { name, company_registration_number: null, addresses: [], phone: null, email: null }
 }
 
 const mockInvoke = vi.fn()
@@ -49,6 +49,8 @@ describe('ClinicSuggestionBanner', () => {
       name: 'Royal Free',
       company_registration_number: 'RC12345',
       addresses: [],
+      phone: null,
+      email: null,
     }
     render(<ClinicSuggestionBanner suggestions={[suggestion]} onDismiss={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /save clinic/i }))
@@ -129,6 +131,8 @@ describe('ClinicSuggestionBanner', () => {
       name: 'Acme Clinic',
       company_registration_number: null,
       addresses: [{ label: null, line1: '1 Main St' }],
+      phone: null,
+      email: null,
     }
     render(<ClinicSuggestionBanner suggestions={[suggestion]} onDismiss={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /save clinic/i }))

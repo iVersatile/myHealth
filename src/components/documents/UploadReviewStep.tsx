@@ -287,7 +287,7 @@ export function UploadReviewStep({ onAcceptCategorySuggestion, onSubmit, addTag 
                   input: {
                     name: clinic.name,
                     address: null,
-                    phone: null,
+                    phone: clinic.phone ?? null,
                     company_registration_number: clinic.company_registration_number ?? null,
                     addresses: clinic.addresses,
                   },
@@ -344,6 +344,16 @@ export function UploadReviewStep({ onAcceptCategorySuggestion, onSubmit, addTag 
                       {addr.label ? `${addr.label}: ` : ''}{addr.line1}
                     </div>
                   ))}
+                  {clinic.phone && (
+                    <span data-testid="clinic-suggestion-phone" className="text-[var(--color-text-secondary)]">
+                      {clinic.phone}
+                    </span>
+                  )}
+                  {clinic.email && (
+                    <span data-testid="clinic-suggestion-email" className="text-[var(--color-text-secondary)]">
+                      {clinic.email}
+                    </span>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {clinicPhase.kind === 'duplicate' ? (

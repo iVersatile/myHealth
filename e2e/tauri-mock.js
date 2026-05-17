@@ -116,6 +116,25 @@
         { entity_type: 'diagnosis', name: 'Musculoskeletal pain', value: null, unit: null, raw_text: 'Musculoskeletal pain' },
       ],
     },
+    'clinic-phone-email-2024.pdf': {
+      contact_suggestions: [],
+      clinic_suggestions: [
+        {
+          name: 'Evewell Clinic',
+          company_registration_number: null,
+          addresses: [{ line1: '115 Harley Street', city: 'London', postcode: 'W1G 6AT' }],
+          phone: '020 3974 0950',
+          email: 'info@evewell.com',
+        },
+      ],
+      category_suggestion: null,
+      document_tags: [],
+      auto_tags: [],
+      doctor_candidates: [],
+      activity_date: null,
+      appointment_suggestion: null,
+      extracted_text_preview: null,
+    },
     'BloodTest_2024-01-15.pdf': {
       contact_suggestions: [],
       clinic_suggestions: [],

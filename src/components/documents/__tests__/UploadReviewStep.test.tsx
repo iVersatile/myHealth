@@ -225,6 +225,8 @@ describe('UploadReviewStep', () => {
       name: 'City Clinic',
       company_registration_number: 'REG123',
       addresses: [{ label: 'Main', line1: '1 Main St' }],
+      phone: null,
+      email: null,
     }
 
     it('shows clinic card when not dismissed', () => {
@@ -490,6 +492,8 @@ describe('UploadReviewStep', () => {
       name: 'Test Clinic',
       company_registration_number: null,
       addresses: [],
+      phone: null,
+      email: null,
     }
 
     it('transitions to saved phase after successful clinic save', async () => {

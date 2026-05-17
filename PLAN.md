@@ -8,8 +8,8 @@
 
 ```
 Phase: 116
-Task:  116.4
-Note:  116.1+116.2+116.3 done. ClinicSuggestionDto already has phone/email. Next: TypeScript ClinicSuggestion interface + UploadReviewStep UI rendering.
+Task:  116.5
+Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI updated. Next: E2E test for clinic suggestion phone+email display.
 ```
 
 ---
@@ -705,7 +705,7 @@ Note:  116.1+116.2+116.3 done. ClinicSuggestionDto already has phone/email. Next
 
    - Done when: integration test passes on dev machine (or skips gracefully); clippy clean.
 
-▶ [ ] **116.4 — DTO + UI: Add `phone`/`email` to `ClinicSuggestionDto` and `UploadReviewStep`**
+[x] **116.4 — DTO + UI: Add `phone`/`email` to `ClinicSuggestionDto` and `UploadReviewStep`**
 
    **Rust:** Add `phone: Option<String>` and `email: Option<String>` fields to `ClinicSuggestionDto` in `src-tauri/src/commands/documents.rs`.
 
@@ -715,7 +715,7 @@ Note:  116.1+116.2+116.3 done. ClinicSuggestionDto already has phone/email. Next
 
    - Done when: `tsc --noEmit` passes; clinic card renders phone + email in dev UI when values are non-null.
 
-[ ] **116.5 — E2E test: clinic suggestion banner shows phone + email**
+▶ [ ] **116.5 — E2E test: clinic suggestion banner shows phone + email**
 
    File: `e2e/clinic-suggestion-phone-email.spec.ts`
 

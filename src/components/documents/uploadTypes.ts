@@ -7,6 +7,8 @@ export interface ClinicSuggestion {
   name: string
   company_registration_number: string | null
   addresses: ExtractedAddress[]
+  phone: string | null
+  email: string | null
 }
 
 export interface ContactSuggestion {
