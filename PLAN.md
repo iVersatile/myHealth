@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 121
-Task:  121.4
-Note:  121.1-121.3 done. E2E passing. Next: pre-commit checks + commit.
+Phase: —
+Task:  —
+Note:  All phases 116–121 shipped. No active task. Awaiting new work.
 ```
 
 ---
@@ -54,26 +54,23 @@ Note:  121.1-121.3 done. E2E passing. Next: pre-commit checks + commit.
 | Multi-user vault support | 107 | LOW | Large | ✅ |
 | Contact extraction: ALLCAPS surname + role-labelled names (F4.8+F4.9) | 108 | MED | Small | ✅ |
 
-**Phase 116 (in progress)**
+**Phases 116–121 (SHIPPED — manual test feedback 2026-05-17)**
 
 | Feature | Phase | Priority | Effort | Status |
 |---------|-------|----------|--------|--------|
-| Supplemental OCR: clinic phone + email from embedded PDF images (F5.4) | 116 | MED | Small | 🔲 |
+| Supplemental OCR: clinic phone + email from embedded PDF images (F5.4) | 116 | MED | Small | ✅ |
+| Smart note content: invoice description summary + first-line fallback | 117 | HIGH | Small | ✅ |
+| Notes list stable sort by note_date (F3.8) | 118 | HIGH | Small | ✅ |
+| Contacts list stable sort alphabetical (F4.10) | 119 | HIGH | Small | ✅ |
+| Clinic extraction: last-30%-first strategy (F5.5) | 120 | MED | Small | ✅ |
+| Clinic rename cascade to documents/appointments (F5.6) | 121 | HIGH | Small | ✅ |
 
-**Phase 117 (in progress)**
+**v1.9 Phases 122–123 (PLANNED)**
 
 | Feature | Phase | Priority | Effort | Status |
 |---------|-------|----------|--------|--------|
-| Smart note content: invoice description summary + first-line fallback | 117 | HIGH | Small | 🔲 |
-
-**Phases 118–121 (planned — from manual test feedback 2026-05-17)**
-
-| Feature | Phase | Priority | Effort | Status |
-|---------|-------|----------|--------|--------|
-| Notes list stable sort by note_date (F3.8) | 118 | HIGH | Small | 🔲 |
-| Contacts list stable sort alphabetical (F4.10) | 119 | HIGH | Small | 🔲 |
-| Clinic extraction: last-30%-first strategy (F5.5) | 120 | MED | Small | 🔲 |
-| Clinic rename cascade to documents/appointments (F5.6) | 121 | HIGH | Small | 🔲 |
+| Clinic name extraction: header-zone heuristic + NHS/hospital suffix (F5.7) | 122 | MED | Small | 🔲 |
+| Draft entity dedup warning + Merge vs Create New UI (F5.8) | 123 | HIGH | Small | 🔲 |
 
 **v1.6+ (deferred)**
 
@@ -1034,7 +1031,7 @@ Note:  121.1-121.3 done. E2E passing. Next: pre-commit checks + commit.
 
    - Done when: `pnpm playwright test clinic-rename-preserves-links` passes.
 
-▶ [ ] **121.4 — Pre-commit checks + commit**
+[x] **121.4 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
@@ -1047,3 +1044,155 @@ Note:  121.1-121.3 done. E2E passing. Next: pre-commit checks + commit.
    Commit: `fix: clinic rename cascades to documents and appointments (F5.6)`
 
    - Done when: checks green; pushed to `origin/develop`; CI green.
+
+---
+
+## Phase 122 — Clinic Name Extraction: Header-Zone Heuristic + NHS/Hospital Suffix (F5.7)
+
+**Goal:** Capture clinic abbreviations (e.g. "RB&HH") and NHS trust names that lack a company suffix (Ltd/plc) and a clinic-type keyword, by adding two complementary strategies to the OCR fallback path.
+
+**Root cause:** "RB&HH" appears in the header image of PDFs but is not matched by `first_clinic` (needs Hospital/Clinic/Centre keyword) or `extract_clinic_name_by_company_suffix` (needs Ltd/plc/LLP suffix).
+
+**Strategy A — Header-zone scan:** Scan the first 10–15 lines of OCR text for a short (≤6 words), ALL-CAPS or Title-Case line that contains `&` or ends with `H`/`NHS` abbreviation pattern, with no digits.
+
+**Strategy B — Extended company-suffix regex:** Add `Hospital`, `NHS Trust`, `NHS Foundation Trust`, `Health Centre`, `Medical Centre`, `Infirmary` alongside existing `Ltd/plc/LLP/LLC` suffixes.
+
+Header-zone scan is tried as a third fallback after `first_clinic` and `extract_clinic_name_by_company_suffix`.
+
+**Done when:**
+- `extract_clinic_name_header_zone()` in `clinic.rs` returns `"RB&HH"` from fixture text with that name in the first 10 lines
+- Extended suffix regex matches `"Royal Brompton & Harefield NHS Foundation Trust"` in body text
+- All existing `clinic.rs` tests still pass
+- `cargo fmt` + `cargo clippy -- -D warnings` + `cargo test` green
+
+### Sprint 122
+
+[ ] **122.1 — `extract_clinic_name_header_zone()` in `clinic.rs`**
+
+   Add to `src-tauri/src/extraction/clinic.rs`:
+   ```rust
+   pub fn extract_clinic_name_header_zone(text: &str) -> Option<String>
+   ```
+   - Take first 15 lines of text
+   - For each line: trim; skip if empty, >6 words, contains a digit, or is a label (is_label() returns true with >4 words)
+   - Match if line is ALL-CAPS (≥2 chars) OR Title-Case with `&` OR matches `r"^[A-Z][A-Za-z'&\-]+"` ≤6 tokens
+   - Return first matching line (trimmed)
+
+   Unit tests:
+   - `extracts_abbreviation_from_header`: `"RB&HH\nINVOICE\n..."` → `Some("RB&HH")`
+   - `returns_none_when_header_has_no_clinic_name`: plain paragraph text in first 15 lines → `None`
+   - `ignores_lines_with_digits`: `"123 Main Street\n..."` → `None`
+
+   - Done when: unit tests pass; `cargo test` green.
+
+[ ] **122.2 — Extend company-suffix regex for NHS/hospital names**
+
+   In `extract_clinic_name_by_company_suffix()`, extend suffix alternation:
+   - Add: `NHS\s+(?:Foundation\s+)?Trust`, `Hospital`, `Health\s+Centre`, `Medical\s+Centre`, `Infirmary`
+   - Existing: `Ltd\.?`, `Limited`, `plc`, `PLC`, `LLP`, `LLC`
+
+   Unit tests:
+   - `extracts_nhs_foundation_trust_name`: `"Royal Brompton & Harefield NHS Foundation Trust\nRef: ..."` → `Some("Royal Brompton & Harefield NHS Foundation Trust")`
+   - `extracts_hospital_suffix_name`: `"St Mary's Hospital\nLondon\n..."` → `Some("St Mary's Hospital")`
+
+   - Done when: new tests pass; existing tests unchanged; `cargo test` green.
+
+[ ] **122.3 — Wire header-zone scan into OCR fallback in `documents.rs`**
+
+   In the OCR fallback block (`spawn_blocking` closure), after `first_clinic` and `extract_clinic_name_by_company_suffix`, add:
+   ```rust
+   .or_else(|| crate::extraction::clinic::extract_clinic_name_header_zone(&ocr_text))
+   ```
+
+   - Done when: `cargo clippy -- -D warnings` clean; `cargo test` green.
+
+[ ] **122.4 — Pre-commit checks + commit**
+
+   ```bash
+   cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+   cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+   cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1
+   npx tsc --noEmit
+   pnpm vitest run
+   ```
+
+   Commit: `feat: clinic name extraction — header-zone heuristic + NHS/hospital suffix (F5.7)`
+
+   - Done when: all checks green; pushed to `origin/develop`; CI green.
+
+---
+
+## Phase 123 — Draft Entity Dedup Warning: Merge vs Create New (F5.8)
+
+**Goal:** When a draft contact or clinic has a non-null `merge_candidate_id`, surface a "Possible duplicate" warning in the draft review UI so the user can decide: merge with the existing record or create a new one. No silent auto-merge.
+
+**Root cause:** `accept_draft_entity` ignores `merge_candidate_id`, silently creating duplicate live entities when a near-match already exists.
+
+**Approach:**
+- Rust: `DraftEntityDto` (or equivalent response type) gains an `existing_name: Option<String>` field populated by a JOIN on `merge_candidate_id` so the frontend knows the existing record's display name
+- Frontend `DraftEntitySection`: when `merge_candidate_id` is set, render a yellow "⚠ Possible duplicate of [existing_name]" badge + two buttons: "Merge with existing" and "Create as new"
+- "Merge with existing" calls `merge_draft_entity` (existing command) with draft-wins defaults (`field_choices: {}`)
+- "Create as new" calls `accept_draft_entity` as today
+
+**Done when:**
+- Draft entities with `merge_candidate_id` show the warning badge in the review UI
+- "Merge" button successfully merges and removes the draft from the list
+- "Create as new" button creates a new live entity as before
+- No existing behaviour changed when `merge_candidate_id` is null
+- `npx tsc --noEmit` passes; `pnpm vitest run` passes; `cargo clippy -- -D warnings` clean
+
+### Sprint 123
+
+[ ] **123.1 — Rust: populate `existing_name` on draft entity responses**
+
+   In `src-tauri/src/commands/drafts.rs`, update the query that returns draft entities to LEFT JOIN on the candidate table:
+   - For contact drafts: `LEFT JOIN contacts c2 ON contacts.merge_candidate_id = c2.id` → select `c2.name AS existing_name`
+   - For clinic drafts: `LEFT JOIN clinics cl2 ON clinics.merge_candidate_id = cl2.id` → select `cl2.name AS existing_name`
+   - Add `existing_name: Option<String>` to the response struct
+
+   - Done when: `cargo test` green; `cargo clippy -- -D warnings` clean.
+
+[ ] **123.2 — TypeScript: add `existing_name` to draft entity types**
+
+   In relevant type definitions (e.g. `src/types/` or inline), add:
+   ```typescript
+   existing_name?: string | null
+   ```
+   to the draft contact/clinic response interface.
+
+   - Done when: `npx tsc --noEmit` passes.
+
+[ ] **123.3 — Frontend: "Possible duplicate" warning + Merge/Create New buttons**
+
+   In `src/components/shared/DraftEntitySection.tsx` (or equivalent):
+   - When `entity.merge_candidate_id && entity.existing_name`: render yellow badge `data-testid="merge-candidate-badge"` with text `"Possible duplicate of [existing_name]"`
+   - Replace single Accept button with two: `data-testid="merge-with-existing-btn"` and `data-testid="create-as-new-btn"`
+   - "Merge": `invoke('merge_draft_entity', { entityType, entityId, fieldChoices: {} })` → remove from draft list
+   - "Create as new": existing `invoke('accept_draft_entity', ...)` call
+   - When `merge_candidate_id` is null: render single Accept button as before
+
+   - Done when: `npx tsc --noEmit` passes; UI renders both buttons when `merge_candidate_id` is set.
+
+[ ] **123.4 — Unit tests**
+
+   In relevant test file:
+   - Test: draft entity with `merge_candidate_id` + `existing_name` → `merge-candidate-badge` visible, both buttons present
+   - Test: clicking "Merge with existing" → `invoke('merge_draft_entity')` called with `fieldChoices: {}`
+   - Test: clicking "Create as new" → `invoke('accept_draft_entity')` called
+   - Test: draft entity without `merge_candidate_id` → single Accept button, no badge
+
+   - Done when: all new tests pass; existing tests unchanged; `pnpm vitest run` green.
+
+[ ] **123.5 — Pre-commit checks + commit**
+
+   ```bash
+   cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+   cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+   cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1
+   npx tsc --noEmit
+   pnpm vitest run
+   ```
+
+   Commit: `feat: draft entity dedup warning — Merge vs Create New when merge_candidate_id set (F5.8)`
+
+   - Done when: all checks green; pushed to `origin/develop`; CI green.
