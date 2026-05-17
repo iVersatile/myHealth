@@ -17,17 +17,19 @@ pub fn extract_company_registration_number(text: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
-/// Extract a clinic/company name near the document start by matching a company-suffix pattern.
+/// Extract a clinic/company name by matching a company-suffix pattern anywhere in the document.
 ///
-/// Useful for invoices where the sender name (e.g. "The Evewell Ltd") appears in the
-/// first few lines but contains no postcode or street keyword for address extraction.
-/// Scans the first 500 characters only to stay anchored to the document header.
+/// Handles two layouts:
+///   • Header layout: "The Evewell Ltd\nINVOICE\n..." — name at start of line
+///   • Bank-transfer layout: "Account Name: The Evewell (Harley Street) Ltd" — name after label
+///
+/// Parentheses in names (e.g. "(Harley Street)") are supported.
 pub fn extract_clinic_name_by_company_suffix(text: &str) -> Option<String> {
-    let head = &text[..text.len().min(500)];
-    let re =
-        Regex::new(r"(?m)^([A-Z][A-Za-z0-9'&\-\s]{2,60}?\s+(?:Ltd\.?|Limited|plc|PLC|LLP|LLC))\b")
-            .expect("valid regex");
-    re.captures(head)
+    let re = Regex::new(
+        r"(?m)^(?:Account\s+Name:\s+)?([A-Z][A-Za-z0-9'&()\- \t]{2,60}?\s+(?:Ltd\.?|Limited|plc|PLC|LLP|LLC))\b",
+    )
+    .expect("valid regex");
+    re.captures(text)
         .and_then(|c| c.get(1))
         .map(|m| m.as_str().trim().to_string())
 }
@@ -170,10 +172,22 @@ mod tests {
     }
 
     #[test]
-    fn only_scans_first_500_chars() {
-        let padding = "x".repeat(500);
+    fn finds_company_name_beyond_500_chars() {
+        let padding = "x".repeat(600);
         let text = format!("{padding}\nHidden Clinic Ltd\nrest of document");
-        assert!(extract_clinic_name_by_company_suffix(&text).is_none());
+        assert_eq!(
+            extract_clinic_name_by_company_suffix(&text).as_deref(),
+            Some("Hidden Clinic Ltd")
+        );
+    }
+
+    #[test]
+    fn extracts_name_from_account_name_label() {
+        let text = "Account Name: The Evewell (Harley Street) Ltd\nSort Code: 60-07-38\n";
+        assert_eq!(
+            extract_clinic_name_by_company_suffix(text).as_deref(),
+            Some("The Evewell (Harley Street) Ltd")
+        );
     }
 
     #[test]
