@@ -2766,7 +2766,7 @@ pub async fn documents_run_extraction(
                     (title, Some(s))
                 }
                 None => {
-                    let raw: String = result.text.trim().chars().take(1000).collect();
+                    let raw: String = result.text.trim().chars().take(3000).collect();
                     let title = match first_clinic_name {
                         Some(clinic) => format!("[{friendly_date}] Document - {clinic}"),
                         None => format!("[{friendly_date}] Document"),

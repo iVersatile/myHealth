@@ -23,34 +23,38 @@ pub fn extract_clinical_notes(text: &str) -> Option<String> {
     if trimmed.len() < 10 {
         return None;
     }
-    Some(trimmed.chars().take(1000).collect())
+    Some(trimmed.chars().take(3000).collect())
 }
 
 fn invoice_line_re() -> &'static Regex {
     INVOICE_LINE_RE.get_or_init(|| {
-        Regex::new(r"(?m)^(.{5,80}?)\s{2,}(?:\d+\s+)?[£$][\d,]+\.\d{2}").expect("valid regex")
+        // Full line: description (5-120 chars) + 2+ spaces + optional qty + optional currency + price
+        Regex::new(r"(?m)^(.{5,120}?)\s{2,}(?:\d+\s+)?(?:[£$€])?[\d,]+\.\d{2}")
+            .expect("valid regex")
     })
 }
 
-/// Extract invoice line-item descriptions from text.
+/// Extract invoice line items from text.
 ///
-/// Matches lines where a description is followed by 2+ spaces and a price
-/// (£/$ with pence). Returns the description portion only, trimmed.
-/// Summary labels (Total, Subtotal, VAT, Tax, Discount) are excluded.
+/// Returns full matching lines (description + price). Currency symbol optional.
+/// Summary labels are excluded.
 pub fn extract_invoice_line_items(text: &str) -> Vec<String> {
     invoice_line_re()
         .captures_iter(text)
-        .filter_map(|c| c.get(1))
+        .filter_map(|c| c.get(0))
         .map(|m| m.as_str().trim().to_string())
         .filter(|s| {
             if s.is_empty() {
                 return false;
             }
             let lower = s.to_lowercase();
-            !matches!(
-                lower.as_str(),
-                "total" | "subtotal" | "sub-total" | "vat" | "tax" | "discount" | "amount due"
-            )
+            !lower.starts_with("total")
+                && !lower.starts_with("subtotal")
+                && !lower.starts_with("sub-total")
+                && !lower.starts_with("amount due")
+                && !lower.starts_with("vat")
+                && !lower.starts_with("tax")
+                && !lower.starts_with("discount")
         })
         .collect()
 }

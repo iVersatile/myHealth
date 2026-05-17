@@ -133,7 +133,7 @@ export default function NoteEditorClient() {
         editor?.commands.setContent(n.content || '')
         const [appts, docs, lnks, vers] = await Promise.all([
           invoke<Appointment[]>('appointments_list', {}),
-          invoke<Document[]>('documents_list', {}),
+          invoke<Document[]>('documents_list', { page: 1, limit: 1000 }),
           invoke<NoteLinkDto[]>('links_for_note', { noteId: id }),
           invoke<NoteVersionDto[]>('note_versions_list', { noteId: id }),
         ])
