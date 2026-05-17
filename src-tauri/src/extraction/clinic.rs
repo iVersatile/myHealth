@@ -17,6 +17,21 @@ pub fn extract_company_registration_number(text: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
+/// Extract a clinic/company name near the document start by matching a company-suffix pattern.
+///
+/// Useful for invoices where the sender name (e.g. "The Evewell Ltd") appears in the
+/// first few lines but contains no postcode or street keyword for address extraction.
+/// Scans the first 500 characters only to stay anchored to the document header.
+pub fn extract_clinic_name_by_company_suffix(text: &str) -> Option<String> {
+    let head = &text[..text.len().min(500)];
+    let re =
+        Regex::new(r"(?m)^([A-Z][A-Za-z0-9'&\-\s]{2,60}?\s+(?:Ltd\.?|Limited|plc|PLC|LLP|LLC))\b")
+            .expect("valid regex");
+    re.captures(head)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
+}
+
 fn is_label(s: &str) -> bool {
     let words: Vec<&str> = s.split_whitespace().collect();
     !s.is_empty()
@@ -129,6 +144,37 @@ fn extract_addresses_by_street_keyword(text: &str, lines: &[&str]) -> Vec<Extrac
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn extracts_ltd_company_name_from_header() {
+        let text = "The Evewell Ltd\nINVOICE\n\nCOVID-19 PCR Test  £120.00\n";
+        assert_eq!(
+            extract_clinic_name_by_company_suffix(text).as_deref(),
+            Some("The Evewell Ltd")
+        );
+    }
+
+    #[test]
+    fn extracts_limited_company_name() {
+        let text = "Harley Street Diagnostics Limited\nInvoice #1234\n";
+        assert_eq!(
+            extract_clinic_name_by_company_suffix(text).as_deref(),
+            Some("Harley Street Diagnostics Limited")
+        );
+    }
+
+    #[test]
+    fn returns_none_when_no_company_suffix() {
+        let text = "Dr. Jane Smith\nAssessment:\nPatient presents with hypertension.\n";
+        assert!(extract_clinic_name_by_company_suffix(text).is_none());
+    }
+
+    #[test]
+    fn only_scans_first_500_chars() {
+        let padding = "x".repeat(500);
+        let text = format!("{padding}\nHidden Clinic Ltd\nrest of document");
+        assert!(extract_clinic_name_by_company_suffix(&text).is_none());
+    }
 
     #[test]
     fn extracts_company_registration_number() {

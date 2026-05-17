@@ -2,6 +2,7 @@ use regex::Regex;
 use std::sync::OnceLock;
 
 static HEADER_RE: OnceLock<Regex> = OnceLock::new();
+static INVOICE_LINE_RE: OnceLock<Regex> = OnceLock::new();
 
 fn header_re() -> &'static Regex {
     HEADER_RE.get_or_init(|| {
@@ -23,6 +24,35 @@ pub fn extract_clinical_notes(text: &str) -> Option<String> {
         return None;
     }
     Some(trimmed.chars().take(1000).collect())
+}
+
+fn invoice_line_re() -> &'static Regex {
+    INVOICE_LINE_RE.get_or_init(|| {
+        Regex::new(r"(?m)^(.{5,80}?)\s{2,}(?:\d+\s+)?[£$][\d,]+\.\d{2}").expect("valid regex")
+    })
+}
+
+/// Extract invoice line-item descriptions from text.
+///
+/// Matches lines where a description is followed by 2+ spaces and a price
+/// (£/$ with pence). Returns the description portion only, trimmed.
+/// Summary labels (Total, Subtotal, VAT, Tax, Discount) are excluded.
+pub fn extract_invoice_line_items(text: &str) -> Vec<String> {
+    invoice_line_re()
+        .captures_iter(text)
+        .filter_map(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
+        .filter(|s| {
+            if s.is_empty() {
+                return false;
+            }
+            let lower = s.to_lowercase();
+            !matches!(
+                lower.as_str(),
+                "total" | "subtotal" | "sub-total" | "vat" | "tax" | "discount" | "amount due"
+            )
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -72,5 +102,58 @@ mod tests {
     fn case_insensitive_header() {
         let text = "ASSESSMENT:\nPatient has elevated blood glucose levels.";
         assert!(extract_clinical_notes(text).is_some());
+    }
+
+    #[test]
+    fn extracts_four_invoice_line_items() {
+        let text = "\
+The Evewell Ltd
+INVOICE
+
+COVID-19 PCR Test                 £120.00
+Consultation                      £200.00
+Gynae Ultrasound Scan              £350.00
+Cervical Smear and HPV Subtyping   £180.00
+
+Total  £850.00
+";
+        let items = extract_invoice_line_items(text);
+        assert_eq!(items.len(), 4, "expected 4 items; got: {items:?}");
+        assert!(
+            items.iter().any(|i| i.contains("COVID-19 PCR")),
+            "missing COVID line; items: {items:?}"
+        );
+        assert!(
+            items.iter().any(|i| i.contains("Consultation")),
+            "missing Consultation; items: {items:?}"
+        );
+        assert!(
+            items.iter().any(|i| i.contains("Gynae Ultrasound")),
+            "missing Ultrasound; items: {items:?}"
+        );
+        assert!(
+            items.iter().any(|i| i.contains("Cervical Smear")),
+            "missing Smear; items: {items:?}"
+        );
+    }
+
+    #[test]
+    fn returns_empty_when_no_invoice_format() {
+        let text = "Assessment:\nPatient presents with mild hypertension.";
+        assert!(extract_invoice_line_items(text).is_empty());
+    }
+
+    #[test]
+    fn invoice_line_items_use_pound_sign() {
+        let text = "Blood test  £45.00\nX-ray      £95.00";
+        let items = extract_invoice_line_items(text);
+        assert_eq!(items.len(), 2);
+    }
+
+    #[test]
+    fn invoice_line_items_use_dollar_sign() {
+        let text = "Lab panel  $120.00\nConsult    $250.00";
+        let items = extract_invoice_line_items(text);
+        assert_eq!(items.len(), 2);
     }
 }

@@ -2442,7 +2442,9 @@ pub async fn documents_run_extraction(
     let mut draft_appt_id: Option<String> = None;
 
     let clinic_suggestions = {
-        let clinic_name = crate::extraction::contact::first_clinic(&result.text);
+        let clinic_name = crate::extraction::contact::first_clinic(&result.text).or_else(|| {
+            crate::extraction::clinic::extract_clinic_name_by_company_suffix(&result.text)
+        });
         if let Some(name) = clinic_name {
             let company_registration_number =
                 crate::extraction::clinic::extract_company_registration_number(&result.text);
@@ -2610,34 +2612,64 @@ pub async fn documents_run_extraction(
             }
         }
 
-        // Auto-create draft appointment if doctor and date are available
-        if !contact_dtos.is_empty() {
-            let doctor_name = &contact_dtos[0].name;
-            let existing_appt: Option<String> = conn
-                .query_row(
+        // Auto-create draft appointment if doctor+date OR clinic+date are available
+        let has_doctor = !contact_dtos.is_empty();
+        let has_clinic = !created_clinic_ids.is_empty();
+        if has_doctor || has_clinic {
+            let doctor_name: Option<String> = if has_doctor {
+                Some(contact_dtos[0].name.clone())
+            } else {
+                None
+            };
+            let first_clinic_name = created_clinic_ids.first().map(|(n, _)| n.as_str());
+            let existing_appt: Option<String> = if let Some(ref dname) = doctor_name {
+                conn.query_row(
                     "SELECT id FROM appointments \
                      WHERE doctor_name = ?1 AND appt_date = ?2 AND is_draft = 0 LIMIT 1",
-                    rusqlite::params![doctor_name, resolved_activity_date],
+                    rusqlite::params![dname, resolved_activity_date],
                     |row| row.get(0),
                 )
-                .optional()?;
+                .optional()?
+            } else if let Some(cname) = first_clinic_name {
+                conn.query_row(
+                    "SELECT id FROM appointments \
+                     WHERE clinic_name = ?1 AND appt_date = ?2 AND is_draft = 0 LIMIT 1",
+                    rusqlite::params![cname, resolved_activity_date],
+                    |row| row.get(0),
+                )
+                .optional()?
+            } else {
+                None
+            };
             if existing_appt.is_none() {
                 let appt_id = Uuid::new_v4().to_string();
-                let first_clinic_name = created_clinic_ids.first().map(|(n, _)| n.as_str());
-                let title = match first_clinic_name {
-                    Some(clinic) => format!("Appointment with {doctor_name} in {clinic}"),
-                    None => format!("Appointment with {doctor_name}"),
+                let title = match (doctor_name.as_deref(), first_clinic_name) {
+                    (Some(doc), Some(clinic)) => format!("Appointment with {doc} in {clinic}"),
+                    (Some(doc), None) => format!("Appointment with {doc}"),
+                    (None, Some(clinic)) => format!("Visit at {clinic}"),
+                    (None, None) => "Visit".to_string(),
+                };
+                let invoice_notes: Option<String> = if doctor_name.is_none() {
+                    let items = crate::extraction::extract_invoice_line_items(&result.text);
+                    if !items.is_empty() {
+                        Some(items.join("\n"))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 };
                 conn.execute(
                     "INSERT INTO appointments \
-                     (id, title, doctor_name, clinic_name, appt_date, status, is_draft, created_at, updated_at) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, 'completed', 1, ?6, ?6)",
+                     (id, title, doctor_name, clinic_name, appt_date, notes, status, is_draft, created_at, updated_at) \
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'completed', 1, ?7, ?7)",
                     rusqlite::params![
                         appt_id,
                         title,
                         doctor_name,
                         first_clinic_name,
                         resolved_activity_date,
+                        invoice_notes,
                         now
                     ],
                 )?;

@@ -303,6 +303,8 @@ pub fn run() {
             commands::addresses::contact_address_create,
             commands::addresses::contact_address_update,
             commands::addresses::contact_address_delete,
+            commands::addresses::clinic_address_set_primary,
+            commands::addresses::contact_address_set_primary,
             symptoms_list,
             symptoms_get,
             symptoms_create,

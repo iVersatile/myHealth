@@ -408,6 +408,56 @@ pub fn contact_address_delete(id: String, state: State<'_, AppState>) -> Result<
         .map(|_| ())
 }
 
+#[tauri::command]
+pub fn clinic_address_set_primary(
+    id: String,
+    clinic_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+    tx.execute(
+        "UPDATE clinic_addresses SET is_primary = 0 WHERE clinic_id = ?",
+        [&clinic_id],
+    )
+    .map_err(|e| CommandError::Internal(e.to_string()))?;
+    tx.execute(
+        "UPDATE clinic_addresses SET is_primary = 1 WHERE id = ?",
+        [&id],
+    )
+    .map_err(|e| CommandError::Internal(e.to_string()))?;
+    tx.commit()
+        .map_err(|e| CommandError::Internal(e.to_string()))
+}
+
+#[tauri::command]
+pub fn contact_address_set_primary(
+    id: String,
+    contact_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), CommandError> {
+    let guard = state.db.lock()?;
+    let conn = CommandContext::new(&guard)?.conn;
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| CommandError::Internal(e.to_string()))?;
+    tx.execute(
+        "UPDATE contact_addresses SET is_primary = 0 WHERE contact_id = ?",
+        [&contact_id],
+    )
+    .map_err(|e| CommandError::Internal(e.to_string()))?;
+    tx.execute(
+        "UPDATE contact_addresses SET is_primary = 1 WHERE id = ?",
+        [&id],
+    )
+    .map_err(|e| CommandError::Internal(e.to_string()))?;
+    tx.commit()
+        .map_err(|e| CommandError::Internal(e.to_string()))
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -759,5 +809,115 @@ mod tests {
             .unwrap();
 
         assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn clinic_address_set_primary_switches_primary() {
+        let conn = open_test_db();
+        let clinic_id = insert_clinic(&conn);
+        let now = Utc::now().to_rfc3339();
+
+        let id1 = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinic_addresses \
+             (id, clinic_id, line1, country, is_primary, created_at) \
+             VALUES (?, ?, '1 Alpha St', 'GB', 1, ?)",
+            rusqlite::params![id1, clinic_id, now],
+        )
+        .unwrap();
+
+        let id2 = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO clinic_addresses \
+             (id, clinic_id, line1, country, is_primary, created_at) \
+             VALUES (?, ?, '2 Beta Ave', 'GB', 0, ?)",
+            rusqlite::params![id2, clinic_id, now],
+        )
+        .unwrap();
+
+        // Simulate set_primary logic
+        conn.execute(
+            "UPDATE clinic_addresses SET is_primary = 0 WHERE clinic_id = ?",
+            [&clinic_id],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE clinic_addresses SET is_primary = 1 WHERE id = ?",
+            [&id2],
+        )
+        .unwrap();
+
+        let primary_id: String = conn
+            .query_row(
+                "SELECT id FROM clinic_addresses WHERE clinic_id = ? AND is_primary = 1",
+                [&clinic_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(primary_id, id2);
+
+        let old_primary: i64 = conn
+            .query_row(
+                "SELECT is_primary FROM clinic_addresses WHERE id = ?",
+                [&id1],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(old_primary, 0);
+    }
+
+    #[test]
+    fn contact_address_set_primary_switches_primary() {
+        let conn = open_test_db();
+        let contact_id = insert_contact(&conn);
+        let now = Utc::now().to_rfc3339();
+
+        let id1 = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO contact_addresses \
+             (id, contact_id, line1, country, is_primary, created_at) \
+             VALUES (?, ?, '10 First Rd', 'GB', 1, ?)",
+            rusqlite::params![id1, contact_id, now],
+        )
+        .unwrap();
+
+        let id2 = Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO contact_addresses \
+             (id, contact_id, line1, country, is_primary, created_at) \
+             VALUES (?, ?, '20 Second Rd', 'GB', 0, ?)",
+            rusqlite::params![id2, contact_id, now],
+        )
+        .unwrap();
+
+        // Simulate set_primary logic
+        conn.execute(
+            "UPDATE contact_addresses SET is_primary = 0 WHERE contact_id = ?",
+            [&contact_id],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE contact_addresses SET is_primary = 1 WHERE id = ?",
+            [&id2],
+        )
+        .unwrap();
+
+        let primary_id: String = conn
+            .query_row(
+                "SELECT id FROM contact_addresses WHERE contact_id = ? AND is_primary = 1",
+                [&contact_id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(primary_id, id2);
+
+        let old_primary: i64 = conn
+            .query_row(
+                "SELECT is_primary FROM contact_addresses WHERE id = ?",
+                [&id1],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(old_primary, 0);
     }
 }

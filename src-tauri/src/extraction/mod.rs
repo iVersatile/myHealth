@@ -8,7 +8,7 @@ pub mod ocr;
 pub mod pdf;
 pub mod tags;
 
-pub use clinical_notes::extract_clinical_notes;
+pub use clinical_notes::{extract_clinical_notes, extract_invoice_line_items};
 pub use contact::ContactSuggestion;
 pub use tags::{auto_extract_tags, extract_activity_date};
 
