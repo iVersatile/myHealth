@@ -79,9 +79,9 @@ pub fn notes_list(
     let conn = CommandContext::new(&guard)?.conn;
 
     let order = if pinned_first.unwrap_or(false) {
-        "ORDER BY is_pinned DESC, updated_at DESC"
+        "ORDER BY is_pinned DESC, note_date DESC NULLS LAST, created_at DESC"
     } else {
-        "ORDER BY updated_at DESC"
+        "ORDER BY note_date DESC NULLS LAST, created_at DESC"
     };
 
     let sql = format!(
@@ -119,6 +119,38 @@ pub fn notes_get(id: String, state: State<'_, AppState>) -> Result<Note, Command
     load_note(conn, &id)
 }
 
+fn parse_note_date(title: &str) -> Option<String> {
+    if !title.starts_with('[') {
+        return None;
+    }
+    let close = title.find(']')?;
+    if close < 2 {
+        return None;
+    }
+    let inner = &title[1..close];
+    // Convert "DD Mon YYYY" → "YYYY-MM-DD" for correct text-sort ordering
+    let parts: Vec<&str> = inner.splitn(3, ' ').collect();
+    if parts.len() == 3 {
+        let month = match parts[1] {
+            "Jan" => "01",
+            "Feb" => "02",
+            "Mar" => "03",
+            "Apr" => "04",
+            "May" => "05",
+            "Jun" => "06",
+            "Jul" => "07",
+            "Aug" => "08",
+            "Sep" => "09",
+            "Oct" => "10",
+            "Nov" => "11",
+            "Dec" => "12",
+            _ => return None,
+        };
+        return Some(format!("{}-{}-{:0>2}", parts[2], month, parts[0]));
+    }
+    None
+}
+
 #[tauri::command]
 pub fn notes_create(
     input: NoteCreateInput,
@@ -126,14 +158,15 @@ pub fn notes_create(
 ) -> Result<Note, CommandError> {
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
+    let note_date = parse_note_date(&input.title);
 
     let guard = state.db.lock()?;
     let conn = CommandContext::new(&guard)?.conn;
 
     conn.execute(
-        "INSERT INTO notes (id, title, content, is_pinned, created_at, updated_at)
-         VALUES (?1, ?2, ?3, 0, ?4, ?4)",
-        rusqlite::params![id, input.title, input.content, now],
+        "INSERT INTO notes (id, title, content, is_pinned, created_at, updated_at, note_date)
+         VALUES (?1, ?2, ?3, 0, ?4, ?4, ?5)",
+        rusqlite::params![id, input.title, input.content, now, note_date],
     )?;
 
     let note = load_note(conn, &id)?;
@@ -187,13 +220,15 @@ pub fn notes_update(
         }
     }
 
+    let note_date = input.title.as_deref().map(parse_note_date);
     let rows = conn.execute(
         "UPDATE notes SET
              title      = COALESCE(?2, title),
              content    = COALESCE(?3, content),
-             updated_at = ?4
+             updated_at = ?4,
+             note_date  = CASE WHEN ?2 IS NOT NULL THEN ?5 ELSE note_date END
              WHERE id = ?1",
-        rusqlite::params![id, input.title, input.content, now],
+        rusqlite::params![id, input.title, input.content, now, note_date],
     )?;
 
     if rows == 0 {
@@ -532,7 +567,8 @@ mod tests {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 is_deleted INTEGER NOT NULL DEFAULT 0,
-                deleted_at TEXT
+                deleted_at TEXT,
+                note_date TEXT
             );
             CREATE TABLE note_tags (
                 note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
@@ -736,7 +772,7 @@ mod tests {
         insert_note(&conn, "n1", "Unpinned", false);
         insert_note(&conn, "n2", "Pinned", true);
         let mut stmt = conn
-            .prepare("SELECT id FROM notes ORDER BY is_pinned DESC, updated_at DESC")
+            .prepare("SELECT id FROM notes ORDER BY is_pinned DESC, note_date DESC NULLS LAST, created_at DESC")
             .unwrap();
         let ids: Vec<String> = stmt
             .query_map([], |row| row.get(0))
@@ -744,6 +780,19 @@ mod tests {
             .filter_map(|r| r.ok())
             .collect();
         assert_eq!(ids[0], "n2");
+    }
+
+    #[test]
+    fn parses_date_from_bracketed_title() {
+        let result = parse_note_date("[15 May 2026] GP visit notes");
+        assert_eq!(result, Some("2026-05-15".to_string()));
+    }
+
+    #[test]
+    fn returns_none_for_title_without_bracket() {
+        assert_eq!(parse_note_date("GP visit notes"), None);
+        assert_eq!(parse_note_date(""), None);
+        assert_eq!(parse_note_date("[x"), None);
     }
 
     fn insert_link(conn: &Connection, note_id: &str, entity_type: &str, entity_id: &str) {

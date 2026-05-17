@@ -4,6 +4,7 @@ mod documents;
 mod draft_lifecycle;
 mod entities;
 mod extraction_pipeline;
+mod notes;
 mod pipeline;
 mod regressions;
 mod upload_pipeline;

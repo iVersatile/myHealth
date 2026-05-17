@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 116
-Task:  116.5
-Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI updated. Next: E2E test for clinic suggestion phone+email display.
+Phase: 118
+Task:  118.3
+Note:  118.2 done. parse_note_date wired into notes_create/notes_update; unit tests green. Next: update notes_list ORDER BY.
 ```
 
 ---
@@ -715,7 +715,7 @@ Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI upda
 
    - Done when: `tsc --noEmit` passes; clinic card renders phone + email in dev UI when values are non-null.
 
-▶ [ ] **116.5 — E2E test: clinic suggestion banner shows phone + email**
+[x] **116.5 — E2E test: clinic suggestion banner shows phone + email**
 
    File: `e2e/clinic-suggestion-phone-email.spec.ts`
 
@@ -727,7 +727,7 @@ Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI upda
 
    - Done when: `pnpm playwright test clinic-suggestion-phone-email` passes.
 
-[ ] **116.6 — Pre-commit checks + commit**
+[x] **116.6 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
@@ -836,7 +836,7 @@ Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI upda
 
 **Done when:** Notes list stays stable after open/edit; pinned notes still appear first; `cargo test` + `npx tsc --noEmit` + `pnpm vitest run` all green.
 
-[ ] **118.1 — DB migration: add `note_date TEXT` column to `notes` table**
+[x] **118.1 — DB migration: add `note_date TEXT` column to `notes` table**
 
    Add migration in `src-tauri/src/db/migrations.rs`:
    ```sql
@@ -850,7 +850,7 @@ Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI upda
 
    - Done when: `cargo test` green; migration applies cleanly on fresh DB.
 
-[ ] **118.2 — Rust: populate `note_date` on create/update**
+[x] **118.2 — Rust: populate `note_date` on create/update**
 
    In `src-tauri/src/commands/notes.rs`:
    - `notes_create`: parse `[DD Mon YYYY]` prefix from `title` arg; write to `note_date` column.
@@ -860,7 +860,7 @@ Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI upda
 
    - Done when: unit tests pass; `cargo test` green.
 
-[ ] **118.3 — Rust: update `notes_list` ORDER BY**
+[x] **118.3 — Rust: update `notes_list` ORDER BY**
 
    In `src-tauri/src/commands/notes.rs`, change `notes_list` SQL from:
    ```sql
@@ -873,7 +873,7 @@ Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI upda
 
    - Done when: `cargo test` green; notes with `[DD Mon YYYY]` titles sort correctly by date.
 
-[ ] **118.4 — Integration test: notes sort by note_date not updated_at**
+[x] **118.4 — Integration test: notes sort by note_date not updated_at**
 
    Rust integration test in `src-tauri/tests/`:
    - Create notes with titles `[01 Jan 2023] A`, `[15 Jun 2022] B`, `[30 Dec 2023] C`
@@ -882,7 +882,7 @@ Note:  116.1–116.4 done. ClinicSuggestion interface + UploadReviewStep UI upda
 
    - Done when: integration test passes.
 
-[ ] **118.5 — Pre-commit checks + commit**
+▶ [ ] **118.5 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check

@@ -680,6 +680,22 @@ pub fn run(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if version < 33 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "ALTER TABLE notes ADD COLUMN note_date TEXT;
+             UPDATE notes SET note_date = (
+                 CASE WHEN title LIKE '[%]%'
+                      THEN substr(title, 2, instr(title, ']') - 2)
+                      ELSE NULL
+                 END
+             );
+             CREATE INDEX IF NOT EXISTS idx_notes_note_date ON notes(note_date);",
+        )?;
+        tx.execute("INSERT INTO schema_migrations (version) VALUES (?1)", [33])?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -706,7 +722,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 32);
+        assert_eq!(version, 33);
     }
 
     #[test]
@@ -720,7 +736,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(version, 32);
+        assert_eq!(version, 33);
     }
 
     #[test]
