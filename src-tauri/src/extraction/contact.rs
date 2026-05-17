@@ -147,9 +147,18 @@ fn first_phone(text: &str) -> Option<String> {
 }
 
 pub fn first_clinic(text: &str) -> Option<String> {
+    let raw = text.len() * 7 / 10;
+    let tail_start = (raw..=text.len())
+        .find(|&i| text.is_char_boundary(i))
+        .unwrap_or(text.len());
     clinic_re()
-        .find(text)
+        .find(&text[tail_start..])
         .map(|m| m.as_str().trim().to_string())
+        .or_else(|| {
+            clinic_re()
+                .find(text)
+                .map(|m| m.as_str().trim().to_string())
+        })
 }
 
 /// Extracts an address block anchored by a UK postcode.
@@ -579,5 +588,36 @@ mod tests {
     fn extracts_plus44_london_03_number() {
         let text = "Tel +44 (0) 203 423 7500";
         assert_eq!(first_phone(text), Some("+44 (0) 203 423 7500".to_string()));
+    }
+
+    #[test]
+    fn extracts_clinic_from_footer_when_also_mentioned_earlier() {
+        // "General Hospital" appears once near the start (first ~5%);
+        // neutral filler fills the middle; "Cleveland Clinic" only in the last ~5%.
+        // tail_start = 70% — the tail contains only filler + footer, so
+        // first_clinic should return "Cleveland Clinic" not "General Hospital".
+        let header = "Referred from General Hospital for consultation.\n";
+        let filler = "The patient attended for routine monitoring of blood pressure.\n".repeat(15);
+        let footer = "Cleveland Clinic\n123 Queen's Square\nLondon WC1N 3BG\n";
+        let text = format!("{header}{filler}{footer}");
+        // Sanity: header ends well within first 70%
+        assert!(header.len() < text.len() * 7 / 10);
+        assert_eq!(first_clinic(&text), Some("Cleveland Clinic".to_string()));
+    }
+
+    #[test]
+    fn falls_back_to_full_text_when_no_footer_match() {
+        // "Springfield Medical Centre" appears in the first ~4% of text.
+        // The remaining 96% is neutral filler with no clinic keywords.
+        // tail scan finds nothing → fallback full-text scan returns the clinic.
+        let clinic_line = "Springfield Medical Centre\n";
+        let filler = "The patient attended for routine monitoring of blood pressure.\n".repeat(15);
+        let text = format!("{clinic_line}{filler}");
+        // Sanity: clinic is well before tail_start
+        assert!(clinic_line.len() < text.len() * 7 / 10);
+        assert_eq!(
+            first_clinic(&text),
+            Some("Springfield Medical Centre".to_string())
+        );
     }
 }
