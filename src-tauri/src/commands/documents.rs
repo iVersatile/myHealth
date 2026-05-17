@@ -2739,13 +2739,25 @@ pub async fn documents_run_extraction(
             }
         }
 
-        // Create/update a linked note in the notes entity table for clinical notes
-        let clinical_notes = crate::extraction::extract_clinical_notes(&result.text);
-        if let Some(ref notes_content) = clinical_notes {
+        // Create/update a linked note: prefer structured clinical section; fall back to raw text
+        let (note_title, notes_content_opt) =
+            match crate::extraction::extract_clinical_notes(&result.text) {
+                Some(s) => ("Clinical Notes", Some(s)),
+                None => {
+                    let raw: String = result.text.trim().chars().take(1000).collect();
+                    if raw.len() >= 10 {
+                        ("Document Notes", Some(raw))
+                    } else {
+                        ("Document Notes", None)
+                    }
+                }
+            };
+        if let Some(ref notes_content) = notes_content_opt {
             let now = Utc::now().to_rfc3339();
             let existing_note_id: Option<String> = conn
                 .query_row(
-                    "SELECT note_id FROM note_links WHERE entity_type = 'document' AND entity_id = ?1 LIMIT 1",
+                    "SELECT note_id FROM note_links \
+                     WHERE entity_type = 'document' AND entity_id = ?1 LIMIT 1",
                     [&id],
                     |row| row.get(0),
                 )
@@ -2762,11 +2774,12 @@ pub async fn documents_run_extraction(
                 conn.execute(
                     "INSERT INTO notes (id, title, content, is_pinned, created_at, updated_at)
                      VALUES (?1, ?2, ?3, 0, ?4, ?4)",
-                    rusqlite::params![nid, "Clinical Notes", notes_content, now],
+                    rusqlite::params![nid, note_title, notes_content, now],
                 )?;
                 let link_id = Uuid::new_v4().to_string();
                 conn.execute(
-                    "INSERT OR IGNORE INTO note_links (id, note_id, entity_type, entity_id, created_at)
+                    "INSERT OR IGNORE INTO note_links \
+                     (id, note_id, entity_type, entity_id, created_at) \
                      VALUES (?1, ?2, 'document', ?3, ?4)",
                     rusqlite::params![link_id, nid, id, now],
                 )?;
@@ -2776,7 +2789,7 @@ pub async fn documents_run_extraction(
                 conn,
                 "note",
                 &note_id,
-                "Clinical Notes",
+                note_title,
                 notes_content,
                 "",
                 "",
