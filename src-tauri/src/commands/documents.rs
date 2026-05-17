@@ -2739,13 +2739,51 @@ pub async fn documents_run_extraction(
             }
         }
 
-        // Write clinical notes to documents.notes before FTS so search index picks them up
+        // Create/update a linked note in the notes entity table for clinical notes
         let clinical_notes = crate::extraction::extract_clinical_notes(&result.text);
-        if let Some(ref notes) = clinical_notes {
-            conn.execute(
-                "UPDATE documents SET notes = ?1 WHERE id = ?2",
-                rusqlite::params![notes, id],
-            )?;
+        if let Some(ref notes_content) = clinical_notes {
+            let now = Utc::now().to_rfc3339();
+            let existing_note_id: Option<String> = conn
+                .query_row(
+                    "SELECT note_id FROM note_links WHERE entity_type = 'document' AND entity_id = ?1 LIMIT 1",
+                    [&id],
+                    |row| row.get(0),
+                )
+                .optional()?;
+
+            let note_id = if let Some(ref nid) = existing_note_id {
+                conn.execute(
+                    "UPDATE notes SET content = ?1, updated_at = ?2 WHERE id = ?3",
+                    rusqlite::params![notes_content, now, nid],
+                )?;
+                nid.clone()
+            } else {
+                let nid = Uuid::new_v4().to_string();
+                conn.execute(
+                    "INSERT INTO notes (id, title, content, is_pinned, created_at, updated_at)
+                     VALUES (?1, ?2, ?3, 0, ?4, ?4)",
+                    rusqlite::params![nid, "Clinical Notes", notes_content, now],
+                )?;
+                let link_id = Uuid::new_v4().to_string();
+                conn.execute(
+                    "INSERT OR IGNORE INTO note_links (id, note_id, entity_type, entity_id, created_at)
+                     VALUES (?1, ?2, 'document', ?3, ?4)",
+                    rusqlite::params![link_id, nid, id, now],
+                )?;
+                nid
+            };
+            upsert_search_index(
+                conn,
+                "note",
+                &note_id,
+                "Clinical Notes",
+                notes_content,
+                "",
+                "",
+                "",
+                "",
+                &now,
+            );
         }
 
         // Propagate extracted_text into FTS5 so content search finds this document
