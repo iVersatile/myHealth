@@ -73,6 +73,7 @@ myHealth is a local-first, offline-only desktop health records manager for macOS
 | F3.5 | Note edit history / version trail | ✅ |
 | F3.6 | Auto-extract clinical notes from uploaded PDF text and pre-populate notes field in upload dialog (detect "Notes:", "Clinical Notes:", "Assessment:", "Plan:", "Impression:" section headers in OCR text) | 🔲 |
 | F3.7 | Note content for uploaded documents follows four rules (evaluated in priority order, no char cap). Rule 1 (invoice — "invoice" in auto_tags): content = full document body text; title = "[date] Invoice - [clinic name]". Rule 2 (imaging — "Radiology" in auto_tags): content = full document body text; title = "[date] Diagnostic Imaging Report" (or "- [clinic name]" suffix when present). Rule 3 (clinical notes section found): content = extracted clinical notes section; title = "[date] Clinical Notes - [clinic name]". Rule 4 (fallback): content = first consecutive non-empty lines joined with ", " up to ~120 chars; title = "[date] Document - [clinic name]". | 🔲 |
+| F3.8 | Notes list default sort: pinned notes first, then by note_date (the `[DD Mon YYYY]` date parsed from the note title), then by created_at. Opening or editing a note must not change its position in the list. `note_date TEXT` column added to `notes` table; populated on create/update from title. | 🔲 |
 
 ### F4 — Contacts
 
@@ -87,6 +88,7 @@ myHealth is a local-first, offline-only desktop health records manager for macOS
 | F4.7 | Doctor name lifecycle: `ApptSuggestionBanner` with editable `doctor_name` + "No doctor" checkbox; `DoctorSuggestionBanner` follow-up "Yes, keep name" / "No, it's a service" | ✅ |
 | F4.8 | Contact extraction: match ALLCAPS-surname names without title prefix (e.g. "Mary Margaret MURPHY") — requires 2+ Title-case words before ALLCAPS surname to avoid false positives | 🔲 |
 | F4.9 | Contact extraction: match GP/role-labelled names (e.g. "GP: Vaibhav SHARMA", "Consultant: James BROWN") via role-label prefix pattern | 🔲 |
+| F4.10 | Contacts list default sort: alphabetical by name at all times. Opening a contact detail or upserting a contact in the store must not change its list position. After any upsert the in-memory array is re-sorted by name. | 🔲 |
 
 ### F5 — Clinics
 
@@ -96,6 +98,8 @@ myHealth is a local-first, offline-only desktop health records manager for macOS
 | F5.2 | Clinic ↔ Contact linking (clinic employs contacts) | ✅ |
 | F5.3 | Clinic tree view on `/clinics` page (clinics table unified) | ✅ |
 | F5.4 | Clinic phone + email auto-extraction: supplemental OCR pass on JPEG images embedded in PDFs (via `pdfimages -j` + Tesseract) when phone/email absent from text layer; phone and email surfaced on clinic suggestion card in upload review step | 🔲 |
+| F5.5 | Clinic name extraction: scan the last 30% of document text first (footer/letterhead region) before falling back to full-text scan; this captures clinic names that appear only at the end of medical reports (e.g. "Cleveland Clinic" in footer). | 🔲 |
+| F5.6 | Clinic rename cascade: when a clinic's name is updated via `clinics_update`, all dependent `documents.clinic_name` and `appointments.clinic_name` text fields are updated atomically in the same transaction so clinic↔document and clinic↔appointment links are preserved. | 🔲 |
 
 ### F6 — Timeline
 

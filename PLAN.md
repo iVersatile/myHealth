@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: 117
-Task:  117.6
-Note:  117.1–117.5 done. Pre-commit + commit complete.
+Phase: 116
+Task:  116.1
+Note:  Phase 117 complete. Phase 116 (supplemental OCR) paused at 116.1. Phases 118–121 added for manual-test fixes.
 ```
 
 ---
@@ -65,6 +65,15 @@ Note:  117.1–117.5 done. Pre-commit + commit complete.
 | Feature | Phase | Priority | Effort | Status |
 |---------|-------|----------|--------|--------|
 | Smart note content: invoice description summary + first-line fallback | 117 | HIGH | Small | 🔲 |
+
+**Phases 118–121 (planned — from manual test feedback 2026-05-17)**
+
+| Feature | Phase | Priority | Effort | Status |
+|---------|-------|----------|--------|--------|
+| Notes list stable sort by note_date (F3.8) | 118 | HIGH | Small | 🔲 |
+| Contacts list stable sort alphabetical (F4.10) | 119 | HIGH | Small | 🔲 |
+| Clinic extraction: last-30%-first strategy (F5.5) | 120 | MED | Small | 🔲 |
+| Clinic rename cascade to documents/appointments (F5.6) | 121 | HIGH | Small | 🔲 |
 
 **v1.6+ (deferred)**
 
@@ -816,3 +825,225 @@ Note:  117.1–117.5 done. Pre-commit + commit complete.
    Commit: `feat: smart note content — invoice/imaging/clinical-notes/fallback (Rule 2 + remove caps)`
 
    - Done when: all checks green; pushed to `origin/develop`; CI green.
+
+---
+
+## Phase 118 — Notes List Stable Sort (F3.8)
+
+**Goal:** Notes list sorts by note_date parsed from title `[DD Mon YYYY]`, not by `updated_at`. Opening or editing a note no longer jumps it to the top.
+
+**Root cause:** `notes_list` SQL uses `ORDER BY is_pinned DESC, updated_at DESC`. `NoteEditorClient` auto-saves on content change, bumping `updated_at`, causing the note to jump to list head.
+
+**Done when:** Notes list stays stable after open/edit; pinned notes still appear first; `cargo test` + `npx tsc --noEmit` + `pnpm vitest run` all green.
+
+[ ] **118.1 — DB migration: add `note_date TEXT` column to `notes` table**
+
+   Add migration in `src-tauri/src/db/migrations.rs`:
+   ```sql
+   ALTER TABLE notes ADD COLUMN note_date TEXT;
+   UPDATE notes SET note_date = (
+       SELECT substr(title, 2, instr(title, ']') - 2)
+       FROM (SELECT title) WHERE title LIKE '[%]%'
+   );
+   ```
+   Increment migration version. Parse existing note titles to backfill `note_date`.
+
+   - Done when: `cargo test` green; migration applies cleanly on fresh DB.
+
+[ ] **118.2 — Rust: populate `note_date` on create/update**
+
+   In `src-tauri/src/commands/notes.rs`:
+   - `notes_create`: parse `[DD Mon YYYY]` prefix from `title` arg; write to `note_date` column.
+   - `notes_update`: same parse on `title`; update `note_date`.
+   - Helper: `fn parse_note_date(title: &str) -> Option<String>` — extract `DD Mon YYYY` from `[DD Mon YYYY]` prefix; return `None` if not present.
+   - Unit tests in `#[cfg(test)]` block: `parses_date_from_bracketed_title`, `returns_none_for_title_without_bracket`.
+
+   - Done when: unit tests pass; `cargo test` green.
+
+[ ] **118.3 — Rust: update `notes_list` ORDER BY**
+
+   In `src-tauri/src/commands/notes.rs`, change `notes_list` SQL from:
+   ```sql
+   ORDER BY is_pinned DESC, updated_at DESC
+   ```
+   to:
+   ```sql
+   ORDER BY is_pinned DESC, note_date DESC NULLS LAST, created_at DESC
+   ```
+
+   - Done when: `cargo test` green; notes with `[DD Mon YYYY]` titles sort correctly by date.
+
+[ ] **118.4 — Integration test: notes sort by note_date not updated_at**
+
+   Rust integration test in `src-tauri/tests/`:
+   - Create notes with titles `[01 Jan 2023] A`, `[15 Jun 2022] B`, `[30 Dec 2023] C`
+   - Call `notes_update` on `[01 Jan 2023] A` to simulate a re-save
+   - Assert `notes_list` returns order: C (2023-12-30), A (2023-01-01), B (2022-06-15)
+
+   - Done when: integration test passes.
+
+[ ] **118.5 — Pre-commit checks + commit**
+
+   ```bash
+   cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+   cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+   cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1
+   npx tsc --noEmit
+   pnpm vitest run
+   ```
+
+   Commit: `feat: notes list sorts by note_date from title, not updated_at (F3.8)`
+
+   - Done when: all checks green; pushed to `origin/develop`; CI green.
+
+---
+
+## Phase 119 — Contacts List Stable Sort (F4.10)
+
+**Goal:** Contacts list always sorts alphabetically by name. Viewing a contact detail or accepting a draft contact must not bring it to the top of the list.
+
+**Root cause:** `upsertContact` in `contactsStore.ts` prepends new contacts at head: `[contact, ...s.contacts]`. Backend returns contacts sorted by name, but the store inserts new entries at position 0.
+
+**Done when:** After accepting a draft contact or viewing a contact, the contacts list remains alphabetically sorted; `pnpm vitest run` green.
+
+[ ] **119.1 — Fix `upsertContact` in `contactsStore.ts`**
+
+   In `src/store/contactsStore.ts`, change `upsertContact` so that after inserting a new contact the array is re-sorted:
+   ```typescript
+   upsertContact: (contact) =>
+     set((s) => {
+       const idx = s.contacts.findIndex((c) => c.id === contact.id)
+       let next: Contact[]
+       if (idx === -1) {
+         next = [...s.contacts, contact]
+       } else {
+         next = [...s.contacts]
+         next[idx] = contact
+       }
+       return { contacts: next.sort((a, b) => a.name.localeCompare(b.name)) }
+     }),
+   ```
+
+   - Done when: change applied; `npx tsc --noEmit` clean.
+
+[ ] **119.2 — Unit test: upsertContact keeps alphabetical order**
+
+   In contacts store test file (or new `contactsStore.test.ts`):
+   - Test: insert contacts out of order (C, A, B) → list sorted A, B, C
+   - Test: update existing contact name → list re-sorted
+   - Test: insert duplicate id → updates in place, sort maintained
+
+   - Done when: tests pass; `pnpm vitest run` green.
+
+[ ] **119.3 — Pre-commit checks + commit**
+
+   ```bash
+   npx tsc --noEmit
+   pnpm vitest run
+   ```
+
+   Commit: `fix: contacts list always sorted alphabetically after upsert (F4.10)`
+
+   - Done when: checks green; pushed to `origin/develop`; CI green.
+
+---
+
+## Phase 120 — Clinic Name Extraction: Last-30%-First Strategy (F5.5)
+
+**Goal:** `first_clinic()` in `contact.rs` scans the last 30% of document text before falling back to a full-text scan. Clinic names that appear only in the footer/letterhead (e.g. "Cleveland Clinic") are now captured.
+
+**Root cause:** `first_clinic(text)` scans full text from the top and returns the first match. Medical reports often reference other institutions earlier in the text; the actual issuing clinic only appears at the document end.
+
+**Done when:** Uploading a document with clinic name only in the footer correctly extracts that clinic; `cargo test` green.
+
+[ ] **120.1 — Refactor `first_clinic()` in `contact.rs`**
+
+   In `src-tauri/src/extraction/contact.rs`, change `first_clinic(text: &str) -> Option<String>`:
+   - Compute `tail_start = text.len() * 7 / 10` (last 30%)
+   - Search `&text[tail_start..]` first; if a match is found return it
+   - Fall back to searching full `text` if no match in tail
+
+   Unit tests in `#[cfg(test)]` block:
+   - `extracts_clinic_from_footer_when_also_mentioned_earlier`: text with another clinic name in first 70% and the target clinic name only in last 30% → returns footer clinic
+   - `falls_back_to_full_text_when_no_footer_match`: clinic name only in first 50% → still returned
+
+   - Done when: unit tests pass; `cargo test` green.
+
+[ ] **120.2 — Integration test: Cleveland Clinic extraction**
+
+   Rust integration test (or fixture-based test):
+   - Construct text simulating the `Upload (30Jan2023-17_52_15).pdf` pattern: generic hospital refs in body, "Cleveland Clinic" + address + phone in last 30%
+   - Assert `first_clinic()` returns `"Cleveland Clinic"`
+   - Assert `extract_address()` returns text containing `"Queen's Square"`
+
+   - Done when: test passes; `cargo test` green.
+
+[ ] **120.3 — Pre-commit checks + commit**
+
+   ```bash
+   cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+   cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+   cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1
+   ```
+
+   Commit: `fix: clinic name extraction scans footer region first (F5.5)`
+
+   - Done when: checks green; pushed to `origin/develop`; CI green.
+
+---
+
+## Phase 121 — Clinic Rename Cascade (F5.6)
+
+**Goal:** Renaming a clinic updates all `documents.clinic_name` and `appointments.clinic_name` text fields atomically so existing clinic↔document and clinic↔appointment links are not broken.
+
+**Root cause:** `clinics_update` only runs `UPDATE clinics SET name/address/phone/crn WHERE id = ?`. The link between clinics and documents/appointments is a text join (`WHERE d.clinic_name = (SELECT name FROM clinics WHERE id = ?)`). After rename, dependent rows still hold the old name and the link appears broken.
+
+**Done when:** Renaming a clinic in the Edit Clinic UI preserves all linked documents and appointments; `cargo test` green; E2E regression test passes.
+
+[ ] **121.1 — Cascade rename in `clinics_update`**
+
+   In `src-tauri/src/commands/clinics.rs`, wrap the update in a transaction:
+   1. `SELECT name FROM clinics WHERE id = ?` → `old_name`
+   2. `UPDATE clinics SET name = ?, address = ?, phone = ?, crn = ? WHERE id = ?`
+   3. If `new_name != old_name`: `UPDATE documents SET clinic_name = ? WHERE clinic_name = ?`
+   4. If `new_name != old_name`: `UPDATE appointments SET clinic_name = ? WHERE clinic_name = ?`
+
+   All four statements inside one `conn.execute_batch` / explicit transaction.
+
+   - Done when: `cargo clippy -- -D warnings` clean; `cargo test` green.
+
+[ ] **121.2 — Rust integration test: rename preserves document link**
+
+   In `src-tauri/tests/`:
+   - Insert clinic `"Old Name"`, insert document with `clinic_name = "Old Name"`
+   - Call `clinics_update` with `name = "New Name"`
+   - Assert `SELECT clinic_name FROM documents WHERE id = ?` returns `"New Name"`
+   - Assert `clinics_get_linked_documents(clinic_id)` still returns the document
+
+   - Done when: integration test passes; `cargo test` green.
+
+[ ] **121.3 — E2E regression test: Edit Clinic → save → documents still linked**
+
+   File: `e2e/clinic-rename-preserves-links.spec.ts`
+
+   Scenario (mocked IPC):
+   1. Mock `clinics_update` to call through and verify `documents.clinic_name` cascade
+   2. Navigate to Edit Clinic page for a clinic that has linked documents
+   3. Change clinic name and save
+   4. Navigate to clinic detail — assert linked documents still appear
+
+   - Done when: `pnpm playwright test clinic-rename-preserves-links` passes.
+
+[ ] **121.4 — Pre-commit checks + commit**
+
+   ```bash
+   cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+   cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+   cargo test --manifest-path src-tauri/Cargo.toml -- --test-threads=1
+   npx tsc --noEmit
+   pnpm vitest run
+   ```
+
+   Commit: `fix: clinic rename cascades to documents and appointments (F5.6)`
+
+   - Done when: checks green; pushed to `origin/develop`; CI green.
