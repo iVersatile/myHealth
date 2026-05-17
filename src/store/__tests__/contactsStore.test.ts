@@ -72,17 +72,36 @@ describe('setError', () => {
 })
 
 describe('upsertContact', () => {
-  it('prepends a new contact', () => {
-    const existing = makeContact({ id: 'c1' })
+  it('inserts new contact in alphabetical order', () => {
+    const existing = makeContact({ id: 'c1', name: 'Dr. Smith' })
     useContactsStore.getState().setContacts([existing])
     const newC = makeContact({ id: 'c2', name: 'Dr. Jones' })
     useContactsStore.getState().upsertContact(newC)
     const { contacts } = useContactsStore.getState()
     expect(contacts).toHaveLength(2)
-    expect(contacts[0]?.id).toBe('c2')
+    expect(contacts[0]?.name).toBe('Dr. Jones')
+    expect(contacts[1]?.name).toBe('Dr. Smith')
   })
 
-  it('updates an existing contact in place', () => {
+  it('sorts out-of-order inserts alphabetically', () => {
+    useContactsStore.getState().upsertContact(makeContact({ id: 'c3', name: 'Charlie' }))
+    useContactsStore.getState().upsertContact(makeContact({ id: 'c1', name: 'Alice' }))
+    useContactsStore.getState().upsertContact(makeContact({ id: 'c2', name: 'Bob' }))
+    const names = useContactsStore.getState().contacts.map((c) => c.name)
+    expect(names).toEqual(['Alice', 'Bob', 'Charlie'])
+  })
+
+  it('re-sorts after name update', () => {
+    useContactsStore.getState().setContacts([
+      makeContact({ id: 'c1', name: 'Alice' }),
+      makeContact({ id: 'c2', name: 'Bob' }),
+    ])
+    useContactsStore.getState().upsertContact(makeContact({ id: 'c1', name: 'Zelda' }))
+    const names = useContactsStore.getState().contacts.map((c) => c.name)
+    expect(names).toEqual(['Bob', 'Zelda'])
+  })
+
+  it('updates an existing contact by id without duplicating', () => {
     const original = makeContact({ id: 'c1', name: 'Old Name' })
     useContactsStore.getState().setContacts([original])
     const updated = makeContact({ id: 'c1', name: 'New Name' })

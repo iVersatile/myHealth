@@ -63,10 +63,14 @@ export const useContactsStore = create<ContactsState>((set) => ({
   upsertContact: (contact) =>
     set((s) => {
       const idx = s.contacts.findIndex((c) => c.id === contact.id)
-      if (idx === -1) return { contacts: [contact, ...s.contacts] }
-      const next = [...s.contacts]
-      next[idx] = contact
-      return { contacts: next }
+      let next: Contact[]
+      if (idx === -1) {
+        next = [...s.contacts, contact]
+      } else {
+        next = [...s.contacts]
+        next[idx] = contact
+      }
+      return { contacts: next.sort((a, b) => a.name.localeCompare(b.name)) }
     }),
 
   removeContact: (id) => set((s) => ({ contacts: s.contacts.filter((c) => c.id !== id) })),
