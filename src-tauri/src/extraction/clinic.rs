@@ -73,6 +73,27 @@ fn collect_block(lines: &[&str], anchor: usize) -> (Option<String>, String, usiz
     (label, candidate, end)
 }
 
+/// Extract a UK/international phone number from OCR text.
+/// Matches patterns like "Tel: 020 7123 4567" or "T 020 7123 4567".
+pub fn extract_clinic_phone(text: &str) -> Option<String> {
+    let re = Regex::new(r"(?i)(?:Tel(?:ephone)?[:\s]+|T\s+)(\+?[\d\s\(\)\-]{7,20}\d)")
+        .expect("valid regex");
+    re.captures(text)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
+}
+
+/// Extract an email address from OCR text.
+/// Matches patterns like "Email: info@clinic.com" or bare "info@clinic.com".
+pub fn extract_clinic_email(text: &str) -> Option<String> {
+    let re =
+        Regex::new(r"(?i)(?:E(?:mail)?[:\s]+)?([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})")
+            .expect("valid regex");
+    re.captures(text)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
+}
+
 /// Extract up to 5 postal addresses from OCR text.
 ///
 /// Primary strategy: anchor on lines that contain a full UK postcode.
@@ -329,6 +350,48 @@ SW1A 1AA
         let addresses = extract_clinic_addresses(text);
         assert_eq!(addresses.len(), 1);
         assert!(addresses[0].label.is_none());
+    }
+
+    #[test]
+    fn extracts_phone_with_tel_label() {
+        let text = "City Medical\nTel: 020 7123 4567\nLondon";
+        assert_eq!(extract_clinic_phone(text).as_deref(), Some("020 7123 4567"));
+    }
+
+    #[test]
+    fn extracts_phone_with_t_prefix() {
+        let text = "T 020 7123 4567";
+        assert_eq!(extract_clinic_phone(text).as_deref(), Some("020 7123 4567"));
+    }
+
+    #[test]
+    fn returns_none_when_no_phone() {
+        let text = "City Medical\n1 Hospital Road\nLondon SW1A 1AA";
+        assert!(extract_clinic_phone(text).is_none());
+    }
+
+    #[test]
+    fn extracts_email_with_label() {
+        let text = "City Medical\nEmail: info@citymedical.co.uk\nLondon";
+        assert_eq!(
+            extract_clinic_email(text).as_deref(),
+            Some("info@citymedical.co.uk")
+        );
+    }
+
+    #[test]
+    fn extracts_bare_email_without_label() {
+        let text = "Contact us at billing@clinic.com for invoices";
+        assert_eq!(
+            extract_clinic_email(text).as_deref(),
+            Some("billing@clinic.com")
+        );
+    }
+
+    #[test]
+    fn returns_none_when_no_email() {
+        let text = "City Medical\n1 Hospital Road\nLondon SW1A 1AA";
+        assert!(extract_clinic_email(text).is_none());
     }
 
     #[test]
