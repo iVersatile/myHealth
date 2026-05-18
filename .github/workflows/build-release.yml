@@ -84,31 +84,26 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # tesseract via choco (shims reliably)
           choco install tesseract --yes
-          choco install poppler --yes
-          # Refresh PATH so choco shims are visible
           $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" +
                       [System.Environment]::GetEnvironmentVariable("PATH","User")
-          # Find tesseract
-          $tess = Get-Command tesseract -ErrorAction SilentlyContinue |
-                  Select-Object -ExpandProperty Source -First 1
+          $tess = Get-Command tesseract -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
           if (-not $tess) {
             $tess = Get-ChildItem -Path "C:\Program Files\Tesseract-OCR" -Filter "tesseract.exe" -Recurse -ErrorAction SilentlyContinue |
                     Select-Object -ExpandProperty FullName -First 1
           }
-          # Find pdftoppm — choco poppler installs to varying locations; search recursively
-          $ppm = Get-ChildItem -Path "C:\ProgramData\chocolatey\lib\poppler" -Filter "pdftoppm.exe" -Recurse -ErrorAction SilentlyContinue |
+          # pdftoppm via direct download — choco poppler does not shim pdftoppm reliably
+          Invoke-WebRequest `
+            -Uri "https://github.com/oschwartz10612/poppler-windows/releases/download/v24.08.0-0/Release-24.08.0-0.zip" `
+            -OutFile "$env:TEMP\poppler.zip" -UseBasicParsing
+          Expand-Archive "$env:TEMP\poppler.zip" -DestinationPath "$env:TEMP\poppler"
+          $ppm = Get-ChildItem -Path "$env:TEMP\poppler" -Filter "pdftoppm.exe" -Recurse -ErrorAction SilentlyContinue |
                  Select-Object -ExpandProperty FullName -First 1
-          if (-not $ppm) {
-            $ppm = Get-ChildItem -Path "C:\tools\poppler" -Filter "pdftoppm.exe" -Recurse -ErrorAction SilentlyContinue |
-                   Select-Object -ExpandProperty FullName -First 1
-          }
-          if (-not $ppm) {
-            $ppm = Get-Command pdftoppm -ErrorAction SilentlyContinue |
-                   Select-Object -ExpandProperty Source -First 1
-          }
-          if (-not $tess) { Write-Error "tesseract.exe not found after choco install"; exit 1 }
-          if (-not $ppm)  { Write-Error "pdftoppm.exe not found after choco install poppler"; exit 1 }
+          if (-not $tess) { Write-Error "tesseract.exe not found"; exit 1 }
+          if (-not $ppm)  { Write-Error "pdftoppm.exe not found in poppler zip"; exit 1 }
+          Write-Host "tesseract: $tess"
+          Write-Host "pdftoppm:  $ppm"
           New-Item -ItemType Directory -Force -Path src-tauri/binaries | Out-Null
           Copy-Item $tess "src-tauri/binaries/tesseract-${{ matrix.target }}.exe"
           Copy-Item $ppm  "src-tauri/binaries/pdftoppm-${{ matrix.target }}.exe"
