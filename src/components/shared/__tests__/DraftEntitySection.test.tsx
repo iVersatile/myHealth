@@ -20,6 +20,7 @@ const makeDraft = (overrides: Partial<DraftEntityRow> = {}): DraftEntityRow => (
   address: null,
   notes: null,
   merge_candidate_id: null,
+  existing_name: null,
   appt_date: null,
   doctor_name: null,
   clinic_name: null,
@@ -289,5 +290,65 @@ describe('DraftEntitySection', () => {
     await waitFor(() => {
       expect(screen.getByText('(2)')).toBeDefined()
     })
+  })
+
+  it('shows merge-candidate-badge and split buttons when merge_candidate_id and existing_name set', async () => {
+    const draft = makeDraft({ merge_candidate_id: 'c99', existing_name: 'Dr. Existing' })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'get_draft_entities') return Promise.resolve([draft])
+      return Promise.resolve(undefined)
+    })
+    render(<DraftEntitySection entityType="contact" />)
+    await waitFor(() => screen.getByTestId('merge-candidate-badge'))
+    expect(screen.getByTestId('merge-candidate-badge').textContent).toContain('Dr. Existing')
+    expect(screen.getByTestId('merge-with-existing-btn')).toBeDefined()
+    expect(screen.getByTestId('create-as-new-btn')).toBeDefined()
+    expect(screen.queryByTestId('accept-draft-btn')).toBeNull()
+  })
+
+  it('clicking merge-with-existing-btn invokes merge_draft_entity', async () => {
+    const draft = makeDraft({ id: 'd1', entity_type: 'contact', merge_candidate_id: 'c99', existing_name: 'Dr. Existing' })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'get_draft_entities') return Promise.resolve([draft])
+      if (cmd === 'merge_draft_entity') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<DraftEntitySection entityType="contact" />)
+    await waitFor(() => screen.getByTestId('merge-with-existing-btn'))
+    await userEvent.click(screen.getByTestId('merge-with-existing-btn'))
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('merge_draft_entity', {
+        entityType: 'contact',
+        entityId: 'd1',
+        fieldChoices: {},
+      })
+    })
+  })
+
+  it('clicking create-as-new-btn invokes accept_draft_entity', async () => {
+    const draft = makeDraft({ id: 'd1', entity_type: 'contact', merge_candidate_id: 'c99', existing_name: 'Dr. Existing' })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'get_draft_entities') return Promise.resolve([draft])
+      if (cmd === 'accept_draft_entity') return Promise.resolve(undefined)
+      return Promise.resolve(undefined)
+    })
+    render(<DraftEntitySection entityType="contact" />)
+    await waitFor(() => screen.getByTestId('create-as-new-btn'))
+    await userEvent.click(screen.getByTestId('create-as-new-btn'))
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith('accept_draft_entity', { entityType: 'contact', entityId: 'd1' })
+    })
+  })
+
+  it('shows single Accept button and no badge when merge_candidate_id is null', async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'get_draft_entities') return Promise.resolve([makeDraft({ merge_candidate_id: null })])
+      return Promise.resolve(undefined)
+    })
+    render(<DraftEntitySection entityType="contact" />)
+    await waitFor(() => screen.getByTestId('accept-draft-btn'))
+    expect(screen.queryByTestId('merge-candidate-badge')).toBeNull()
+    expect(screen.queryByTestId('merge-with-existing-btn')).toBeNull()
+    expect(screen.queryByTestId('create-as-new-btn')).toBeNull()
   })
 })

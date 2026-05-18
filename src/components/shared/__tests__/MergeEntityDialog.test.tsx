@@ -20,6 +20,7 @@ const makeDraft = (overrides: Partial<DraftEntityRow> = {}): DraftEntityRow => (
   address: null,
   notes: 'Draft notes',
   merge_candidate_id: 'c99',
+  existing_name: null,
   appt_date: null,
   doctor_name: null,
   clinic_name: null,

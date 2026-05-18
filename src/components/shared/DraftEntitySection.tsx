@@ -18,6 +18,7 @@ export interface DraftEntityRow {
   address: string | null
   notes: string | null
   merge_candidate_id: string | null
+  existing_name: string | null
   appt_date: string | null
   doctor_name: string | null
   clinic_name: string | null
@@ -77,6 +78,19 @@ export function DraftEntitySection({ entityType, onMerge }: Props) {
     }
   }
 
+  async function handleMergeWithExisting(draft: DraftEntityRow) {
+    setDrafts((prev) => prev.filter((d) => d.id !== draft.id))
+    try {
+      await invoke('merge_draft_entity', {
+        entityType: draft.entity_type,
+        entityId: draft.id,
+        fieldChoices: {},
+      })
+    } catch {
+      loadDrafts()
+    }
+  }
+
   async function handleReject(draft: DraftEntityRow) {
     setDrafts((prev) => prev.filter((d) => d.id !== draft.id))
     try {
@@ -125,24 +139,53 @@ export function DraftEntitySection({ entityType, onMerge }: Props) {
                   {draftSubtitle(draft) && (
                     <p className="text-xs text-[var(--color-text-muted)] truncate">{draftSubtitle(draft)}</p>
                   )}
+                  {draft.merge_candidate_id && draft.existing_name && (
+                    <span
+                      data-testid="merge-candidate-badge"
+                      className="inline-flex items-center rounded-full bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-[10px] font-semibold px-2 py-0.5 mt-1"
+                    >
+                      Possible duplicate of {draft.existing_name}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {draft.merge_candidate_id && onMerge && (
-                    <button
-                      data-testid="merge-draft-btn"
-                      onClick={() => onMerge(draft)}
-                      className="text-xs px-3 py-1.5 rounded border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                    >
-                      Merge
-                    </button>
+                  {draft.merge_candidate_id && draft.existing_name ? (
+                    <>
+                      <button
+                        data-testid="merge-with-existing-btn"
+                        onClick={() => void handleMergeWithExisting(draft)}
+                        className="text-xs px-3 py-1.5 rounded border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      >
+                        Merge with existing
+                      </button>
+                      <button
+                        data-testid="create-as-new-btn"
+                        onClick={() => void handleAccept(draft)}
+                        className="text-xs px-3 py-1.5 rounded border border-green-400 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                      >
+                        Create as new
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {draft.merge_candidate_id && onMerge && (
+                        <button
+                          data-testid="merge-draft-btn"
+                          onClick={() => onMerge(draft)}
+                          className="text-xs px-3 py-1.5 rounded border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        >
+                          Merge
+                        </button>
+                      )}
+                      <button
+                        data-testid="accept-draft-btn"
+                        onClick={() => void handleAccept(draft)}
+                        className="text-xs px-3 py-1.5 rounded border border-green-400 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                      >
+                        Accept
+                      </button>
+                    </>
                   )}
-                  <button
-                    data-testid="accept-draft-btn"
-                    onClick={() => void handleAccept(draft)}
-                    className="text-xs px-3 py-1.5 rounded border border-green-400 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                  >
-                    Accept
-                  </button>
                   <button
                     data-testid="reject-draft-btn"
                     onClick={() => void handleReject(draft)}
