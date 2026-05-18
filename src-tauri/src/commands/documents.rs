@@ -2449,9 +2449,11 @@ pub async fn documents_run_extraction(
     let mut draft_appt_id: Option<String> = None;
 
     let clinic_suggestions = {
-        let text_name = crate::extraction::contact::first_clinic(&result.text).or_else(|| {
-            crate::extraction::clinic::extract_clinic_name_by_company_suffix(&result.text)
-        });
+        let text_name = crate::extraction::contact::first_clinic(&result.text)
+            .or_else(|| {
+                crate::extraction::clinic::extract_clinic_name_by_company_suffix(&result.text)
+            })
+            .or_else(|| crate::extraction::clinic::extract_clinic_name_header_zone(&result.text));
         let text_phone = crate::extraction::clinic::extract_clinic_phone(&result.text);
         let text_email = crate::extraction::clinic::extract_clinic_email(&result.text);
 
@@ -2481,9 +2483,13 @@ pub async fn documents_run_extraction(
                 if ocr_text.is_empty() {
                     return (None, None, None);
                 }
-                let n = crate::extraction::contact::first_clinic(&ocr_text).or_else(|| {
-                    crate::extraction::clinic::extract_clinic_name_by_company_suffix(&ocr_text)
-                });
+                let n = crate::extraction::contact::first_clinic(&ocr_text)
+                    .or_else(|| {
+                        crate::extraction::clinic::extract_clinic_name_by_company_suffix(&ocr_text)
+                    })
+                    .or_else(|| {
+                        crate::extraction::clinic::extract_clinic_name_header_zone(&ocr_text)
+                    });
                 let p = crate::extraction::clinic::extract_clinic_phone(&ocr_text);
                 let e = crate::extraction::clinic::extract_clinic_email(&ocr_text);
                 (n, p, e)

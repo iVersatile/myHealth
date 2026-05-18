@@ -24,14 +24,101 @@ pub fn extract_company_registration_number(text: &str) -> Option<String> {
 ///   • Bank-transfer layout: "Account Name: The Evewell (Harley Street) Ltd" — name after label
 ///
 /// Parentheses in names (e.g. "(Harley Street)") are supported.
+/// Also matches NHS/hospital institutional suffixes: Hospital, NHS Trust, NHS Foundation Trust,
+/// Health Centre, Medical Centre, Infirmary.
 pub fn extract_clinic_name_by_company_suffix(text: &str) -> Option<String> {
     let re = Regex::new(
-        r"(?m)^(?:Account\s+Name:\s+)?([A-Z][A-Za-z0-9'&()\- \t]{2,60}?\s+(?:Ltd\.?|Limited|plc|PLC|LLP|LLC))\b",
+        r"(?m)^(?:Account\s+Name:\s+)?([A-Z][A-Za-z0-9'&()\- \t]{2,60}?\s+(?:Ltd\.?|Limited|plc|PLC|LLP|LLC|NHS\s+(?:Foundation\s+)?Trust|Hospital|Health\s+Centre|Medical\s+Centre|Infirmary))\b",
     )
     .expect("valid regex");
     re.captures(text)
         .and_then(|c| c.get(1))
         .map(|m| m.as_str().trim().to_string())
+}
+
+/// Extract a clinic name from the header zone (first 15 lines) of OCR text.
+///
+/// Targets bare institutional abbreviations and short names that have no company-law suffix
+/// (Ltd/plc) and no clinic-type keyword (Hospital/Clinic/Centre). Examples: "RB&HH", "UCLH".
+///
+/// A line qualifies when ALL of these hold:
+///   - 1–6 whitespace-separated tokens
+///   - No digit characters
+///   - Either entirely ALL-CAPS (≥4 avg chars/token, to skip generic words like "DATE")
+///     OR Title-Case and contains `&`
+///
+/// Common single-token all-caps document field labels that are never clinic names.
+static GENERIC_HEADER_LABELS: &[&str] = &[
+    "TO",
+    "FROM",
+    "DATE",
+    "INVOICE",
+    "REF",
+    "TOTAL",
+    "NAME",
+    "ADDRESS",
+    "SUBJECT",
+    "RE",
+    "DEAR",
+    "PATIENT",
+    "DOCTOR",
+    "PAGE",
+    "BILL",
+    "TIME",
+    "ITEM",
+    "COST",
+    "PAID",
+    "DUE",
+    "NOTE",
+    "ATTN",
+    "CC",
+    "FAX",
+    "TEL",
+    "EMAIL",
+    "PHONE",
+    "VAT",
+    "TAX",
+    "RECEIPT",
+    "STATEMENT",
+    "SUMMARY",
+    "DETAILS",
+    "DESCRIPTION",
+];
+
+pub fn extract_clinic_name_header_zone(text: &str) -> Option<String> {
+    for line in text.lines().take(15) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let words: Vec<&str> = trimmed.split_whitespace().collect();
+        if words.is_empty() || words.len() > 6 {
+            continue;
+        }
+        if trimmed.chars().any(|c| c.is_ascii_digit()) {
+            continue;
+        }
+        if GENERIC_HEADER_LABELS.contains(&trimmed) {
+            continue;
+        }
+        let has_ampersand = trimmed.contains('&');
+        let is_all_caps =
+            trimmed == trimmed.to_uppercase() && trimmed.chars().any(|c| c.is_alphabetic());
+
+        if is_all_caps {
+            // Skip very short tokens (single letters, "IT", "OF", etc.)
+            let avg_len: usize = words.iter().map(|w| w.len()).sum::<usize>() / words.len();
+            if avg_len < 3 {
+                continue;
+            }
+            return Some(trimmed.to_string());
+        }
+
+        if has_ampersand && words.len() <= 6 {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
 }
 
 fn is_label(s: &str) -> bool {
@@ -405,5 +492,65 @@ SW1A 1AA
         let addresses = extract_clinic_addresses(text);
         assert_eq!(addresses.len(), 1);
         assert!(addresses[0].label.is_none());
+    }
+
+    #[test]
+    fn extracts_abbreviation_from_header() {
+        let text = "RB&HH\nINVOICE\nDate: 30 Jan 2023\nPatient: John Smith\n";
+        assert_eq!(
+            extract_clinic_name_header_zone(text).as_deref(),
+            Some("RB&HH")
+        );
+    }
+
+    #[test]
+    fn extracts_all_caps_abbreviation_from_header() {
+        let text = "UCLH\nDepartment of Medicine\nInvoice No: 12345\n";
+        assert_eq!(
+            extract_clinic_name_header_zone(text).as_deref(),
+            Some("UCLH")
+        );
+    }
+
+    #[test]
+    fn returns_none_when_header_has_no_clinic_name() {
+        let text = "The patient presents with chest pain.\nHistory of hypertension.\nNo previous surgery.\n";
+        assert!(extract_clinic_name_header_zone(text).is_none());
+    }
+
+    #[test]
+    fn ignores_lines_with_digits_in_header() {
+        let text = "123 Main Street\nLondon\nRB&HH\n";
+        assert_eq!(
+            extract_clinic_name_header_zone(text).as_deref(),
+            Some("RB&HH")
+        );
+    }
+
+    #[test]
+    fn ignores_generic_short_all_caps_words() {
+        let text = "TO\nFROM\nDATE\nRB&HH\nINVOICE\n";
+        assert_eq!(
+            extract_clinic_name_header_zone(text).as_deref(),
+            Some("RB&HH")
+        );
+    }
+
+    #[test]
+    fn extracts_nhs_foundation_trust_name() {
+        let text = "Royal Brompton & Harefield NHS Foundation Trust\nRef: 9876\n";
+        assert_eq!(
+            extract_clinic_name_by_company_suffix(text).as_deref(),
+            Some("Royal Brompton & Harefield NHS Foundation Trust")
+        );
+    }
+
+    #[test]
+    fn extracts_hospital_suffix_name() {
+        let text = "St Mary's Hospital\nLondon\nInvoice #555\n";
+        assert_eq!(
+            extract_clinic_name_by_company_suffix(text).as_deref(),
+            Some("St Mary's Hospital")
+        );
     }
 }
