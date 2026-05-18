@@ -105,6 +105,22 @@ jobs:
           Copy-Item $tess "src-tauri/binaries/tesseract-${{ matrix.target }}.exe"
           Copy-Item $ppm  "src-tauri/binaries/pdftoppm-${{ matrix.target }}.exe"
 
+      - name: Bundle dylibs for sidecar binaries (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install dylibbundler
+          mkdir -p src-tauri/binaries/libs
+          dylibbundler -od -b \
+            -x "src-tauri/binaries/pdftoppm-${{ matrix.target }}" \
+            -d src-tauri/binaries/libs/ \
+            -p "@executable_path/../Resources/libs/" \
+            -s /opt/homebrew/lib
+          dylibbundler -od -b \
+            -x "src-tauri/binaries/tesseract-${{ matrix.target }}" \
+            -d src-tauri/binaries/libs/ \
+            -p "@executable_path/../Resources/libs/" \
+            -s /opt/homebrew/lib
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:

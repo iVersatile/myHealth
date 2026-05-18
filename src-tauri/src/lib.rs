@@ -116,10 +116,11 @@ pub fn run() {
             }
 
             // Resolve bundled sidecar binaries (tesseract, pdftoppm).
-            // In a release .app bundle the sidecars live next to the main
-            // executable; set env vars so ocr.rs can find them without
-            // hardcoding paths.  In local dev the vars stay unset and ocr.rs
-            // falls back to system PATH binaries.
+            // Only active in release builds — dev uses system PATH binaries
+            // which have correct rpaths in their Homebrew install location.
+            // Tauri dev copies sidecars to target/debug/ but those copies have
+            // broken @loader_path rpaths, so skipping them in dev is correct.
+            #[cfg(not(debug_assertions))]
             if let Ok(exe) = std::env::current_exe() {
                 if let Some(bin_dir) = exe.parent() {
                     for (name, var) in &[
