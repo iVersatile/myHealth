@@ -7,9 +7,9 @@
 ## RESUME POINT (always current)
 
 ```
-Phase: —
-Task:  —
-Note:  All phases 116–121 shipped. No active task. Awaiting new work.
+Phase: 123
+Task:  123.5
+Note:  Phase 123 complete — F5.8 draft dedup warning shipped
 ```
 
 ---
@@ -69,7 +69,7 @@ Note:  All phases 116–121 shipped. No active task. Awaiting new work.
 
 | Feature | Phase | Priority | Effort | Status |
 |---------|-------|----------|--------|--------|
-| Clinic name extraction: header-zone heuristic + NHS/hospital suffix (F5.7) | 122 | MED | Small | 🔲 |
+| Clinic name extraction: header-zone heuristic + NHS/hospital suffix (F5.7) | 122 | MED | Small | ✅ |
 | Draft entity dedup warning + Merge vs Create New UI (F5.8) | 123 | HIGH | Small | 🔲 |
 
 **v1.6+ (deferred)**
@@ -1067,7 +1067,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
 ### Sprint 122
 
-[ ] **122.1 — `extract_clinic_name_header_zone()` in `clinic.rs`**
+[x] **122.1 — `extract_clinic_name_header_zone()` in `clinic.rs`**
 
    Add to `src-tauri/src/extraction/clinic.rs`:
    ```rust
@@ -1085,7 +1085,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
    - Done when: unit tests pass; `cargo test` green.
 
-[ ] **122.2 — Extend company-suffix regex for NHS/hospital names**
+[x] **122.2 — Extend company-suffix regex for NHS/hospital names**
 
    In `extract_clinic_name_by_company_suffix()`, extend suffix alternation:
    - Add: `NHS\s+(?:Foundation\s+)?Trust`, `Hospital`, `Health\s+Centre`, `Medical\s+Centre`, `Infirmary`
@@ -1097,7 +1097,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
    - Done when: new tests pass; existing tests unchanged; `cargo test` green.
 
-[ ] **122.3 — Wire header-zone scan into OCR fallback in `documents.rs`**
+[x] **122.3 — Wire header-zone scan into OCR fallback in `documents.rs`**
 
    In the OCR fallback block (`spawn_blocking` closure), after `first_clinic` and `extract_clinic_name_by_company_suffix`, add:
    ```rust
@@ -1106,7 +1106,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
    - Done when: `cargo clippy -- -D warnings` clean; `cargo test` green.
 
-[ ] **122.4 — Pre-commit checks + commit**
+[x] **122.4 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
@@ -1143,7 +1143,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
 ### Sprint 123
 
-[ ] **123.1 — Rust: populate `existing_name` on draft entity responses**
+[x] **123.1 — Rust: populate `existing_name` on draft entity responses**
 
    In `src-tauri/src/commands/drafts.rs`, update the query that returns draft entities to LEFT JOIN on the candidate table:
    - For contact drafts: `LEFT JOIN contacts c2 ON contacts.merge_candidate_id = c2.id` → select `c2.name AS existing_name`
@@ -1152,7 +1152,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
    - Done when: `cargo test` green; `cargo clippy -- -D warnings` clean.
 
-[ ] **123.2 — TypeScript: add `existing_name` to draft entity types**
+[x] **123.2 — TypeScript: add `existing_name` to draft entity types**
 
    In relevant type definitions (e.g. `src/types/` or inline), add:
    ```typescript
@@ -1162,7 +1162,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
    - Done when: `npx tsc --noEmit` passes.
 
-[ ] **123.3 — Frontend: "Possible duplicate" warning + Merge/Create New buttons**
+[x] **123.3 — Frontend: "Possible duplicate" warning + Merge/Create New buttons**
 
    In `src/components/shared/DraftEntitySection.tsx` (or equivalent):
    - When `entity.merge_candidate_id && entity.existing_name`: render yellow badge `data-testid="merge-candidate-badge"` with text `"Possible duplicate of [existing_name]"`
@@ -1173,7 +1173,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
    - Done when: `npx tsc --noEmit` passes; UI renders both buttons when `merge_candidate_id` is set.
 
-[ ] **123.4 — Unit tests**
+[x] **123.4 — Unit tests**
 
    In relevant test file:
    - Test: draft entity with `merge_candidate_id` + `existing_name` → `merge-candidate-badge` visible, both buttons present
@@ -1183,7 +1183,7 @@ Header-zone scan is tried as a third fallback after `first_clinic` and `extract_
 
    - Done when: all new tests pass; existing tests unchanged; `pnpm vitest run` green.
 
-[ ] **123.5 — Pre-commit checks + commit**
+[x] **123.5 — Pre-commit checks + commit**
 
    ```bash
    cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
