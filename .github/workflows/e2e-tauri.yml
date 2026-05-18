@@ -27,7 +27,15 @@ jobs:
             librsvg2-dev \
             webkit2gtk-driver \
             xvfb \
-            sqlite3
+            sqlite3 \
+            tesseract-ocr \
+            poppler-utils
+
+      - name: Stage sidecar binaries
+        run: |
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" src-tauri/binaries/tesseract-x86_64-unknown-linux-gnu
+          cp "$(which pdftoppm)"  src-tauri/binaries/pdftoppm-x86_64-unknown-linux-gnu
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable

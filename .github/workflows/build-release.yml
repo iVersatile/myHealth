@@ -16,7 +16,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: myHealth_aarch64.dmg
-          - os: macos-latest
+          - os: macos-13
             target: x86_64-apple-darwin
             artifact_name: myHealth_x86_64.dmg
           - os: windows-latest
@@ -61,7 +61,40 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            tesseract-ocr \
+            poppler-utils
+
+      - name: Stage sidecar binaries (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" src-tauri/binaries/tesseract-x86_64-unknown-linux-gnu
+          cp "$(which pdftoppm)"  src-tauri/binaries/pdftoppm-x86_64-unknown-linux-gnu
+
+      - name: Stage sidecar binaries (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install tesseract poppler
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" "src-tauri/binaries/tesseract-${{ matrix.target }}"
+          cp "$(which pdftoppm)"  "src-tauri/binaries/pdftoppm-${{ matrix.target }}"
+
+      - name: Stage sidecar binaries (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install tesseract --yes
+          choco install poppler --yes
+          $tess = Get-ChildItem "C:\Program Files\Tesseract-OCR\tesseract.exe" -ErrorAction SilentlyContinue |
+                  Select-Object -ExpandProperty FullName -First 1
+          if (-not $tess) { $tess = (Get-Command tesseract).Source }
+          $ppm  = Get-ChildItem "C:\ProgramData\chocolatey\lib\poppler\tools\bin\pdftoppm.exe" -ErrorAction SilentlyContinue |
+                  Select-Object -ExpandProperty FullName -First 1
+          if (-not $ppm) { $ppm = (Get-Command pdftoppm).Source }
+          New-Item -ItemType Directory -Force -Path src-tauri/binaries | Out-Null
+          Copy-Item $tess "src-tauri/binaries/tesseract-${{ matrix.target }}.exe"
+          Copy-Item $ppm  "src-tauri/binaries/pdftoppm-${{ matrix.target }}.exe"
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0

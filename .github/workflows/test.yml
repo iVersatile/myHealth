@@ -54,7 +54,15 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            tesseract-ocr \
+            poppler-utils
+
+      - name: Stage sidecar binaries
+        run: |
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" src-tauri/binaries/tesseract-x86_64-unknown-linux-gnu
+          cp "$(which pdftoppm)"  src-tauri/binaries/pdftoppm-x86_64-unknown-linux-gnu
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -94,7 +102,15 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            tesseract-ocr \
+            poppler-utils
+
+      - name: Stage sidecar binaries
+        run: |
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" src-tauri/binaries/tesseract-x86_64-unknown-linux-gnu
+          cp "$(which pdftoppm)"  src-tauri/binaries/pdftoppm-x86_64-unknown-linux-gnu
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
