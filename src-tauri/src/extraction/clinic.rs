@@ -117,6 +117,29 @@ pub fn extract_clinic_name_header_zone(text: &str) -> Option<String> {
         if has_ampersand && words.len() <= 6 {
             return Some(trimmed.to_string());
         }
+
+        // Title-Case line ending in a recognised clinic-type keyword.
+        // Catches "The London Clinic", "Harley Street Surgery", etc.
+        const CLINIC_KEYWORDS: &[&str] = &[
+            "Clinic",
+            "Surgery",
+            "Hospital",
+            "Practice",
+            "Centre",
+            "Center",
+            "Infirmary",
+            "Dispensary",
+        ];
+        let is_title_case = words
+            .iter()
+            .all(|w| w.chars().next().map(|c| c.is_uppercase()).unwrap_or(true));
+        if is_title_case {
+            if let Some(&last) = words.last() {
+                if CLINIC_KEYWORDS.contains(&last) {
+                    return Some(trimmed.to_string());
+                }
+            }
+        }
     }
     None
 }

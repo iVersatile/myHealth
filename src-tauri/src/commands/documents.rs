@@ -2449,11 +2449,11 @@ pub async fn documents_run_extraction(
     let mut draft_appt_id: Option<String> = None;
 
     let clinic_suggestions = {
-        let text_name = crate::extraction::contact::first_clinic(&result.text)
+        let text_name = crate::extraction::clinic::extract_clinic_name_header_zone(&result.text)
             .or_else(|| {
                 crate::extraction::clinic::extract_clinic_name_by_company_suffix(&result.text)
             })
-            .or_else(|| crate::extraction::clinic::extract_clinic_name_header_zone(&result.text));
+            .or_else(|| crate::extraction::contact::first_clinic(&result.text));
         let text_phone = crate::extraction::clinic::extract_clinic_phone(&result.text);
         let text_email = crate::extraction::clinic::extract_clinic_email(&result.text);
 
@@ -2468,19 +2468,31 @@ pub async fn documents_run_extraction(
                 let Ok(tmp) = tempfile::TempDir::new() else {
                     return (None, None, None);
                 };
-                let pages = crate::extraction::ocr::split_pdf_to_pages(
+                let pages = match crate::extraction::ocr::split_pdf_to_pages(
                     std::path::Path::new(&pdf_path_ocr),
                     tmp.path(),
-                )
-                .unwrap_or_default();
+                ) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        log::warn!("[OCR] split_pdf_to_pages failed for {pdf_path_ocr}: {e}");
+                        return (None, None, None);
+                    }
+                };
                 // Cap at 10 pages to bound latency on large documents.
                 let ocr_text: String = pages
                     .iter()
                     .take(10)
-                    .filter_map(|p| crate::extraction::ocr::extract_image_text(p).ok())
+                    .filter_map(|p| {
+                        crate::extraction::ocr::extract_image_text(p)
+                            .map_err(|e| {
+                                log::warn!("[OCR] extract_image_text failed for {}: {e}", p.display());
+                            })
+                            .ok()
+                    })
                     .collect::<Vec<_>>()
                     .join("\n");
                 if ocr_text.is_empty() {
+                    log::warn!("[OCR] OCR produced no text for {pdf_path_ocr}; clinic/appointment extraction skipped");
                     return (None, None, None);
                 }
                 let n = crate::extraction::contact::first_clinic(&ocr_text)

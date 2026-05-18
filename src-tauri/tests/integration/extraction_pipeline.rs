@@ -1,6 +1,9 @@
-use app_lib::extraction::clinic::{extract_clinic_email, extract_clinic_phone};
+use app_lib::extraction::clinic::{
+    extract_clinic_email, extract_clinic_name_by_company_suffix, extract_clinic_phone,
+};
+use app_lib::extraction::contact::first_clinic;
 use app_lib::extraction::extract;
-use app_lib::extraction::ocr::{extract_embedded_images, extract_image_text};
+use app_lib::extraction::ocr::{extract_embedded_images, extract_image_text, split_pdf_to_pages};
 use std::path::Path;
 
 fn fixture(name: &str) -> std::path::PathBuf {
@@ -108,4 +111,122 @@ fn supplemental_ocr_extracts_phone_and_email_from_embedded_image() {
     // Functions must not panic on any OCR output — result may be None if fixture has no contact.
     let _phone = extract_clinic_phone(&ocr_text);
     let _email = extract_clinic_email(&ocr_text);
+}
+
+// ── Supplemental OCR path (split_pdf_to_pages + extract_image_text) ─────────
+// These tests exercise the production code path used in documents_run_extraction
+// for image-only / scanner PDFs where pdftotext yields empty text.
+
+fn pdftoppm_installed() -> bool {
+    std::process::Command::new("which")
+        .arg("pdftoppm")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn tesseract_installed() -> bool {
+    std::process::Command::new("which")
+        .arg("tesseract")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// split_pdf_to_pages returns a descriptive Err (not a panic) when pdftoppm is absent.
+/// The warn-log branch in documents.rs depends on this error propagating correctly.
+#[test]
+fn split_pdf_to_pages_returns_err_when_pdftoppm_missing() {
+    if pdftoppm_installed() {
+        eprintln!("SKIP: pdftoppm is installed — missing-tool error path not exercisable");
+        return;
+    }
+
+    let tmp = tempfile::TempDir::new().expect("temp dir");
+    let pdf = fixture("two-page-scanned.pdf");
+    let result = split_pdf_to_pages(&pdf, tmp.path());
+
+    assert!(
+        result.is_err(),
+        "split_pdf_to_pages must return Err when pdftoppm is absent"
+    );
+    let msg = result.unwrap_err();
+    assert!(
+        msg.contains("pdftoppm"),
+        "error message must mention pdftoppm; got: {msg}"
+    );
+}
+
+/// When pdftoppm is available, split_pdf_to_pages must return at least one page image
+/// for the two-page scanned fixture and extract_image_text must not panic on any page.
+#[test]
+fn split_pdf_to_pages_and_ocr_complete_without_panic() {
+    if !pdftoppm_installed() {
+        eprintln!("SKIP: pdftoppm not found — install poppler to run this test");
+        return;
+    }
+
+    let tmp = tempfile::TempDir::new().expect("temp dir");
+    let pdf = fixture("two-page-scanned.pdf");
+    let pages = split_pdf_to_pages(&pdf, tmp.path())
+        .expect("split_pdf_to_pages must succeed when pdftoppm is installed");
+
+    assert!(
+        !pages.is_empty(),
+        "two-page-scanned.pdf must yield at least one page image"
+    );
+
+    // extract_image_text must not panic; OCR may return Ok("") or Err if Tesseract absent.
+    for page in &pages {
+        let _ = extract_image_text(page);
+    }
+}
+
+/// Full supplemental OCR pipeline on the scanned fixture:
+/// split pages → OCR each → run all extraction functions on combined text.
+/// Verifies the pipeline completes end-to-end and extraction functions don't panic.
+#[test]
+fn supplemental_ocr_pipeline_does_not_panic_on_scanned_pdf() {
+    if !pdftoppm_installed() || !tesseract_installed() {
+        eprintln!(
+            "SKIP: requires pdftoppm and tesseract (missing: {}{})",
+            if !pdftoppm_installed() {
+                "pdftoppm "
+            } else {
+                ""
+            },
+            if !tesseract_installed() {
+                "tesseract"
+            } else {
+                ""
+            }
+        );
+        return;
+    }
+
+    let tmp = tempfile::TempDir::new().expect("temp dir");
+    let pdf = fixture("two-page-scanned.pdf");
+
+    let pages = split_pdf_to_pages(&pdf, tmp.path()).expect("split_pdf_to_pages must succeed");
+
+    let ocr_text: String = pages
+        .iter()
+        .take(10)
+        .filter_map(|p| extract_image_text(p).ok())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // Extraction functions must not panic regardless of OCR output quality.
+    let _clinic =
+        first_clinic(&ocr_text).or_else(|| extract_clinic_name_by_company_suffix(&ocr_text));
+    let _phone = extract_clinic_phone(&ocr_text);
+    let _email = extract_clinic_email(&ocr_text);
+
+    eprintln!(
+        "OCR text length: {} chars; clinic={:?} phone={:?} email={:?}",
+        ocr_text.len(),
+        _clinic,
+        _phone,
+        _email
+    );
 }

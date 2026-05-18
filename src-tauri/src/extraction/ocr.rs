@@ -3,6 +3,20 @@ use std::time::Duration;
 
 const PER_CALL_TIMEOUT: Duration = Duration::from_secs(60);
 
+/// Returns the tesseract binary path.
+/// Prefers `MYHEALTH_TESSERACT_PATH` (set at startup from the bundled sidecar);
+/// falls back to bare `"tesseract"` for local dev where it is on PATH.
+fn tesseract_bin() -> std::ffi::OsString {
+    std::env::var_os("MYHEALTH_TESSERACT_PATH").unwrap_or_else(|| "tesseract".into())
+}
+
+/// Returns the pdftoppm binary path.
+/// Prefers `MYHEALTH_PDFTOPPM_PATH` (set at startup from the bundled sidecar);
+/// falls back to bare `"pdftoppm"` for local dev where it is on PATH.
+fn pdftoppm_bin() -> std::ffi::OsString {
+    std::env::var_os("MYHEALTH_PDFTOPPM_PATH").unwrap_or_else(|| "pdftoppm".into())
+}
+
 /// Sentinel returned by [`extract_image_text_async`] when the per-page timeout fires.
 pub const OCR_TIMEOUT_MARKER: &str = "[OCR_TIMEOUT]";
 
@@ -12,7 +26,7 @@ pub const OCR_TIMEOUT_MARKER: &str = "[OCR_TIMEOUT]";
 pub async fn extract_image_text_async(path: &Path) -> Result<String, String> {
     let path_str = path.to_str().ok_or("non-UTF-8 path")?;
 
-    let child = tokio::process::Command::new("tesseract")
+    let child = tokio::process::Command::new(tesseract_bin())
         .arg(path_str)
         .arg("stdout")
         .arg("-l")
@@ -62,7 +76,7 @@ pub fn split_pdf_to_pages(
         .ok_or("non-UTF-8 temp path")?
         .to_string();
 
-    let status = std::process::Command::new("pdftoppm")
+    let status = std::process::Command::new(pdftoppm_bin())
         .arg("-png")
         .arg(pdf_path.to_str().ok_or("non-UTF-8 PDF path")?)
         .arg(&prefix)

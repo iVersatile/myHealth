@@ -114,6 +114,26 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // Resolve bundled sidecar binaries (tesseract, pdftoppm).
+            // In a release .app bundle the sidecars live next to the main
+            // executable; set env vars so ocr.rs can find them without
+            // hardcoding paths.  In local dev the vars stay unset and ocr.rs
+            // falls back to system PATH binaries.
+            if let Ok(exe) = std::env::current_exe() {
+                if let Some(bin_dir) = exe.parent() {
+                    for (name, var) in &[
+                        ("tesseract", "MYHEALTH_TESSERACT_PATH"),
+                        ("pdftoppm", "MYHEALTH_PDFTOPPM_PATH"),
+                    ] {
+                        let candidate = bin_dir.join(name);
+                        if candidate.exists() {
+                            std::env::set_var(var, &candidate);
+                        }
+                    }
+                }
+            }
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 loop {
