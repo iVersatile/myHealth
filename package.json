@@ -1,6 +1,6 @@
 {
   "name": "myhealth",
-  "version": "1.8.1",
+  "version": "1.9.1",
   "private": true,
   "packageManager": "pnpm@11.0.0",
   "scripts": {

@@ -18,6 +18,7 @@ pub struct DraftEntityRow {
     pub address: Option<String>,
     pub notes: Option<String>,
     pub merge_candidate_id: Option<String>,
+    pub existing_name: Option<String>,
     // appointment
     pub appt_date: Option<String>,
     pub doctor_name: Option<String>,
@@ -44,10 +45,12 @@ pub fn get_draft_entities(
     let rows = match entity_type.as_str() {
         "contact" => {
             let mut stmt = conn.prepare(
-                "SELECT id, name, role, specialty, phone, email, clinic, notes, merge_candidate_id, created_at
-                 FROM contacts
-                 WHERE is_draft = 1 AND is_deleted = 0
-                 ORDER BY created_at DESC",
+                "SELECT c.id, c.name, c.role, c.specialty, c.phone, c.email, c.clinic, c.notes,
+                        c.merge_candidate_id, c.created_at, c2.name AS existing_name
+                 FROM contacts c
+                 LEFT JOIN contacts c2 ON c.merge_candidate_id = c2.id AND c2.is_deleted = 0
+                 WHERE c.is_draft = 1 AND c.is_deleted = 0
+                 ORDER BY c.created_at DESC",
             )?;
             let rows = stmt
                 .query_map([], |r| {
@@ -63,6 +66,7 @@ pub fn get_draft_entities(
                         notes: r.get(7)?,
                         merge_candidate_id: r.get(8)?,
                         created_at: r.get(9)?,
+                        existing_name: r.get(10)?,
                         address: None,
                         appt_date: None,
                         doctor_name: None,
@@ -81,10 +85,12 @@ pub fn get_draft_entities(
         }
         "clinic" => {
             let mut stmt = conn.prepare(
-                "SELECT id, name, address, phone, email, merge_candidate_id, created_at
-                 FROM clinics
-                 WHERE is_draft = 1 AND is_deleted = 0
-                 ORDER BY created_at DESC",
+                "SELECT cl.id, cl.name, cl.address, cl.phone, cl.email,
+                        cl.merge_candidate_id, cl.created_at, cl2.name AS existing_name
+                 FROM clinics cl
+                 LEFT JOIN clinics cl2 ON cl.merge_candidate_id = cl2.id AND cl2.is_deleted = 0
+                 WHERE cl.is_draft = 1 AND cl.is_deleted = 0
+                 ORDER BY cl.created_at DESC",
             )?;
             let rows = stmt
                 .query_map([], |r| {
@@ -99,6 +105,7 @@ pub fn get_draft_entities(
                         notes: None,
                         merge_candidate_id: r.get(5)?,
                         created_at: r.get(6)?,
+                        existing_name: r.get(7)?,
                         role: None,
                         clinic: None,
                         appt_date: None,
@@ -142,6 +149,7 @@ pub fn get_draft_entities(
                         clinic: None,
                         address: None,
                         merge_candidate_id: None,
+                        existing_name: None,
                         severity: None,
                         onset_date: None,
                         dosage: None,
@@ -177,6 +185,7 @@ pub fn get_draft_entities(
                         clinic: None,
                         address: None,
                         merge_candidate_id: None,
+                        existing_name: None,
                         appt_date: None,
                         doctor_name: None,
                         clinic_name: None,
@@ -216,6 +225,7 @@ pub fn get_draft_entities(
                         clinic: None,
                         address: None,
                         merge_candidate_id: None,
+                        existing_name: None,
                         appt_date: None,
                         doctor_name: None,
                         clinic_name: None,
@@ -817,9 +827,12 @@ mod tests {
         // are caught here rather than at runtime.
         let mut stmt = conn
             .prepare(
-                "SELECT id, name, address, phone, email, merge_candidate_id, created_at
-                 FROM clinics WHERE is_draft = 1 AND is_deleted = 0
-                 ORDER BY created_at DESC",
+                "SELECT cl.id, cl.name, cl.address, cl.phone, cl.email,
+                        cl.merge_candidate_id, cl.created_at, cl2.name AS existing_name
+                 FROM clinics cl
+                 LEFT JOIN clinics cl2 ON cl.merge_candidate_id = cl2.id AND cl2.is_deleted = 0
+                 WHERE cl.is_draft = 1 AND cl.is_deleted = 0
+                 ORDER BY cl.created_at DESC",
             )
             .unwrap();
         let ids: Vec<String> = stmt
@@ -830,6 +843,56 @@ mod tests {
 
         assert_eq!(ids.len(), 1);
         assert_eq!(ids[0], "c1");
+    }
+
+    #[test]
+    fn get_draft_clinics_existing_name_populated_when_merge_candidate_set() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO clinics (id, name, is_draft, is_deleted) VALUES
+                ('live1', 'Live Clinic', 0, 0),
+                ('draft1', 'Draft Clinic', 1, 0);
+             UPDATE clinics SET merge_candidate_id = 'live1' WHERE id = 'draft1';",
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT cl.id, cl2.name AS existing_name
+                 FROM clinics cl
+                 LEFT JOIN clinics cl2 ON cl.merge_candidate_id = cl2.id AND cl2.is_deleted = 0
+                 WHERE cl.id = 'draft1'",
+            )
+            .unwrap();
+        let result: (String, Option<String>) =
+            stmt.query_row([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+
+        assert_eq!(result.0, "draft1");
+        assert_eq!(result.1, Some("Live Clinic".to_string()));
+    }
+
+    #[test]
+    fn get_draft_clinics_existing_name_null_when_no_merge_candidate() {
+        let conn = open_test_db();
+        conn.execute_batch(
+            "INSERT INTO clinics (id, name, is_draft, is_deleted) VALUES
+                ('draft2', 'Another Draft', 1, 0);",
+        )
+        .unwrap();
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT cl.id, cl2.name AS existing_name
+                 FROM clinics cl
+                 LEFT JOIN clinics cl2 ON cl.merge_candidate_id = cl2.id AND cl2.is_deleted = 0
+                 WHERE cl.id = 'draft2'",
+            )
+            .unwrap();
+        let result: (String, Option<String>) =
+            stmt.query_row([], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+
+        assert_eq!(result.0, "draft2");
+        assert!(result.1.is_none());
     }
 
     #[test]
