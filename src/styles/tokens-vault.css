@@ -1,0 +1,101 @@
+/* Vault theme overrides — applied via data-theme on <html>
+ * Calm: clinical teal  |  Coffee: warm cream  |  Mint: vibrant teal
+ * Layout vars (--sidebar-width etc.) switch in Phase 52 when IconRail ships.
+ */
+
+:root[data-theme="vault-dark"] {
+  --color-bg:             #0D1117;
+  --color-surface:        #161B22;
+  --color-surface-raised: #21262D;
+  --color-surface-sunken: #0D1117;
+  --color-surface-hover:  #30363D;
+  --color-border:         #30363D;
+  --color-text:           #E6EDF3;
+  --color-text-secondary: #8B949E;
+  --color-text-muted:     #6E7681;
+  --color-text-disabled:  #484F58;
+  --color-text-inverse:   #0D1117;
+  --color-primary:        #F0A500;
+  --color-primary-hover:  #D4920A;
+  --color-primary-dim:    rgba(240, 165, 0, 0.15);
+  --color-rail-bg:        #010409;
+  --color-flagged-low:    #D29922;
+  --color-flagged-high:   #F85149;
+  --color-flagged-ok:     #3FB950;
+  --color-tag-bg:         rgba(240, 165, 0, 0.15);
+  --color-tag-text:       #F0A500;
+  --doc-list-width:       300px;
+  --ai-panel-width:       240px;
+}
+
+:root[data-theme="calm"] {
+  --color-bg:             #EBF5F7;
+  --color-surface:        #FFFFFF;
+  --color-surface-raised: #DCEEF5;
+  --color-surface-sunken: #D2E8F0;
+  --color-border:         #C4E0E8;
+  --color-text:           #1B3852;
+  --color-text-secondary: #5A7A8C;
+  --color-text-muted:     #7A9AAC;
+  --color-text-disabled:  #A0BCCA;
+  --color-text-inverse:   #FFFFFF;
+  --color-primary:        #1A93A7;
+  --color-primary-hover:  #147E90;
+  --color-primary-dim:    rgba(26, 147, 167, 0.12);
+  --color-rail-bg:        #1A3347;
+  --color-flagged-low:    #D97706;
+  --color-flagged-high:   #DC2626;
+  --color-flagged-ok:     #16A34A;
+  --color-tag-bg:         rgba(26, 147, 167, 0.12);
+  --color-tag-text:       #1A93A7;
+  --doc-list-width:       300px;
+  --ai-panel-width:       240px;
+}
+
+:root[data-theme="coffee"] {
+  --color-bg:             #EDE8DF;
+  --color-surface:        #FAF7F2;
+  --color-surface-raised: #EDE0CF;
+  --color-surface-sunken: #E3D5C0;
+  --color-border:         #D9CFC4;
+  --color-text:           #2C1F12;
+  --color-text-secondary: #8C7B6B;
+  --color-text-muted:     #A0917F;
+  --color-text-disabled:  #C0B0A0;
+  --color-text-inverse:   #FAF7F2;
+  --color-primary:        #C8956A;
+  --color-primary-hover:  #B07B52;
+  --color-primary-dim:    rgba(200, 149, 106, 0.12);
+  --color-rail-bg:        #3D2B1A;
+  --color-flagged-low:    #D97706;
+  --color-flagged-high:   #DC2626;
+  --color-flagged-ok:     #16A34A;
+  --color-tag-bg:         rgba(200, 149, 106, 0.15);
+  --color-tag-text:       #A0653A;
+  --doc-list-width:       300px;
+  --ai-panel-width:       240px;
+}
+
+:root[data-theme="mint"] {
+  --color-bg:             #F0FAFA;
+  --color-surface:        #FFFFFF;
+  --color-surface-raised: #E0F7F6;
+  --color-surface-sunken: #D0F0EE;
+  --color-border:         #C2E8E8;
+  --color-text:           #162E2E;
+  --color-text-secondary: #5A9E9E;
+  --color-text-muted:     #7ABCBC;
+  --color-text-disabled:  #A0D0D0;
+  --color-text-inverse:   #FFFFFF;
+  --color-primary:        #17C3B2;
+  --color-primary-hover:  #10A898;
+  --color-primary-dim:    rgba(23, 195, 178, 0.12);
+  --color-rail-bg:        #1C3535;
+  --color-flagged-low:    #D97706;
+  --color-flagged-high:   #DC2626;
+  --color-flagged-ok:     #16A34A;
+  --color-tag-bg:         rgba(23, 195, 178, 0.12);
+  --color-tag-text:       #0E9080;
+  --doc-list-width:       300px;
+  --ai-panel-width:       240px;
+}

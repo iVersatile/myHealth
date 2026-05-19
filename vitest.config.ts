@@ -7,9 +7,20 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: [],
+    setupFiles: ['./vitest.setup.ts'],
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**', 'e2e-tauri/**'],
     coverage: {
       provider: "v8",
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        'e2e/**',
+        'e2e-tauri/**',
+        // PDF renderer: uses @react-pdf/renderer which requires browser canvas, not jsdom
+        '**/DocumentReport*',
+        // Navigation shell — no business logic to cover
+        '**/components/layout/Sidebar*',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,

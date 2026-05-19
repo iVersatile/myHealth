@@ -1,0 +1,264 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,sans-serif">
+  <!-- Background -->
+  <rect width="1440" height="900" fill="#EBF5F7"/>
+
+  <!-- ── Icon Rail (52px) ── -->
+  <rect x="0" y="0" width="52" height="900" fill="#1A3347"/>
+  <!-- Logo mark -->
+  <rect x="14" y="16" width="24" height="24" rx="6" fill="#1A93A7"/>
+  <text x="26" y="33" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="700">H</text>
+  <!-- Nav icons -->
+  <!-- Documents (active) -->
+  <rect x="0" y="76" width="4" height="40" rx="2" fill="#1A93A7"/>
+  <rect x="8" y="76" width="36" height="40" rx="8" fill="#1A93A7" fill-opacity="0.25"/>
+  <text x="26" y="101" text-anchor="middle" fill="#1A93A7" font-size="18">📄</text>
+  <!-- Timeline -->
+  <rect x="8" y="128" width="36" height="40" rx="8" fill="none"/>
+  <text x="26" y="153" text-anchor="middle" fill="#7BA8BE" font-size="18">📅</text>
+  <!-- Contacts -->
+  <rect x="8" y="180" width="36" height="40" rx="8" fill="none"/>
+  <text x="26" y="205" text-anchor="middle" fill="#7BA8BE" font-size="18">👤</text>
+  <!-- Clinics -->
+  <rect x="8" y="232" width="36" height="40" rx="8" fill="none"/>
+  <text x="26" y="257" text-anchor="middle" fill="#7BA8BE" font-size="18">🏥</text>
+  <!-- Notes -->
+  <rect x="8" y="284" width="36" height="40" rx="8" fill="none"/>
+  <text x="26" y="309" text-anchor="middle" fill="#7BA8BE" font-size="18">📝</text>
+  <!-- Trash (bottom) -->
+  <rect x="8" y="840" width="36" height="40" rx="8" fill="none"/>
+  <text x="26" y="865" text-anchor="middle" fill="#7BA8BE" font-size="18">🗑</text>
+
+  <!-- ── Document List Panel (300px) ── -->
+  <rect x="52" y="0" width="300" height="900" fill="#FFFFFF"/>
+  <rect x="52" y="0" width="300" height="900" fill="none" stroke="#C4E0E8" stroke-width="1"/>
+
+  <!-- Search bar -->
+  <rect x="64" y="16" width="276" height="36" rx="8" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="84" y="39" fill="#5A7A8C" font-size="13">🔍  Search documents…</text>
+
+  <!-- Filter chips -->
+  <rect x="64" y="62" width="60" height="24" rx="12" fill="#1A93A7"/>
+  <text x="94" y="79" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="600">All</text>
+  <rect x="132" y="62" width="72" height="24" rx="12" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="168" y="79" text-anchor="middle" fill="#5A7A8C" font-size="11">Lab Results</text>
+  <rect x="212" y="62" width="58" height="24" rx="12" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="241" y="79" text-anchor="middle" fill="#5A7A8C" font-size="11">Imaging</text>
+
+  <!-- Doc rows -->
+  <!-- Row 1 — selected -->
+  <rect x="52" y="98" width="300" height="72" fill="#DCEEF5"/>
+  <rect x="52" y="98" width="3" height="72" fill="#1A93A7"/>
+  <!-- flag indicator -->
+  <circle cx="316" cy="117" r="5" fill="#DC2626"/>
+  <rect x="64" y="108" width="32" height="32" rx="6" fill="#1A93A7" fill-opacity="0.2"/>
+  <text x="80" y="129" text-anchor="middle" fill="#1A93A7" font-size="14">🧪</text>
+  <text x="104" y="120" fill="#1B3852" font-size="13" font-weight="600">Blood Test Results</text>
+  <text x="104" y="136" fill="#5A7A8C" font-size="11">09 Mar 2023</text>
+  <rect x="104" y="148" width="68" height="16" rx="8" fill="#1A93A7" fill-opacity="0.15"/>
+  <text x="138" y="160" text-anchor="middle" fill="#1A93A7" font-size="10" font-weight="600">LAB RESULT</text>
+
+  <!-- Row 2 -->
+  <rect x="52" y="170" width="300" height="72" fill="#FFFFFF"/>
+  <rect x="52" y="241" width="300" height="1" fill="#C4E0E8"/>
+  <rect x="64" y="180" width="32" height="32" rx="6" fill="#5A7A8C" fill-opacity="0.15"/>
+  <text x="80" y="201" text-anchor="middle" fill="#5A7A8C" font-size="14">📋</text>
+  <text x="104" y="192" fill="#1B3852" font-size="13" font-weight="500">Physiotherapy Notes</text>
+  <text x="104" y="208" fill="#5A7A8C" font-size="11">22 Feb 2023</text>
+  <rect x="104" y="220" width="68" height="16" rx="8" fill="#5A7A8C" fill-opacity="0.12"/>
+  <text x="138" y="232" text-anchor="middle" fill="#5A7A8C" font-size="10" font-weight="600">CLINICAL NOTE</text>
+
+  <!-- Row 3 -->
+  <rect x="52" y="242" width="300" height="72" fill="#FFFFFF"/>
+  <rect x="52" y="313" width="300" height="1" fill="#C4E0E8"/>
+  <rect x="64" y="252" width="32" height="32" rx="6" fill="#5A7A8C" fill-opacity="0.15"/>
+  <text x="80" y="273" text-anchor="middle" fill="#5A7A8C" font-size="14">🩻</text>
+  <text x="104" y="264" fill="#1B3852" font-size="13" font-weight="500">Chest X-Ray Report</text>
+  <text x="104" y="280" fill="#5A7A8C" font-size="11">14 Jan 2023</text>
+  <rect x="104" y="292" width="56" height="16" rx="8" fill="#5A7A8C" fill-opacity="0.12"/>
+  <text x="132" y="304" text-anchor="middle" fill="#5A7A8C" font-size="10" font-weight="600">IMAGING</text>
+
+  <!-- Row 4 -->
+  <rect x="52" y="314" width="300" height="72" fill="#FFFFFF"/>
+  <rect x="52" y="385" width="300" height="1" fill="#C4E0E8"/>
+  <rect x="64" y="324" width="32" height="32" rx="6" fill="#5A7A8C" fill-opacity="0.15"/>
+  <text x="80" y="345" text-anchor="middle" fill="#5A7A8C" font-size="14">💊</text>
+  <text x="104" y="336" fill="#1B3852" font-size="13" font-weight="500">Prescription — Omeprazole</text>
+  <text x="104" y="352" fill="#5A7A8C" font-size="11">03 Jan 2023</text>
+  <rect x="104" y="364" width="68" height="16" rx="8" fill="#5A7A8C" fill-opacity="0.12"/>
+  <text x="138" y="376" text-anchor="middle" fill="#5A7A8C" font-size="10" font-weight="600">PRESCRIPTION</text>
+
+  <!-- Row 5 -->
+  <rect x="52" y="386" width="300" height="72" fill="#FFFFFF"/>
+  <rect x="52" y="457" width="300" height="1" fill="#C4E0E8"/>
+  <rect x="64" y="396" width="32" height="32" rx="6" fill="#5A7A8C" fill-opacity="0.15"/>
+  <text x="80" y="417" text-anchor="middle" fill="#5A7A8C" font-size="14">🏥</text>
+  <text x="104" y="408" fill="#1B3852" font-size="13" font-weight="500">Hospital Discharge Summary</text>
+  <text x="104" y="424" fill="#5A7A8C" font-size="11">18 Dec 2022</text>
+  <rect x="104" y="436" width="60" height="16" rx="8" fill="#5A7A8C" fill-opacity="0.12"/>
+  <text x="134" y="448" text-anchor="middle" fill="#5A7A8C" font-size="10" font-weight="600">DISCHARGE</text>
+
+  <!-- Upload button -->
+  <rect x="64" y="848" width="276" height="36" rx="8" fill="#1A93A7"/>
+  <text x="202" y="871" text-anchor="middle" fill="#FFFFFF" font-size="13" font-weight="600">+ Upload Document</text>
+
+  <!-- ── PDF Preview Panel (flex-1 ≈ 836px) ── -->
+  <rect x="352" y="0" width="836" height="900" fill="#EBF5F7"/>
+
+  <!-- Toolbar -->
+  <rect x="352" y="0" width="836" height="52" fill="#FFFFFF" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="372" y="31" fill="#1B3852" font-size="13" font-weight="600">Blood Test Results — 09 Mar 2023</text>
+  <!-- Toolbar buttons -->
+  <rect x="948" y="12" width="28" height="28" rx="6" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="962" y="31" text-anchor="middle" fill="#5A7A8C" font-size="14">−</text>
+  <rect x="982" y="12" width="56" height="28" rx="6" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="1010" y="31" text-anchor="middle" fill="#1B3852" font-size="12">100%</text>
+  <rect x="1044" y="12" width="28" height="28" rx="6" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="1058" y="31" text-anchor="middle" fill="#5A7A8C" font-size="14">+</text>
+  <rect x="1092" y="12" width="28" height="28" rx="6" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="1106" y="31" text-anchor="middle" fill="#5A7A8C" font-size="14">↗</text>
+  <rect x="1130" y="12" width="28" height="28" rx="6" fill="#EBF5F7" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="1144" y="31" text-anchor="middle" fill="#5A7A8C" font-size="14">⋯</text>
+
+  <!-- PDF page shadow -->
+  <rect x="440" y="72" width="660" height="800" rx="4" fill="#00000015"/>
+  <!-- PDF page -->
+  <rect x="436" y="68" width="660" height="800" rx="4" fill="#FFFFFF" stroke="#C4E0E8" stroke-width="1"/>
+
+  <!-- PDF content -->
+  <text x="766" y="110" text-anchor="middle" fill="#1B3852" font-size="18" font-weight="700">Haematology Report</text>
+  <text x="766" y="132" text-anchor="middle" fill="#5A7A8C" font-size="12">Patient: J. Smith  |  DOB: 12/04/1985  |  NHS No: 123 456 7890</text>
+  <text x="766" y="150" text-anchor="middle" fill="#5A7A8C" font-size="12">Requesting Physician: Dr. A. Patel  |  Collected: 09 Mar 2023  |  Reported: 10 Mar 2023</text>
+  <line x1="456" y1="162" x2="1076" y2="162" stroke="#C4E0E8" stroke-width="1"/>
+
+  <!-- Table header -->
+  <rect x="456" y="170" width="660" height="28" fill="#EBF5F7"/>
+  <text x="476" y="188" fill="#1B3852" font-size="12" font-weight="600">Test</text>
+  <text x="696" y="188" fill="#1B3852" font-size="12" font-weight="600">Result</text>
+  <text x="786" y="188" fill="#1B3852" font-size="12" font-weight="600">Units</text>
+  <text x="886" y="188" fill="#1B3852" font-size="12" font-weight="600">Reference Range</text>
+  <text x="1036" y="188" fill="#1B3852" font-size="12" font-weight="600">Flag</text>
+
+  <!-- Table rows -->
+  <line x1="456" y1="198" x2="1076" y2="198" stroke="#EBF5F7" stroke-width="1"/>
+  <text x="476" y="216" fill="#1B3852" font-size="12">Haemoglobin (Hgb)</text>
+  <text x="696" y="216" fill="#1B3852" font-size="12">138</text>
+  <text x="786" y="216" fill="#5A7A8C" font-size="12">g/L</text>
+  <text x="886" y="216" fill="#5A7A8C" font-size="12">130 – 170</text>
+
+  <line x1="456" y1="226" x2="1076" y2="226" stroke="#EBF5F7" stroke-width="1"/>
+  <text x="476" y="244" fill="#1B3852" font-size="12">White Blood Cells (WBC)</text>
+  <text x="696" y="244" fill="#DC2626" font-size="12" font-weight="600">11.8</text>
+  <text x="786" y="244" fill="#5A7A8C" font-size="12">×10⁹/L</text>
+  <text x="886" y="244" fill="#5A7A8C" font-size="12">4.0 – 11.0</text>
+  <rect x="1030" y="232" width="36" height="18" rx="4" fill="#DC2626"/>
+  <text x="1048" y="245" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="700">HIGH</text>
+
+  <line x1="456" y1="254" x2="1076" y2="254" stroke="#EBF5F7" stroke-width="1"/>
+  <text x="476" y="272" fill="#1B3852" font-size="12">Platelets (PLT)</text>
+  <text x="696" y="272" fill="#1B3852" font-size="12">245</text>
+  <text x="786" y="272" fill="#5A7A8C" font-size="12">×10⁹/L</text>
+  <text x="886" y="272" fill="#5A7A8C" font-size="12">150 – 400</text>
+
+  <line x1="456" y1="282" x2="1076" y2="282" stroke="#EBF5F7" stroke-width="1"/>
+  <text x="476" y="300" fill="#1B3852" font-size="12">Ferritin</text>
+  <text x="696" y="300" fill="#D97706" font-size="12" font-weight="600">9</text>
+  <text x="786" y="300" fill="#5A7A8C" font-size="12">µg/L</text>
+  <text x="886" y="300" fill="#5A7A8C" font-size="12">12 – 300</text>
+  <rect x="1030" y="288" width="32" height="18" rx="4" fill="#D97706"/>
+  <text x="1046" y="301" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="700">LOW</text>
+
+  <line x1="456" y1="310" x2="1076" y2="310" stroke="#EBF5F7" stroke-width="1"/>
+  <text x="476" y="328" fill="#1B3852" font-size="12">Serum Folate</text>
+  <text x="696" y="328" fill="#1B3852" font-size="12">7.2</text>
+  <text x="786" y="328" fill="#5A7A8C" font-size="12">nmol/L</text>
+  <text x="886" y="328" fill="#5A7A8C" font-size="12">7.0 – 45.0</text>
+
+  <text x="476" y="372" fill="#5A7A8C" font-size="11" font-style="italic">Reviewed by: Dr. M. Chen, FRCPath  |  Lab ID: HEM-2023-4471</text>
+
+  <!-- ── AI Insights Panel (240px) ── -->
+  <rect x="1188" y="0" width="252" height="900" fill="#FFFFFF" stroke="#C4E0E8" stroke-width="1"/>
+
+  <!-- Panel header -->
+  <rect x="1188" y="0" width="252" height="52" fill="#EBF5F7"/>
+  <text x="1264" y="22" fill="#1B3852" font-size="13" font-weight="700">AI Insights</text>
+  <text x="1264" y="38" fill="#5A7A8C" font-size="10">Extracted at upload</text>
+  <!-- Collapse button -->
+  <rect x="1398" y="14" width="28" height="24" rx="4" fill="#DCEEF5"/>
+  <text x="1412" y="31" text-anchor="middle" fill="#1A93A7" font-size="12">›</text>
+
+  <!-- Summary section -->
+  <text x="1204" y="76" fill="#1B3852" font-size="11" font-weight="700">SUMMARY</text>
+  <rect x="1200" y="84" width="224" height="72" rx="6" fill="#EBF5F7"/>
+  <text x="1212" y="100" fill="#1B3852" font-size="11">Haematology panel showing</text>
+  <text x="1212" y="116" fill="#1B3852" font-size="11">elevated WBC and low ferritin.</text>
+  <text x="1212" y="132" fill="#5A7A8C" font-size="10">Possible infection or anaemia.</text>
+  <text x="1212" y="148" fill="#5A7A8C" font-size="10">Follow-up recommended.</text>
+
+  <!-- Flagged values section -->
+  <line x1="1200" y1="168" x2="1424" y2="168" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="1204" y="186" fill="#1B3852" font-size="11" font-weight="700">FLAGGED VALUES</text>
+  <!-- WBC HIGH -->
+  <rect x="1200" y="194" width="224" height="48" rx="6" fill="#FEF2F2"/>
+  <text x="1216" y="212" fill="#DC2626" font-size="11" font-weight="600">WBC</text>
+  <rect x="1360" y="198" width="36" height="16" rx="4" fill="#DC2626"/>
+  <text x="1378" y="210" text-anchor="middle" fill="#FFFFFF" font-size="9" font-weight="700">HIGH</text>
+  <text x="1216" y="230" fill="#1B3852" font-size="11">11.8 ×10⁹/L  <tspan fill="#5A7A8C">(ref 4.0–11.0)</tspan></text>
+  <!-- Ferritin LOW -->
+  <rect x="1200" y="250" width="224" height="48" rx="6" fill="#FFFBEB"/>
+  <text x="1216" y="268" fill="#D97706" font-size="11" font-weight="600">Ferritin</text>
+  <rect x="1360" y="254" width="32" height="16" rx="4" fill="#D97706"/>
+  <text x="1376" y="266" text-anchor="middle" fill="#FFFFFF" font-size="9" font-weight="700">LOW</text>
+  <text x="1216" y="286" fill="#1B3852" font-size="11">9 µg/L  <tspan fill="#5A7A8C">(ref 12–300)</tspan></text>
+
+  <!-- Extracted details section -->
+  <line x1="1200" y1="312" x2="1424" y2="312" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="1204" y="330" fill="#1B3852" font-size="11" font-weight="700">EXTRACTED DETAILS</text>
+
+  <text x="1204" y="352" fill="#5A7A8C" font-size="10">Doctor</text>
+  <text x="1204" y="366" fill="#1B3852" font-size="11">Dr. A. Patel</text>
+
+  <text x="1204" y="388" fill="#5A7A8C" font-size="10">Clinic</text>
+  <text x="1204" y="402" fill="#1A93A7" font-size="11" text-decoration="underline">City Health Lab</text>
+
+  <text x="1204" y="424" fill="#5A7A8C" font-size="10">Date</text>
+  <text x="1204" y="438" fill="#1B3852" font-size="11">09 Mar 2023</text>
+
+  <text x="1204" y="460" fill="#5A7A8C" font-size="10">Category</text>
+  <rect x="1204" y="468" width="68" height="18" rx="9" fill="#1A93A7" fill-opacity="0.15"/>
+  <text x="1238" y="481" text-anchor="middle" fill="#1A93A7" font-size="10" font-weight="600">Lab Result</text>
+
+  <text x="1204" y="502" fill="#5A7A8C" font-size="10">Tags</text>
+  <rect x="1204" y="510" width="42" height="18" rx="9" fill="#EBF5F7"/>
+  <text x="1225" y="523" text-anchor="middle" fill="#5A7A8C" font-size="10">blood</text>
+  <rect x="1252" y="510" width="50" height="18" rx="9" fill="#EBF5F7"/>
+  <text x="1277" y="523" text-anchor="middle" fill="#5A7A8C" font-size="10">anaemia</text>
+
+  <!-- Related docs section -->
+  <line x1="1200" y1="542" x2="1424" y2="542" stroke="#C4E0E8" stroke-width="1"/>
+  <text x="1204" y="560" fill="#1B3852" font-size="11" font-weight="700">RELATED DOCUMENTS</text>
+  <rect x="1200" y="568" width="224" height="44" rx="6" fill="#EBF5F7"/>
+  <text x="1216" y="585" fill="#1B3852" font-size="11">Iron Panel — 15 Jun 2022</text>
+  <text x="1216" y="601" fill="#5A7A8C" font-size="10">Lab Result · Dr. A. Patel</text>
+  <rect x="1200" y="620" width="224" height="44" rx="6" fill="#EBF5F7"/>
+  <text x="1216" y="637" fill="#1B3852" font-size="11">FBC — 02 Sep 2022</text>
+  <text x="1216" y="653" fill="#5A7A8C" font-size="10">Lab Result · City Health Lab</text>
+
+  <!-- ── Theme Label Card (bottom-right) ── -->
+  <rect x="1196" y="832" width="216" height="52" rx="8" fill="#1A3347"/>
+  <text x="1304" y="854" text-anchor="middle" fill="#1A93A7" font-size="11" font-weight="700" letter-spacing="2">CALM</text>
+  <text x="1304" y="870" text-anchor="middle" fill="#7BA8BE" font-size="10">Clinical Teal · Medical Trust</text>
+
+  <!-- ── Annotations ── -->
+  <!-- Rail annotation -->
+  <line x1="26" y1="460" x2="26" y2="540" stroke="#1A93A7" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="26" y="556" text-anchor="middle" fill="#1A93A7" font-size="9">52px</text>
+  <text x="26" y="568" text-anchor="middle" fill="#1A93A7" font-size="9">rail</text>
+
+  <!-- List panel annotation -->
+  <line x1="52" y1="870" x2="352" y2="870" stroke="#5A7A8C" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="202" y="886" text-anchor="middle" fill="#5A7A8C" font-size="9">300px list panel</text>
+
+  <!-- AI panel annotation -->
+  <line x1="1188" y1="870" x2="1440" y2="870" stroke="#5A7A8C" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="1314" y="886" text-anchor="middle" fill="#5A7A8C" font-size="9">240px AI panel</text>
+</svg>

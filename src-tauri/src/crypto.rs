@@ -3,7 +3,7 @@ use pbkdf2::pbkdf2;
 use sha2::Sha512;
 
 pub const KEY_LEN: usize = 32;
-pub const ITERATIONS: u32 = 64_000;
+pub const ITERATIONS: u32 = 500_000;
 
 pub fn derive_key(password: &str, salt: &[u8]) -> [u8; KEY_LEN] {
     let mut key = [0u8; KEY_LEN];

@@ -16,9 +16,6 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: myHealth_aarch64.dmg
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact_name: myHealth_x86_64.dmg
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: myHealth_x86_64.msi
@@ -31,11 +28,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
+
+      - uses: pnpm/action-setup@v4
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -60,7 +58,68 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            tesseract-ocr \
+            poppler-utils
+
+      - name: Stage sidecar binaries (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" src-tauri/binaries/tesseract-x86_64-unknown-linux-gnu
+          cp "$(which pdftoppm)"  src-tauri/binaries/pdftoppm-x86_64-unknown-linux-gnu
+
+      - name: Stage sidecar binaries (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install tesseract poppler
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" "src-tauri/binaries/tesseract-${{ matrix.target }}"
+          cp "$(which pdftoppm)"  "src-tauri/binaries/pdftoppm-${{ matrix.target }}"
+
+      - name: Stage sidecar binaries (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # tesseract via choco (shims reliably)
+          choco install tesseract --yes
+          $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" +
+                      [System.Environment]::GetEnvironmentVariable("PATH","User")
+          $tess = Get-Command tesseract -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+          if (-not $tess) {
+            $tess = Get-ChildItem -Path "C:\Program Files\Tesseract-OCR" -Filter "tesseract.exe" -Recurse -ErrorAction SilentlyContinue |
+                    Select-Object -ExpandProperty FullName -First 1
+          }
+          # pdftoppm via direct download — choco poppler does not shim pdftoppm reliably
+          Invoke-WebRequest `
+            -Uri "https://github.com/oschwartz10612/poppler-windows/releases/download/v24.08.0-0/Release-24.08.0-0.zip" `
+            -OutFile "$env:TEMP\poppler.zip" -UseBasicParsing
+          Expand-Archive "$env:TEMP\poppler.zip" -DestinationPath "$env:TEMP\poppler"
+          $ppm = Get-ChildItem -Path "$env:TEMP\poppler" -Filter "pdftoppm.exe" -Recurse -ErrorAction SilentlyContinue |
+                 Select-Object -ExpandProperty FullName -First 1
+          if (-not $tess) { Write-Error "tesseract.exe not found"; exit 1 }
+          if (-not $ppm)  { Write-Error "pdftoppm.exe not found in poppler zip"; exit 1 }
+          Write-Host "tesseract: $tess"
+          Write-Host "pdftoppm:  $ppm"
+          New-Item -ItemType Directory -Force -Path src-tauri/binaries | Out-Null
+          Copy-Item $tess "src-tauri/binaries/tesseract-${{ matrix.target }}.exe"
+          Copy-Item $ppm  "src-tauri/binaries/pdftoppm-${{ matrix.target }}.exe"
+
+      - name: Bundle dylibs for sidecar binaries (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install dylibbundler
+          mkdir -p src-tauri/binaries/libs
+          dylibbundler -od -b \
+            -x "src-tauri/binaries/pdftoppm-${{ matrix.target }}" \
+            -d src-tauri/binaries/libs/ \
+            -p "@executable_path/../Resources/libs/" \
+            -s /opt/homebrew/lib
+          dylibbundler -od -b \
+            -x "src-tauri/binaries/tesseract-${{ matrix.target }}" \
+            -d src-tauri/binaries/libs/ \
+            -p "@executable_path/../Resources/libs/" \
+            -s /opt/homebrew/lib
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0

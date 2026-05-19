@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "myHealth",
-  "version": "0.1.0",
+  "version": "1.9.4",
   "identifier": "com.myhealth.app",
   "build": {
     "frontendDist": "../out",
@@ -20,12 +20,23 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https://asset.localhost; frame-src asset: https://asset.localhost; connect-src 'self' ipc: http://ipc.localhost; font-src 'self' data:; object-src 'none'; base-uri 'self'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/.myHealth/**", "$APPDATA/.myHealth/**"]
+      }
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": [
+      "binaries/tesseract",
+      "binaries/pdftoppm"
+    ],
+    "resources": {
+      "binaries/libs/*": "libs/"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

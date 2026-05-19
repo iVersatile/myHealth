@@ -2,3 +2,10 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Sidecar binaries — platform-specific, populated by CI before tauri build.
+# Local dev: symlink to Homebrew binaries.  Do not commit.
+/binaries/*
+# Keep the libs/ dir skeleton so the tauri.conf.json glob always resolves
+!/binaries/libs/
+!/binaries/libs/placeholder

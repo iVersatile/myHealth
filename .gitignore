@@ -49,3 +49,6 @@ tmp-scaffold/
 # claude code
 CLAUDE.md
 .claude/
+
+# archives
+docs/archive/

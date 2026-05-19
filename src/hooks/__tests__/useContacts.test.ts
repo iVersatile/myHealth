@@ -1,0 +1,263 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { renderHook, act, waitFor } from '@testing-library/react'
+import { useContactsStore } from '../../store/contactsStore'
+import type { Contact } from '../../store/contactsStore'
+import { useAppointmentsStore } from '../../store/appointmentsStore'
+import type { Appointment } from '../../store/appointmentsStore'
+
+const mockInvoke = vi.fn()
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => mockInvoke(...args),
+}))
+
+const makeContact = (overrides: Partial<Contact> = {}): Contact => ({
+  id: 'c1',
+  name: 'Dr. Smith',
+  role: 'gp',
+  specialty: null,
+  phone: null,
+  email: null,
+  clinic: null,
+  address: null,
+  notes: null,
+  contact_clinic_id: null,
+  created_at: '2026-04-20T10:00:00Z',
+  updated_at: '2026-04-20T10:00:00Z',
+  ...overrides,
+})
+
+const makeAppointment = (overrides: Partial<Appointment> = {}): Appointment => ({
+  id: 'a1',
+  title: 'Checkup',
+  doctor_name: null,
+  clinic_name: null,
+  specialty: null,
+  appt_date: '2026-06-01T09:00:00Z',
+  duration_min: 30,
+  location: null,
+  notes: null,
+  status: 'scheduled',
+  reminder_min: 60,
+  reminder_offsets: null,
+  created_at: '2026-04-20T10:00:00Z',
+  updated_at: '2026-04-20T10:00:00Z',
+  document_ids: [],
+  contact_ids: [],
+  recurrence_series_id: null,
+  ...overrides,
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  useContactsStore.setState({ contacts: [], loading: false, error: null })
+  useAppointmentsStore.setState({ appointments: [], loading: false, error: null, statusFilter: 'all' })
+})
+
+async function getHook(roleFilter?: string) {
+  const { useContacts } = await import('../useContacts')
+  return renderHook(() => useContacts(roleFilter))
+}
+
+describe('fetch on mount', () => {
+  it('calls contacts_list and populates store', async () => {
+    const contacts = [makeContact({ id: 'c1' }), makeContact({ id: 'c2', name: 'Dr. Jones', role: 'specialist' })]
+    mockInvoke.mockResolvedValueOnce(contacts)
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_list', {})
+    expect(result.current.contacts).toEqual(contacts)
+  })
+
+  it('passes role filter to contacts_list', async () => {
+    mockInvoke.mockResolvedValueOnce([])
+
+    const { result } = await getHook('specialist')
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_list', { role: 'specialist' })
+  })
+
+  it('sets error state on fetch failure', async () => {
+    mockInvoke.mockRejectedValueOnce(new Error('DB locked'))
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.error).toBe('DB locked')
+    expect(result.current.contacts).toEqual([])
+  })
+
+  it('sets error state as string when rejection is a Tauri plain object', async () => {
+    mockInvoke.mockRejectedValueOnce({ message: 'connection timeout' })
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.error).toBe('connection timeout')
+  })
+})
+
+describe('createContact', () => {
+  it('invokes contacts_create and upserts into store', async () => {
+    mockInvoke.mockResolvedValueOnce([])
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const created = makeContact({ id: 'c99', name: 'New Doctor' })
+    mockInvoke.mockResolvedValueOnce(created)
+
+    let returned: Contact | undefined
+    await act(async () => {
+      returned = await result.current.createContact({
+        name: 'New Doctor',
+        role: 'gp',
+      })
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_create', {
+      input: { name: 'New Doctor', role: 'gp' },
+    })
+    expect(returned).toEqual(created)
+    expect(useContactsStore.getState().contacts).toContainEqual(created)
+  })
+
+  it('throws on contacts_create failure', async () => {
+    mockInvoke.mockResolvedValueOnce([])
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    mockInvoke.mockRejectedValueOnce(new Error('write failed'))
+
+    await expect(
+      act(async () => {
+        await result.current.createContact({ name: 'X', role: 'gp' })
+      }),
+    ).rejects.toThrow('write failed')
+  })
+})
+
+describe('updateContact', () => {
+  it('invokes contacts_update and upserts into store', async () => {
+    const original = makeContact({ id: 'c1', name: 'Old Name' })
+    mockInvoke.mockResolvedValueOnce([original])
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const updated = makeContact({ id: 'c1', name: 'New Name' })
+    mockInvoke.mockResolvedValueOnce(updated)
+
+    let returned: Contact | undefined
+    await act(async () => {
+      returned = await result.current.updateContact({ id: 'c1', name: 'New Name' })
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_update', {
+      input: { id: 'c1', name: 'New Name' },
+    })
+    expect(returned).toEqual(updated)
+    expect(useContactsStore.getState().contacts[0]?.name).toBe('New Name')
+  })
+})
+
+describe('deleteContact', () => {
+  it('invokes contacts_delete and removes from store', async () => {
+    const c = makeContact({ id: 'c1' })
+    mockInvoke.mockResolvedValueOnce([c])
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    mockInvoke.mockResolvedValueOnce(undefined)
+
+    await act(async () => {
+      await result.current.deleteContact('c1')
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'c1' })
+    expect(useContactsStore.getState().contacts).toHaveLength(0)
+  })
+
+  it('throws on contacts_delete failure', async () => {
+    mockInvoke.mockResolvedValueOnce([makeContact()])
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    mockInvoke.mockRejectedValueOnce(new Error('delete failed'))
+
+    await expect(
+      act(async () => {
+        await result.current.deleteContact('c1')
+      }),
+    ).rejects.toThrow('delete failed')
+  })
+
+  it('refreshes appointments after deleting a contact so stale doctor/clinic names are cleared', async () => {
+    const c = makeContact({ id: 'c1', name: 'Dr. Smith' })
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([c])
+      if (cmd === 'contacts_delete') return Promise.resolve(undefined)
+      if (cmd === 'appointments_list') return Promise.resolve([])
+      return Promise.resolve(undefined)
+    })
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.deleteContact('c1')
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'c1' })
+    expect(mockInvoke).toHaveBeenCalledWith('appointments_list', {})
+  })
+
+  it('clears clinic_name on linked appointment when a hospital contact is deleted', async () => {
+    const clinic = makeContact({ id: 'clinic1', name: 'St. Mary Clinic', role: 'hospital' })
+    // Appointment initially has clinic_name populated from the linked clinic contact.
+    const apptBefore = makeAppointment({ id: 'a1', clinic_name: 'St. Mary Clinic', contact_ids: ['clinic1'] })
+    // Rust cascade NULLs clinic_name; appointments_list returns the updated row.
+    const apptAfter = makeAppointment({ id: 'a1', clinic_name: null, contact_ids: [] })
+
+    useAppointmentsStore.setState({ appointments: [apptBefore], loading: false, error: null, statusFilter: 'all' })
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === 'contacts_list') return Promise.resolve([clinic])
+      if (cmd === 'contacts_delete') return Promise.resolve(undefined)
+      if (cmd === 'appointments_list') return Promise.resolve([apptAfter])
+      return Promise.resolve(undefined)
+    })
+
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.deleteContact('clinic1')
+    })
+
+    expect(mockInvoke).toHaveBeenCalledWith('contacts_delete', { id: 'clinic1' })
+    expect(mockInvoke).toHaveBeenCalledWith('appointments_list', {})
+    // Store must reflect the cleared clinic_name so the UI shows no stale clinic title.
+    expect(useAppointmentsStore.getState().appointments[0]?.clinic_name).toBeNull()
+  })
+})
+
+describe('refresh', () => {
+  it('re-fetches contacts', async () => {
+    mockInvoke.mockResolvedValueOnce([])
+    const { result } = await getHook()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const freshContacts = [makeContact({ id: 'c10', name: 'Dr. Refresh' })]
+    mockInvoke.mockResolvedValueOnce(freshContacts)
+
+    await act(async () => {
+      await result.current.refresh()
+    })
+
+    expect(result.current.contacts).toEqual(freshContacts)
+  })
+})

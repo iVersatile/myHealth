@@ -1,0 +1,379 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="1440" height="900" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif">
+  <defs>
+    <linearGradient id="tileGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#007AFF;stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#007AFF;stop-opacity:0.04"/>
+    </linearGradient>
+    <linearGradient id="tileGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34C759;stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#34C759;stop-opacity:0.04"/>
+    </linearGradient>
+    <linearGradient id="tileGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF9500;stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#FF9500;stop-opacity:0.04"/>
+    </linearGradient>
+    <linearGradient id="tileGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#AF52DE;stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#AF52DE;stop-opacity:0.04"/>
+    </linearGradient>
+    <linearGradient id="tileGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF3B30;stop-opacity:0.10"/>
+      <stop offset="100%" style="stop-color:#FF3B30;stop-opacity:0.03"/>
+    </linearGradient>
+    <linearGradient id="tileGrad6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5AC8FA;stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#5AC8FA;stop-opacity:0.04"/>
+    </linearGradient>
+    <filter id="tileShadow" x="-5%" y="-5%" width="110%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="rgba(0,0,0,0.07)"/>
+    </filter>
+    <filter id="activeNavShadow">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="rgba(0,122,255,0.5)"/>
+    </filter>
+  </defs>
+
+  <!-- Background: macOS light gray -->
+  <rect width="1440" height="900" fill="#F5F5F7"/>
+
+  <!-- Subtle dot texture -->
+  <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+    <circle cx="12" cy="12" r="0.8" fill="#C7C7CC" opacity="0.5"/>
+  </pattern>
+  <rect width="1440" height="900" fill="url(#dots)"/>
+
+  <!-- ======================== ICON RAIL SIDEBAR ======================== -->
+  <rect x="0" y="0" width="56" height="900" fill="rgba(255,255,255,0.85)"/>
+  <line x1="56" y1="0" x2="56" y2="900" stroke="#E5E5EA" stroke-width="0.5"/>
+
+  <!-- App logo -->
+  <rect x="12" y="14" width="32" height="32" rx="8" fill="#007AFF"/>
+  <text x="28" y="34" text-anchor="middle" font-size="16" fill="white" font-weight="700">M</text>
+
+  <!-- Home (active) -->
+  <rect x="8" y="60" width="40" height="40" rx="10" fill="#007AFF" opacity="0.12"/>
+  <text x="28" y="85" text-anchor="middle" font-size="18" fill="#007AFF">⌂</text>
+
+  <!-- Documents -->
+  <text x="28" y="138" text-anchor="middle" font-size="18" fill="#8E8E93">📄</text>
+  <!-- Search -->
+  <text x="28" y="188" text-anchor="middle" font-size="18" fill="#8E8E93">🔍</text>
+  <!-- Contacts -->
+  <text x="28" y="238" text-anchor="middle" font-size="18" fill="#8E8E93">👤</text>
+  <!-- Timeline -->
+  <text x="28" y="288" text-anchor="middle" font-size="18" fill="#8E8E93">📅</text>
+  <!-- Tags -->
+  <text x="28" y="338" text-anchor="middle" font-size="18" fill="#8E8E93">🏷</text>
+
+  <line x1="12" y1="380" x2="44" y2="380" stroke="#E5E5EA" stroke-width="0.5"/>
+
+  <!-- Settings -->
+  <text x="28" y="840" text-anchor="middle" font-size="18" fill="#8E8E93">⚙</text>
+  <!-- Profile -->
+  <circle cx="28" cy="870" r="14" fill="#E5E5EA"/>
+  <text x="28" y="875" text-anchor="middle" font-size="11" fill="#8E8E93">YW</text>
+
+  <!-- ======================== TOP BAR ======================== -->
+  <rect x="56" y="0" width="1384" height="52" fill="rgba(255,255,255,0.75)"/>
+  <line x1="56" y1="52" x2="1440" y2="52" stroke="#E5E5EA" stroke-width="0.5"/>
+
+  <text x="80" y="33" font-size="17" font-weight="600" fill="#1C1C1E">Overview</text>
+
+  <rect x="200" y="16" width="130" height="22" rx="11" fill="#F2F2F7"/>
+  <text x="265" y="31" text-anchor="middle" font-size="12" fill="#636366">Sunday, 10 May 2026</text>
+
+  <rect x="920" y="12" width="260" height="28" rx="8" fill="#F2F2F7"/>
+  <text x="940" y="31" font-size="13" fill="#8E8E93">🔍 Search records...</text>
+
+  <rect x="1200" y="12" width="100" height="28" rx="8" fill="#007AFF"/>
+  <text x="1250" y="31" text-anchor="middle" font-size="12" font-weight="600" fill="white">+ Upload</text>
+
+  <text x="1336" y="32" text-anchor="middle" font-size="16" fill="#8E8E93">🔔</text>
+  <circle cx="1346" cy="18" r="5" fill="#FF3B30"/>
+  <text x="1346" y="21" text-anchor="middle" font-size="7" fill="white" font-weight="700">2</text>
+
+  <!-- ======================== BENTO GRID ======================== -->
+
+  <!-- TILE 1: Recent Documents (wide) -->
+  <rect x="72" y="68" width="594" height="276" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="72" y="68" width="594" height="4" rx="2" fill="#007AFF" opacity="0.6"/>
+
+  <text x="96" y="100" font-size="13" font-weight="600" fill="#1C1C1E">Recent Documents</text>
+  <text x="96" y="116" font-size="11" fill="#8E8E93">Last 30 days · 12 new</text>
+  <text x="634" y="100" text-anchor="end" font-size="12" fill="#007AFF">See all →</text>
+
+  <!-- Row 1 selected -->
+  <rect x="88" y="126" width="562" height="40" rx="8" fill="#EFF6FF"/>
+  <rect x="88" y="126" width="3" height="40" rx="1.5" fill="#007AFF"/>
+  <rect x="102" y="135" width="24" height="22" rx="4" fill="#FF3B30" opacity="0.15"/>
+  <text x="114" y="150" text-anchor="middle" font-size="9" font-weight="700" fill="#FF3B30">PDF</text>
+  <text x="136" y="143" font-size="12" font-weight="500" fill="#1C1C1E">Blood Panel — Full CBC</text>
+  <text x="136" y="157" font-size="11" fill="#8E8E93">Dr. Chen · City Hospital</text>
+  <rect x="496" y="133" width="46" height="16" rx="8" fill="#FF3B30" opacity="0.12"/>
+  <text x="519" y="144" text-anchor="middle" font-size="9" font-weight="600" fill="#FF3B30">⚑ Flagged</text>
+  <text x="638" y="150" text-anchor="end" font-size="11" fill="#8E8E93">2 May</text>
+
+  <!-- Row 2 -->
+  <rect x="102" y="179" width="24" height="22" rx="4" fill="#007AFF" opacity="0.12"/>
+  <text x="114" y="194" text-anchor="middle" font-size="9" font-weight="700" fill="#007AFF">PDF</text>
+  <text x="136" y="191" font-size="12" font-weight="500" fill="#1C1C1E">X-Ray Chest PA View</text>
+  <text x="136" y="205" font-size="11" fill="#8E8E93">Dr. Patel · Radiology Dept</text>
+  <text x="638" y="197" text-anchor="end" font-size="11" fill="#8E8E93">28 Apr</text>
+
+  <!-- Row 3 -->
+  <rect x="102" y="221" width="24" height="22" rx="4" fill="#34C759" opacity="0.12"/>
+  <text x="114" y="236" text-anchor="middle" font-size="9" font-weight="700" fill="#34C759">PDF</text>
+  <text x="136" y="233" font-size="12" font-weight="500" fill="#1C1C1E">Physiotherapy Session Notes</text>
+  <text x="136" y="247" font-size="11" fill="#8E8E93">Dr. Müller · Sports Clinic</text>
+  <text x="638" y="239" text-anchor="end" font-size="11" fill="#8E8E93">22 Apr</text>
+
+  <!-- Row 4 -->
+  <rect x="102" y="263" width="24" height="22" rx="4" fill="#AF52DE" opacity="0.12"/>
+  <text x="114" y="278" text-anchor="middle" font-size="9" font-weight="700" fill="#AF52DE">PDF</text>
+  <text x="136" y="275" font-size="12" font-weight="500" fill="#1C1C1E">Cardiology Stress Test</text>
+  <text x="136" y="289" font-size="11" fill="#8E8E93">Dr. Kim · Heart Institute</text>
+  <text x="638" y="281" text-anchor="end" font-size="11" fill="#8E8E93">14 Apr</text>
+
+  <!-- Row 5 faded -->
+  <rect x="102" y="303" width="24" height="18" rx="4" fill="#FF9500" opacity="0.10"/>
+  <text x="114" y="316" text-anchor="middle" font-size="9" font-weight="700" fill="#FF9500" opacity="0.6">PDF</text>
+  <text x="136" y="318" font-size="12" fill="#8E8E93">Prescription — Metformin 500mg</text>
+  <text x="638" y="318" text-anchor="end" font-size="11" fill="#C7C7CC">3 Apr</text>
+
+  <!-- TILE 2: Health Score -->
+  <rect x="682" y="68" width="376" height="276" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="682" y="68" width="376" height="4" rx="2" fill="#34C759" opacity="0.6"/>
+
+  <text x="706" y="100" font-size="13" font-weight="600" fill="#1C1C1E">Health Score</text>
+  <text x="706" y="116" font-size="11" fill="#8E8E93">Based on last 90 days</text>
+
+  <circle cx="870" cy="206" r="70" fill="none" stroke="#E5E5EA" stroke-width="10"/>
+  <circle cx="870" cy="206" r="70" fill="none" stroke="#34C759" stroke-width="10"
+    stroke-dasharray="307 440" stroke-dashoffset="110" stroke-linecap="round"/>
+  <text x="870" y="198" text-anchor="middle" font-size="32" font-weight="700" fill="#1C1C1E">78</text>
+  <text x="870" y="218" text-anchor="middle" font-size="12" fill="#8E8E93">Good</text>
+
+  <text x="706" y="298" font-size="11" fill="#8E8E93">Documents</text>
+  <text x="706" y="315" font-size="16" font-weight="600" fill="#1C1C1E">47</text>
+  <text x="820" y="298" font-size="11" fill="#8E8E93">Flagged</text>
+  <rect x="820" y="304" width="28" height="14" rx="7" fill="#FF3B30" opacity="0.15"/>
+  <text x="834" y="315" text-anchor="middle" font-size="12" font-weight="600" fill="#FF3B30">3</text>
+  <text x="920" y="298" font-size="11" fill="#8E8E93">Contacts</text>
+  <text x="920" y="315" font-size="16" font-weight="600" fill="#1C1C1E">8</text>
+  <text x="1014" y="298" font-size="11" fill="#8E8E93">Clinics</text>
+  <text x="1014" y="315" font-size="16" font-weight="600" fill="#1C1C1E">5</text>
+
+  <!-- TILE 3: Categories -->
+  <rect x="1074" y="68" width="292" height="130" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="1074" y="68" width="292" height="4" rx="2" fill="#AF52DE" opacity="0.6"/>
+
+  <text x="1098" y="100" font-size="13" font-weight="600" fill="#1C1C1E">Categories</text>
+
+  <rect x="1098" y="112" width="72" height="22" rx="11" fill="#FF3B30" opacity="0.15"/>
+  <text x="1134" y="127" text-anchor="middle" font-size="11" fill="#FF3B30">Lab · 18</text>
+  <rect x="1178" y="112" width="72" height="22" rx="11" fill="#007AFF" opacity="0.15"/>
+  <text x="1214" y="127" text-anchor="middle" font-size="11" fill="#007AFF">Imaging · 9</text>
+  <rect x="1258" y="112" width="90" height="22" rx="11" fill="#34C759" opacity="0.15"/>
+  <text x="1303" y="127" text-anchor="middle" font-size="11" fill="#34C759">Therapy · 7</text>
+  <rect x="1098" y="142" width="80" height="22" rx="11" fill="#AF52DE" opacity="0.15"/>
+  <text x="1138" y="157" text-anchor="middle" font-size="11" fill="#AF52DE">Cardio · 6</text>
+  <rect x="1186" y="142" width="84" height="22" rx="11" fill="#FF9500" opacity="0.15"/>
+  <text x="1228" y="157" text-anchor="middle" font-size="11" fill="#FF9500">Rx · 4</text>
+  <rect x="1098" y="172" width="68" height="16" rx="8" fill="#F2F2F7"/>
+  <text x="1132" y="184" text-anchor="middle" font-size="10" fill="#8E8E93">+ 3 more</text>
+
+  <!-- TILE 4: Reminders -->
+  <rect x="1074" y="214" width="292" height="130" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="1074" y="214" width="292" height="4" rx="2" fill="#FF9500" opacity="0.6"/>
+
+  <text x="1098" y="246" font-size="13" font-weight="600" fill="#1C1C1E">Reminders</text>
+  <text x="1344" y="246" text-anchor="end" font-size="12" fill="#007AFF">+ Add</text>
+
+  <rect x="1098" y="256" width="16" height="16" rx="4" fill="none" stroke="#FF9500" stroke-width="1.5"/>
+  <text x="1122" y="268" font-size="12" fill="#1C1C1E">Annual blood test due</text>
+  <text x="1122" y="282" font-size="11" fill="#FF9500">In 5 days</text>
+  <rect x="1098" y="292" width="16" height="16" rx="4" fill="none" stroke="#8E8E93" stroke-width="1.5"/>
+  <text x="1122" y="304" font-size="12" fill="#1C1C1E">Physio follow-up</text>
+  <text x="1122" y="318" font-size="11" fill="#8E8E93">28 May</text>
+
+  <!-- TILE 5: Timeline -->
+  <rect x="72" y="360" width="460" height="220" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="72" y="360" width="460" height="4" rx="2" fill="#5AC8FA" opacity="0.6"/>
+
+  <text x="96" y="392" font-size="13" font-weight="600" fill="#1C1C1E">Health Timeline</text>
+  <text x="96" y="408" font-size="11" fill="#8E8E93">Last 6 months</text>
+  <text x="510" y="392" text-anchor="end" font-size="12" fill="#007AFF">Full timeline →</text>
+
+  <line x1="96" y1="450" x2="510" y2="450" stroke="#E5E5EA" stroke-width="1.5"/>
+
+  <circle cx="120" cy="450" r="8" fill="white" stroke="#5AC8FA" stroke-width="2"/>
+  <text x="120" y="470" text-anchor="middle" font-size="9" fill="#8E8E93">Nov</text>
+  <text x="120" y="481" text-anchor="middle" font-size="8" fill="#8E8E93">Physio</text>
+
+  <circle cx="186" cy="450" r="8" fill="white" stroke="#34C759" stroke-width="2"/>
+  <text x="186" y="470" text-anchor="middle" font-size="9" fill="#8E8E93">Dec</text>
+  <text x="186" y="481" text-anchor="middle" font-size="8" fill="#8E8E93">Prescr.</text>
+
+  <circle cx="252" cy="450" r="8" fill="white" stroke="#FF9500" stroke-width="2"/>
+  <text x="252" y="470" text-anchor="middle" font-size="9" fill="#8E8E93">Jan</text>
+  <text x="252" y="481" text-anchor="middle" font-size="8" fill="#8E8E93">Cardio</text>
+
+  <circle cx="318" cy="450" r="8" fill="white" stroke="#007AFF" stroke-width="2"/>
+  <text x="318" y="470" text-anchor="middle" font-size="9" fill="#8E8E93">Feb</text>
+  <text x="318" y="481" text-anchor="middle" font-size="8" fill="#8E8E93">X-Ray</text>
+
+  <circle cx="385" cy="450" r="10" fill="none" stroke="#FF3B30" stroke-width="2"/>
+  <circle cx="385" cy="450" r="5" fill="#FF3B30"/>
+  <text x="385" y="470" text-anchor="middle" font-size="9" fill="#8E8E93">Apr</text>
+  <text x="385" y="481" text-anchor="middle" font-size="8" fill="#FF3B30">⚑ CBC</text>
+
+  <circle cx="490" cy="450" r="8" fill="#007AFF"/>
+  <circle cx="490" cy="450" r="14" fill="none" stroke="#007AFF" stroke-width="1.5" opacity="0.3"/>
+  <text x="490" y="470" text-anchor="middle" font-size="9" fill="#007AFF" font-weight="600">May</text>
+  <text x="490" y="481" text-anchor="middle" font-size="8" fill="#007AFF">Today</text>
+
+  <rect x="95" y="398" width="70" height="36" rx="6" fill="#5AC8FA" opacity="0.12" stroke="#5AC8FA" stroke-width="0.5"/>
+  <text x="130" y="414" text-anchor="middle" font-size="9" fill="#5AC8FA" font-weight="600">Physio</text>
+  <text x="130" y="426" text-anchor="middle" font-size="8" fill="#5AC8FA">Nov 3</text>
+
+  <rect x="352" y="398" width="72" height="36" rx="6" fill="#FF3B30" opacity="0.08" stroke="#FF3B30" stroke-width="0.5"/>
+  <text x="388" y="414" text-anchor="middle" font-size="9" fill="#FF3B30" font-weight="600">Blood CBC</text>
+  <text x="388" y="426" text-anchor="middle" font-size="8" fill="#FF3B30">Apr 28 · ⚑</text>
+
+  <circle cx="100" cy="540" r="5" fill="#FF3B30"/>
+  <text x="112" y="544" font-size="10" fill="#8E8E93">Flagged</text>
+  <circle cx="164" cy="540" r="5" fill="#007AFF"/>
+  <text x="176" y="544" font-size="10" fill="#8E8E93">Current</text>
+  <circle cx="220" cy="540" r="5" fill="none" stroke="#34C759" stroke-width="1.5"/>
+  <text x="232" y="544" font-size="10" fill="#8E8E93">Normal</text>
+
+  <!-- TILE 6: Doctors -->
+  <rect x="548" y="360" width="294" height="220" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="548" y="360" width="294" height="4" rx="2" fill="#007AFF" opacity="0.4"/>
+
+  <text x="572" y="392" font-size="13" font-weight="600" fill="#1C1C1E">My Doctors</text>
+  <text x="820" y="392" text-anchor="end" font-size="12" fill="#007AFF">All →</text>
+
+  <circle cx="590" cy="424" r="18" fill="#007AFF" opacity="0.15"/>
+  <text x="590" y="429" text-anchor="middle" font-size="12" font-weight="600" fill="#007AFF">LC</text>
+  <text x="616" y="420" font-size="12" font-weight="500" fill="#1C1C1E">Dr. Li Chen</text>
+  <text x="616" y="434" font-size="11" fill="#8E8E93">Haematology · City Hospital</text>
+  <rect x="786" y="413" width="28" height="16" rx="8" fill="#F2F2F7"/>
+  <text x="800" y="424" text-anchor="middle" font-size="10" fill="#636366">12</text>
+
+  <circle cx="590" cy="468" r="18" fill="#34C759" opacity="0.15"/>
+  <text x="590" y="473" text-anchor="middle" font-size="12" font-weight="600" fill="#34C759">RP</text>
+  <text x="616" y="464" font-size="12" font-weight="500" fill="#1C1C1E">Dr. Raj Patel</text>
+  <text x="616" y="478" font-size="11" fill="#8E8E93">Radiology · St Mary's</text>
+  <rect x="786" y="457" width="28" height="16" rx="8" fill="#F2F2F7"/>
+  <text x="800" y="468" text-anchor="middle" font-size="10" fill="#636366">9</text>
+
+  <circle cx="590" cy="512" r="18" fill="#FF9500" opacity="0.15"/>
+  <text x="590" y="517" text-anchor="middle" font-size="12" font-weight="600" fill="#FF9500">SM</text>
+  <text x="616" y="508" font-size="12" font-weight="500" fill="#1C1C1E">Dr. Sarah Müller</text>
+  <text x="616" y="522" font-size="11" fill="#8E8E93">Physiotherapy · Sports Clinic</text>
+  <rect x="786" y="501" width="28" height="16" rx="8" fill="#F2F2F7"/>
+  <text x="800" y="512" text-anchor="middle" font-size="10" fill="#636366">7</text>
+
+  <circle cx="590" cy="556" r="18" fill="#AF52DE" opacity="0.15"/>
+  <text x="590" y="561" text-anchor="middle" font-size="12" font-weight="600" fill="#AF52DE">JK</text>
+  <text x="616" y="552" font-size="12" font-weight="500" fill="#1C1C1E">Dr. Jin Kim</text>
+  <text x="616" y="566" font-size="11" fill="#8E8E93">Cardiology · Heart Institute</text>
+  <rect x="786" y="545" width="28" height="16" rx="8" fill="#F2F2F7"/>
+  <text x="800" y="556" text-anchor="middle" font-size="10" fill="#636366">6</text>
+
+  <!-- TILE 7: Flagged Values -->
+  <rect x="858" y="360" width="208" height="220" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="858" y="360" width="208" height="4" rx="2" fill="#FF3B30" opacity="0.6"/>
+
+  <text x="882" y="392" font-size="13" font-weight="600" fill="#1C1C1E">Flagged Values</text>
+  <text x="882" y="408" font-size="11" fill="#8E8E93">Needs attention</text>
+
+  <rect x="882" y="420" width="160" height="46" rx="10" fill="#FF3B30" opacity="0.06" stroke="#FF3B30" stroke-width="0.5"/>
+  <text x="896" y="440" font-size="11" font-weight="600" fill="#FF3B30">Haemoglobin</text>
+  <text x="896" y="456" font-size="11" fill="#1C1C1E">9.2 g/dL</text>
+  <rect x="982" y="431" width="48" height="16" rx="8" fill="#FF3B30" opacity="0.15"/>
+  <text x="1006" y="442" text-anchor="middle" font-size="9" font-weight="700" fill="#FF3B30">LOW</text>
+
+  <rect x="882" y="474" width="160" height="46" rx="10" fill="#FF9500" opacity="0.06" stroke="#FF9500" stroke-width="0.5"/>
+  <text x="896" y="494" font-size="11" font-weight="600" fill="#FF9500">MCV</text>
+  <text x="896" y="510" font-size="11" fill="#1C1C1E">76 fL</text>
+  <rect x="956" y="485" width="72" height="16" rx="8" fill="#FF9500" opacity="0.15"/>
+  <text x="992" y="496" text-anchor="middle" font-size="9" font-weight="700" fill="#FF9500">BORDERLINE</text>
+
+  <rect x="882" y="528" width="160" height="40" rx="10" fill="#34C759" opacity="0.06" stroke="#34C759" stroke-width="0.5"/>
+  <text x="896" y="548" font-size="11" font-weight="500" fill="#8E8E93">All others</text>
+  <rect x="976" y="535" width="56" height="16" rx="8" fill="#34C759" opacity="0.15"/>
+  <text x="1004" y="546" text-anchor="middle" font-size="9" font-weight="700" fill="#34C759">NORMAL</text>
+
+  <!-- TILE 8: Activity chart -->
+  <rect x="1082" y="360" width="284" height="220" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="1082" y="360" width="284" height="4" rx="2" fill="#007AFF" opacity="0.3"/>
+
+  <text x="1106" y="392" font-size="13" font-weight="600" fill="#1C1C1E">Activity</text>
+  <text x="1106" y="408" font-size="11" fill="#8E8E93">Uploads this month</text>
+
+  <text x="1106" y="445" font-size="9" fill="#C7C7CC">8</text>
+  <line x1="1118" y1="440" x2="1350" y2="440" stroke="#F2F2F7" stroke-width="1"/>
+  <text x="1106" y="475" font-size="9" fill="#C7C7CC">4</text>
+  <line x1="1118" y1="470" x2="1350" y2="470" stroke="#F2F2F7" stroke-width="1"/>
+
+  <rect x="1128" y="428" width="22" height="72" rx="4" fill="#007AFF" opacity="0.3"/>
+  <text x="1139" y="515" text-anchor="middle" font-size="8" fill="#8E8E93">Nov</text>
+  <rect x="1162" y="440" width="22" height="60" rx="4" fill="#007AFF" opacity="0.3"/>
+  <text x="1173" y="515" text-anchor="middle" font-size="8" fill="#8E8E93">Dec</text>
+  <rect x="1196" y="448" width="22" height="52" rx="4" fill="#007AFF" opacity="0.4"/>
+  <text x="1207" y="515" text-anchor="middle" font-size="8" fill="#8E8E93">Jan</text>
+  <rect x="1230" y="432" width="22" height="68" rx="4" fill="#007AFF" opacity="0.5"/>
+  <text x="1241" y="515" text-anchor="middle" font-size="8" fill="#8E8E93">Feb</text>
+  <rect x="1264" y="454" width="22" height="46" rx="4" fill="#007AFF" opacity="0.4"/>
+  <text x="1275" y="515" text-anchor="middle" font-size="8" fill="#8E8E93">Mar</text>
+  <rect x="1298" y="420" width="22" height="80" rx="4" fill="#007AFF"/>
+  <text x="1309" y="515" text-anchor="middle" font-size="8" fill="#007AFF" font-weight="600">Apr</text>
+  <rect x="1332" y="452" width="22" height="48" rx="4" fill="#007AFF" opacity="0.25"/>
+  <text x="1343" y="515" text-anchor="middle" font-size="8" fill="#8E8E93">May</text>
+
+  <text x="1106" y="545" font-size="11" fill="#8E8E93">Storage used</text>
+  <rect x="1106" y="552" width="240" height="8" rx="4" fill="#F2F2F7"/>
+  <rect x="1106" y="552" width="156" height="8" rx="4" fill="#007AFF"/>
+  <text x="1350" y="560" text-anchor="end" font-size="11" fill="#8E8E93">65%</text>
+
+  <!-- BOTTOM ACCENT TILES -->
+  <rect x="72" y="596" width="180" height="100" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="72" y="596" width="180" height="4" rx="2" fill="#34C759" opacity="0.6"/>
+  <text x="96" y="630" font-size="11" fill="#8E8E93">Clinics</text>
+  <text x="96" y="665" font-size="36" font-weight="700" fill="#34C759">5</text>
+  <text x="96" y="682" font-size="10" fill="#8E8E93">Registered</text>
+
+  <rect x="268" y="596" width="180" height="100" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="268" y="596" width="180" height="4" rx="2" fill="#AF52DE" opacity="0.6"/>
+  <text x="292" y="630" font-size="11" fill="#8E8E93">Tags</text>
+  <text x="292" y="665" font-size="36" font-weight="700" fill="#AF52DE">24</text>
+  <text x="292" y="682" font-size="10" fill="#8E8E93">Across all docs</text>
+
+  <rect x="464" y="596" width="238" height="100" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <rect x="464" y="596" width="238" height="4" rx="2" fill="#FF3B30" opacity="0.5"/>
+  <text x="488" y="628" font-size="11" fill="#8E8E93">Last Upload</text>
+  <text x="488" y="650" font-size="14" font-weight="600" fill="#1C1C1E">Blood Panel — CBC</text>
+  <text x="488" y="666" font-size="11" fill="#8E8E93">2 May 2026 · Dr. Li Chen</text>
+  <rect x="488" y="674" width="52" height="16" rx="8" fill="#FF3B30" opacity="0.12"/>
+  <text x="514" y="685" text-anchor="middle" font-size="9" font-weight="600" fill="#FF3B30">⚑ Flagged</text>
+
+  <rect x="718" y="596" width="648" height="100" rx="16" fill="white" filter="url(#tileShadow)"/>
+  <text x="742" y="628" font-size="11" font-weight="600" fill="#1C1C1E">Quick Actions</text>
+  <rect x="742" y="638" width="120" height="34" rx="10" fill="#007AFF"/>
+  <text x="802" y="659" text-anchor="middle" font-size="12" font-weight="600" fill="white">+ Upload Doc</text>
+  <rect x="874" y="638" width="110" height="34" rx="10" fill="#F2F2F7"/>
+  <text x="929" y="659" text-anchor="middle" font-size="12" fill="#1C1C1E">Add Doctor</text>
+  <rect x="996" y="638" width="100" height="34" rx="10" fill="#F2F2F7"/>
+  <text x="1046" y="659" text-anchor="middle" font-size="12" fill="#1C1C1E">New Clinic</text>
+  <rect x="1108" y="638" width="90" height="34" rx="10" fill="#F2F2F7"/>
+  <text x="1153" y="659" text-anchor="middle" font-size="12" fill="#1C1C1E">Add Tag</text>
+  <rect x="1210" y="638" width="130" height="34" rx="10" fill="#F2F2F7"/>
+  <text x="1275" y="659" text-anchor="middle" font-size="12" fill="#1C1C1E">Export Records</text>
+
+  <!-- Label -->
+  <rect x="72" y="856" width="1294" height="1" fill="#E5E5EA"/>
+  <text x="72" y="878" font-size="12" fill="#8E8E93">Option D — macOS Bento Dashboard  ·  Icon rail sidebar  ·  Variable-size tiles  ·  Apple Blue #007AFF</text>
+  <text x="1366" y="878" text-anchor="end" font-size="12" fill="#8E8E93">myHealth · Tauri + Next.js</text>
+
+</svg>

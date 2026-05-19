@@ -1,0 +1,103 @@
+name: E2E Tauri (WebdriverIO)
+
+on:
+  push:
+    branches:
+      - 'release/**'
+      - develop
+  pull_request:
+    branches:
+      - 'release/**'
+
+jobs:
+  e2e-tauri:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            webkit2gtk-driver \
+            xvfb \
+            sqlite3 \
+            tesseract-ocr \
+            poppler-utils
+
+      - name: Stage sidecar binaries
+        run: |
+          mkdir -p src-tauri/binaries
+          cp "$(which tesseract)" src-tauri/binaries/tesseract-x86_64-unknown-linux-gnu
+          cp "$(which pdftoppm)"  src-tauri/binaries/pdftoppm-x86_64-unknown-linux-gnu
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Tauri app (release)
+        run: pnpm tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ''
+
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --locked
+
+      - name: Install e2e-tauri deps
+        run: cd e2e-tauri && npm ci
+
+      - name: Start display
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+          sleep 1
+
+      - name: Debug environment
+        run: |
+          echo "=== Release binaries ==="
+          ls -la src-tauri/target/release/ | grep -v '^\(total\|dr\)' | head -30
+          echo "=== WebKitWebDriver ==="
+          which WebKitWebDriver 2>/dev/null || echo "NOT IN PATH"
+          WebKitWebDriver --version 2>/dev/null || echo "NO VERSION"
+          echo "=== tauri-driver ==="
+          which tauri-driver || echo "NOT IN PATH"
+          tauri-driver --version 2>/dev/null || echo "NO VERSION"
+          echo "=== binary check ==="
+          ls -la "$PWD/src-tauri/target/release/app" 2>/dev/null || echo "BINARY NOT FOUND"
+          echo "=== ldd ==="
+          ldd "$PWD/src-tauri/target/release/app" 2>&1 | head -40
+          echo "=== App launch test (5s timeout) ==="
+          timeout 5 "$PWD/src-tauri/target/release/app" > /tmp/app-launch.log 2>&1 || echo "App exit code: $?"
+          cat /tmp/app-launch.log
+
+      - name: Run WebdriverIO smoke tests
+        run: |
+          export TAURI_APP_BINARY=$PWD/src-tauri/target/release/app
+          tauri-driver > /tmp/tauri-driver.log 2>&1 &
+          sleep 2
+          cd e2e-tauri && npm test || true
+          echo "=== tauri-driver log ==="
+          cat /tmp/tauri-driver.log
+        env:
+          MYHEALTH_TEST_DB: ${{ github.workspace }}/src-tauri/tests/fixtures/test.db

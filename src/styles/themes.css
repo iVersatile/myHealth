@@ -1,0 +1,50 @@
+html.theme-calm {
+  --color-primary:        oklch(52% 0.18 240);
+  --color-primary-hover:  oklch(45% 0.18 240);
+  --color-accent:         oklch(58% 0.15 175);
+  --color-surface:        oklch(99% 0 0);
+  --color-surface-raised: oklch(97% 0 0);
+  --color-surface-sunken: oklch(95% 0 0);
+  --color-border:         oklch(90% 0 0);
+  --color-border-subtle:  oklch(93% 0 0);
+  --color-text:           oklch(18% 0 0);
+  --color-text-secondary: oklch(45% 0 0);
+  --color-text-muted:     oklch(52% 0 0);
+  --color-text-disabled:  oklch(65% 0 0);
+  --color-tag-bg:         oklch(93% 0.04 175);
+  --color-tag-text:       oklch(30% 0.10 175);
+}
+
+html.theme-coffee {
+  --color-primary:        oklch(50% 0.11 55);
+  --color-primary-hover:  oklch(43% 0.11 55);
+  --color-accent:         oklch(66% 0.15 65);
+  --color-surface:        oklch(97% 0.01 80);
+  --color-surface-raised: oklch(95% 0.02 75);
+  --color-surface-sunken: oklch(92% 0.03 72);
+  --color-border:         oklch(86% 0.03 75);
+  --color-border-subtle:  oklch(90% 0.02 75);
+  --color-text:           oklch(20% 0.04 50);
+  --color-text-secondary: oklch(42% 0.06 55);
+  --color-text-muted:     oklch(53% 0.04 55);
+  --color-text-disabled:  oklch(66% 0.02 60);
+  --color-tag-bg:         oklch(91% 0.05 68);
+  --color-tag-text:       oklch(35% 0.09 55);
+}
+
+html.theme-mint {
+  --color-primary:        oklch(48% 0.14 175);
+  --color-primary-hover:  oklch(42% 0.14 175);
+  --color-accent:         oklch(60% 0.16 178);
+  --color-surface:        oklch(98% 0.01 175);
+  --color-surface-raised: oklch(96% 0.02 172);
+  --color-surface-sunken: oklch(93% 0.03 170);
+  --color-border:         oklch(88% 0.03 170);
+  --color-border-subtle:  oklch(91% 0.02 172);
+  --color-text:           oklch(18% 0.02 175);
+  --color-text-secondary: oklch(42% 0.04 168);
+  --color-text-muted:     oklch(53% 0.03 168);
+  --color-text-disabled:  oklch(65% 0.01 170);
+  --color-tag-bg:         oklch(91% 0.06 175);
+  --color-tag-text:       oklch(30% 0.11 178);
+}
