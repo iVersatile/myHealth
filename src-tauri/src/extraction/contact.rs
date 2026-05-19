@@ -49,7 +49,7 @@ fn gp_label_re() -> &'static Regex {
         // Optional title prefix is consumed but NOT captured; capture group 1 = name only.
         // Uses [ \t]+ (not \s+) to stop at line boundaries and avoid absorbing clinic names.
         Regex::new(
-            r"\b(?:GP|Consultant|Registrar|Physiotherapist?|Nurse|Specialist|Surgeon):?[ \t]+(?:(?:Dr\.?|Prof\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Sir)[ \t]+)?([A-Z][a-zA-Z\-']+(?:[ \t]+[A-Z][a-zA-Z\-']+)*)",
+            r"\b(?:GP|Consultant|Registrar|Physiotherapist?|Nurse|Specialist|Surgeon|Provider|Doctor|Clinician|Practitioner|Physician|Therapist):?[ \t]+(?:(?:Dr\.?|Prof\.?|Mr\.?|Mrs\.?|Ms\.?|Miss|Sir)[ \t]+)?([A-Z][a-zA-Z\-']+(?:[ \t]+[A-Z][a-zA-Z\-']+)*)",
         )
         .expect("gp label regex valid")
     })
@@ -147,18 +147,49 @@ fn first_phone(text: &str) -> Option<String> {
 }
 
 pub fn first_clinic(text: &str) -> Option<String> {
+    // Line-starter words that signal the clinic name appears in a boilerplate phrase
+    // ("For professional services at X") rather than as a standalone header/label.
+    const BOILERPLATE_LINE_STARTERS: &[&str] = &[
+        "For",
+        "In",
+        "At",
+        "From",
+        "To",
+        "Of",
+        "On",
+        "By",
+        "Re",
+        "As",
+        "Per",
+        "With",
+        "Without",
+        "Regarding",
+    ];
+
+    // Returns true when the regex match (given its absolute byte offset in `text`)
+    // is embedded in a boilerplate sentence rather than on a dedicated header line.
+    let is_boilerplate = |abs_start: usize| -> bool {
+        let line_start = text[..abs_start].rfind('\n').map(|i| i + 1).unwrap_or(0);
+        let first_word = text[line_start..].split_whitespace().next().unwrap_or("");
+        BOILERPLATE_LINE_STARTERS.contains(&first_word)
+    };
+
     let raw = text.len() * 7 / 10;
     let tail_start = (raw..=text.len())
         .find(|&i| text.is_char_boundary(i))
         .unwrap_or(text.len());
-    clinic_re()
-        .find(&text[tail_start..])
-        .map(|m| m.as_str().trim().to_string())
-        .or_else(|| {
-            clinic_re()
-                .find(text)
-                .map(|m| m.as_str().trim().to_string())
-        })
+
+    for m in clinic_re().find_iter(&text[tail_start..]) {
+        if !is_boilerplate(tail_start + m.start()) {
+            return Some(m.as_str().trim().to_string());
+        }
+    }
+    for m in clinic_re().find_iter(text) {
+        if !is_boilerplate(m.start()) {
+            return Some(m.as_str().trim().to_string());
+        }
+    }
+    None
 }
 
 /// Extracts an address block anchored by a UK postcode.
@@ -618,6 +649,48 @@ mod tests {
         assert_eq!(
             first_clinic(&text),
             Some("Springfield Medical Centre".to_string())
+        );
+    }
+
+    #[test]
+    fn first_clinic_skips_boilerplate_hospital_returns_header_clinic() {
+        // Regression for v1.9.3: short invoices from "Bill Medical" contained
+        // "For Professional Services at Princess Grace Hospital" in the tail.
+        // first_clinic() was returning "Princess Grace Hospital" (boilerplate line)
+        // instead of "Bill Medical" (header line).
+        let text = "\
+Bill Medical\n\
+12 Harley Street, London W1G 9PQ\n\
+Doctor: Michael Chapman\n\
+\n\
+For Professional Services at Princess Grace Hospital\n\
+Amount Due: £250.00\n";
+        assert_eq!(
+            first_clinic(text),
+            Some("Bill Medical".to_string()),
+            "should return header clinic, not boilerplate hospital reference"
+        );
+    }
+
+    #[test]
+    fn extracts_contact_from_bill_medical_invoice_with_doctor_label() {
+        // Regression for v1.9.3: "Doctor:" label was not in gp_label_re,
+        // so "Michael Chapman" was never extracted as a contact suggestion.
+        let text = "\
+Bill Medical\n\
+12 Harley Street, London W1G 9PQ\n\
+Tel: 020 7946 0111\n\
+Doctor: Michael Chapman\n\
+\n\
+For Professional Services at Princess Grace Hospital\n\
+Amount Due: £250.00\n";
+        let suggestions = extract_contact_suggestions(text);
+        assert!(
+            suggestions
+                .iter()
+                .any(|s| s.name.contains("Michael") && s.name.contains("Chapman")),
+            "expected 'Michael Chapman' in suggestions; got: {:?}",
+            suggestions.iter().map(|s| &s.name).collect::<Vec<_>>()
         );
     }
 }
