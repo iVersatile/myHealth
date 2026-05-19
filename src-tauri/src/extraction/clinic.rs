@@ -26,14 +26,43 @@ pub fn extract_company_registration_number(text: &str) -> Option<String> {
 /// Parentheses in names (e.g. "(Harley Street)") are supported.
 /// Also matches NHS/hospital institutional suffixes: Hospital, NHS Trust, NHS Foundation Trust,
 /// Health Centre, Medical Centre, Infirmary.
+// Words that introduce billing context rather than a clinic name.
+// "For Professional Services at Princess Grace Hospital" → reject; real name is elsewhere.
+const BOILERPLATE_LEADING_WORDS: &[&str] = &[
+    "For",
+    "In",
+    "At",
+    "From",
+    "To",
+    "Of",
+    "On",
+    "By",
+    "Re",
+    "As",
+    "Per",
+    "With",
+    "Without",
+    "Regarding",
+    "Subject",
+    "Invoice",
+];
+
 pub fn extract_clinic_name_by_company_suffix(text: &str) -> Option<String> {
     let re = Regex::new(
         r"(?m)^(?:Account\s+Name:\s+)?([A-Z][A-Za-z0-9'&()\- \t]{2,60}?\s+(?:Ltd\.?|Limited|plc|PLC|LLP|LLC|NHS\s+(?:Foundation\s+)?Trust|Hospital|Health\s+Centre|Medical\s+Centre|Infirmary))\b",
     )
     .expect("valid regex");
-    re.captures(text)
-        .and_then(|c| c.get(1))
-        .map(|m| m.as_str().trim().to_string())
+    for caps in re.captures_iter(text) {
+        if let Some(m) = caps.get(1) {
+            let name = m.as_str().trim().to_string();
+            let first_word = name.split_whitespace().next().unwrap_or("");
+            if BOILERPLATE_LEADING_WORDS.contains(&first_word) {
+                continue;
+            }
+            return Some(name);
+        }
+    }
+    None
 }
 
 /// Extract a clinic name from the header zone (first 15 lines) of OCR text.
@@ -129,6 +158,7 @@ pub fn extract_clinic_name_header_zone(text: &str) -> Option<String> {
             "Center",
             "Infirmary",
             "Dispensary",
+            "Medical",
         ];
         let is_title_case = words
             .iter()
@@ -574,6 +604,27 @@ SW1A 1AA
         assert_eq!(
             extract_clinic_name_by_company_suffix(text).as_deref(),
             Some("St Mary's Hospital")
+        );
+    }
+
+    // Regression: "For Professional Services at Princess Grace Hospital" is billing boilerplate
+    // and must not be returned as the clinic name (v1.9.3 bug).
+    #[test]
+    fn rejects_for_professional_services_at_boilerplate() {
+        let text = "Bill Medical\nInvoice #21\nDate: 21 Jan 2022\nFor Professional Services at Princess Grace Hospital\n";
+        assert!(
+            extract_clinic_name_by_company_suffix(text).is_none(),
+            "boilerplate 'For Professional Services at …' must not be returned as clinic name"
+        );
+    }
+
+    // Regression: "Bill Medical" must be extracted from header zone (v1.9.3 bug).
+    #[test]
+    fn extracts_bill_medical_from_header_zone() {
+        let text = "Bill Medical\nInvoice #21\nDate: 21 Jan 2022\nFor Professional Services at Princess Grace Hospital\n";
+        assert_eq!(
+            extract_clinic_name_header_zone(text).as_deref(),
+            Some("Bill Medical")
         );
     }
 }
